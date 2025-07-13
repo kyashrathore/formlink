@@ -59,12 +59,12 @@ interface UseUniversalKeyboardParams<T> {
 
 /**
  * Universal keyboard navigation hook for accessible form inputs
- * 
+ *
  * @description
  * Provides comprehensive keyboard navigation for any list of options,
  * supporting multiple navigation patterns (arrows, letters, numbers, vim).
  * Handles focus management, ARIA attributes, and conflict resolution.
- * 
+ *
  * @example
  * ```typescript
  * const keyboard = useUniversalKeyboard({
@@ -76,7 +76,7 @@ interface UseUniversalKeyboardParams<T> {
  *   onSelect: handleSelection,
  *   isActive: true
  * });
- * 
+ *
  * return (
  *   <div {...keyboard.getContainerProps()}>
  *     {options.map((opt, i) => (
@@ -120,10 +120,10 @@ export function useUniversalKeyboard<T>({
     (letter: string): Option<T> | undefined => {
       const normalizedLetter = letter.toLowerCase();
       return activeOptions.find((option) =>
-        option.label.toLowerCase().startsWith(normalizedLetter)
+        option.label.toLowerCase().startsWith(normalizedLetter),
       );
     },
-    [activeOptions]
+    [activeOptions],
   );
 
   const selectHighlighted = useCallback(() => {
@@ -148,7 +148,7 @@ export function useUniversalKeyboard<T>({
         }
       });
     },
-    [activeOptions.length]
+    [activeOptions.length],
   );
 
   const handleKeyDown = useCallback(
@@ -207,7 +207,7 @@ export function useUniversalKeyboard<T>({
       }
 
       // Priority 2: Shortcuts (when dropdown is closed)
-      
+
       // Letter shortcuts
       if (config.shortcuts.letters && /^[a-zA-Z]$/.test(e.key)) {
         const option = findOptionByLetter(e.key);
@@ -251,7 +251,7 @@ export function useUniversalKeyboard<T>({
       activeOptions,
       onSelect,
       setDropdownOpen,
-    ]
+    ],
   );
 
   // Component-level event handling
@@ -275,7 +275,15 @@ export function useUniversalKeyboard<T>({
       // Better keyboard capture
       onKeyDownCapture: handleKeyDown,
     };
-  }, [handleKeyDown, isActive, activeOptions, highlightedIndex, autoFocus, isDropdownOpen, setDropdownOpen]);
+  }, [
+    handleKeyDown,
+    isActive,
+    activeOptions,
+    highlightedIndex,
+    autoFocus,
+    isDropdownOpen,
+    setDropdownOpen,
+  ]);
 
   const getOptionProps = useCallback(
     (index: number) => {
@@ -298,7 +306,7 @@ export function useUniversalKeyboard<T>({
         "data-highlighted": isHighlighted,
       };
     },
-    [activeOptions, highlightedIndex, onSelect]
+    [activeOptions, highlightedIndex, onSelect],
   );
 
   // Cleanup
@@ -311,14 +319,15 @@ export function useUniversalKeyboard<T>({
       if (
         containerRef.current &&
         (containerRef.current.contains(document.activeElement) ||
-         document.activeElement === containerRef.current)
+          document.activeElement === containerRef.current)
       ) {
         handleKeyDown(e);
       }
     };
 
     window.addEventListener("keydown", handleGlobalKeyDown, true);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown, true);
+    return () =>
+      window.removeEventListener("keydown", handleGlobalKeyDown, true);
   }, [isActive, handleKeyDown]);
 
   return {
@@ -336,7 +345,7 @@ export function useUniversalKeyboard<T>({
 export function shouldDirectRender(
   options: Option[],
   mode: "typeform" | "chat",
-  override?: boolean
+  override?: boolean,
 ): boolean {
   if (override !== undefined) return override;
   if (mode === "chat") return false; // Space constraints in chat mode

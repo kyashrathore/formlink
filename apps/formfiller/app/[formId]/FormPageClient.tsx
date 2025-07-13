@@ -16,13 +16,13 @@ interface FormPageContentProps {
 }
 
 // This component must be used INSIDE FormModeProvider
-function FormPageContent({ 
-  formSchema, 
-  isTestSubmission, 
-  queryDataForForm 
+function FormPageContent({
+  formSchema,
+  isTestSubmission,
+  queryDataForForm,
 }: FormPageContentProps) {
   const { isAIMode, isTypeFormMode } = useFormMode();
-  
+
   // Convert schema to UI format for components
   const uiFormSchema = mapFormToUI(formSchema);
 
@@ -49,7 +49,11 @@ function FormPageContent({
     // Business logic for starting quiz (if any additional logic needed)
   };
 
-  const handleAnswerChange = (questionId: string, value: any, questionType: Question["questionType"]) => {
+  const handleAnswerChange = (
+    questionId: string,
+    value: any,
+    questionType: Question["questionType"],
+  ) => {
     // Route to appropriate business logic based on question type
     switch (questionType) {
       case "singleChoice":
@@ -64,7 +68,7 @@ function FormPageContent({
         // Store ranking as JSON string
         if (Array.isArray(value)) {
           setQuestionResponse(questionId, JSON.stringify(value));
-        } else if (typeof value === 'string') {
+        } else if (typeof value === "string") {
           setQuestionResponse(questionId, value);
         }
         break;
@@ -118,29 +122,36 @@ interface FormPageClientProps {
   searchParams: { [key: string]: string | string[] | undefined };
 }
 
-export default function FormPageClient({ 
-  formSchema, 
-  isTestSubmission, 
+export default function FormPageClient({
+  formSchema,
+  isTestSubmission,
   queryDataForForm,
-  searchParams 
+  searchParams,
 }: FormPageClientProps) {
   // Extract default mode from form settings
-  const defaultMode = formSchema.settings?.defaultMode as "ai" | "typeform" | undefined;
-  
+  const defaultMode = formSchema.settings?.defaultMode as
+    | "ai"
+    | "typeform"
+    | undefined;
+
   // Convert search params to the format expected by FormModeProvider
   const urlSearchParams = {
-    mode: typeof searchParams?.mode === "string" ? searchParams.mode : undefined,
-    aimode: typeof searchParams?.aimode === "string" ? searchParams.aimode : undefined,
+    mode:
+      typeof searchParams?.mode === "string" ? searchParams.mode : undefined,
+    aimode:
+      typeof searchParams?.aimode === "string"
+        ? searchParams.aimode
+        : undefined,
   };
 
   return (
-    <FormModeProvider 
+    <FormModeProvider
       defaultMode={defaultMode || "ai"}
       formSettings={{ defaultMode }}
       urlSearchParams={urlSearchParams}
     >
       <div className="h-full">
-        <FormPageContent 
+        <FormPageContent
           formSchema={formSchema}
           isTestSubmission={isTestSubmission}
           queryDataForForm={queryDataForForm}

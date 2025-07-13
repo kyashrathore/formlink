@@ -1,20 +1,22 @@
-"use client"
+"use client";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 import { Check } from "@phosphor-icons/react/Check";
 import { CaretDown } from "@phosphor-icons/react/CaretDown";
 import { CaretUp } from "@phosphor-icons/react/CaretUp";
 import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
 
-import * as SelectPrimitive from "@radix-ui/react-select"
-import * as React from "react"
+import * as SelectPrimitive from "@radix-ui/react-select";
+import * as React from "react";
 
 interface SelectWithSearchContextValue {
   searchValue: string;
   setSearchValue: (value: string) => void;
 }
 
-const SelectWithSearchContext = React.createContext<SelectWithSearchContextValue | undefined>(undefined);
+const SelectWithSearchContext = React.createContext<
+  SelectWithSearchContextValue | undefined
+>(undefined);
 
 function useSelectWithSearch() {
   const context = React.useContext(SelectWithSearchContext);
@@ -24,7 +26,8 @@ function useSelectWithSearch() {
   return context;
 }
 
-interface SelectWithSearchProps extends React.ComponentProps<typeof SelectPrimitive.Root> {
+interface SelectWithSearchProps
+  extends React.ComponentProps<typeof SelectPrimitive.Root> {
   children: React.ReactNode;
 }
 
@@ -77,7 +80,7 @@ function SelectSearchInput({
           "w-full rounded-md border border-input bg-background px-8 py-1.5 text-sm",
           "placeholder:text-muted-foreground",
           "focus:border-ring focus:outline-none focus:ring-1 focus:ring-ring/50",
-          className
+          className,
         )}
         onKeyDown={(e) => {
           // Prevent select from closing on Enter in search
@@ -93,7 +96,8 @@ function SelectSearchInput({
   );
 }
 
-interface SelectSearchableContentProps extends React.ComponentProps<typeof SelectPrimitive.Content> {
+interface SelectSearchableContentProps
+  extends React.ComponentProps<typeof SelectPrimitive.Content> {
   searchPlaceholder?: string;
 }
 
@@ -114,7 +118,7 @@ function SelectSearchableContent({
 
     return React.Children.toArray(children).filter((child) => {
       if (!React.isValidElement(child)) return true;
-      
+
       // Keep non-item elements (like groups, labels)
       if (child.type !== SelectSearchableItem) return true;
 
@@ -126,7 +130,8 @@ function SelectSearchableContent({
   }, [children, searchValue]);
 
   // Show no results message
-  const hasResults = Array.isArray(filteredChildren) && filteredChildren.length > 0;
+  const hasResults =
+    Array.isArray(filteredChildren) && filteredChildren.length > 0;
 
   return (
     <SelectPrimitive.Portal>
@@ -136,7 +141,7 @@ function SelectSearchableContent({
           "bg-background text-secondary-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-sm backdrop-blur-xl",
           position === "popper" &&
             "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
-          className
+          className,
         )}
         position={position}
         {...props}
@@ -144,13 +149,13 @@ function SelectSearchableContent({
         <div className="sticky top-0 bg-background border-b">
           <SelectSearchInput placeholder={searchPlaceholder} />
         </div>
-        
+
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
           className={cn(
             "p-1",
             position === "popper" &&
-              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1"
+              "h-[var(--radix-select-trigger-height)] w-full min-w-[var(--radix-select-trigger-width)] scroll-my-1",
           )}
         >
           {hasResults ? (
@@ -170,18 +175,18 @@ function SelectSearchableContent({
 // Helper function to extract text from children
 function getItemText(children: React.ReactNode): string {
   if (typeof children === "string") return children;
-  
+
   if (React.isValidElement(children)) {
     const childProps = children.props as { children?: React.ReactNode };
     if (childProps.children) {
       return getItemText(childProps.children);
     }
   }
-  
+
   if (Array.isArray(children)) {
     return children.map(getItemText).join("");
   }
-  
+
   return "";
 }
 
@@ -196,7 +201,7 @@ const SelectSearchableItem = React.forwardRef<
       data-slot="select-item"
       className={cn(
         "focus:bg-accent focus:text-accent-foreground [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
-        className
+        className,
       )}
       {...props}
     >
@@ -220,12 +225,12 @@ export {
 };
 
 // Re-export from regular select with "WithSearch" suffix
-export { 
+export {
   SelectGroup as SelectGroupWithSearch,
   SelectValue as SelectValueWithSearch,
   SelectTrigger as SelectTriggerWithSearch,
   SelectLabel as SelectLabelWithSearch,
-  SelectSeparator as SelectSeparatorWithSearch
+  SelectSeparator as SelectSeparatorWithSearch,
 } from "./select";
 
 // Re-export scroll buttons with proper styling
@@ -238,7 +243,7 @@ function SelectScrollUpButton({
       data-slot="select-scroll-up-button"
       className={cn(
         "flex cursor-default items-center justify-center py-1",
-        className
+        className,
       )}
       {...props}
     >
@@ -256,7 +261,7 @@ function SelectScrollDownButton({
       data-slot="select-scroll-down-button"
       className={cn(
         "flex cursor-default items-center justify-center py-1",
-        className
+        className,
       )}
       {...props}
     >

@@ -18,25 +18,26 @@ const errorConfigs = {
   "not-found": {
     icon: FileX,
     title: "Form not found",
-    defaultMessage: "The form you're looking for doesn't exist or has been removed.",
+    defaultMessage:
+      "The form you're looking for doesn't exist or has been removed.",
     showRetry: false,
     showHome: true,
   },
-  "network": {
+  network: {
     icon: WifiOff,
     title: "Connection issue",
     defaultMessage: "Please check your internet connection and try again.",
     showRetry: true,
     showHome: false,
   },
-  "server": {
+  server: {
     icon: AlertCircle,
     title: "Something went wrong",
     defaultMessage: "We're having trouble loading the form. Please try again.",
     showRetry: true,
     showHome: false,
   },
-  "unknown": {
+  unknown: {
     icon: AlertCircle,
     title: "Unexpected error",
     defaultMessage: "An unexpected error occurred. Please try again.",
@@ -62,18 +63,18 @@ export function FormErrorState({
       transition={{ duration: 0.3 }}
       className={cn(
         "flex flex-col items-center justify-center min-h-[400px] p-8 text-center",
-        className
+        className,
       )}
     >
       <div className="rounded-full bg-destructive/10 p-4 mb-4">
         <Icon className="h-12 w-12 text-destructive" />
       </div>
-      
+
       <h2 className="text-2xl font-semibold mb-2">{config.title}</h2>
       <p className="text-muted-foreground max-w-md mb-6">
         {message || config.defaultMessage}
       </p>
-      
+
       <div className="flex gap-3">
         {config.showRetry && onRetry && (
           <Button onClick={onRetry} variant="default">
@@ -82,7 +83,10 @@ export function FormErrorState({
           </Button>
         )}
         {config.showHome && onGoHome && (
-          <Button onClick={onGoHome} variant={config.showRetry ? "outline" : "default"}>
+          <Button
+            onClick={onGoHome}
+            variant={config.showRetry ? "outline" : "default"}
+          >
             <Home className="mr-2 h-4 w-4" />
             Go home
           </Button>
@@ -112,14 +116,14 @@ export function SubmissionError({
       exit={{ opacity: 0, y: 20 }}
       className={cn(
         "flex items-center justify-between gap-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg",
-        className
+        className,
       )}
     >
       <div className="flex items-center gap-3">
         <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
         <p className="text-sm">{message}</p>
       </div>
-      
+
       <div className="flex items-center gap-2">
         {onRetry && (
           <Button size="sm" variant="ghost" onClick={onRetry}>
@@ -149,7 +153,7 @@ export function ValidationError({ message, className }: ValidationErrorProps) {
       exit={{ opacity: 0, height: 0 }}
       className={cn(
         "text-sm text-destructive mt-1 flex items-center gap-1",
-        className
+        className,
       )}
     >
       <AlertCircle className="h-3 w-3" />
@@ -187,7 +191,7 @@ export function FileUploadError({
       exit={{ opacity: 0, scale: 0.95 }}
       className={cn(
         "p-3 bg-destructive/10 border border-destructive/20 rounded-lg",
-        className
+        className,
       )}
     >
       <div className="flex items-start justify-between gap-3">
@@ -197,7 +201,7 @@ export function FileUploadError({
             {fileErrorMessages[error]}
           </p>
         </div>
-        
+
         <div className="flex items-center gap-1">
           {onRetry && (
             <Button size="sm" variant="ghost" onClick={onRetry}>

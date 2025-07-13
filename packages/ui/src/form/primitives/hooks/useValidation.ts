@@ -1,4 +1,4 @@
-import { ValidationError } from '../types';
+import { ValidationError } from "../types";
 
 export interface UseValidationProps<T> {
   value: T;
@@ -15,7 +15,9 @@ export interface UseValidationReturn {
 /**
  * Hook for handling validation logic
  */
-export function useValidation<T>(props: UseValidationProps<T>): UseValidationReturn {
+export function useValidation<T>(
+  props: UseValidationProps<T>,
+): UseValidationReturn {
   // Placeholder implementation
   return {
     errors: [],

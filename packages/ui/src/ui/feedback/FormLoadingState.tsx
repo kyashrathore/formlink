@@ -25,7 +25,7 @@ export function FormLoadingState({
       transition={{ duration: 0.3 }}
       className={cn(
         "flex flex-col items-center justify-center min-h-[400px] p-8",
-        className
+        className,
       )}
     >
       <div className="relative">
@@ -36,9 +36,9 @@ export function FormLoadingState({
           </div>
         )}
       </div>
-      
+
       <p className="mt-4 text-sm text-muted-foreground">{message}</p>
-      
+
       {showProgress && (
         <div className="mt-4 w-full max-w-xs">
           <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
@@ -89,7 +89,7 @@ export function SubmissionLoadingState({
       exit={{ opacity: 0, y: -10 }}
       className={cn(
         "flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-md",
-        className
+        className,
       )}
     >
       <Loader2 className="h-4 w-4 animate-spin" />
@@ -115,7 +115,9 @@ export function FileUploadLoadingState({
         <span className="text-muted-foreground truncate max-w-[200px]">
           {fileName}
         </span>
-        <span className="text-primary font-medium">{Math.round(progress)}%</span>
+        <span className="text-primary font-medium">
+          {Math.round(progress)}%
+        </span>
       </div>
       <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
         <motion.div

@@ -9,11 +9,13 @@ interface UseSelectInputOptions {
   multiple?: boolean;
 }
 
-export function useSelectInput(options: UseSelectInputOptions): UseInputReturn<string | null> {
+export function useSelectInput(
+  options: UseSelectInputOptions,
+): UseInputReturn<string | null> {
   const {
     initialValue = null,
     required = false,
-    options: selectOptions
+    options: selectOptions,
   } = options;
 
   const [value, setValue] = useState<string | null>(initialValue);
@@ -24,11 +26,12 @@ export function useSelectInput(options: UseSelectInputOptions): UseInputReturn<s
   // Filter options based on search
   const filteredOptions = useMemo(() => {
     if (!searchQuery) return selectOptions;
-    
+
     const query = searchQuery.toLowerCase();
-    return selectOptions.filter(option => 
-      option.label.toLowerCase().includes(query) ||
-      option.value.toLowerCase().includes(query)
+    return selectOptions.filter(
+      (option) =>
+        option.label.toLowerCase().includes(query) ||
+        option.value.toLowerCase().includes(query),
     );
   }, [selectOptions, searchQuery]);
 
@@ -41,7 +44,7 @@ export function useSelectInput(options: UseSelectInputOptions): UseInputReturn<s
     }
 
     // Check if selected value is valid
-    if (value && !selectOptions.find(opt => opt.value === value)) {
+    if (value && !selectOptions.find((opt) => opt.value === value)) {
       newErrors.push("Invalid selection");
     }
 
@@ -60,7 +63,7 @@ export function useSelectInput(options: UseSelectInputOptions): UseInputReturn<s
       }
 
       // Check if selected value is valid
-      if (value && !selectOptions.find(opt => opt.value === value)) {
+      if (value && !selectOptions.find((opt) => opt.value === value)) {
         newErrors.push("Invalid selection");
       }
 
@@ -80,36 +83,39 @@ export function useSelectInput(options: UseSelectInputOptions): UseInputReturn<s
   }, []);
 
   // Keyboard navigation helpers
-  const handleKeyboard = useCallback((key: string) => {
-    // Handle letter/number shortcuts
-    if (key.length === 1) {
-      const upperKey = key.toUpperCase();
-      const index = upperKey.charCodeAt(0) - 65; // A=0, B=1, etc
-      
-      if (index >= 0 && index < selectOptions.length) {
-        const option = selectOptions[index];
-        if (option) {
-          handleChange(option.value);
-          return true;
+  const handleKeyboard = useCallback(
+    (key: string) => {
+      // Handle letter/number shortcuts
+      if (key.length === 1) {
+        const upperKey = key.toUpperCase();
+        const index = upperKey.charCodeAt(0) - 65; // A=0, B=1, etc
+
+        if (index >= 0 && index < selectOptions.length) {
+          const option = selectOptions[index];
+          if (option) {
+            handleChange(option.value);
+            return true;
+          }
+        }
+
+        // Try number shortcuts
+        const num = parseInt(key);
+        if (!isNaN(num) && num > 0 && num <= selectOptions.length) {
+          const option = selectOptions[num - 1];
+          if (option) {
+            handleChange(option.value);
+            return true;
+          }
         }
       }
-      
-      // Try number shortcuts
-      const num = parseInt(key);
-      if (!isNaN(num) && num > 0 && num <= selectOptions.length) {
-        const option = selectOptions[num - 1];
-        if (option) {
-          handleChange(option.value);
-          return true;
-        }
-      }
-    }
-    return false;
-  }, [handleChange]); // Removed selectOptions to prevent infinite loop
+      return false;
+    },
+    [handleChange],
+  ); // Removed selectOptions to prevent infinite loop
 
   const handlers = {
     onKeyPress: handleKeyboard,
-    setSearchQuery
+    setSearchQuery,
   };
 
   return {
@@ -121,7 +127,7 @@ export function useSelectInput(options: UseSelectInputOptions): UseInputReturn<s
     clearErrors,
     handlers: {
       ...handlers,
-      filteredOptions
-    } as any
+      filteredOptions,
+    } as any,
   };
 }

@@ -1,12 +1,12 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { UIAddressData } from '../../../types/generic';
-import { BaseAddress } from '../../primitives';
-import { cn } from '../../../lib/utils';
-import { Button } from '../../../ui/button';
-import { ArrowRight } from 'lucide-react';
+import React from "react";
+import { motion } from "motion/react";
+import { UIAddressData } from "../../../types/generic";
+import { BaseAddress } from "../../primitives";
+import { cn } from "../../../lib/utils";
+import { Button } from "../../../ui/button";
+import { ArrowRight } from "lucide-react";
 
-export type FormMode = 'chat' | 'typeform';
+export type FormMode = "chat" | "typeform";
 
 export interface UnifiedAddressInputProps {
   mode: FormMode;
@@ -40,13 +40,13 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
     required = false,
     requiredFields = [
       "street1",
-      "city", 
+      "city",
       "stateProvince",
       "postalCode",
       "country",
     ],
     autoFocus = true,
-    className
+    className,
   } = props;
 
   // Use BaseAddress primitive for all field state management and validation
@@ -62,41 +62,41 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
     onSubmit,
   });
 
-  const {
-    fieldProps,
-    isComplete,
-    errors,
-    isTouched,
-    validate,
-  } = addressPrimitive;
+  const { fieldProps, isComplete, errors, isTouched, validate } =
+    addressPrimitive;
 
   // Field order for rendering
   const fieldOrder: (keyof UIAddressData)[] = [
-    'street1',
-    'street2',
-    'city',
-    'stateProvince',
-    'postalCode',
-    'country',
+    "street1",
+    "street2",
+    "city",
+    "stateProvince",
+    "postalCode",
+    "country",
   ];
 
-  const handleKeyDown = (e: React.KeyboardEvent, field: keyof UIAddressData) => {
+  const handleKeyDown = (
+    e: React.KeyboardEvent,
+    field: keyof UIAddressData,
+  ) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      
+
       // Find current field index
       const currentIndex = fieldOrder.indexOf(field);
-      
+
       // Try to focus next field
       if (currentIndex < fieldOrder.length - 1) {
         const nextField = fieldOrder[currentIndex + 1];
         if (nextField) {
-          const nextInput = document.querySelector(`input[id="${fieldProps[nextField].id}"]`) as HTMLInputElement;
+          const nextInput = document.querySelector(
+            `input[id="${fieldProps[nextField].id}"]`,
+          ) as HTMLInputElement;
           if (nextInput) {
             nextInput.focus();
           }
         }
-      } else if (isComplete && onSubmit && mode === 'chat') {
+      } else if (isComplete && onSubmit && mode === "chat") {
         // Only submit on Enter in chat mode when complete
         onSubmit();
       }
@@ -105,21 +105,21 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
   };
 
   // Mode-specific styling
-  const containerClass = mode === 'chat' 
-    ? "w-full space-y-6" 
-    : "w-full space-y-4";
+  const containerClass =
+    mode === "chat" ? "w-full space-y-6" : "w-full space-y-4";
 
-  const inputClass = mode === 'chat'
-    ? cn(
-        "w-full px-4 py-3 border-2 rounded-lg transition-all duration-200",
-        "text-lg placeholder:text-muted-foreground/50",
-        "focus:outline-none focus:border-primary focus:ring-0"
-      )
-    : cn(
-        "w-full px-3 py-2 border rounded-lg transition-all duration-200",
-        "text-base placeholder:text-muted-foreground/50",
-        "focus:outline-none focus:border-primary focus:ring-0"
-      );
+  const inputClass =
+    mode === "chat"
+      ? cn(
+          "w-full px-4 py-3 border-2 rounded-lg transition-all duration-200",
+          "text-lg placeholder:text-muted-foreground/50",
+          "focus:outline-none focus:border-primary focus:ring-0",
+        )
+      : cn(
+          "w-full px-3 py-2 border rounded-lg transition-all duration-200",
+          "text-base placeholder:text-muted-foreground/50",
+          "focus:outline-none focus:border-primary focus:ring-0",
+        );
 
   return (
     <div className={cn(containerClass, className)}>
@@ -130,7 +130,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
           const { domProps, state } = fieldData;
           const hasError = state.touched && state.error;
           const fieldValue = domProps.value;
-          
+
           return (
             <motion.div
               key={field}
@@ -139,11 +139,11 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
               transition={{ delay: index * 0.1 }}
               className={cn("space-y-2", fieldGridConfig[field])}
             >
-              <label 
+              <label
                 htmlFor={domProps.id}
                 className="block text-sm font-medium text-foreground"
               >
-                {domProps['aria-label']}
+                {domProps["aria-label"]}
                 {state.required && <span className="text-red-500 ml-1">*</span>}
               </label>
               <input
@@ -154,14 +154,14 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
                 }}
                 className={cn(
                   inputClass,
-                  hasError 
-                    ? "border-red-500 bg-red-50/50" 
-                    : fieldValue 
+                  hasError
+                    ? "border-red-500 bg-red-50/50"
+                    : fieldValue
                       ? "border-green-500 bg-green-50/30"
-                      : mode === 'chat'
+                      : mode === "chat"
                         ? "border-muted hover:border-muted-foreground/50"
                         : "border-border hover:border-border-hover",
-                  domProps.disabled && "opacity-50 cursor-not-allowed"
+                  domProps.disabled && "opacity-50 cursor-not-allowed",
                 )}
               />
             </motion.div>
@@ -181,23 +181,23 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
       )}
 
       {/* Submit Button - ONLY for Chat Mode */}
-      {mode === 'chat' && onSubmit && isComplete && (
+      {mode === "chat" && onSubmit && isComplete && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="flex items-center mt-4"
         >
-          <Button 
+          <Button
             onClick={() => {
               // Validate on submit - only place validation should happen
               const validationErrors = validate();
               if (validationErrors.length === 0 && onSubmit) {
                 onSubmit();
               }
-            }} 
+            }}
             disabled={disabled}
-            size="lg" 
+            size="lg"
             className="group"
           >
             Continue
@@ -205,7 +205,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
           </Button>
         </motion.div>
       )}
-      
+
       {/* TypeForm Mode: No continue button - let parent handle navigation */}
     </div>
   );

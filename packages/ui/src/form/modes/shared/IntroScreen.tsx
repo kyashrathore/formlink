@@ -13,28 +13,34 @@ export interface IntroScreenProps {
   className?: string;
 }
 
-export function IntroScreen({ formSchema, onStart, className }: IntroScreenProps) {
+export function IntroScreen({
+  formSchema,
+  onStart,
+  className,
+}: IntroScreenProps) {
   const { mode } = useFormMode();
-  
+
   if (!formSchema) return null;
 
   return (
-    <div className={cn(
-      "flex flex-col items-center justify-center min-h-screen px-4 py-12",
-      className
-    )}>
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center min-h-screen px-4 py-12",
+        className,
+      )}
+    >
       <div className="w-full max-w-md text-center space-y-6">
-        <h1 className={cn(
-          "text-3xl font-bold mb-4",
-          mode === "typeform" ? "text-foreground" : "text-primary"
-        )}>
+        <h1
+          className={cn(
+            "text-3xl font-bold mb-4",
+            mode === "typeform" ? "text-foreground" : "text-primary",
+          )}
+        >
           {formSchema.title}
         </h1>
 
         {formSchema.description && (
-          <p className="text-muted-foreground mb-8">
-            {formSchema.description}
-          </p>
+          <p className="text-muted-foreground mb-8">{formSchema.description}</p>
         )}
 
         <Button

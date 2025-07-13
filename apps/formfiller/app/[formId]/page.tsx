@@ -6,7 +6,6 @@ import { notFound } from "next/navigation";
 import { FormErrorState } from "@formlink/ui";
 
 async function getFormSchemaById(shortId: string): Promise<Form | null> {
-
   const supabase = await createServerClient(null, "service");
 
   const { data: formData, error: formError } = await supabase
@@ -19,7 +18,7 @@ async function getFormSchemaById(shortId: string): Promise<Form | null> {
     if (formError && formError.code !== "PGRST116") {
       console.error(
         `Supabase error fetching form ${shortId}:`,
-        formError.message
+        formError.message,
       );
     }
     return null;
@@ -49,7 +48,7 @@ async function getFormSchemaById(shortId: string): Promise<Form | null> {
     if (versionError && versionError.code !== "PGRST116") {
       console.error(
         `Supabase error fetching ${versionStatus} version ${versionId} for form ${shortId}:`,
-        versionError.message
+        versionError.message,
       );
     }
     return null;
@@ -78,7 +77,7 @@ async function getFormSchemaById(shortId: string): Promise<Form | null> {
     if (!validationResult.success) {
       console.error(
         `Server Schema Validation Error for form ${formData.id} (version ${versionData.version_id}):`,
-        validationResult.error.errors
+        validationResult.error.errors,
       );
 
       return null;
@@ -88,7 +87,7 @@ async function getFormSchemaById(shortId: string): Promise<Form | null> {
   } catch (castError) {
     console.error(
       `Error constructing form schema object for version ${versionId}:`,
-      castError
+      castError,
     );
     return null;
   }
@@ -119,15 +118,16 @@ export default async function FormPage({
     typeof awaitedSearchParams?.formlinkai_testmode === "string"
       ? awaitedSearchParams.formlinkai_testmode === "true"
       : Array.isArray(awaitedSearchParams?.formlinkai_testmode)
-      ? awaitedSearchParams.formlinkai_testmode[0] === "true"
-      : false;
+        ? awaitedSearchParams.formlinkai_testmode[0] === "true"
+        : false;
 
   // Extract query parameters specified in formSchema.settings.additionalFields.queryParamater
   let queryDataForForm: Record<string, any> = {};
-  const queryParamList =
-    Array.isArray(formSchema?.settings?.additionalFields?.queryParamater)
-      ? formSchema.settings.additionalFields.queryParamater
-      : [];
+  const queryParamList = Array.isArray(
+    formSchema?.settings?.additionalFields?.queryParamater,
+  )
+    ? formSchema.settings.additionalFields.queryParamater
+    : [];
   if (queryParamList.length > 0) {
     for (const param of queryParamList) {
       if (typeof param === "string" && param in awaitedSearchParams) {

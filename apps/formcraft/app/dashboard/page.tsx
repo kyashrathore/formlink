@@ -5,7 +5,7 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { FormWithVersions } from "./types"
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default async function Home() {
   const cookieStore = await cookies()

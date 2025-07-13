@@ -26,7 +26,7 @@ interface RepairableQuestion {
 export function repairQuestionInputTypes(questions: any[]): any[] {
   if (!Array.isArray(questions)) {
     console.warn(
-      "repairQuestionInputTypes: input was not an array, returning as is."
+      "repairQuestionInputTypes: input was not an array, returning as is.",
     );
     return questions;
   }

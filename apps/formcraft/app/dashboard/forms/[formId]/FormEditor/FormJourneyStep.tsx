@@ -112,7 +112,8 @@ const FormJourneyStep = ({
     formId: form?.id,
     hasJourneyScript: !!form?.settings?.journeyScript,
     journeyScriptLength: form?.settings?.journeyScript?.length,
-    journeyScriptPreview: form?.settings?.journeyScript?.substring(0, 50) + "..."
+    journeyScriptPreview:
+      form?.settings?.journeyScript?.substring(0, 50) + "...",
   })
 
   // Get initial content from form settings
@@ -121,7 +122,7 @@ const FormJourneyStep = ({
 
     console.log("[FormJourneyStep] getInitialContent called", {
       hasJourneyScript: !!journeyScript,
-      journeyScriptType: typeof journeyScript
+      journeyScriptType: typeof journeyScript,
     })
 
     if (!journeyScript) return ""
@@ -152,12 +153,12 @@ const FormJourneyStep = ({
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(true)
   // State to track if content has been modified
   const [isModified, setIsModified] = useState<boolean>(false)
-  
+
   // Reset state when form ID changes
   useEffect(() => {
     console.log("[FormJourneyStep] Form ID changed, resetting state", {
       formId: form?.id,
-      hadContent: !!journeyScriptContent
+      hadContent: !!journeyScriptContent,
     })
     setJourneyScriptContent(getInitialContent())
     setIsModified(false)

@@ -11,7 +11,9 @@ interface DashboardLayoutClientProps {
   children: React.ReactNode
 }
 
-export default function DashboardLayoutClient({ children }: DashboardLayoutClientProps) {
+export default function DashboardLayoutClient({
+  children,
+}: DashboardLayoutClientProps) {
   const params = useParams()
   const searchParams = useSearchParams()
   const [activeFormId, setActiveFormId] = useState<string | null>(null)
@@ -75,13 +77,16 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
           userId={userId}
           layoutId="agent-panel-shared"
           showSuggestions={true}
-          initialMessage={(console.log("[DashboardLayout] Rendering AgentInteractionPanel", {
-            activeFormId,
-            hasInitialPrompt: !!initialPrompt,
-            hasUrlPrompt: !!urlPrompt,
-            initialPrompt,
-            urlPrompt
-          }), urlPrompt || initialPrompt || undefined)}
+          initialMessage={
+            (console.log("[DashboardLayout] Rendering AgentInteractionPanel", {
+              activeFormId,
+              hasInitialPrompt: !!initialPrompt,
+              hasUrlPrompt: !!urlPrompt,
+              initialPrompt,
+              urlPrompt,
+            }),
+            urlPrompt || initialPrompt || undefined)
+          }
         />
       )}
     </>

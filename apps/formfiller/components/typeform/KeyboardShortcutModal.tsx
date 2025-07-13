@@ -40,19 +40,21 @@ export default function KeyboardShortcutModal({
             Navigate and answer questions quickly using your keyboard
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-3 mt-4">
           {shortcuts.map((shortcut) => (
             <div
               key={shortcut.key}
               className="flex items-center justify-between py-2"
             >
-              <kbd className={cn(
-                "px-2 py-1 text-xs font-semibold",
-                "bg-muted text-muted-foreground",
-                "border rounded-md",
-                "min-w-[80px] text-center"
-              )}>
+              <kbd
+                className={cn(
+                  "px-2 py-1 text-xs font-semibold",
+                  "bg-muted text-muted-foreground",
+                  "border rounded-md",
+                  "min-w-[80px] text-center",
+                )}
+              >
                 {shortcut.key}
               </kbd>
               <span className="text-sm text-muted-foreground ml-4">
@@ -61,9 +63,10 @@ export default function KeyboardShortcutModal({
             </div>
           ))}
         </div>
-        
+
         <div className="mt-6 text-xs text-muted-foreground text-center">
-          Press <kbd className="px-1 py-0.5 text-xs border rounded">Esc</kbd> to close
+          Press <kbd className="px-1 py-0.5 text-xs border rounded">Esc</kbd> to
+          close
         </div>
       </DialogContent>
     </Dialog>

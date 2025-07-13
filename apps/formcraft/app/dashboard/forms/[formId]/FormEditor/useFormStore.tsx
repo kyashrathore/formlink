@@ -126,10 +126,11 @@ const formStore: StateCreator<
       formId: form.id,
       hasJourneyScript: !!form.settings?.journeyScript,
       journeyScriptLength: form.settings?.journeyScript?.length,
-      journeyScriptPreview: form.settings?.journeyScript?.substring(0, 50) + "...",
-      settingsKeys: form.settings ? Object.keys(form.settings) : []
+      journeyScriptPreview:
+        form.settings?.journeyScript?.substring(0, 50) + "...",
+      settingsKeys: form.settings ? Object.keys(form.settings) : [],
     })
-    
+
     const firstQuestionId = form.questions?.[0]?.id ?? null
 
     const questionsWithLists: QuestionWithLists[] = form.questions.map(
@@ -154,7 +155,7 @@ const formStore: StateCreator<
     // Only include properties that are explicitly in the new form
     // Don't merge with defaults to avoid persisting old data
     const effectiveSettings = form.settings || getDefaultSettings()
-    
+
     const processedForm = {
       ...form,
       settings: effectiveSettings,

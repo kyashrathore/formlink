@@ -9,10 +9,7 @@ import { FormInputType } from "./registry";
 interface InputContainerProps {
   currentQuestion: UIQuestion;
   currentResponse: UIResponseValue;
-  handleSelect: (
-    questionId: string,
-    value: UIResponseValue
-  ) => void;
+  handleSelect: (questionId: string, value: UIResponseValue) => void;
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
   showNextButton?: boolean;
   disabled?: boolean;
@@ -28,10 +25,10 @@ function mapQuestionToUnifiedProps(
   question: UIQuestion,
   currentResponse: UIResponseValue,
   handleSelect: (questionId: string, value: UIResponseValue) => void,
-  onNext?: () => void
+  onNext?: () => void,
 ) {
   const questionType = question.questionType;
-  
+
   // Map questionType to FormInputType
   let type: FormInputType;
   switch (questionType) {
@@ -76,15 +73,27 @@ function mapQuestionToUnifiedProps(
 
   // Convert currentResponse to appropriate format and handle null values
   let value = currentResponse;
-  if (type === "date" && typeof currentResponse === "string" && currentResponse) {
+  if (
+    type === "date" &&
+    typeof currentResponse === "string" &&
+    currentResponse
+  ) {
     value = currentResponse; // Keep as string for UIResponseValue compatibility
   }
-  
+
   // Ensure inputs never receive null values - convert to appropriate defaults
-  if ((type === "text" || type === "email" || type === "url" || type === "tel" || type === "password" || type === "textarea") && value === null) {
+  if (
+    (type === "text" ||
+      type === "email" ||
+      type === "url" ||
+      type === "tel" ||
+      type === "password" ||
+      type === "textarea") &&
+    value === null
+  ) {
     value = "";
   }
-  
+
   // Ranking expects an array, handle JSON strings and null values
   if (type === "ranking") {
     if (value === null) {
@@ -99,12 +108,12 @@ function mapQuestionToUnifiedProps(
       value = [];
     }
   }
-  
-  // MultiSelect expects an array, not null  
+
+  // MultiSelect expects an array, not null
   if ((type === "multiselect" || type === "multipleChoice") && value === null) {
     value = [];
   }
-  
+
   // Base props
   const baseProps = {
     type,
@@ -119,7 +128,9 @@ function mapQuestionToUnifiedProps(
     },
     onSubmit: onNext as (() => void) | undefined,
     disabled: false,
-    required: Boolean(question.validations?.required?.value || question.required),
+    required: Boolean(
+      question.validations?.required?.value || question.required,
+    ),
     placeholder: question.placeholder || question.display?.placeholder,
   };
 
@@ -127,11 +138,12 @@ function mapQuestionToUnifiedProps(
   if (type === "select" || type === "multipleChoice" || type === "ranking") {
     (baseProps as Record<string, unknown>).options = question.options || [];
   }
-  
+
   if (type === "rating") {
-    (baseProps as Record<string, unknown>).max = question.ratingConfig?.max || 5;
+    (baseProps as Record<string, unknown>).max =
+      question.ratingConfig?.max || 5;
   }
-  
+
   if (type === "linear-scale") {
     const linearConfig = question.linearScaleConfig;
     (baseProps as Record<string, unknown>).config = {
@@ -142,9 +154,10 @@ function mapQuestionToUnifiedProps(
       endLabel: linearConfig?.endLabel,
     };
   }
-  
+
   if (type === "fileUpload") {
-    (baseProps as Record<string, unknown>).accept = question.validations?.fileTypes;
+    (baseProps as Record<string, unknown>).accept =
+      question.validations?.fileTypes;
     (baseProps as Record<string, unknown>).maxSize = 5 * 1024 * 1024; // 5MB default
   }
 
@@ -153,23 +166,16 @@ function mapQuestionToUnifiedProps(
 
 export function InputContainer(props: InputContainerProps) {
   const { mode } = useFormMode();
-  const { 
-    currentQuestion, 
-    currentResponse, 
-    handleSelect, 
-    onNext
-  } = props;
-  
-  
+  const { currentQuestion, currentResponse, handleSelect, onNext } = props;
+
   // Map to unified props
   const unifiedProps = mapQuestionToUnifiedProps(
     currentQuestion,
     currentResponse,
     handleSelect,
-    onNext
+    onNext,
   );
   const { handleFileUpload, uploadedFile, onFileSelect, isUploading } = props;
-
 
   // Extract file upload props to pass through
 

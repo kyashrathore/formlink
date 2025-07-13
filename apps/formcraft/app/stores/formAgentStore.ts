@@ -58,14 +58,19 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
               newFormId: formId,
               currentFormId: state.formId,
               hasCurrentForm: !!state.currentForm,
-              currentFormHasJourneyScript: !!state.currentForm?.settings?.journeyScript,
-              willReset: state.formId && state.formId !== formId
+              currentFormHasJourneyScript:
+                !!state.currentForm?.settings?.journeyScript,
+              willReset: state.formId && state.formId !== formId,
             })
-            
+
             // If we're initializing for a different form OR if we have stale form data, clear everything
-            if ((state.formId && state.formId !== formId) || 
-                (state.currentForm && state.currentForm.id !== formId)) {
-              console.log("[AgentStore] Resetting store for new form or clearing stale data")
+            if (
+              (state.formId && state.formId !== formId) ||
+              (state.currentForm && state.currentForm.id !== formId)
+            ) {
+              console.log(
+                "[AgentStore] Resetting store for new form or clearing stale data"
+              )
               const newState = {
                 ...initialState,
                 formId,
@@ -75,12 +80,14 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
               console.log("[AgentStore] New state after reset:", {
                 formId: newState.formId,
                 hasCurrentForm: !!newState.currentForm,
-                currentFormIsNull: newState.currentForm === null
+                currentFormIsNull: newState.currentForm === null,
               })
               return newState
             }
             // Same form, just update connection status
-            console.log("[AgentStore] Same form, updating connection status only")
+            console.log(
+              "[AgentStore] Same form, updating connection status only"
+            )
             return {
               ...state,
               formId,
@@ -115,17 +122,26 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
                     eventFormId: snapshotEvent.formId,
                     stateFormId: state.formId,
                     formIdMatch: snapshotEvent.formId === state.formId,
-                    hasJourneyScript: !!snapshotEvent.data.form?.settings?.journeyScript,
-                    journeyScriptPreview: snapshotEvent.data.form?.settings?.journeyScript?.substring(0, 50) + "..."
+                    hasJourneyScript:
+                      !!snapshotEvent.data.form?.settings?.journeyScript,
+                    journeyScriptPreview:
+                      snapshotEvent.data.form?.settings?.journeyScript?.substring(
+                        0,
+                        50
+                      ) + "...",
                   })
-                  
+
                   // Only update if this event is for the current form
                   if (snapshotEvent.formId === state.formId) {
                     newCurrentForm = snapshotEvent.data.form
                     newAgentState = snapshotEvent.data.agentState
-                    console.log("[AgentStore] Applied state snapshot for current form")
+                    console.log(
+                      "[AgentStore] Applied state snapshot for current form"
+                    )
                   } else {
-                    console.log("[AgentStore] Ignoring state snapshot for different form")
+                    console.log(
+                      "[AgentStore] Ignoring state snapshot for different form"
+                    )
                   }
                 }
                 break

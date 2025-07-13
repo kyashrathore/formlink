@@ -16,21 +16,33 @@ export async function POST(request: Request) {
   if (!file || !formId || !submissionId || !questionId) {
     return NextResponse.json(
       { error: "Missing required fields." },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
   // Validate file extension
-  const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx', 'txt'];
+  const allowedExtensions = [
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "pdf",
+    "doc",
+    "docx",
+    "txt",
+  ];
   const fileExtension = file.name.split(".").pop()?.toLowerCase();
-  
+
   if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
     return NextResponse.json(
-      { error: "Invalid file type. Allowed types: " + allowedExtensions.join(", ") },
-      { status: 400 }
+      {
+        error:
+          "Invalid file type. Allowed types: " + allowedExtensions.join(", "),
+      },
+      { status: 400 },
     );
   }
-  
+
   const fileName = `${uuidv4()}.${fileExtension}`;
   const filePath = `${formId}/${submissionId}+${questionId}_${fileName}`;
 
@@ -49,7 +61,10 @@ export async function POST(request: Request) {
       .getPublicUrl(filePath);
 
     if (!publicUrlData) {
-        return NextResponse.json({ error: "Could not get public URL." }, { status: 500 });
+      return NextResponse.json(
+        { error: "Could not get public URL." },
+        { status: 500 },
+      );
     }
 
     const attachmentData = {
@@ -81,7 +96,7 @@ export async function POST(request: Request) {
     console.error("Upload error:", error);
     return NextResponse.json(
       { error: "An unexpected error occurred." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

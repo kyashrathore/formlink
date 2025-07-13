@@ -1,9 +1,9 @@
 "use client";
 
-import React from 'react';
-import { BaseTextInput } from '../../primitives/BaseTextInput';
-import { Input } from '../../../ui/input';
-import { cn } from '../../../lib/utils';
+import React from "react";
+import { BaseTextInput } from "../../primitives/BaseTextInput";
+import { Input } from "../../../ui/input";
+import { cn } from "../../../lib/utils";
 
 export interface ChatPhoneInputProps {
   value: string;
@@ -22,11 +22,7 @@ export function ChatPhoneInput({
   disabled = false,
   required = false,
 }: ChatPhoneInputProps) {
-  const {
-    inputProps,
-    errors,
-    isTouched,
-  } = BaseTextInput({
+  const { inputProps, errors, isTouched } = BaseTextInput({
     value,
     onChange,
     disabled,
@@ -38,14 +34,19 @@ export function ChatPhoneInput({
     pattern: "^[+]?[(]?[0-9]{3}[)]?[-\\s.]?[(]?[0-9]{3}[)]?[-\\s.]?[0-9]{4,6}$",
     onValidate: (val) => {
       const errors = [];
-      if (val && !val.match(/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{4,6}$/)) {
+      if (
+        val &&
+        !val.match(
+          /^[+]?[(]?[0-9]{3}[)]?[-\s.]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{4,6}$/,
+        )
+      ) {
         errors.push({
-          type: 'pattern',
-          message: 'Please enter a valid phone number'
+          type: "pattern",
+          message: "Please enter a valid phone number",
         });
       }
       return errors;
-    }
+    },
   });
 
   const showError = isTouched && errors.length > 0;
@@ -65,17 +66,14 @@ export function ChatPhoneInput({
           className={cn(
             "w-full px-4 py-3 rounded-lg border-2 border-border bg-background text-foreground placeholder:text-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:border-primary hover:border-border",
             showError && "border-destructive focus:ring-destructive",
-            disabled && "opacity-50 cursor-not-allowed"
+            disabled && "opacity-50 cursor-not-allowed",
           )}
         />
       </div>
-      
+
       {showError && (
-        <p className="text-sm text-destructive">
-          {errors[0]?.message}
-        </p>
+        <p className="text-sm text-destructive">{errors[0]?.message}</p>
       )}
-      
     </div>
   );
 }

@@ -24,7 +24,8 @@ import {
   List,
   Book,
   Star,
-  Sparkle,AddressBookTabs,
+  Sparkle,
+  AddressBookTabs,
 } from "@phosphor-icons/react/dist/ssr";
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5;

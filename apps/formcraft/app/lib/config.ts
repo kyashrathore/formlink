@@ -1,11 +1,6 @@
 import { getenv } from "@/lib/env"
 import { openai } from "@ai-sdk/openai"
-import {
-  ClaudeIcon,
-  GeminiIcon,
-  MistralIcon,
-  OpenAIIcon,
-} from "@formlink/ui"
+import { ClaudeIcon, GeminiIcon, MistralIcon, OpenAIIcon } from "@formlink/ui"
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5
 export const AUTH_DAILY_MESSAGE_LIMIT = 100

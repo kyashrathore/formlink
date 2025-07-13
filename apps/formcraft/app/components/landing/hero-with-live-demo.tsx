@@ -242,7 +242,7 @@ export function HeroWithLiveDemo() {
           // Anonymous sign-in successful, creating user record
 
           // Check localStorage for existing anonymous session
-          const existingAnonymousId = localStorage.getItem('anonymous_user_id')
+          const existingAnonymousId = localStorage.getItem("anonymous_user_id")
           let userCreationSkipped = false
 
           if (existingAnonymousId === data.user.id) {
@@ -291,12 +291,12 @@ export function HeroWithLiveDemo() {
               } else {
                 // User record created successfully
                 // Store the anonymous user ID for future visits
-                localStorage.setItem('anonymous_user_id', data.user.id)
+                localStorage.setItem("anonymous_user_id", data.user.id)
               }
             } else if (existingUser) {
               // User already exists, continuing
               // Store the anonymous user ID for future visits
-              localStorage.setItem('anonymous_user_id', data.user.id)
+              localStorage.setItem("anonymous_user_id", data.user.id)
             } else if (checkError?.code === "42501") {
               // RLS prevents checking user existence, continuing
               userCreationSkipped = true
@@ -330,10 +330,12 @@ export function HeroWithLiveDemo() {
 
           // Clear the input after successful redirect
           setInputValue("")
-          
+
           // Redirect to form editor with prompt as query parameter
           const params = new URLSearchParams({ prompt: prompt })
-          router.push(`/dashboard/forms/${formIdRef.current}?${params.toString()}`)
+          router.push(
+            `/dashboard/forms/${formIdRef.current}?${params.toString()}`
+          )
         }
       } catch (error) {
         // Error during anonymous sign-in

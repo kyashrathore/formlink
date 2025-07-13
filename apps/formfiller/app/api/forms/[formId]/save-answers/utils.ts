@@ -1,44 +1,42 @@
 // Save a single answer (partial saving)
 export async function saveIndividualFormAnswer(
-    supabase: any,
-    submissionId: string,
-    versionId: string,
-    questionId: string,
-    answerValue: any,
-    isComplete: boolean,
-    testmode: boolean
-  ) {
-    const { error: submissionError } = await supabase
-      .from("form_submissions")
-      .upsert({
-        submission_id: submissionId,
-        form_version_id: versionId,
-        status: isComplete ? "completed" : "in_progress",
-        testmode,
-      });
-  
-    if (submissionError) {
-      console.error("Error upserting form_submission record:", submissionError);
-      return;
-    }
-  
-    const { error: saveError } = await supabase
-      .from("form_answers")
-      .upsert([
-        {
-          submission_id: submissionId,
-          question_id: questionId,
-          answer_value: answerValue,
-        },
-      ]);
-  
-    if (saveError) {
-      console.error("Error saving response to DB:", saveError);
-    } else {
-      console.log(`[API] Saved answer for question ${questionId} successfully.`);
-    }
+  supabase: any,
+  submissionId: string,
+  versionId: string,
+  questionId: string,
+  answerValue: any,
+  isComplete: boolean,
+  testmode: boolean,
+) {
+  const { error: submissionError } = await supabase
+    .from("form_submissions")
+    .upsert({
+      submission_id: submissionId,
+      form_version_id: versionId,
+      status: isComplete ? "completed" : "in_progress",
+      testmode,
+    });
+
+  if (submissionError) {
+    console.error("Error upserting form_submission record:", submissionError);
+    return;
   }
-  
+
+  const { error: saveError } = await supabase.from("form_answers").upsert([
+    {
+      submission_id: submissionId,
+      question_id: questionId,
+      answer_value: answerValue,
+    },
+  ]);
+
+  if (saveError) {
+    console.error("Error saving response to DB:", saveError);
+  } else {
+    console.log(`[API] Saved answer for question ${questionId} successfully.`);
+  }
+}
+
 // Save all answers at once (bulk save)
 export async function saveAllFormAnswers(
   supabase: any,
@@ -46,7 +44,7 @@ export async function saveAllFormAnswers(
   versionId: string,
   allResponses: Record<string, any>,
   isComplete: boolean,
-  testmode: boolean
+  testmode: boolean,
 ) {
   const { error: submissionError } = await supabase
     .from("form_submissions")
@@ -60,7 +58,7 @@ export async function saveAllFormAnswers(
   if (submissionError) {
     console.error(
       "Error upserting form_submission record as completed:",
-      submissionError
+      submissionError,
     );
     return;
   }
@@ -75,7 +73,7 @@ export async function saveAllFormAnswers(
       submission_id: submissionId,
       question_id,
       answer_value,
-    })
+    }),
   );
 
   const { error: saveError } = await supabase

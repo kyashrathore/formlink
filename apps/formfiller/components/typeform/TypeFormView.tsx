@@ -29,7 +29,11 @@ interface TypeFormViewProps {
   onInitialize: (schema: any, id?: string) => Promise<void>;
   onStartQuiz: () => void;
   onRestart: () => Promise<void>;
-  onAnswerChange: (questionId: string, value: any, questionType: Question["questionType"]) => void;
+  onAnswerChange: (
+    questionId: string,
+    value: any,
+    questionType: Question["questionType"],
+  ) => void;
   onFileUpload: (questionId: string, file: File) => Promise<string | null>;
   onNavigateNext: (currentIndex: number) => number | null;
   onMarkCompleted: () => void;
@@ -38,9 +42,9 @@ interface TypeFormViewProps {
   getProgress: (activeIndex: number) => number;
 }
 
-export default function TypeFormView({ 
-  formSchema, 
-  uiFormSchema, 
+export default function TypeFormView({
+  formSchema,
+  uiFormSchema,
   formId,
   questions,
   questionResponses,
@@ -59,14 +63,15 @@ export default function TypeFormView({
   const isMobileView = useIsMobile();
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [direction, setDirection] = useState(1);
-  
+
   // Local UI state (previously from useFormUIStore)
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(-1); // -1 for intro screen
   const [showConfetti, setShowConfetti] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const currentQuestion: Question | null = getCurrentQuestion(activeQuestionIndex);
+  const currentQuestion: Question | null =
+    getCurrentQuestion(activeQuestionIndex);
 
   useEffect(() => {
     if (formSchema) {
@@ -90,13 +95,18 @@ export default function TypeFormView({
   const handleSelectAndNavigate = (
     questionId: string,
     value: any,
-    questionType: Question["questionType"]
+    questionType: Question["questionType"],
   ) => {
     // Call the business logic callback
     onAnswerChange(questionId, value, questionType);
-    
+
     // Auto-advance for single-selection question types
-    const autoAdvanceTypes = ["singleChoice", "rating", "linearScale", "likertScale"];
+    const autoAdvanceTypes = [
+      "singleChoice",
+      "rating",
+      "linearScale",
+      "likertScale",
+    ];
     if (autoAdvanceTypes.includes(questionType)) {
       setTimeout(() => {
         handleNextWithDirection();
@@ -116,7 +126,7 @@ export default function TypeFormView({
       }
     }
   };
-  
+
   // Track direction for next navigation
   const handleNextWithDirection = () => {
     setDirection(1); // Going forwards
@@ -223,40 +233,45 @@ export default function TypeFormView({
   const progress = getProgress(activeQuestionIndex);
 
   return (
-    <FormModeProvider defaultMode="typeform" formSettings={{ defaultMode: "typeform" }} urlSearchParams={{}}>
+    <FormModeProvider
+      defaultMode="typeform"
+      formSettings={{ defaultMode: "typeform" }}
+      urlSearchParams={{}}
+    >
       <TypeFormDropdownProvider>
-      {activeQuestionIndex >= 0 && !isCompleted && (
-        <TypeFormProgress 
-          progress={progress}
-          current={activeQuestionIndex + 1}
-          total={questions.length}
-        />
-      )}
-      <TypeFormLayout>
-        <AnimatePresence mode="wait">
-          {renderContent()}
-        </AnimatePresence>
-      
-      {/* Navigation Arrows */}
-      {activeQuestionIndex >= 0 && !isCompleted && (
-        <TypeFormNavigation
-          onPrevious={handlePrevious}
-          onNext={handleNextWithDirection}
-          canGoPrevious={activeQuestionIndex > 0}
-          canGoNext={currentQuestion ? (
-            currentQuestion.questionType === "text" 
-              ? (questionResponses[currentQuestion.id] || "").trim() !== ""
-              : questionResponses[currentQuestion.id] != null
-          ) : false}
-        />
-      )}
-      
-        <KeyboardShortcutModal
-          open={showKeyboardHelp}
-          onOpenChange={setShowKeyboardHelp}
-        />
-      </TypeFormLayout>
-    </TypeFormDropdownProvider>
+        {activeQuestionIndex >= 0 && !isCompleted && (
+          <TypeFormProgress
+            progress={progress}
+            current={activeQuestionIndex + 1}
+            total={questions.length}
+          />
+        )}
+        <TypeFormLayout>
+          <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
+
+          {/* Navigation Arrows */}
+          {activeQuestionIndex >= 0 && !isCompleted && (
+            <TypeFormNavigation
+              onPrevious={handlePrevious}
+              onNext={handleNextWithDirection}
+              canGoPrevious={activeQuestionIndex > 0}
+              canGoNext={
+                currentQuestion
+                  ? currentQuestion.questionType === "text"
+                    ? (questionResponses[currentQuestion.id] || "").trim() !==
+                      ""
+                    : questionResponses[currentQuestion.id] != null
+                  : false
+              }
+            />
+          )}
+
+          <KeyboardShortcutModal
+            open={showKeyboardHelp}
+            onOpenChange={setShowKeyboardHelp}
+          />
+        </TypeFormLayout>
+      </TypeFormDropdownProvider>
     </FormModeProvider>
   );
 }

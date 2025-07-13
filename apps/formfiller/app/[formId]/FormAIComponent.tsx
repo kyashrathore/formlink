@@ -42,7 +42,6 @@ export default function FormAIComponent({
   const [isInFallbackMode, setIsInFallbackMode] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
 
-
   const {
     formDisplayState,
     currentQuestionId,
@@ -81,7 +80,7 @@ export default function FormAIComponent({
         versionToUse,
         true,
         queryDataForForm || {},
-        isTestSubmission
+        isTestSubmission,
       );
     }
   }, [formId, formSchema, submissionId, isTestSubmission, queryDataForForm]);
@@ -99,73 +98,109 @@ export default function FormAIComponent({
     },
     onFinish: (message: any) => {
       processAssistantResponse(message, currentQuestionIdRef.current);
-      
+
       // Check for tool invocations
       if (message.toolInvocations) {
         // Update local state for any saveAnswer tool calls
         message.toolInvocations.forEach((toolCall: any) => {
-          if (toolCall.toolName === 'saveAnswer' && toolCall.state === 'result') {
+          if (
+            toolCall.toolName === "saveAnswer" &&
+            toolCall.state === "result"
+          ) {
             const result = toolCall.result;
-            if (result?.saved && result?.questionId && result?.answer !== undefined) {
+            if (
+              result?.saved &&
+              result?.questionId &&
+              result?.answer !== undefined
+            ) {
               setCurrentInput(result.questionId, result.answer);
             }
           }
         });
-        
+
         // Check for completion
-        if (message.toolInvocations.some((t: any) => t.toolName === 'completeSubmission')) {
-          setFormDisplayState('completed');
+        if (
+          message.toolInvocations.some(
+            (t: any) => t.toolName === "completeSubmission",
+          )
+        ) {
+          setFormDisplayState("completed");
         }
       }
-      
+
       // Extract questionId from the message content if present
       try {
         // Look for all question links in the message
         const questionLinkRegex = /\[question\]\([^)]+\?qId=([^)]+)\)/g;
-        const matches = [...(message.content?.matchAll(questionLinkRegex) || [])];
-        
+        const matches = [
+          ...(message.content?.matchAll(questionLinkRegex) || []),
+        ];
+
         if (matches.length > 0) {
           // Use the last question link found (most likely the current question)
           const lastMatch = matches[matches.length - 1];
           const newQuestionId = lastMatch[1];
-          
+
           // Validate that this question exists in the form schema
-          const questionExists = formSchema?.questions?.some((q: any) => q.id === newQuestionId);
-          
+          const questionExists = formSchema?.questions?.some(
+            (q: any) => q.id === newQuestionId,
+          );
+
           if (questionExists) {
             store.setCurrentQuestionId(newQuestionId);
           } else {
-            console.warn(`[FormAIComponent] Question ID ${newQuestionId} not found in form schema`);
+            console.warn(
+              `[FormAIComponent] Question ID ${newQuestionId} not found in form schema`,
+            );
           }
         }
       } catch (error) {
-        console.error('[FormAIComponent] Error extracting question ID from AI response:', error);
+        console.error(
+          "[FormAIComponent] Error extracting question ID from AI response:",
+          error,
+        );
       }
-      
+
       setErrorMessage(null);
       setShowRetry(false);
     },
     onError: (error: any) => {
-      console.error('Chat error:', error);
-      
+      console.error("Chat error:", error);
+
       // Handle different error types
-      if (error.message?.includes('Rate limit')) {
-        setErrorMessage('You\'re going too fast! Please wait a moment before continuing.');
-      } else if (error.message?.includes('Network')) {
-        setErrorMessage('Connection issue. Please check your internet and try again.');
+      if (error.message?.includes("Rate limit")) {
+        setErrorMessage(
+          "You're going too fast! Please wait a moment before continuing.",
+        );
+      } else if (error.message?.includes("Network")) {
+        setErrorMessage(
+          "Connection issue. Please check your internet and try again.",
+        );
       } else {
-        setErrorMessage('Something went wrong. Please try again.');
+        setErrorMessage("Something went wrong. Please try again.");
       }
-      
+
       setShowRetry(true);
       setLastError(error.message);
     },
   });
 
-  const { messages, setMessages, append, input, handleInputChange, handleSubmit, status } = chat;
+  const {
+    messages,
+    setMessages,
+    append,
+    input,
+    handleInputChange,
+    handleSubmit,
+    status,
+  } = chat;
 
   useEffect(() => {
-    if (formDisplayState === "idle" && chatHistoryMessages.length === 0 && messages.length > 0) {
+    if (
+      formDisplayState === "idle" &&
+      chatHistoryMessages.length === 0 &&
+      messages.length > 0
+    ) {
       setMessages([]);
     }
   }, [formDisplayState, chatHistoryMessages, messages, setMessages]);
@@ -180,26 +215,30 @@ export default function FormAIComponent({
   }, [messages]);
 
   useEffect(() => {
-    if (
-      triggerUserMessageForSelection &&
-      append &&
-      formSchema
-    ) {
+    if (triggerUserMessageForSelection && append && formSchema) {
       const { questionId, value, displayText } = triggerUserMessageForSelection;
 
       const handleAutoSubmission = async () => {
         try {
           // In AI mode, the chat-assist route handles all saves
           // Don't save directly to database
-          
+
           // Update local state
           setCurrentInput(questionId, value);
-          
+
           // Find next question (but don't update currentQuestionId yet)
-          const currentQuestion = formSchema.questions.find((q: any) => q.id === questionId);
+          const currentQuestion = formSchema.questions.find(
+            (q: any) => q.id === questionId,
+          );
           const updatedInputs = { ...currentInputs, [questionId]: value };
-          const nextQuestion = currentQuestion ? findNextQuestion(currentQuestion, formSchema.questions, updatedInputs) : null;
-          
+          const nextQuestion = currentQuestion
+            ? findNextQuestion(
+                currentQuestion,
+                formSchema.questions,
+                updatedInputs,
+              )
+            : null;
+
           // Don't update currentQuestionId here - let the QuestionWrapper handle it
           // when the AI presents the next question
           // if (nextQuestion) {
@@ -214,8 +253,8 @@ export default function FormAIComponent({
           };
 
           // Determine submission behavior based on how the answer was submitted
-          const submissionBehavior = 'auto'; // User clicked on an input component
-          
+          const submissionBehavior = "auto"; // User clicked on an input component
+
           const submissionBody = {
             userInput: value,
             submissionBehavior,
@@ -228,12 +267,11 @@ export default function FormAIComponent({
             isTestSubmission,
           };
 
-
           append(newUserMessage, { body: submissionBody });
           setFormDisplayState("chatting_ai_loading");
         } catch (error) {
-          console.error('Failed to save answer:', error);
-          setErrorMessage('Failed to save your answer. Please try again.');
+          console.error("Failed to save answer:", error);
+          setErrorMessage("Failed to save your answer. Please try again.");
         } finally {
           clearTriggerUserMessageForSelection();
         }
@@ -251,18 +289,19 @@ export default function FormAIComponent({
     setCurrentInput,
   ]);
 
-  const handleAISubmit = (e?: React.FormEvent<HTMLFormElement> | React.KeyboardEvent) => {
+  const handleAISubmit = (
+    e?: React.FormEvent<HTMLFormElement> | React.KeyboardEvent,
+  ) => {
     e?.preventDefault();
-    
+
     if (!input.trim()) return;
-    
-    
+
     currentQuestionIdRef.current = currentQuestionId;
     setErrorMessage(null);
-    
+
     const body = {
       userInput: input,
-      submissionBehavior: 'manualUnclear', // User typed and hit enter
+      submissionBehavior: "manualUnclear", // User typed and hit enter
       currentQuestionId,
       formSchema,
       responses: currentInputs,
@@ -271,21 +310,22 @@ export default function FormAIComponent({
       isTestSubmission,
     };
 
-
     handleSubmit(e, { body });
     setFormDisplayState("chatting_ai_loading");
   };
-  
+
   const handleRetry = () => {
     setErrorMessage(null);
     setShowRetry(false);
     // Resend the last message
     if (messages.length > 0) {
-      const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
+      const lastUserMessage = [...messages]
+        .reverse()
+        .find((m) => m.role === "user");
       if (lastUserMessage && input) {
         const body = {
           userInput: input,
-          submissionBehavior: 'manualUnclear',
+          submissionBehavior: "manualUnclear",
           currentQuestionId,
           formSchema,
           responses: currentInputs,
@@ -301,10 +341,9 @@ export default function FormAIComponent({
   const isFormSaved = formDisplayState === "saved";
   const isFormCompleted = formDisplayState === "completed";
 
-
   const formRedirectUrl =
     formSchema?.settings?.redirectOnSubmissionUrl &&
-      typeof formSchema.settings.redirectOnSubmissionUrl === "string"
+    typeof formSchema.settings.redirectOnSubmissionUrl === "string"
       ? formSchema.settings.redirectOnSubmissionUrl
       : undefined;
 
@@ -316,7 +355,7 @@ export default function FormAIComponent({
 
   // Track if we've sent the initial message
   const hasInitiatedRef = useRef(false);
-  
+
   // Auto-start form when component mounts
   useEffect(() => {
     if (submissionId && formDisplayState === "idle") {
@@ -326,9 +365,14 @@ export default function FormAIComponent({
 
   // Send initial message to AI when form interaction starts
   useEffect(() => {
-    if (formDisplayState === "chatting_ai_ready" && chatHistoryMessages.length === 0 && append && !hasInitiatedRef.current) {
+    if (
+      formDisplayState === "chatting_ai_ready" &&
+      chatHistoryMessages.length === 0 &&
+      append &&
+      !hasInitiatedRef.current
+    ) {
       hasInitiatedRef.current = true;
-      
+
       // Send a hidden user message to initiate the form
       const initiationMessage = {
         id: uuidv4(),
@@ -340,7 +384,7 @@ export default function FormAIComponent({
 
       const submissionBody = {
         userInput: "Start the form",
-        submissionBehavior: 'auto' as const,
+        submissionBehavior: "auto" as const,
         currentQuestionId: null,
         formSchema,
         responses: {},
@@ -352,13 +396,23 @@ export default function FormAIComponent({
       append(initiationMessage, { body: submissionBody });
       setFormDisplayState("chatting_ai_loading");
     }
-  }, [formDisplayState, chatHistoryMessages, append, formSchema, submissionId, userId, setFormDisplayState]);
+  }, [
+    formDisplayState,
+    chatHistoryMessages,
+    append,
+    formSchema,
+    submissionId,
+    userId,
+    setFormDisplayState,
+  ]);
 
   // Calculate isChatActive early
-  const isChatActive = !(formDisplayState === "idle" ||
+  const isChatActive = !(
+    formDisplayState === "idle" ||
     (chatHistoryMessages.length === 0 &&
       (formDisplayState === "displaying_question_classical" ||
-        formDisplayState === "chatting_ai_ready")));
+        formDisplayState === "chatting_ai_ready"))
+  );
 
   const pageVariants = {
     initial: { opacity: 0, y: 20 },
@@ -389,7 +443,10 @@ export default function FormAIComponent({
   return (
     <div className="flex flex-col h-full">
       {errorMessage && (
-        <Alert variant="destructive" className="mx-4 mt-4 border-red-200 bg-red-50">
+        <Alert
+          variant="destructive"
+          className="mx-4 mt-4 border-red-200 bg-red-50"
+        >
           <AlertCircle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
             {errorMessage}
@@ -408,7 +465,10 @@ export default function FormAIComponent({
         </Alert>
       )}
       {isInFallbackMode && (
-        <Alert variant="default" className="mx-4 mt-2 border-yellow-200 bg-yellow-50">
+        <Alert
+          variant="default"
+          className="mx-4 mt-2 border-yellow-200 bg-yellow-50"
+        >
           <AlertDescription className="text-yellow-800">
             Running in simplified mode due to technical issues.
           </AlertDescription>
@@ -416,18 +476,13 @@ export default function FormAIComponent({
       )}
       <AnimatePresence>
         {!isChatActive ? (
-          <div
-            key="loading-screen"
-            className="h-full"
-          >
+          <div key="loading-screen" className="h-full">
             <div className="flex flex-col items-center justify-center h-full p-4 text-center lg:max-w-3xl md:max-w-3xl mx-auto">
               <div className="text-muted-foreground">Loading form...</div>
             </div>
           </div>
         ) : (
-          <div
-            key="chat-interface"
-          >
+          <div key="chat-interface">
             <div className="relative flex flex-col h-full w-full overflow-hidden">
               <div className="overflow-hidden">
                 <Conversation
@@ -440,9 +495,7 @@ export default function FormAIComponent({
 
               <AnimatePresence>
                 {!showThankYou && (
-                  <motion.div
-                    key="prompt-input"
-                  >
+                  <motion.div key="prompt-input">
                     <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
                       <div className="lg:max-w-3xl md:max-w-3xl mx-auto w-full">
                         <div className="relative order-2 px-2 pb-3 sm:pb-4 md:order-1">
@@ -450,7 +503,11 @@ export default function FormAIComponent({
                             <PromptInput
                               className="border-input bg-popover relative z-10 overflow-hidden border p-0 pb-2 shadow-xs backdrop-blur-xl"
                               value={input}
-                              onValueChange={(value: string) => handleInputChange?.({ target: { value } } as any)}
+                              onValueChange={(value: string) =>
+                                handleInputChange?.({
+                                  target: { value },
+                                } as any)
+                              }
                               onSubmit={handleAISubmit}
                             >
                               <PromptInputTextarea
@@ -463,7 +520,11 @@ export default function FormAIComponent({
                                     variant="default"
                                     size="sm"
                                     className="h-9 w-9 cursor-pointer rounded-full transition-all duration-300 ease-out"
-                                    disabled={!input.trim() || status === 'streaming' || !submissionId}
+                                    disabled={
+                                      !input.trim() ||
+                                      status === "streaming" ||
+                                      !submissionId
+                                    }
                                     type="submit"
                                     aria-label="Send answer"
                                   >

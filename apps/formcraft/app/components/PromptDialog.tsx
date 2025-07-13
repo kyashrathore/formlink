@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  Button,
   Dialog,
   DialogClose,
   DialogContent,
@@ -10,7 +11,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@formlink/ui"
-import { Button } from "@formlink/ui"
 import React, { useEffect, useState } from "react"
 import Chat from "./chat/chat"
 

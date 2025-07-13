@@ -7,16 +7,16 @@ import { v4 as uuidv4 } from "uuid";
 
 import { findNextQuestion } from "@/lib/utils";
 import { createServerClient } from "@formlink/db";
-import { 
-  FormValidator, 
-  ContextManager, 
+import {
+  FormValidator,
+  ContextManager,
   sanitizeUserInput,
   triggerWebhook,
   trackServerEvent,
   AIContext,
   ValidationResult,
   Question,
-  Form
+  Form,
 } from "./utils";
 
 // Initialize OpenRouter provider
@@ -25,225 +25,236 @@ const openRouterProvider = createOpenRouter({
 });
 const MODEL = openRouterProvider("google/gemini-2.5-flash-preview");
 
-
 // Helper function to save message to database
 async function saveMessage(
   submissionId: string,
-  role: 'user' | 'assistant',
+  role: "user" | "assistant",
   content: string,
-  userId?: string
+  userId?: string,
 ) {
   try {
     const supabase = await createServerClient(null, "service");
-    const { error } = await supabase
-      .from('submission_messages')
-      .insert({
-        submission_id: submissionId,
-        role,
-        content: { text: content },
-        user_id: userId || null,
-      });
-    
+    const { error } = await supabase.from("submission_messages").insert({
+      submission_id: submissionId,
+      role,
+      content: { text: content },
+      user_id: userId || null,
+    });
+
     if (error) {
-      console.error('Error saving message to submission_messages:', error);
-      trackServerEvent('message.save.error', { role });
+      console.error("Error saving message to submission_messages:", error);
+      trackServerEvent("message.save.error", { role });
     }
   } catch (err) {
-    console.error('Exception while saving message:', err);
-    trackServerEvent('message.save.exception', { role });
+    console.error("Exception while saving message:", err);
+    trackServerEvent("message.save.exception", { role });
   }
 }
 
 // Create tools factory function to access context
-function createTools(context: { submissionId: string; userId?: string; formSchema?: any; responses?: Record<string, any> }) {
+function createTools(context: {
+  submissionId: string;
+  userId?: string;
+  formSchema?: any;
+  responses?: Record<string, any>;
+}) {
   return {
     saveAnswer: tool({
-      description: 'Save a validated answer to the database',
+      description: "Save a validated answer to the database",
       parameters: z.object({
         questionId: z.string(),
         answer: z.any(),
       }),
       execute: async ({ questionId, answer }) => {
-      try {
+        try {
+          const supabase = await createServerClient(null, "service");
 
-        const supabase = await createServerClient(null, "service");
-        
-        // Retry logic with exponential backoff
-        let retries = 3;
-        let lastError = null;
-        
-        while (retries > 0) {
-          try {
-            const { error } = await supabase
-              .from('form_answers')
-              .upsert({
+          // Retry logic with exponential backoff
+          let retries = 3;
+          let lastError = null;
+
+          while (retries > 0) {
+            try {
+              const { error } = await supabase.from("form_answers").upsert({
                 submission_id: context.submissionId,
                 question_id: questionId,
                 answer_value: answer,
               });
-            
-            if (!error) {
-              // Update submission last_updated_at
-              await supabase
-                .from('form_submissions')
-                .update({ last_updated_at: new Date().toISOString() })
-                .eq('submission_id', context.submissionId);
-              
-              // Update the context responses to reflect the saved answer
-              if (context.responses) {
-                context.responses[questionId] = answer;
+
+              if (!error) {
+                // Update submission last_updated_at
+                await supabase
+                  .from("form_submissions")
+                  .update({ last_updated_at: new Date().toISOString() })
+                  .eq("submission_id", context.submissionId);
+
+                // Update the context responses to reflect the saved answer
+                if (context.responses) {
+                  context.responses[questionId] = answer;
+                }
+
+                trackServerEvent("tool.save_answer.success", { questionId });
+                return { saved: true, questionId, answer };
               }
-              
-              trackServerEvent('tool.save_answer.success', { questionId });
-              return { saved: true, questionId, answer };
+
+              lastError = error;
+              retries--;
+              if (retries > 0) {
+                await new Promise((resolve) =>
+                  setTimeout(resolve, 1000 * (4 - retries)),
+                );
+              }
+            } catch (e: any) {
+              lastError = e;
+              retries--;
             }
-            
-            lastError = error;
-            retries--;
-            if (retries > 0) {
-              await new Promise(resolve => setTimeout(resolve, 1000 * (4 - retries)));
-            }
-          } catch (e: any) {
-            lastError = e;
-            retries--;
           }
-        }
-        
-        trackServerEvent('tool.save_answer.failure', { 
-          questionId, 
-          error: lastError?.message || 'Unknown error' 
-        });
-        return { saved: false, error: 'Failed to save answer after retries' };
-        
-      } catch (error) {
-        console.error('SaveAnswer tool error:', error);
-        return { saved: false, error: 'An unexpected error occurred' };
-      }
-    },
-  }),
 
-  refreshFormContext: tool({
-    description: 'Get latest form submission state from database',
-    parameters: z.object({
-      includeMetadata: z.boolean().optional().default(false),
+          trackServerEvent("tool.save_answer.failure", {
+            questionId,
+            error: lastError?.message || "Unknown error",
+          });
+          return { saved: false, error: "Failed to save answer after retries" };
+        } catch (error) {
+          console.error("SaveAnswer tool error:", error);
+          return { saved: false, error: "An unexpected error occurred" };
+        }
+      },
     }),
-    execute: async ({ includeMetadata }) => {
-      try {
-        const supabase = await createServerClient(null, "service");
-        
-        // Get submission and answers in parallel
-        const [submissionResult, answersResult] = await Promise.all([
-          supabase
-            .from('form_submissions')
-            .select('status, metadata, created_at, last_updated_at')
-            .eq('submission_id', context.submissionId)
-            .single(),
-          supabase
-            .from('form_answers')
-            .select('question_id, answer_value')
-            .eq('submission_id', context.submissionId)
-            .order('created_at', { ascending: true })
-        ]);
 
-        if (submissionResult.error || answersResult.error) {
-          throw new Error('Failed to fetch form context');
-        }
+    refreshFormContext: tool({
+      description: "Get latest form submission state from database",
+      parameters: z.object({
+        includeMetadata: z.boolean().optional().default(false),
+      }),
+      execute: async ({ includeMetadata }) => {
+        try {
+          const supabase = await createServerClient(null, "service");
 
-        const responses = answersResult.data?.reduce((acc: any, ans: any) => ({
-          ...acc,
-          [ans.question_id]: ans.answer_value
-        }), {}) || {};
+          // Get submission and answers in parallel
+          const [submissionResult, answersResult] = await Promise.all([
+            supabase
+              .from("form_submissions")
+              .select("status, metadata, created_at, last_updated_at")
+              .eq("submission_id", context.submissionId)
+              .single(),
+            supabase
+              .from("form_answers")
+              .select("question_id, answer_value")
+              .eq("submission_id", context.submissionId)
+              .order("created_at", { ascending: true }),
+          ]);
 
-        const result: any = {
-          responses,
-          answerCount: Object.keys(responses).length,
-          status: submissionResult.data?.status,
-        };
+          if (submissionResult.error || answersResult.error) {
+            throw new Error("Failed to fetch form context");
+          }
 
-        if (includeMetadata) {
-          result.metadata = submissionResult.data?.metadata;
-          result.timing = {
-            started: submissionResult.data?.created_at,
-            lastUpdate: submissionResult.data?.last_updated_at,
+          const responses =
+            answersResult.data?.reduce(
+              (acc: any, ans: any) => ({
+                ...acc,
+                [ans.question_id]: ans.answer_value,
+              }),
+              {},
+            ) || {};
+
+          const result: any = {
+            responses,
+            answerCount: Object.keys(responses).length,
+            status: submissionResult.data?.status,
           };
-        }
 
-        trackServerEvent('tool.refresh_context.success');
-        return result;
-        
-      } catch (error) {
-        trackServerEvent('tool.refresh_context.failure');
-        throw error;
-      }
-    },
-  }),
-
-  completeSubmission: tool({
-    description: 'Mark form submission as complete',
-    parameters: z.object({
-      finalValidation: z.boolean().optional().default(true),
-    }),
-    execute: async ({ finalValidation }) => {
-      try {
-        // Final validation check if requested
-        if (finalValidation && context.formSchema) {
-          const requiredQuestions = context.formSchema.questions.filter((q: Question) => q.validations?.required);
-          const missingRequired = requiredQuestions.filter((q: Question) => !context.responses?.[q.id]);
-          
-          if (missingRequired.length > 0) {
-            return {
-              completed: false,
-              error: `Missing required fields: ${missingRequired.map((q: Question) => q.title || q.id).join(', ')}`,
+          if (includeMetadata) {
+            result.metadata = submissionResult.data?.metadata;
+            result.timing = {
+              started: submissionResult.data?.created_at,
+              lastUpdate: submissionResult.data?.last_updated_at,
             };
           }
-        }
 
-        const supabase = await createServerClient(null, "service");
-        const { error } = await supabase
-          .from('form_submissions')
-          .update({ 
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-            metadata: {
-              completion_metrics: {
-                total_questions: context.formSchema?.questions.length || 0,
-                answered_questions: Object.keys(context.responses || {}).length,
-                completion_percentage: Math.round(
-                  (Object.keys(context.responses || {}).length / (context.formSchema?.questions.length || 1)) * 100
-                ),
-              }
+          trackServerEvent("tool.refresh_context.success");
+          return result;
+        } catch (error) {
+          trackServerEvent("tool.refresh_context.failure");
+          throw error;
+        }
+      },
+    }),
+
+    completeSubmission: tool({
+      description: "Mark form submission as complete",
+      parameters: z.object({
+        finalValidation: z.boolean().optional().default(true),
+      }),
+      execute: async ({ finalValidation }) => {
+        try {
+          // Final validation check if requested
+          if (finalValidation && context.formSchema) {
+            const requiredQuestions = context.formSchema.questions.filter(
+              (q: Question) => q.validations?.required,
+            );
+            const missingRequired = requiredQuestions.filter(
+              (q: Question) => !context.responses?.[q.id],
+            );
+
+            if (missingRequired.length > 0) {
+              return {
+                completed: false,
+                error: `Missing required fields: ${missingRequired.map((q: Question) => q.title || q.id).join(", ")}`,
+              };
             }
-          })
-          .eq('submission_id', context.submissionId);
+          }
 
-        if (error) throw error;
+          const supabase = await createServerClient(null, "service");
+          const { error } = await supabase
+            .from("form_submissions")
+            .update({
+              status: "completed",
+              completed_at: new Date().toISOString(),
+              metadata: {
+                completion_metrics: {
+                  total_questions: context.formSchema?.questions.length || 0,
+                  answered_questions: Object.keys(context.responses || {})
+                    .length,
+                  completion_percentage: Math.round(
+                    (Object.keys(context.responses || {}).length /
+                      (context.formSchema?.questions.length || 1)) *
+                      100,
+                  ),
+                },
+              },
+            })
+            .eq("submission_id", context.submissionId);
 
-        // Trigger webhook if configured
-        if (context.formSchema?.settings?.integrations?.webhookUrl) {
-          // Fire and forget webhook
-          triggerWebhook(context.formSchema.settings.integrations.webhookUrl, {
-            submissionId: context.submissionId,
-            responses: context.responses || {},
-            completedAt: new Date().toISOString(),
-          }).catch(e => console.error('Webhook failed:', e));
+          if (error) throw error;
+
+          // Trigger webhook if configured
+          if (context.formSchema?.settings?.integrations?.webhookUrl) {
+            // Fire and forget webhook
+            triggerWebhook(
+              context.formSchema.settings.integrations.webhookUrl,
+              {
+                submissionId: context.submissionId,
+                responses: context.responses || {},
+                completedAt: new Date().toISOString(),
+              },
+            ).catch((e) => console.error("Webhook failed:", e));
+          }
+
+          trackServerEvent("form.completed", {
+            formId: context.formSchema?.id,
+            questionCount: Object.keys(context.responses || {}).length,
+          });
+
+          return { completed: true };
+        } catch (error) {
+          trackServerEvent("tool.complete_submission.failure");
+          return { completed: false, error: "Failed to complete submission" };
         }
-
-        trackServerEvent('form.completed', { 
-          formId: context.formSchema?.id,
-          questionCount: Object.keys(context.responses || {}).length 
-        });
-        
-        return { completed: true };
-        
-      } catch (error) {
-        trackServerEvent('tool.complete_submission.failure');
-        return { completed: false, error: 'Failed to complete submission' };
-      }
-    },
-  }),
+      },
+    }),
   };
 }
-
 
 // Enhanced system prompt with psychological principles
 const ENHANCED_FORM_ASSISTANT_PROMPT = `
@@ -364,11 +375,14 @@ const UNIFIED_FORM_ASSISTANT_PROMPT = ENHANCED_FORM_ASSISTANT_PROMPT;
 
 export async function POST(req: Request) {
   const startTime = Date.now();
-  
+
   try {
     // Get headers for tracking
     const headersList = await headers();
-    const ip = headersList.get('x-forwarded-for') || headersList.get('x-real-ip') || 'unknown';
+    const ip =
+      headersList.get("x-forwarded-for") ||
+      headersList.get("x-real-ip") ||
+      "unknown";
 
     const {
       userInput,
@@ -379,79 +393,98 @@ export async function POST(req: Request) {
       submissionId,
       userId,
       justSavedAnswer,
-      isTestSubmission = false
+      isTestSubmission = false,
     } = await req.json();
 
     // Input sanitization for security - only for string inputs
     let sanitizedInput = userInput;
-    
+
     // Check if we need to sanitize based on question type
     if (currentQuestionId) {
-      const currentQuestion = formSchema.questions.find((q: Question) => q.id === currentQuestionId);
+      const currentQuestion = formSchema.questions.find(
+        (q: Question) => q.id === currentQuestionId,
+      );
       if (currentQuestion) {
         // Only sanitize text-based inputs
-        const needsSanitization = 
-          currentQuestion.questionType === 'text' ||
-          (currentQuestion.questionType === 'text' && currentQuestion.display.inputType === 'text') ||
-          !['address', 'multipleChoice', 'fileUpload', 'ranking'].includes(currentQuestion.questionType);
-        
-        if (needsSanitization && typeof userInput === 'string') {
+        const needsSanitization =
+          currentQuestion.questionType === "text" ||
+          (currentQuestion.questionType === "text" &&
+            currentQuestion.display.inputType === "text") ||
+          !["address", "multipleChoice", "fileUpload", "ranking"].includes(
+            currentQuestion.questionType,
+          );
+
+        if (needsSanitization && typeof userInput === "string") {
           sanitizedInput = sanitizeUserInput(userInput);
         }
       }
-    } else if (typeof userInput === 'string') {
+    } else if (typeof userInput === "string") {
       // If no current question (like chat messages), sanitize if it's a string
       sanitizedInput = sanitizeUserInput(userInput);
     }
-
 
     // Initialize submission if needed
     let activeSubmissionId = submissionId;
     if (!activeSubmissionId) {
       activeSubmissionId = uuidv4();
     }
-    
+
     // Always ensure submission exists (upsert)
     const supabase = await createServerClient(null, "service");
-    const { error: submissionError } = await supabase.from('form_submissions').upsert({
-      submission_id: activeSubmissionId,
-      form_version_id: formSchema.version_id || formSchema.id,
-      status: 'in_progress',
-      user_id: userId,
-      testmode: isTestSubmission || false,
-      metadata: {
-        ip_address: ip,
-        user_agent: headersList.get('user-agent') || 'unknown',
-        started_at: new Date().toISOString(),
-      }
-    }, {
-      onConflict: 'submission_id'
-    });
-    
+    const { error: submissionError } = await supabase
+      .from("form_submissions")
+      .upsert(
+        {
+          submission_id: activeSubmissionId,
+          form_version_id: formSchema.version_id || formSchema.id,
+          status: "in_progress",
+          user_id: userId,
+          testmode: isTestSubmission || false,
+          metadata: {
+            ip_address: ip,
+            user_agent: headersList.get("user-agent") || "unknown",
+            started_at: new Date().toISOString(),
+          },
+        },
+        {
+          onConflict: "submission_id",
+        },
+      );
+
     if (submissionError) {
-      console.error('Failed to create/update submission:', submissionError);
-      trackServerEvent('submission.upsert.error', { error: submissionError.message });
+      console.error("Failed to create/update submission:", submissionError);
+      trackServerEvent("submission.upsert.error", {
+        error: submissionError.message,
+      });
       return NextResponse.json(
-        { error: 'Failed to initialize form submission' },
-        { status: 500 }
+        { error: "Failed to initialize form submission" },
+        { status: 500 },
       );
     }
 
     // Pre-validate if submission behavior indicates answer
     let validationResult: ValidationResult | undefined = undefined;
-    if ((submissionBehavior === 'auto' || submissionBehavior === 'manualClear') && currentQuestionId) {
-      const currentQuestion = formSchema.questions.find((q: Question) => q.id === currentQuestionId);
-      
+    if (
+      (submissionBehavior === "auto" || submissionBehavior === "manualClear") &&
+      currentQuestionId
+    ) {
+      const currentQuestion = formSchema.questions.find(
+        (q: Question) => q.id === currentQuestionId,
+      );
+
       if (currentQuestion) {
-        validationResult = FormValidator.validate(sanitizedInput, currentQuestion);
-        
+        validationResult = FormValidator.validate(
+          sanitizedInput,
+          currentQuestion,
+        );
+
         // Cross-field validation if initial validation passed
         if (validationResult.isValid) {
           const crossFieldValidation = FormValidator.validateCrossField(
             currentQuestionId,
             validationResult.normalizedValue,
             responses,
-            formSchema
+            formSchema,
           );
           if (!crossFieldValidation.isValid) {
             validationResult = crossFieldValidation;
@@ -472,24 +505,25 @@ export async function POST(req: Request) {
       progress: {
         answered: Object.keys(responses).length,
         total: formSchema.questions.length,
-        percentage: Math.round((Object.keys(responses).length / formSchema.questions.length) * 100)
+        percentage: Math.round(
+          (Object.keys(responses).length / formSchema.questions.length) * 100,
+        ),
       },
-      journeyScript: formSchema.settings?.journeyScript
+      journeyScript: formSchema.settings?.journeyScript,
     };
-
 
     // Compress context if needed
     const compressedContext = ContextManager.compressContext(context);
 
     // Save user message
     if (sanitizedInput) {
-      await saveMessage(activeSubmissionId, 'user', sanitizedInput, userId);
+      await saveMessage(activeSubmissionId, "user", sanitizedInput, userId);
     }
 
     // Track request metrics
-    trackServerEvent('api.form_assist.request', {
+    trackServerEvent("api.form_assist.request", {
       formId: formSchema.id,
-      submissionBehavior: submissionBehavior || 'none',
+      submissionBehavior: submissionBehavior || "none",
       hasValidationResult: !!validationResult,
     });
 
@@ -498,7 +532,7 @@ export async function POST(req: Request) {
       submissionId: activeSubmissionId,
       userId,
       formSchema,
-      responses
+      responses,
     });
 
     // Build system prompt with journey script if available
@@ -514,45 +548,44 @@ export async function POST(req: Request) {
         system: systemPrompt,
         prompt: JSON.stringify(compressedContext),
         tools,
-        toolChoice: 'auto',
+        toolChoice: "auto",
         maxSteps: 5,
         onFinish: async ({ text, toolCalls, toolResults }) => {
           // Save assistant message
-          await saveMessage(activeSubmissionId, 'assistant', text, userId);
-          
+          await saveMessage(activeSubmissionId, "assistant", text, userId);
+
           // Track AI performance
           const duration = Date.now() - startTime;
-          trackServerEvent('api.form_assist.duration', {
+          trackServerEvent("api.form_assist.duration", {
             duration,
             formId: formSchema.id,
             toolCallCount: toolCalls?.length || 0,
           });
-          
+
           // Track tool usage
-          toolCalls?.forEach(call => {
-            trackServerEvent('tool.usage', {
+          toolCalls?.forEach((call) => {
+            trackServerEvent("tool.usage", {
               toolName: call.toolName,
               formId: formSchema.id,
             });
           });
         },
         onError: async (error: any) => {
-          trackServerEvent('api.form_assist.error', {
+          trackServerEvent("api.form_assist.error", {
             formId: formSchema.id,
-            errorType: error?.name || 'unknown',
+            errorType: error?.name || "unknown",
           });
-        }
+        },
       });
 
       return result.toDataStreamResponse({
         headers: {
-          'X-Submission-Id': activeSubmissionId,
+          "X-Submission-Id": activeSubmissionId,
         },
       });
-      
     } catch (aiError: any) {
-      console.error('AI processing failed:', aiError);
-      
+      console.error("AI processing failed:", aiError);
+
       // Fallback response
       if (validationResult && !validationResult.isValid) {
         return new Response(
@@ -560,38 +593,37 @@ export async function POST(req: Request) {
             message: `There was an issue with your input: ${validationResult.error}. Please try again.`,
             fallback: true,
           }),
-          { 
+          {
             status: 200,
-            headers: { 
-              'Content-Type': 'application/json',
-              'X-Fallback-Mode': 'true'
+            headers: {
+              "Content-Type": "application/json",
+              "X-Fallback-Mode": "true",
             },
-          }
+          },
         );
       }
-      
+
       return new Response(
         JSON.stringify({
-          message: "I'm having trouble processing your request. Please try again in a moment.",
+          message:
+            "I'm having trouble processing your request. Please try again in a moment.",
           fallback: true,
         }),
-        { 
+        {
           status: 200,
-          headers: { 
-            'Content-Type': 'application/json',
-            'X-Fallback-Mode': 'true'
+          headers: {
+            "Content-Type": "application/json",
+            "X-Fallback-Mode": "true",
           },
-        }
+        },
       );
     }
-    
   } catch (error) {
-    console.error('Form assist API error:', error);
-    trackServerEvent('api.form_assist.critical_error');
-    
-    return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
-      { status: 500 }
-    );
+    console.error("Form assist API error:", error);
+    trackServerEvent("api.form_assist.critical_error");
+
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+    });
   }
 }

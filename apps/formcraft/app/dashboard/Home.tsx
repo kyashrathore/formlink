@@ -3,8 +3,8 @@
 import { analytics } from "@/app/lib/analytics"
 import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import { Database } from "@formlink/db"
-import { CardTitle } from "@formlink/ui" // For form titles in the sidebar
 import {
+  CardTitle,
   Sidebar,
   SidebarContent,
   SidebarHeader,
@@ -16,6 +16,8 @@ import {
   SidebarTrigger,
   useSidebar, // To get sidebar state
 } from "@formlink/ui"
+// For form titles in the sidebar
+
 import { format } from "date-fns"
 import { motion } from "motion/react"
 import Link from "next/link"

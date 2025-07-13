@@ -18,7 +18,7 @@ export function CompletionScreen({
   isMobileView = false,
   showConfetti,
   onRestart,
-  className
+  className,
 }: CompletionScreenProps) {
   const { mode } = useFormMode();
   const isTypeform = mode === "typeform";
@@ -29,7 +29,7 @@ export function CompletionScreen({
         "flex flex-col h-full bg-card text-card-foreground p-6 justify-between relative overflow-hidden",
         !isTypeform && "rounded-md border",
         isMobileView && "p-4",
-        className
+        className,
       )}
     >
       {showConfetti && <ConfettiElements />}
@@ -41,7 +41,7 @@ export function CompletionScreen({
           <Award
             className={cn(
               "text-primary",
-              isMobileView ? "w-12 h-12" : "w-16 h-16"
+              isMobileView ? "w-12 h-12" : "w-16 h-16",
             )}
           />
         </div>

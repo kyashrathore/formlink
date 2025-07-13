@@ -1,6 +1,6 @@
 /**
  * Generic interfaces for UI components to remove @formlink/schema dependencies
- * 
+ *
  * These types are minimal, reusable interfaces that capture just what UI components need
  * without tying them to FormJunction's specific schema structure.
  */
@@ -68,9 +68,9 @@ export interface UILikertScaleConfig {
 // Question Types
 // ============================================================================
 
-export type UIQuestionType = 
+export type UIQuestionType =
   | "text"
-  | "email" 
+  | "email"
   | "url"
   | "tel"
   | "password"
@@ -96,12 +96,12 @@ export interface UIQuestion {
   display?: UIDisplay;
   required?: boolean;
   placeholder?: string;
-  
+
   // Type-specific configurations
   linearScaleConfig?: UILinearScaleConfig;
   ratingConfig?: UIRatingConfig;
   likertScaleConfig?: UILikertScaleConfig;
-  
+
   // Conditional logic (basic structure)
   conditionalLogic?: {
     field?: string;
@@ -131,12 +131,12 @@ export interface UIForm {
 // Response Types
 // ============================================================================
 
-export type UIResponseValue = 
-  | string 
-  | number 
-  | string[] 
-  | UIAddressData 
-  | File 
+export type UIResponseValue =
+  | string
+  | number
+  | string[]
+  | UIAddressData
+  | File
   | null;
 
 export interface UIFormResponse {
@@ -206,7 +206,11 @@ export interface UIFormFillingActions {
   handleStartQuiz: () => void;
   handleRestart: () => void;
   handleSingleChoiceChange: (questionId: string, value: string) => void;
-  handleMultipleChoiceChange: (questionId: string, value: string, checked: boolean) => void;
+  handleMultipleChoiceChange: (
+    questionId: string,
+    value: string,
+    checked: boolean,
+  ) => void;
   handleTextChange: (questionId: string, value: string) => void;
   setQuestionResponse: (questionId: string, value: UIResponseValue) => void;
   shouldShowQuestion: (question: UIQuestion) => boolean;

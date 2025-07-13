@@ -72,7 +72,7 @@ const typeformStyles: Record<string, ThemeStyles> = {
       "w-full px-0 py-3 text-2xl md:text-3xl font-light",
       "bg-transparent border-0 border-b-2 border-border/30",
       "focus:border-primary focus:outline-none transition-colors duration-200",
-      "placeholder:text-muted-foreground/50"
+      "placeholder:text-muted-foreground/50",
     ),
     hint: "text-sm text-muted-foreground flex items-center gap-2 mt-3",
     // Unused styles for this component
@@ -142,7 +142,7 @@ const typeformStyles: Record<string, ThemeStyles> = {
       "border-2 border-border/50 bg-card/50 backdrop-blur",
       "cursor-pointer transition-all duration-200",
       "hover:border-primary/50 hover:bg-card/80",
-      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
     ),
     selected: "border-primary bg-primary/10 hover:bg-primary/15",
     highlighted: "ring-2 ring-primary ring-offset-2",
@@ -152,12 +152,12 @@ const typeformStyles: Record<string, ThemeStyles> = {
     letterHint: cn(
       "px-2 py-1 text-xs font-medium",
       "bg-muted/50 text-muted-foreground rounded",
-      "border border-border/50"
+      "border border-border/50",
     ),
     numberHint: cn(
       "px-2 py-1 text-xs font-medium",
       "bg-muted/50 text-muted-foreground rounded",
-      "border border-border/50"
+      "border border-border/50",
     ),
     // Unused styles
     checkbox: "",
@@ -215,26 +215,27 @@ const typeformStyles: Record<string, ThemeStyles> = {
   },
   multiSelect: {
     container: "w-full space-y-4",
-    optionsWrapper: "max-h-96 rounded-lg border border-border/50 bg-card/50 backdrop-blur",
+    optionsWrapper:
+      "max-h-96 rounded-lg border border-border/50 bg-card/50 backdrop-blur",
     option: cn(
       "group relative flex items-center gap-4 p-4",
       "border-b border-border/30 last:border-b-0",
       "cursor-pointer transition-all duration-200",
-      "hover:bg-accent/50"
+      "hover:bg-accent/50",
     ),
     selected: "bg-primary/10 hover:bg-primary/15",
     highlighted: "bg-accent",
     checkbox: cn(
       "flex-shrink-0 w-5 h-5 rounded",
       "border-2 border-border/50",
-      "transition-all duration-200"
+      "transition-all duration-200",
     ),
     label: "flex-1 text-base font-medium",
     hints: "flex items-center gap-2",
     letterHint: cn(
       "px-2 py-1 text-xs font-medium",
       "bg-muted/50 text-muted-foreground rounded",
-      "border border-border/50"
+      "border border-border/50",
     ),
     footer: "flex items-center justify-between pt-4 border-t border-border/50",
     selectionCount: "text-sm text-muted-foreground",
@@ -242,7 +243,7 @@ const typeformStyles: Record<string, ThemeStyles> = {
       "inline-flex items-center gap-2 px-4 py-2 rounded-md",
       "bg-primary text-primary-foreground font-medium",
       "hover:bg-primary/90 transition-colors duration-200",
-      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
     ),
     // Unused styles
     input: "",
@@ -301,11 +302,11 @@ const typeformStyles: Record<string, ThemeStyles> = {
     ratingButton: cn(
       "group relative p-2 rounded-lg",
       "transition-all duration-200",
-      "hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+      "hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring",
     ),
     icon: cn(
       "w-10 h-10 transition-all duration-200",
-      "text-border/50 group-hover:text-primary/50"
+      "text-border/50 group-hover:text-primary/50",
     ),
     active: "text-primary",
     hint: "text-sm text-muted-foreground text-center mt-4",
@@ -375,7 +376,7 @@ const typeformStyles: Record<string, ThemeStyles> = {
       "text-lg font-medium text-center",
       "cursor-pointer transition-all duration-200",
       "hover:border-primary/50 hover:bg-card/80",
-      "focus:outline-none focus:ring-2 focus:ring-ring"
+      "focus:outline-none focus:ring-2 focus:ring-ring",
     ),
     selected: "border-primary bg-primary/10 hover:bg-primary/15",
     label: "block text-sm text-muted-foreground text-center mt-2",
@@ -447,7 +448,7 @@ const chatStyles: Record<string, ThemeStyles> = {
       "w-full px-4 py-3 text-base",
       "bg-card border-2 border-border/50 rounded-lg",
       "focus:border-primary focus:outline-none transition-colors duration-200",
-      "placeholder:text-muted-foreground/50"
+      "placeholder:text-muted-foreground/50",
     ),
     hint: "text-sm text-muted-foreground",
     // Unused styles for this component
@@ -517,7 +518,7 @@ const chatStyles: Record<string, ThemeStyles> = {
       "border-2 border-border/50 bg-card",
       "cursor-pointer transition-all duration-200",
       "hover:border-primary/50 hover:bg-muted/50",
-      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
     ),
     selected: "border-primary bg-primary/10 hover:bg-primary/15",
     highlighted: "ring-2 ring-primary ring-offset-2",
@@ -587,25 +588,26 @@ const chatStyles: Record<string, ThemeStyles> = {
       "group relative flex items-center gap-3 p-3 rounded-lg",
       "border-2 border-border/50 bg-card",
       "cursor-pointer transition-all duration-200",
-      "hover:border-primary/50 hover:bg-muted/50"
+      "hover:border-primary/50 hover:bg-muted/50",
     ),
     selected: "bg-primary/10 border-primary",
     highlighted: "ring-2 ring-primary ring-offset-2",
     checkbox: cn(
       "flex-shrink-0 w-5 h-5 rounded",
       "border-2 border-input",
-      "transition-all duration-200"
+      "transition-all duration-200",
     ),
     label: "flex-1 text-sm font-medium",
     hints: "hidden",
     letterHint: "hidden",
-    footer: "flex items-center justify-between pt-3 text-sm text-muted-foreground",
+    footer:
+      "flex items-center justify-between pt-3 text-sm text-muted-foreground",
     selectionCount: "text-sm text-muted-foreground",
     submitButton: cn(
       "inline-flex items-center gap-2 px-4 py-2 rounded-md",
       "bg-primary text-primary-foreground font-medium",
       "hover:bg-primary/90 transition-colors duration-200",
-      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+      "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
     ),
     // Unused styles
     input: "",
@@ -664,11 +666,11 @@ const chatStyles: Record<string, ThemeStyles> = {
     ratingButton: cn(
       "group relative p-2 rounded-lg",
       "transition-all duration-200",
-      "hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
+      "hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring",
     ),
     icon: cn(
       "w-10 h-10 transition-all duration-200",
-      "text-muted-foreground/50 group-hover:scale-110"
+      "text-muted-foreground/50 group-hover:scale-110",
     ),
     active: "text-primary",
     hint: "hidden", // No keyboard hints in chat mode
@@ -738,7 +740,7 @@ const chatStyles: Record<string, ThemeStyles> = {
       "text-sm font-medium text-center",
       "cursor-pointer transition-all duration-200",
       "hover:border-primary/50 hover:bg-muted/50",
-      "focus:outline-none focus:ring-2 focus:ring-ring"
+      "focus:outline-none focus:ring-2 focus:ring-ring",
     ),
     selected: "border-primary bg-primary/10 hover:bg-primary/15",
     label: "block text-xs text-muted-foreground text-center mt-2",
@@ -802,71 +804,76 @@ const chatStyles: Record<string, ThemeStyles> = {
   },
 };
 
-export function useThemeStyles(component: string, mode: 'typeform' | 'chat'): ThemeStyles {
-  const styles = mode === 'typeform' ? typeformStyles : chatStyles;
-  
+export function useThemeStyles(
+  component: string,
+  mode: "typeform" | "chat",
+): ThemeStyles {
+  const styles = mode === "typeform" ? typeformStyles : chatStyles;
+
   // Return the component styles or empty strings for all properties
-  return styles[component] || {
-    container: "",
-    option: "",
-    selected: "",
-    highlighted: "",
-    label: "",
-    hints: "",
-    letterHint: "",
-    numberHint: "",
-    radio: "",
-    checkbox: "",
-    input: "",
-    hint: "",
-    footer: "",
-    submitButton: "",
-    optionsGrid: "",
-    optionButton: "",
-    moreButton: "",
-    inputWrapper: "",
-    sendButton: "",
-    sendIcon: "",
-    optionsWrapper: "",
-    chip: "",
-    checkIcon: "",
-    selectionCount: "",
-    ratingContainer: "",
-    ratingButton: "",
-    icon: "",
-    active: "",
-    hovered: "",
-    keyHint: "",
-    number: "",
-    selectedText: "",
-    compact: "",
-    quickDates: "",
-    quickDateButton: "",
-    customDateButton: "",
-    calendarWrapper: "",
-    backButton: "",
-    calendar: "",
-    todayButton: "",
-    selectedDate: "",
-    dropzone: "",
-    dragging: "",
-    content: "",
-    iconWrapper: "",
-    uploadIcon: "",
-    mainText: "",
-    subText: "",
-    browseButton: "",
-    sizeHint: "",
-    fileList: "",
-    fileItem: "",
-    fileName: "",
-    fileSize: "",
-    removeButton: "",
-    progressBar: "",
-    progressFill: "",
-    uploadButton: "",
-    hiddenInput: "",
-    preview: "",
-    fileInfo: "",
-  };
+  return (
+    styles[component] || {
+      container: "",
+      option: "",
+      selected: "",
+      highlighted: "",
+      label: "",
+      hints: "",
+      letterHint: "",
+      numberHint: "",
+      radio: "",
+      checkbox: "",
+      input: "",
+      hint: "",
+      footer: "",
+      submitButton: "",
+      optionsGrid: "",
+      optionButton: "",
+      moreButton: "",
+      inputWrapper: "",
+      sendButton: "",
+      sendIcon: "",
+      optionsWrapper: "",
+      chip: "",
+      checkIcon: "",
+      selectionCount: "",
+      ratingContainer: "",
+      ratingButton: "",
+      icon: "",
+      active: "",
+      hovered: "",
+      keyHint: "",
+      number: "",
+      selectedText: "",
+      compact: "",
+      quickDates: "",
+      quickDateButton: "",
+      customDateButton: "",
+      calendarWrapper: "",
+      backButton: "",
+      calendar: "",
+      todayButton: "",
+      selectedDate: "",
+      dropzone: "",
+      dragging: "",
+      content: "",
+      iconWrapper: "",
+      uploadIcon: "",
+      mainText: "",
+      subText: "",
+      browseButton: "",
+      sizeHint: "",
+      fileList: "",
+      fileItem: "",
+      fileName: "",
+      fileSize: "",
+      removeButton: "",
+      progressBar: "",
+      progressFill: "",
+      uploadButton: "",
+      hiddenInput: "",
+      preview: "",
+      fileInfo: "",
+    }
+  );
 }

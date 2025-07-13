@@ -10,7 +10,7 @@ function createClient() {
   return createBrowserClient();
 }
 
-export type Attachment = {
+type Attachment = {
   name: string;
   contentType: string;
   url: string;
@@ -19,9 +19,9 @@ export type Attachment = {
 /**
  * Upload file to Supabase storage
  */
-export async function uploadFile(
+async function uploadFile(
   supabase: SupabaseClient,
-  file: File
+  file: File,
 ): Promise<string> {
   const fileExt = file.name.split(".").pop();
   const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
@@ -45,7 +45,7 @@ export async function uploadFile(
 /**
  * Create attachment object from file and URL
  */
-export function createAttachment(file: File, url: string): Attachment {
+function createAttachment(file: File, url: string): Attachment {
   return {
     name: file.name,
     contentType: file.type,
@@ -56,12 +56,12 @@ export function createAttachment(file: File, url: string): Attachment {
 /**
  * Process multiple files for chat attachments
  */
-export async function processFiles(
+async function processFiles(
   files: File[],
   chatId: string,
   userId: string,
   validateFile: (file: File) => { isValid: boolean; error?: string },
-  onValidationError: (error: string) => void
+  onValidationError: (error: string) => void,
 ): Promise<Attachment[]> {
   const supabase = createClient();
   const attachments: Attachment[] = [];
@@ -77,14 +77,16 @@ export async function processFiles(
     try {
       const url = await uploadFile(supabase, file);
 
-      const { error } = await supabase.from("submission_chat_attachments").insert({
-        chat_id: chatId,
-        user_id: userId,
-        file_url: url,
-        file_name: file.name,
-        file_type: file.type,
-        file_size: file.size,
-      });
+      const { error } = await supabase
+        .from("submission_chat_attachments")
+        .insert({
+          chat_id: chatId,
+          user_id: userId,
+          file_url: url,
+          file_name: file.name,
+          file_type: file.type,
+          file_size: file.size,
+        });
 
       if (error) throw new Error(`Database insertion failed: ${error.message}`);
 
@@ -98,7 +100,7 @@ export async function processFiles(
   return attachments;
 }
 
-export class FileUploadLimitError extends Error {
+class FileUploadLimitError extends Error {
   code: string;
   constructor(message: string) {
     super(message);
@@ -109,14 +111,11 @@ export class FileUploadLimitError extends Error {
 /**
  * Check if user has reached daily file upload limit
  */
-export async function checkFileUploadLimit(
-  userId: string,
-  dailyLimit: number
-) {
+async function checkFileUploadLimit(userId: string, dailyLimit: number) {
   const supabase = createClient();
   const now = new Date();
   const startOfToday = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
   );
   const startOfTodayISO = startOfToday.toISOString();
 

@@ -24,7 +24,7 @@ export default function RedirectCountdown({
     }
 
     const timerId = setInterval(() => {
-      setCurrentSeconds(prevSeconds => {
+      setCurrentSeconds((prevSeconds) => {
         if (prevSeconds <= 1) {
           clearInterval(timerId);
           onCountdownComplete?.();
@@ -41,7 +41,6 @@ export default function RedirectCountdown({
   useEffect(() => {
     setCurrentSeconds(initialSeconds);
   }, [initialSeconds]);
-
 
   if (!redirectUrl || currentSeconds <= 0) {
     // If countdown is done or no URL, don't render (parent handles redirecting message)

@@ -1,9 +1,9 @@
 /**
  * Component Registry - Centralized component management for FormJunction
- * 
- * Simple object-based registry that replaces the hardcoded componentMap 
+ *
+ * Simple object-based registry that replaces the hardcoded componentMap
  * from UnifiedFormInput.tsx.
- * 
+ *
  * Benefits:
  * - Single source of truth for component mappings
  * - Easy component registration without touching core files
@@ -20,9 +20,9 @@ export {
   getRegisteredComponentTypes,
   addComponent,
   renderRegisteredComponent,
-  
+
   // Types
   type ComponentRegistryEntry,
   type FormInputMode,
-  type FormInputType
-} from './ComponentRegistry';
+  type FormInputType,
+} from "./ComponentRegistry";

@@ -19,7 +19,7 @@ interface TypeFormQuestionProps {
   onAnswer: (
     questionId: string,
     value: any,
-    questionType: Question["questionType"]
+    questionType: Question["questionType"],
   ) => void;
   onFileUpload?: (questionId: string, file: File) => Promise<void>;
   uploadedFile?: File | null;
@@ -38,14 +38,13 @@ export default function TypeFormQuestion({
   onNext,
   questionNumber,
 }: TypeFormQuestionProps) {
-  
   const isTextInput = question.questionType === "text";
   const isTextarea = isTextInput && question.display?.inputType === "textarea";
-  
+
   // Comprehensive response check for all question types
   const hasResponse = (() => {
     if (response === null || response === undefined) return false;
-    
+
     switch (question.questionType) {
       case "text":
         return response !== "";
@@ -53,7 +52,7 @@ export default function TypeFormQuestion({
         return Array.isArray(response) && response.length > 0;
       case "ranking":
         // Handle JSON string format used by ranking
-        if (typeof response === 'string') {
+        if (typeof response === "string") {
           try {
             const parsed = JSON.parse(response);
             return Array.isArray(parsed) && parsed.length > 0;
@@ -135,7 +134,7 @@ export default function TypeFormQuestion({
             transition={{ delay: 0.2 }}
             className={cn(
               "flex items-center mt-4",
-              questionNumber ? "ml-[3rem]" : ""
+              questionNumber ? "ml-[3rem]" : "",
             )}
           >
             <Button onClick={onNext} size="lg" className="group mr-4">

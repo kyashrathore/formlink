@@ -1,13 +1,13 @@
-"use client"
+"use client";
 
-import { cn } from "../lib/utils"
-import React from "react"
+import { cn } from "../lib/utils";
+import React from "react";
 
 export interface LoaderProps {
-  variant?: "loading-dots"
-  size?: "sm" | "md" | "lg"
-  text?: string
-  className?: string
+  variant?: "loading-dots";
+  size?: "sm" | "md" | "lg";
+  text?: string;
+  className?: string;
 }
 
 export function TextDotsLoader({
@@ -15,15 +15,15 @@ export function TextDotsLoader({
   text = "Thinking",
   size = "md",
 }: {
-  className?: string
-  text?: string
-  size?: "sm" | "md" | "lg"
+  className?: string;
+  text?: string;
+  size?: "sm" | "md" | "lg";
 }) {
   const textSizes = {
     sm: "text-xs",
     md: "text-sm",
     lg: "text-base",
-  }
+  };
 
   return (
     <div className={cn("inline-flex items-center", className)}>
@@ -42,11 +42,11 @@ export function TextDotsLoader({
         </span>
       </span>
     </div>
-  )
+  );
 }
 
 function Loader({ size = "md", text, className }: LoaderProps) {
-  return <TextDotsLoader text={text} size={size} className={className} />
+  return <TextDotsLoader text={text} size={size} className={className} />;
 }
 
-export { Loader }
+export { Loader };

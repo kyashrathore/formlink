@@ -82,7 +82,9 @@ export async function* createFormAgent(
 
       for (const key in chunk) {
         if (Object.prototype.hasOwnProperty.call(chunk, key)) {
-          const nodeOutput = (chunk as Record<string, any>)[key] as Partial<AgentState>
+          const nodeOutput = (chunk as Record<string, any>)[
+            key
+          ] as Partial<AgentState>
           if (nodeOutput && Array.isArray(nodeOutput._agentEvents)) {
             eventsFromThisChunk.push(...nodeOutput._agentEvents)
           }

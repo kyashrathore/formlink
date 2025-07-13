@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import path from "path"
+import path from "path";
 
 const nextConfig: NextConfig = {
   assetPrefix: "/f",
@@ -7,11 +7,7 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   outputFileTracingRoot: path.join(__dirname, "../../"),
-  transpilePackages: [
-    "@formlink/ui",
-    "@formlink/db",
-    "@formlink/schema",
-  ],
+  transpilePackages: ["@formlink/ui", "@formlink/db", "@formlink/schema"],
 };
 
 export default nextConfig;

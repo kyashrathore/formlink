@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 
 export function useRowLayout(
   optionsCount: number,
-  threshold: number = 4
+  threshold: number = 4,
 ): boolean {
   const [shouldUseRowLayout, setShouldUseRowLayout] = useState(false);
 

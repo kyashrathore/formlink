@@ -7,13 +7,21 @@ interface TypeFormDropdownContextType {
   setDropdownOpen: (open: boolean) => void;
 }
 
-const TypeFormDropdownContext = createContext<TypeFormDropdownContextType | undefined>(undefined);
+const TypeFormDropdownContext = createContext<
+  TypeFormDropdownContextType | undefined
+>(undefined);
 
-export function TypeFormDropdownProvider({ children }: { children: ReactNode }) {
+export function TypeFormDropdownProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
 
   return (
-    <TypeFormDropdownContext.Provider value={{ isDropdownOpen, setDropdownOpen }}>
+    <TypeFormDropdownContext.Provider
+      value={{ isDropdownOpen, setDropdownOpen }}
+    >
       {children}
     </TypeFormDropdownContext.Provider>
   );

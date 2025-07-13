@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useControllableState } from '@radix-ui/react-use-controllable-state';
-import { ChevronsUpDownIcon, PlusIcon } from 'lucide-react';
+import { useControllableState } from "@radix-ui/react-use-controllable-state";
+import { ChevronsUpDownIcon, PlusIcon } from "lucide-react";
 import {
   type ComponentProps,
   createContext,
@@ -10,8 +10,8 @@ import {
   useEffect,
   useRef,
   useState,
-} from 'react';
-import { Button } from '../../button';
+} from "react";
+import { Button } from "../../button";
 import {
   Command,
   CommandEmpty,
@@ -20,13 +20,9 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from '../../command';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '../../popover';
-import { cn } from '../../../lib/utils';
+} from "../../command";
+import { Popover, PopoverContent, PopoverTrigger } from "../../popover";
+import { cn } from "../../../lib/utils";
 
 type ComboboxData = {
   label: string;
@@ -48,14 +44,14 @@ type ComboboxContextType = {
 
 const ComboboxContext = createContext<ComboboxContextType>({
   data: [],
-  type: 'item',
-  value: '',
+  type: "item",
+  value: "",
   onValueChange: () => {},
   open: false,
   onOpenChange: () => {},
   width: 200,
   setWidth: () => {},
-  inputValue: '',
+  inputValue: "",
   setInputValue: () => {},
 });
 
@@ -81,7 +77,7 @@ export const Combobox = ({
   ...props
 }: ComboboxProps) => {
   const [value, onValueChange] = useControllableState({
-    defaultProp: defaultValue ?? '',
+    defaultProp: defaultValue ?? "",
     prop: controlledValue,
     onChange: controlledOnValueChange,
   });
@@ -91,7 +87,7 @@ export const Combobox = ({
     onChange: controlledOnOpenChange,
   });
   const [width, setWidth] = useState(200);
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
 
   return (
     <ComboboxContext.Provider
@@ -175,7 +171,7 @@ export const ComboboxContent = ({
 
   return (
     <PopoverContent
-      className={cn('p-0', className)}
+      className={cn("p-0", className)}
       style={{ width }}
       {...popoverOptions}
     >
@@ -290,8 +286,8 @@ export const ComboboxCreateNew = ({
   return (
     <button
       className={cn(
-        'relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
-        className
+        "relative flex w-full cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+        className,
       )}
       onClick={handleCreateNew}
       type="button"

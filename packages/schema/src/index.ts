@@ -163,13 +163,13 @@ const BaseQuestionSchema = z.object({
     .array(z.string())
     .optional()
     .describe(
-      "Human-readable descriptions of validation rules (e.g., 'This question is required.')"
+      "Human-readable descriptions of validation rules (e.g., 'This question is required.')",
     ),
   readableConditionalLogic: z
     .array(z.string())
     .optional()
     .describe(
-      "Human-readable descriptions of conditional logic rules (e.g., 'Show if Q1 equals Yes')"
+      "Human-readable descriptions of conditional logic rules (e.g., 'Show if Q1 equals Yes')",
     ),
 });
 
@@ -189,7 +189,7 @@ export const RankingQuestionSchema = BaseQuestionSchema.extend({
     .string()
     .optional()
     .describe(
-      "Human-readable description of ranking rules (e.g., 'Rank your top 3 choices')"
+      "Human-readable description of ranking rules (e.g., 'Rank your top 3 choices')",
     ),
 });
 
@@ -200,7 +200,7 @@ export const RatingQuestionSchema = BaseQuestionSchema.extend({
     .string()
     .optional()
     .describe(
-      "Human-readable description of the rating scale (e.g., 'Rate from 1 (Low) to 5 (High)')"
+      "Human-readable description of the rating scale (e.g., 'Rate from 1 (Low) to 5 (High)')",
     ),
 });
 
@@ -219,7 +219,7 @@ export const LikertScaleQuestionSchema = BaseQuestionSchema.extend({
     .string()
     .optional()
     .describe(
-      "Human-readable description of the Likert scale (e.g., 'Rate your agreement from Strongly Disagree to Strongly Agree')"
+      "Human-readable description of the Likert scale (e.g., 'Rate your agreement from Strongly Disagree to Strongly Agree')",
     ),
 });
 
@@ -352,7 +352,7 @@ export const SettingsSchema = z
             field_id: z.string(),
             prompt: z.string(),
             jsonata: z.string(),
-          })
+          }),
         ),
       })
       .optional(),
@@ -366,7 +366,6 @@ export const SettingsSchema = z
     branching: z
       .object({
         enabled: z.boolean().optional().default(false),
-        
       })
       .optional(),
   })

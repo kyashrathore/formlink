@@ -1,22 +1,21 @@
-"use client"
-
+"use client";
 
 import { Warning } from "@phosphor-icons/react/Warning";
 import { Info } from "@phosphor-icons/react/Info";
 import { CheckCircle } from "@phosphor-icons/react/CheckCircle";
-import { toast as sonnerToast } from "sonner"
-import { Button } from "./button"
+import { toast as sonnerToast } from "sonner";
+import { Button } from "./button";
 
 type ToastProps = {
-  id: string | number
-  title: string
-  description?: string
+  id: string | number;
+  title: string;
+  description?: string;
   button?: {
-    label: string
-    onClick: () => void
-  }
-  status?: "error" | "info" | "success" | "warning"
-}
+    label: string;
+    onClick: () => void;
+  };
+  status?: "error" | "info" | "success" | "warning";
+};
 
 function Toast({ title, description, button, id, status }: ToastProps) {
   return (
@@ -43,8 +42,8 @@ function Toast({ title, description, button, id, status }: ToastProps) {
           <Button
             size="sm"
             onClick={() => {
-              button?.onClick()
-              sonnerToast.dismiss(id)
+              button?.onClick();
+              sonnerToast.dismiss(id);
             }}
             type="button"
             variant="secondary"
@@ -54,7 +53,7 @@ function Toast({ title, description, button, id, status }: ToastProps) {
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 function toast(toast: Omit<ToastProps, "id">) {
@@ -70,8 +69,8 @@ function toast(toast: Omit<ToastProps, "id">) {
     ),
     {
       position: "bottom-right",
-    }
-  )
+    },
+  );
 }
 
-export { toast }
+export { toast };

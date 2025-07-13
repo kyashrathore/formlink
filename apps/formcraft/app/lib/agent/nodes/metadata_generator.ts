@@ -166,7 +166,6 @@ export async function generateMetadataAndTasksNode(
       title: aiResponseData.title,
       description: aiResponseData.description,
     }
-
     ;(aiResponseData.questionDetails || []).forEach(
       (detail: any, index: any) => {
         questionDetailsCount++

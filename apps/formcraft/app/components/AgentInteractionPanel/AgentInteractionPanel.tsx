@@ -6,7 +6,8 @@ import { MODEL_DEFAULT } from "@/app/lib/config"
 import {
   ErrorEvent as AgentErrorEvent,
   AgentEvent,
-} from "@/app/lib/types/agent-events" // Renamed to avoid conflict
+} from "@/app/lib/types/agent-events"
+// Renamed to avoid conflict
 import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import { useMobile } from "@/hooks/use-mobile"
 import { useChat, type Message as VercelChatMessage } from "@ai-sdk/react"
@@ -48,18 +49,18 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [isPanelExpanded, setIsPanelExpanded] = useState(() => {
     // Persist panel state in localStorage
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('agentPanelExpanded')
-      return saved !== null ? saved === 'true' : true
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("agentPanelExpanded")
+      return saved !== null ? saved === "true" : true
     }
     return true
   })
   const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
-  
+
   // Save panel state to localStorage whenever it changes
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('agentPanelExpanded', isPanelExpanded.toString())
+    if (typeof window !== "undefined") {
+      localStorage.setItem("agentPanelExpanded", isPanelExpanded.toString())
     }
   }, [isPanelExpanded])
 
@@ -159,7 +160,7 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
       hasStoredInitialMessage: !!storedInitialMessage,
       storedInitialMessage,
       messagesLength: vercelChatMessages.length,
-      hasUserInteracted
+      hasUserInteracted,
     })
 
     if (
@@ -172,7 +173,10 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
       // Small delay just to ensure UI is ready
       const timer = setTimeout(() => {
         if (isMounted) {
-          console.log("[AgentInteractionPanel] Sending initial message:", storedInitialMessage)
+          console.log(
+            "[AgentInteractionPanel] Sending initial message:",
+            storedInitialMessage
+          )
           append({
             role: "user",
             content: storedInitialMessage,

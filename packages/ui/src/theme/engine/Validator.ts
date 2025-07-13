@@ -1,4 +1,4 @@
-import { FormJunctionTheme, ValidationResult } from '../types';
+import { FormJunctionTheme, ValidationResult } from "../types";
 
 export class Validator {
   /**
@@ -32,7 +32,7 @@ export class Validator {
     return {
       valid: errors.length === 0,
       errors,
-      warnings
+      warnings,
     };
   }
 
@@ -45,8 +45,16 @@ export class Validator {
       return;
     }
 
-    const requiredTokens = ['colors', 'typography', 'spacing', 'borders', 'effects', 'animations', 'layout'];
-    requiredTokens.forEach(token => {
+    const requiredTokens = [
+      "colors",
+      "typography",
+      "spacing",
+      "borders",
+      "effects",
+      "animations",
+      "layout",
+    ];
+    requiredTokens.forEach((token) => {
       if (!theme.tokens[token as keyof typeof theme.tokens]) {
         errors.push(`Theme tokens must include "${token}"`);
       }
@@ -68,7 +76,11 @@ export class Validator {
   /**
    * Validate color values
    */
-  private validateColors(theme: FormJunctionTheme, errors: string[], warnings: string[]): void {
+  private validateColors(
+    theme: FormJunctionTheme,
+    errors: string[],
+    warnings: string[],
+  ): void {
     const colors = theme.tokens?.colors;
     if (!colors) return;
 
@@ -79,8 +91,8 @@ export class Validator {
     });
 
     // Check for required color properties
-    const requiredColors = ['primary', 'background', 'text', 'border', 'error'];
-    requiredColors.forEach(color => {
+    const requiredColors = ["primary", "background", "text", "border", "error"];
+    requiredColors.forEach((color) => {
       if (!colors[color as keyof typeof colors]) {
         errors.push(`Missing required color: "${color}"`);
       }
@@ -90,7 +102,11 @@ export class Validator {
   /**
    * Validate typography values
    */
-  private validateTypography(theme: FormJunctionTheme, errors: string[], warnings: string[]): void {
+  private validateTypography(
+    theme: FormJunctionTheme,
+    errors: string[],
+    warnings: string[],
+  ): void {
     const typography = theme.tokens?.typography;
     if (!typography) return;
 
@@ -108,8 +124,10 @@ export class Validator {
 
     // Validate font weights
     Object.entries(typography.weights || {}).forEach(([key, value]) => {
-      if (typeof value !== 'number' || value < 100 || value > 900) {
-        errors.push(`Invalid font weight for "${key}": ${value}. Must be between 100 and 900.`);
+      if (typeof value !== "number" || value < 100 || value > 900) {
+        errors.push(
+          `Invalid font weight for "${key}": ${value}. Must be between 100 and 900.`,
+        );
       }
     });
   }
@@ -117,7 +135,11 @@ export class Validator {
   /**
    * Validate spacing values
    */
-  private validateSpacing(theme: FormJunctionTheme, errors: string[], warnings: string[]): void {
+  private validateSpacing(
+    theme: FormJunctionTheme,
+    errors: string[],
+    warnings: string[],
+  ): void {
     const spacing = theme.tokens?.spacing;
     if (!spacing) return;
 
@@ -131,24 +153,34 @@ export class Validator {
   /**
    * Validate animation values
    */
-  private validateAnimations(theme: FormJunctionTheme, errors: string[], warnings: string[]): void {
+  private validateAnimations(
+    theme: FormJunctionTheme,
+    errors: string[],
+    warnings: string[],
+  ): void {
     const animations = theme.tokens?.animations;
     if (!animations) return;
 
     // Validate durations
-    ['durationFast', 'durationNormal', 'durationSlow'].forEach(duration => {
+    ["durationFast", "durationNormal", "durationSlow"].forEach((duration) => {
       const value = animations[duration as keyof typeof animations];
-      if (typeof value === 'string' && !this.isValidDuration(value)) {
+      if (typeof value === "string" && !this.isValidDuration(value)) {
         errors.push(`Invalid animation duration for "${duration}": ${value}`);
       }
     });
 
     // Validate animation configs
-    if (animations.questionEnter && !this.isValidAnimationConfig(animations.questionEnter)) {
+    if (
+      animations.questionEnter &&
+      !this.isValidAnimationConfig(animations.questionEnter)
+    ) {
       errors.push('Invalid animation config for "questionEnter"');
     }
 
-    if (animations.questionExit && !this.isValidAnimationConfig(animations.questionExit)) {
+    if (
+      animations.questionExit &&
+      !this.isValidAnimationConfig(animations.questionExit)
+    ) {
       errors.push('Invalid animation config for "questionExit"');
     }
   }
@@ -156,22 +188,36 @@ export class Validator {
   /**
    * Validate accessibility settings
    */
-  private validateAccessibility(theme: FormJunctionTheme, errors: string[], warnings: string[]): void {
+  private validateAccessibility(
+    theme: FormJunctionTheme,
+    errors: string[],
+    warnings: string[],
+  ): void {
     const accessibility = theme.accessibility;
     if (!accessibility) return;
 
     // Validate font size multiplier
     if (accessibility.fontSizeMultiplier !== undefined) {
-      if (typeof accessibility.fontSizeMultiplier !== 'number' || 
-          accessibility.fontSizeMultiplier < 0.5 || 
-          accessibility.fontSizeMultiplier > 3) {
-        errors.push('Font size multiplier must be between 0.5 and 3');
+      if (
+        typeof accessibility.fontSizeMultiplier !== "number" ||
+        accessibility.fontSizeMultiplier < 0.5 ||
+        accessibility.fontSizeMultiplier > 3
+      ) {
+        errors.push("Font size multiplier must be between 0.5 and 3");
       }
     }
 
     // Validate color blind mode
-    const validColorBlindModes = ['none', 'protanopia', 'deuteranopia', 'tritanopia'];
-    if (accessibility.colorBlindMode && !validColorBlindModes.includes(accessibility.colorBlindMode)) {
+    const validColorBlindModes = [
+      "none",
+      "protanopia",
+      "deuteranopia",
+      "tritanopia",
+    ];
+    if (
+      accessibility.colorBlindMode &&
+      !validColorBlindModes.includes(accessibility.colorBlindMode)
+    ) {
       errors.push(`Invalid color blind mode: ${accessibility.colorBlindMode}`);
     }
   }
@@ -186,22 +232,34 @@ export class Validator {
     // Check primary text contrast
     const bgContrast = this.getContrastRatio(colors.background, colors.text);
     if (bgContrast < 4.5) {
-      warnings.push(`Low contrast ratio (${bgContrast.toFixed(2)}) between background and text. WCAG AA requires 4.5:1`);
+      warnings.push(
+        `Low contrast ratio (${bgContrast.toFixed(2)}) between background and text. WCAG AA requires 4.5:1`,
+      );
     }
 
     // Check primary button contrast
     if (colors.primary && colors.primaryForeground) {
-      const btnContrast = this.getContrastRatio(colors.primary, colors.primaryForeground);
+      const btnContrast = this.getContrastRatio(
+        colors.primary,
+        colors.primaryForeground,
+      );
       if (btnContrast < 4.5) {
-        warnings.push(`Low contrast ratio (${btnContrast.toFixed(2)}) for primary button. WCAG AA requires 4.5:1`);
+        warnings.push(
+          `Low contrast ratio (${btnContrast.toFixed(2)}) for primary button. WCAG AA requires 4.5:1`,
+        );
       }
     }
 
     // Check error text contrast
     if (colors.error && colors.background) {
-      const errorContrast = this.getContrastRatio(colors.background, colors.error);
+      const errorContrast = this.getContrastRatio(
+        colors.background,
+        colors.error,
+      );
       if (errorContrast < 4.5) {
-        warnings.push(`Low contrast ratio (${errorContrast.toFixed(2)}) for error text. WCAG AA requires 4.5:1`);
+        warnings.push(
+          `Low contrast ratio (${errorContrast.toFixed(2)}) for error text. WCAG AA requires 4.5:1`,
+        );
       }
     }
   }
@@ -221,12 +279,16 @@ export class Validator {
     }
 
     // Check HSL/HSLA
-    if (/^hsla?\(\d{1,3},\s*\d{1,3}%,\s*\d{1,3}%(,\s*(0|1|0?\.\d+))?\)$/.test(color)) {
+    if (
+      /^hsla?\(\d{1,3},\s*\d{1,3}%,\s*\d{1,3}%(,\s*(0|1|0?\.\d+))?\)$/.test(
+        color,
+      )
+    ) {
       return true;
     }
 
     // Check CSS color names
-    const cssColors = ['transparent', 'inherit', 'currentColor'];
+    const cssColors = ["transparent", "inherit", "currentColor"];
     if (cssColors.includes(color)) {
       return true;
     }
@@ -253,11 +315,11 @@ export class Validator {
    */
   private isValidAnimationConfig(config: any): boolean {
     return (
-      typeof config === 'object' &&
+      typeof config === "object" &&
       config.duration &&
       this.isValidDuration(config.duration) &&
       config.easing &&
-      typeof config.easing === 'string'
+      typeof config.easing === "string"
     );
   }
 
@@ -267,10 +329,10 @@ export class Validator {
   private getContrastRatio(color1: string, color2: string): number {
     const lum1 = this.getLuminance(color1);
     const lum2 = this.getLuminance(color2);
-    
+
     const brightest = Math.max(lum1, lum2);
     const darkest = Math.min(lum1, lum2);
-    
+
     return (brightest + 0.05) / (darkest + 0.05);
   }
 
@@ -282,7 +344,7 @@ export class Validator {
     if (!rgb) return 0;
 
     const { r, g, b } = rgb;
-    const [rs, gs, bs] = [r, g, b].map(c => {
+    const [rs, gs, bs] = [r, g, b].map((c) => {
       c = c / 255;
       return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
     });
@@ -295,10 +357,12 @@ export class Validator {
    */
   private hexToRgb(hex: string): { r: number; g: number; b: number } | null {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
+    return result
+      ? {
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
+      : null;
   }
 }

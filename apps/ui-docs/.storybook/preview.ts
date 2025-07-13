@@ -12,30 +12,30 @@ const preview: Preview = {
       },
     },
     darkMode: {
-      classTarget: 'html',
-      stylePreview: true
+      classTarget: "html",
+      stylePreview: true,
     },
     viewport: {
       viewports: {
         mobile1: {
-          name: 'Small mobile',
+          name: "Small mobile",
           styles: {
-            width: '360px',
-            height: '640px',
+            width: "360px",
+            height: "640px",
           },
         },
         mobile2: {
-          name: 'Large mobile',
+          name: "Large mobile",
           styles: {
-            width: '414px',
-            height: '896px',
+            width: "414px",
+            height: "896px",
           },
         },
         tablet: {
-          name: 'Tablet',
+          name: "Tablet",
           styles: {
-            width: '834px',
-            height: '1194px',
+            width: "834px",
+            height: "1194px",
           },
         },
       },
@@ -44,10 +44,10 @@ const preview: Preview = {
   decorators: [
     withThemeByClassName({
       themes: {
-        light: 'light',
-        dark: 'dark',
+        light: "light",
+        dark: "dark",
       },
-      defaultTheme: 'light',
+      defaultTheme: "light",
     }),
   ],
 };

@@ -6,7 +6,7 @@ export const useQuestionRenderer = (
   messageId: string,
   isLast?: boolean,
   variant: "user" | "assistant" = "assistant",
-  handleFileUpload?: (questionId: string, file: File) => Promise<void>
+  handleFileUpload?: (questionId: string, file: File) => Promise<void>,
 ) => {
   const components = {
     p: ({ node, children, ...props }: any) => {

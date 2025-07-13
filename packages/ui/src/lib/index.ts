@@ -16,16 +16,14 @@ const APP_DOMAIN =
 
 // Note: parseFormSchema function removed to decouple from @formlink/schema
 // Applications should implement their own form parsing logic
-export const parseFormSchema = (
-  content: string | object
-): any => {
+export const parseFormSchema = (content: string | object): any => {
   if (typeof content === "object" && content !== null) {
     const schema = content as Record<string, any>;
 
     if (schema.questions && typeof schema.questions === "string") {
       try {
         schema.questions = parseFormSchema(
-          JSON.parse(schema.questions)
+          JSON.parse(schema.questions),
         ).questions;
       } catch (error) {
         console.error("Failed to parse stringified questions:", error);
@@ -73,7 +71,7 @@ export const fetcher = async (url: string) => {
 
   if (!res.ok) {
     const error = new Error(
-      "An error occurred while fetching the data."
+      "An error occurred while fetching the data.",
     ) as ApplicationError;
 
     error.info = await res.json();
@@ -113,7 +111,7 @@ function addToolMessageToChat({
         ...message,
         toolInvocations: message.toolInvocations.map((toolInvocation) => {
           const toolResult = toolMessage.content.find(
-            (tool) => tool.toolCallId === toolInvocation.toolCallId
+            (tool) => tool.toolCallId === toolInvocation.toolCallId,
           );
 
           if (toolResult) {
@@ -165,7 +163,7 @@ export function sanitizeResponseMessages({
         ? toolResultIds.includes(content.toolCallId)
         : content.type === "text"
           ? content.text.length > 0
-          : true
+          : true,
     );
 
     if (reasoning) {
@@ -179,7 +177,7 @@ export function sanitizeResponseMessages({
   });
 
   return messagesBySanitizedContent.filter(
-    (message) => message.content.length > 0
+    (message) => message.content.length > 0,
   );
 }
 

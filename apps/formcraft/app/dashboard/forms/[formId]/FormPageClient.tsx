@@ -65,7 +65,7 @@ export default function FormPageClient({
   useWarnIfUnsavedChanges()
 
   const { setForm, form, resetForm } = useFormStore()
-  
+
   // Initialize agent connection for this form on mount
   useEffect(() => {
     console.log("[FormPageClient] Mounting with formId:", formIdFromUrl)
@@ -74,23 +74,28 @@ export default function FormPageClient({
       formId: currentAgentState.formId,
       hasCurrentForm: !!currentAgentState.currentForm,
       currentFormId: currentAgentState.currentForm?.id,
-      hasJourneyScript: !!currentAgentState.currentForm?.settings?.journeyScript,
-      journeyScriptPreview: currentAgentState.currentForm?.settings?.journeyScript?.substring(0, 50) + "..."
+      hasJourneyScript:
+        !!currentAgentState.currentForm?.settings?.journeyScript,
+      journeyScriptPreview:
+        currentAgentState.currentForm?.settings?.journeyScript?.substring(
+          0,
+          50
+        ) + "...",
     })
-    
+
     // Always initialize connection for the current form
     // This will properly clear any stale data if switching forms
     useFormAgentStore.getState().initializeConnection(formIdFromUrl)
-    
+
     console.log("[FormPageClient] After initializeConnection:")
     const afterState = useFormAgentStore.getState()
     console.log({
       formId: afterState.formId,
       hasCurrentForm: !!afterState.currentForm,
       currentFormId: afterState.currentForm?.id,
-      hasJourneyScript: !!afterState.currentForm?.settings?.journeyScript
+      hasJourneyScript: !!afterState.currentForm?.settings?.journeyScript,
     })
-    
+
     return () => {
       // Don't reset stores on unmount as it might affect navigation
     }
@@ -98,18 +103,18 @@ export default function FormPageClient({
 
   useEffect(() => {
     const currentStoreForm = useFormStore.getState().form
-    
+
     // If we're navigating to a different form, immediately set placeholder
     if (currentStoreForm && currentStoreForm.id !== formIdFromUrl) {
       console.log("[FormPageClient] Different form detected, resetting", {
         oldFormId: currentStoreForm.id,
         newFormId: formIdFromUrl,
-        oldFormHasJourneyScript: !!currentStoreForm.settings?.journeyScript
+        oldFormHasJourneyScript: !!currentStoreForm.settings?.journeyScript,
       })
-      
+
       // Reset form store when switching forms
       resetForm() // Clear the form store completely
-      
+
       // Immediately set a placeholder form to prevent showing old data
       const placeholderForm: FormWithVersionIds = {
         id: formIdFromUrl,
@@ -128,12 +133,12 @@ export default function FormPageClient({
       }
       console.log("[FormPageClient] Setting placeholder form", {
         formId: placeholderForm.id,
-        hasJourneyScript: !!placeholderForm.settings?.journeyScript
+        hasJourneyScript: !!placeholderForm.settings?.journeyScript,
       })
       setForm(placeholderForm)
       return // Exit early since we've already set the form
     }
-    
+
     if (initialDbForm && initialDbForm.id) {
       // Setting form from DB
       if (!currentStoreForm || currentStoreForm.id !== initialDbForm.id) {
@@ -144,9 +149,10 @@ export default function FormPageClient({
         console.log("[FormPageClient] Creating new placeholder form", {
           formId: formIdFromUrl,
           currentFormId: currentStoreForm?.id,
-          currentFormHasJourneyScript: !!currentStoreForm?.settings?.journeyScript
+          currentFormHasJourneyScript:
+            !!currentStoreForm?.settings?.journeyScript,
         })
-        
+
         const newPlaceholderForm: FormWithVersionIds = {
           id: formIdFromUrl,
           version_id: uuidv4(),
@@ -164,7 +170,7 @@ export default function FormPageClient({
         }
         console.log("[FormPageClient] Placeholder form created", {
           hasJourneyScript: !!newPlaceholderForm.settings?.journeyScript,
-          settings: newPlaceholderForm.settings
+          settings: newPlaceholderForm.settings,
         })
         // Creating placeholder form
         setForm(newPlaceholderForm)
@@ -173,10 +179,10 @@ export default function FormPageClient({
   }, [initialDbForm, formIdFromUrl, setForm])
 
   // Subscribe to the agent store but only for the current form
-  const formAgent_currentForm = useFormAgentStore((state) => 
+  const formAgent_currentForm = useFormAgentStore((state) =>
     state.currentForm?.id === formIdFromUrl ? state.currentForm : null
   )
-  const formAgent_agentStateFromStore = useFormAgentStore((state) => 
+  const formAgent_agentStateFromStore = useFormAgentStore((state) =>
     state.currentForm?.id === formIdFromUrl ? state.agentState : null
   )
 
@@ -187,9 +193,11 @@ export default function FormPageClient({
       urlFormId: formIdFromUrl,
       idsMatch: formAgent_currentForm?.id === formIdFromUrl,
       hasJourneyScript: !!formAgent_currentForm?.settings?.journeyScript,
-      journeyScriptPreview: formAgent_currentForm?.settings?.journeyScript?.substring(0, 50) + "..."
+      journeyScriptPreview:
+        formAgent_currentForm?.settings?.journeyScript?.substring(0, 50) +
+        "...",
     })
-    
+
     // This effect reacts to changes in the form data received from the agent
     // (via SSE and processed by useFormAgentStore, updating formAgent_currentForm)
     // The subscription already filters by form ID, so we just check if we have data
@@ -200,25 +208,27 @@ export default function FormPageClient({
       console.log("[FormPageClient] Current form store state:", {
         formId: currentFormInStore?.id,
         title: currentFormInStore?.title,
-        hasJourneyScript: !!currentFormInStore?.settings?.journeyScript
+        hasJourneyScript: !!currentFormInStore?.settings?.journeyScript,
       })
 
       // Check if this is stale data - if the current form is a placeholder (no version from DB)
       // and the agent form has content, we should wait for fresh agent data
-      const isPlaceholderForm = !currentFormInStore?.current_draft_version_id && 
-                                !currentFormInStore?.current_published_version_id &&
-                                currentFormInStore?.title === "Untitled Form"
-      
-      const hasAgentContent = formAgent_currentForm.questions.length > 0 || 
-                              formAgent_currentForm.settings?.journeyScript ||
-                              formAgent_currentForm.title !== "Untitled Form"
-      
+      const isPlaceholderForm =
+        !currentFormInStore?.current_draft_version_id &&
+        !currentFormInStore?.current_published_version_id &&
+        currentFormInStore?.title === "Untitled Form"
+
+      const hasAgentContent =
+        formAgent_currentForm.questions.length > 0 ||
+        formAgent_currentForm.settings?.journeyScript ||
+        formAgent_currentForm.title !== "Untitled Form"
+
       console.log("[FormPageClient] Stale data check:", {
         isPlaceholderForm,
         hasAgentContent,
-        willSkip: isPlaceholderForm && hasAgentContent
+        willSkip: isPlaceholderForm && hasAgentContent,
       })
-      
+
       // Don't apply agent data if we have a fresh placeholder and the agent data looks like old content
       if (isPlaceholderForm && hasAgentContent) {
         console.log("[FormPageClient] Skipping stale agent data for new form")

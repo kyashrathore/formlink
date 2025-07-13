@@ -1,5 +1,5 @@
-import * as React from "react"
-import type { SVGProps } from "react"
+import * as React from "react";
+import type { SVGProps } from "react";
 
 const Icon = (props: SVGProps<SVGSVGElement>) => (
   <svg
@@ -34,5 +34,5 @@ const Icon = (props: SVGProps<SVGSVGElement>) => (
       </clipPath>
     </defs>
   </svg>
-)
-export default Icon
+);
+export default Icon;

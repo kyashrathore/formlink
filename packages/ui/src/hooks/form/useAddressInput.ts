@@ -8,11 +8,19 @@ interface UseAddressInputOptions {
   requiredFields?: (keyof UIAddressData)[];
 }
 
-export function useAddressInput(options: UseAddressInputOptions = {}): UseInputReturn<UIAddressData | null> {
+export function useAddressInput(
+  options: UseAddressInputOptions = {},
+): UseInputReturn<UIAddressData | null> {
   const {
     initialValue = null,
     required = false,
-    requiredFields = ["street1", "city", "stateProvince", "postalCode", "country"]
+    requiredFields = [
+      "street1",
+      "city",
+      "stateProvince",
+      "postalCode",
+      "country",
+    ],
   } = options;
 
   const [value, setValue] = useState<UIAddressData | null>(initialValue);
@@ -30,12 +38,16 @@ export function useAddressInput(options: UseAddressInputOptions = {}): UseInputR
 
     // Field-level validation
     if (value && required) {
-      requiredFields.forEach(field => {
+      requiredFields.forEach((field) => {
         if (!value[field] || value[field].trim().length === 0) {
-          const fieldName = field === "street1" ? "Street address" :
-                           field === "stateProvince" ? "State/Province" :
-                           field === "postalCode" ? "Postal code" :
-                           field.charAt(0).toUpperCase() + field.slice(1);
+          const fieldName =
+            field === "street1"
+              ? "Street address"
+              : field === "stateProvince"
+                ? "State/Province"
+                : field === "postalCode"
+                  ? "Postal code"
+                  : field.charAt(0).toUpperCase() + field.slice(1);
           newErrors.push(`${fieldName} is required`);
         }
       });
@@ -60,25 +72,31 @@ export function useAddressInput(options: UseAddressInputOptions = {}): UseInputR
     }
   }, [value, touched, validate]);
 
-  const handleChange = useCallback((newValue: UIAddressData | null) => {
-    setValue(newValue);
-    if (!touched) {
-      setTouched(true);
-    }
-  }, [touched]);
+  const handleChange = useCallback(
+    (newValue: UIAddressData | null) => {
+      setValue(newValue);
+      if (!touched) {
+        setTouched(true);
+      }
+    },
+    [touched],
+  );
 
-  const updateField = useCallback((field: keyof UIAddressData, fieldValue: string) => {
-    const updatedAddress = {
-      ...(value || {} as UIAddressData),
-      [field]: fieldValue
-    } as UIAddressData;
-    
-    handleChange(updatedAddress);
-    
-    if (!fieldTouched[field]) {
-      setFieldTouched(prev => ({ ...prev, [field]: true }));
-    }
-  }, [value, handleChange, fieldTouched]);
+  const updateField = useCallback(
+    (field: keyof UIAddressData, fieldValue: string) => {
+      const updatedAddress = {
+        ...(value || ({} as UIAddressData)),
+        [field]: fieldValue,
+      } as UIAddressData;
+
+      handleChange(updatedAddress);
+
+      if (!fieldTouched[field]) {
+        setFieldTouched((prev) => ({ ...prev, [field]: true }));
+      }
+    },
+    [value, handleChange, fieldTouched],
+  );
 
   const clearErrors = useCallback(() => {
     setErrors([]);
@@ -86,15 +104,15 @@ export function useAddressInput(options: UseAddressInputOptions = {}): UseInputR
 
   const isComplete = useCallback(() => {
     if (!value) return false;
-    return requiredFields.every(field => 
-      value[field] && value[field].trim().length > 0
+    return requiredFields.every(
+      (field) => value[field] && value[field].trim().length > 0,
     );
   }, [value, requiredFields]);
 
   const handlers = {
     updateField,
     isComplete,
-    fieldTouched
+    fieldTouched,
   };
 
   return {
@@ -104,6 +122,6 @@ export function useAddressInput(options: UseAddressInputOptions = {}): UseInputR
     validate,
     isValid: errors.length === 0,
     clearErrors,
-    handlers: handlers as Record<string, unknown>
+    handlers: handlers as Record<string, unknown>,
   };
 }

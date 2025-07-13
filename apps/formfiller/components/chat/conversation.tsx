@@ -14,12 +14,12 @@ type ConversationProps = {
   messages: MessageType[];
   status?: "streaming" | "ready" | "submitted" | "error";
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
-};  
+};
 
 // Scroll button component
 const ConversationScrollButton = () => {
   const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-  
+
   return !isAtBottom ? (
     <Button
       size="icon"
@@ -40,10 +40,10 @@ export function Conversation({
   const initialMessageCount = useRef(messages.length);
 
   // Filter out hidden messages
-  const visibleMessages = messages.filter(msg => !(msg as any).hidden);
+  const visibleMessages = messages.filter((msg) => !(msg as any).hidden);
 
   return (
-    <StickToBottom 
+    <StickToBottom
       className="relative flex h-[calc(75vh)] w-full overflow-y-auto overflow-x-hidden"
       resize="smooth"
       initial="smooth"

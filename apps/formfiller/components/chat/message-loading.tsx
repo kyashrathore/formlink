@@ -8,10 +8,10 @@ export function MessageLoading() {
   return (
     <Message
       className={cn(
-        "group flex w-full max-w-3xl items-start gap-4 px-3 py-1.5 sm:px-4 md:px-6"
+        "group flex w-full max-w-3xl items-start gap-4 px-3 py-1.5 sm:px-4 md:px-6",
       )}
     >
-      <motion.div 
+      <motion.div
         className="flex max-w-[90%] sm:max-w-[85%] md:max-w-[70%]"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -26,12 +26,22 @@ export function MessageLoading() {
           <motion.div
             className="w-2 h-2 bg-muted-foreground/40 rounded-full"
             animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.2 }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 0.2,
+            }}
           />
           <motion.div
             className="w-2 h-2 bg-muted-foreground/40 rounded-full"
             animate={{ opacity: [0.3, 1, 0.3] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut", delay: 0.4 }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: "easeInOut",
+              delay: 0.4,
+            }}
           />
         </div>
       </motion.div>

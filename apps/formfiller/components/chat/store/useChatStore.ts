@@ -10,9 +10,13 @@ import { apiConfig, apiServices } from "../../../lib/api-config";
 
 // --- Pure Helper Functions (top-level, no store dependency) ---
 
-export async function computeDerivedFields(formSchema: Form | null, currentInputs: Record<string, any>) {
+async function computeDerivedFields(
+  formSchema: Form | null,
+  currentInputs: Record<string, any>,
+) {
   let responsesWithComputedFields = { ...currentInputs };
-  const computedFields = formSchema?.settings?.additionalFields?.computedFromResponses;
+  const computedFields =
+    formSchema?.settings?.additionalFields?.computedFromResponses;
   if (Array.isArray(computedFields) && computedFields.length > 0) {
     for (const computed of computedFields) {
       if (
@@ -29,7 +33,7 @@ export async function computeDerivedFields(formSchema: Form | null, currentInput
           console.error(
             "Error evaluating computedFromResponses jsonata:",
             computed,
-            err
+            err,
           );
         }
       }
@@ -38,7 +42,7 @@ export async function computeDerivedFields(formSchema: Form | null, currentInput
   return responsesWithComputedFields;
 }
 
-export function saveAnswerToApi(
+function saveAnswerToApi(
   apiConfiguration: {
     formId: string | null;
     versionId: string | null;
@@ -51,9 +55,10 @@ export function saveAnswerToApi(
     allResponses?: Record<string, any>;
     isPartial: boolean;
     submissionStatus: string;
-  }
+  },
 ) {
-  const { formId, versionId, submissionId, isTestSubmission } = apiConfiguration;
+  const { formId, versionId, submissionId, isTestSubmission } =
+    apiConfiguration;
   if (!formId || !versionId || !submissionId) {
     console.error("Missing IDs for saveAnswerToApi");
     return;
@@ -75,7 +80,7 @@ export function saveAnswerToApi(
   });
 }
 
-export async function handleAiFormCompletion(
+async function handleAiFormCompletion(
   storeData: {
     formSchema: Form | null;
     versionId: string | null;
@@ -85,13 +90,16 @@ export async function handleAiFormCompletion(
   },
   currentInputs: Record<string, any>,
   setFormDisplayState: (newState: FormDisplayState) => void, // Added setFormDisplayState
-  submissionStatusOverride?: string
+  submissionStatusOverride?: string,
 ) {
   if (!storeData.formId || !storeData.versionId || !storeData.submissionId) {
     console.error("Missing IDs for AI form completion save");
     return;
   }
-  let responsesWithComputedFields = await computeDerivedFields(storeData.formSchema, currentInputs);
+  let responsesWithComputedFields = await computeDerivedFields(
+    storeData.formSchema,
+    currentInputs,
+  );
   let finalSubmissionStatus = submissionStatusOverride || "completed";
   saveAnswerToApi(
     {
@@ -104,11 +112,10 @@ export async function handleAiFormCompletion(
       allResponses: responsesWithComputedFields,
       isPartial: false,
       submissionStatus: finalSubmissionStatus,
-    }
+    },
   );
   setFormDisplayState("saved"); // Transition to saved state
 }
-
 
 type FormDisplayState =
   | "idle"
@@ -150,7 +157,7 @@ interface ChatState {
     versionIdVal: string,
     aiModeFlag: boolean,
     initialData?: Record<string, any>,
-    isTestSubmissionFlag?: boolean
+    isTestSubmissionFlag?: boolean,
   ) => void;
   startFormInteraction: () => void;
   initializeForm: (
@@ -159,12 +166,12 @@ interface ChatState {
     versionIdVal: string,
     aiModeFlag: boolean,
     initialData?: Record<string, any>,
-    isTestSubmissionFlag?: boolean
+    isTestSubmissionFlag?: boolean,
   ) => void;
   submitAnswerClassical: (answerValue: any) => void;
   processAssistantResponse: (
     assistantMessage: MessageType,
-    currentQuestionIdBeforeAIMaybe: string | null
+    currentQuestionIdBeforeAIMaybe: string | null,
   ) => void;
   getCurrentQuestion: () => Question | undefined;
   setFormDisplayState: (newState: FormDisplayState) => void;
@@ -175,7 +182,7 @@ interface ChatState {
     assistantMessageId: string,
     questionId: string,
     value: any,
-    displayText: string
+    displayText: string,
   ) => void;
   clearTriggerUserMessageForSelection: () => void;
   restartForm: () => void;
@@ -207,7 +214,7 @@ export const useChatStore = create<ChatState>()(
         versionIdVal,
         aiModeFlag,
         initialData = {},
-        isTestSubmissionFlag = false
+        isTestSubmissionFlag = false,
       ) => {
         const {
           formId: prevFormId,
@@ -219,7 +226,8 @@ export const useChatStore = create<ChatState>()(
         } = get();
 
         // Determine if we are re-initializing the exact same form instance
-        const isContinuingSameFormInstance = prevFormId === formIdVal && prevSubmissionId;
+        const isContinuingSameFormInstance =
+          prevFormId === formIdVal && prevSubmissionId;
 
         let newSubmissionId = prevSubmissionId;
         // Generate a new submissionId if it's a different form or no submissionId was persisted
@@ -232,11 +240,19 @@ export const useChatStore = create<ChatState>()(
           formId: formIdVal,
           versionId: versionIdVal,
           aiMode: aiModeFlag,
-          currentInputs: isContinuingSameFormInstance ? prevCurrentInputs : initialData,
+          currentInputs: isContinuingSameFormInstance
+            ? prevCurrentInputs
+            : initialData,
           submissionId: newSubmissionId,
-          chatHistoryMessages: isContinuingSameFormInstance ? prevChatHistoryMessages : [],
-          currentQuestionId: isContinuingSameFormInstance ? prevCurrentQuestionId : null,
-          formDisplayState: isContinuingSameFormInstance ? prevFormDisplayState : "idle",
+          chatHistoryMessages: isContinuingSameFormInstance
+            ? prevChatHistoryMessages
+            : [],
+          currentQuestionId: isContinuingSameFormInstance
+            ? prevCurrentQuestionId
+            : null,
+          formDisplayState: isContinuingSameFormInstance
+            ? prevFormDisplayState
+            : "idle",
           lastError: null,
           triggerUserMessageForSelection: null,
           isTestSubmission: isTestSubmissionFlag,
@@ -244,7 +260,14 @@ export const useChatStore = create<ChatState>()(
       },
 
       startFormInteraction: () => {
-        const { formSchema, aiMode, formId, submissionId, versionId, isTestSubmission } = get();
+        const {
+          formSchema,
+          aiMode,
+          formId,
+          submissionId,
+          versionId,
+          isTestSubmission,
+        } = get();
         if (!formSchema) return;
 
         // Create the submission record in the database (only for non-AI mode)
@@ -264,7 +287,10 @@ export const useChatStore = create<ChatState>()(
                 status: "in_progress",
               }),
             }).catch((error) => {
-              console.error("Failed to create initial submission record:", error);
+              console.error(
+                "Failed to create initial submission record:",
+                error,
+              );
             });
           }
         }
@@ -285,7 +311,7 @@ export const useChatStore = create<ChatState>()(
             : "displaying_question_classical") as FormDisplayState,
           currentQuestionId: firstQuestionId,
         };
-        
+
         set(newState);
       },
 
@@ -295,9 +321,16 @@ export const useChatStore = create<ChatState>()(
         versionIdVal,
         aiModeFlag,
         initialData = {},
-        isTestSubmissionFlag = false
+        isTestSubmissionFlag = false,
       ) => {
-        get().setupFormCore(formSchemaData, formIdVal, versionIdVal, aiModeFlag, initialData, isTestSubmissionFlag);
+        get().setupFormCore(
+          formSchemaData,
+          formIdVal,
+          versionIdVal,
+          aiModeFlag,
+          initialData,
+          isTestSubmissionFlag,
+        );
       },
 
       submitAnswerClassical: async (answerValue) => {
@@ -314,7 +347,7 @@ export const useChatStore = create<ChatState>()(
         if (!formSchema || !currentQuestionId) return;
 
         const currentQuestion = formSchema.questions.find(
-          (q: Question) => q.id === currentQuestionId
+          (q: Question) => q.id === currentQuestionId,
         );
 
         if (!currentQuestion) {
@@ -339,7 +372,10 @@ export const useChatStore = create<ChatState>()(
           return;
         }
 
-        const newInputs = { ...currentInputs, [currentQuestionId]: answerValue };
+        const newInputs = {
+          ...currentInputs,
+          [currentQuestionId]: answerValue,
+        };
         set({ currentInputs: newInputs, lastError: null });
 
         // Determine submission status
@@ -353,14 +389,14 @@ export const useChatStore = create<ChatState>()(
             answerValue,
             isPartial: true,
             submissionStatus,
-          }
+          },
         );
 
         // Find next question (currentQuestion is now guaranteed to be Question)
         const nextQ = findNextQuestion(
           currentQuestion,
           formSchema.questions,
-          newInputs
+          newInputs,
         );
         if (nextQ) {
           set({
@@ -370,7 +406,10 @@ export const useChatStore = create<ChatState>()(
         } else {
           // Form complete
           // Compute computed fields before saving all answers
-          let responsesWithComputedFields = await computeDerivedFields(formSchema, newInputs);
+          let responsesWithComputedFields = await computeDerivedFields(
+            formSchema,
+            newInputs,
+          );
 
           // Determine status for full submission
           let finalSubmissionStatus = "completed";
@@ -382,7 +421,7 @@ export const useChatStore = create<ChatState>()(
               allResponses: responsesWithComputedFields,
               isPartial: false,
               submissionStatus: finalSubmissionStatus,
-            }
+            },
           );
           setFormDisplayState("saved"); // Transition to saved state
           set({ currentQuestionId: null }); // Clear current question
@@ -391,7 +430,7 @@ export const useChatStore = create<ChatState>()(
 
       processAssistantResponse: async (
         assistantMessage,
-        currentQuestionIdBeforeAIMaybe
+        currentQuestionIdBeforeAIMaybe,
       ) => {
         // This function is now a stub, as the primary logic
         // for handling question transitions is managed by the link-based system
@@ -402,12 +441,15 @@ export const useChatStore = create<ChatState>()(
       getCurrentQuestion: () => {
         const { formSchema, currentQuestionId } = get();
         if (!formSchema || !currentQuestionId) return undefined;
-        return formSchema.questions.find((q: Question) => q.id === currentQuestionId);
+        return formSchema.questions.find(
+          (q: Question) => q.id === currentQuestionId,
+        );
       },
 
       setFormDisplayState: (newState) => set({ formDisplayState: newState }),
       setLastError: (errorMsg) => set({ lastError: errorMsg }),
-      setChatHistoryMessages: (messages) => set({ chatHistoryMessages: messages }),
+      setChatHistoryMessages: (messages) =>
+        set({ chatHistoryMessages: messages }),
       setCurrentInput: (questionId, value) =>
         set((state) => ({
           currentInputs: {
@@ -419,7 +461,7 @@ export const useChatStore = create<ChatState>()(
         assistantMessageId,
         questionId,
         value,
-        displayText
+        displayText,
       ) =>
         set({
           triggerUserMessageForSelection: {
@@ -436,7 +478,14 @@ export const useChatStore = create<ChatState>()(
       setEphemeralUploadedFile: (file) => set({ ephemeralUploadedFile: file }),
 
       handleFileUpload: async (questionId, file) => {
-        const { formId, submissionId, setLastError, setCurrentInput, setFormDisplayState, setTriggerUserMessageForSelection } = get();
+        const {
+          formId,
+          submissionId,
+          setLastError,
+          setCurrentInput,
+          setFormDisplayState,
+          setTriggerUserMessageForSelection,
+        } = get();
         if (!formId || !submissionId) {
           setLastError("Cannot upload file: missing form or submission ID.");
           return;
@@ -465,20 +514,24 @@ export const useChatStore = create<ChatState>()(
           setCurrentInput(questionId, fileDetails);
 
           // Find the last assistant message to trigger the user message from
-          const lastAssistantMessage = get().chatHistoryMessages.filter(m => m.role === 'assistant').pop();
+          const lastAssistantMessage = get()
+            .chatHistoryMessages.filter((m) => m.role === "assistant")
+            .pop();
 
           if (lastAssistantMessage) {
             setTriggerUserMessageForSelection(
               lastAssistantMessage.id,
               questionId,
               fileDetails,
-              `Uploaded file: ${fileName}`
+              `Uploaded file: ${fileName}`,
             );
           }
-
-
         } catch (error) {
-          setLastError(error instanceof Error ? error.message : "An unknown error occurred during file upload.");
+          setLastError(
+            error instanceof Error
+              ? error.message
+              : "An unknown error occurred during file upload.",
+          );
         } finally {
           setFormDisplayState("chatting_ai_ready");
           set({ ephemeralUploadedFile: null });
@@ -532,14 +585,21 @@ export const useChatStore = create<ChatState>()(
         });
       },
 
-      setCurrentQuestionId: (questionId) => set({ currentQuestionId: questionId }),
+      setCurrentQuestionId: (questionId) =>
+        set({ currentQuestionId: questionId }),
     }),
     {
       name: "form-junction-chat-history-v2",
       partialize: (state) =>
         Object.fromEntries(
-          Object.entries(state).filter(([key]) => !['ephemeralUploadedFile', 'triggerUserMessageForSelection'].includes(key))
+          Object.entries(state).filter(
+            ([key]) =>
+              ![
+                "ephemeralUploadedFile",
+                "triggerUserMessageForSelection",
+              ].includes(key),
+          ),
         ),
-    }
-  )
+    },
+  ),
 );

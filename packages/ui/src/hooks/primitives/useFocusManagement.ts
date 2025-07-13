@@ -1,5 +1,5 @@
-import { useEffect, useRef, useCallback, useState, RefObject } from 'react';
-import { FormMode } from '../form/context/FormModeContext';
+import { useEffect, useRef, useCallback, useState, RefObject } from "react";
+import { FormMode } from "../form/context/FormModeContext";
 
 interface UseFocusManagementOptions {
   mode: FormMode;
@@ -35,24 +35,26 @@ interface UseFocusManagementReturn {
 }
 
 const FOCUSABLE_SELECTORS = [
-  'a[href]',
-  'button:not([disabled])',
-  'input:not([disabled])',
-  'select:not([disabled])',
-  'textarea:not([disabled])',
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
   '[tabindex]:not([tabindex="-1"])',
-].join(', ');
+].join(", ");
 
-export function useFocusManagement(options: UseFocusManagementOptions): UseFocusManagementReturn {
+export function useFocusManagement(
+  options: UseFocusManagementOptions,
+): UseFocusManagementReturn {
   const {
     mode,
     elementRef,
     containerRef,
     autoFocus = false,
-    trapFocus = mode === 'typeform',
+    trapFocus = mode === "typeform",
     restoreFocus = false,
     scrollToError = false,
-    keepFocusOnInteraction = mode === 'ai',
+    keepFocusOnInteraction = mode === "ai",
     announceChanges = false,
     trackHistory = false,
     customTabOrder = [],
@@ -65,15 +67,17 @@ export function useFocusManagement(options: UseFocusManagementOptions): UseFocus
 
   // Get scroll behavior based on user preferences
   const getScrollBehavior = useCallback(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    return prefersReducedMotion ? 'auto' : 'smooth';
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    return prefersReducedMotion ? "auto" : "smooth";
   }, []);
 
   // Update focusable elements when container changes
   useEffect(() => {
     if (containerRef?.current && trapFocus) {
       const elements = Array.from(
-        containerRef.current.querySelectorAll(FOCUSABLE_SELECTORS)
+        containerRef.current.querySelectorAll(FOCUSABLE_SELECTORS),
       ) as HTMLElement[];
       setFocusableElements(elements);
     }
@@ -94,7 +98,7 @@ export function useFocusManagement(options: UseFocusManagementOptions): UseFocus
   useEffect(() => {
     if (restoreFocus) {
       savedFocusRef.current = document.activeElement as HTMLElement;
-      
+
       return () => {
         // Restore focus on unmount
         if (savedFocusRef.current && savedFocusRef.current !== document.body) {
@@ -105,31 +109,36 @@ export function useFocusManagement(options: UseFocusManagementOptions): UseFocus
   }, [restoreFocus]);
 
   // Handle keyboard navigation for focus trapping
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    if (!trapFocus || !containerRef?.current || event.key !== 'Tab') {
-      return;
-    }
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (!trapFocus || !containerRef?.current || event.key !== "Tab") {
+        return;
+      }
 
-    const focusable = Array.from(
-      containerRef.current.querySelectorAll(FOCUSABLE_SELECTORS)
-    ) as HTMLElement[];
+      const focusable = Array.from(
+        containerRef.current.querySelectorAll(FOCUSABLE_SELECTORS),
+      ) as HTMLElement[];
 
-    if (focusable.length === 0) return;
+      if (focusable.length === 0) return;
 
-    const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
-    let nextIndex: number;
+      const currentIndex = focusable.indexOf(
+        document.activeElement as HTMLElement,
+      );
+      let nextIndex: number;
 
-    if (event.shiftKey) {
-      // Backward navigation
-      nextIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
-    } else {
-      // Forward navigation
-      nextIndex = currentIndex >= focusable.length - 1 ? 0 : currentIndex + 1;
-    }
+      if (event.shiftKey) {
+        // Backward navigation
+        nextIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
+      } else {
+        // Forward navigation
+        nextIndex = currentIndex >= focusable.length - 1 ? 0 : currentIndex + 1;
+      }
 
-    event.preventDefault();
-    focusable[nextIndex].focus();
-  }, [trapFocus, containerRef]);
+      event.preventDefault();
+      focusable[nextIndex].focus();
+    },
+    [trapFocus, containerRef],
+  );
 
   // Handle interaction in chat mode
   const handleInteraction = useCallback(() => {
@@ -151,46 +160,52 @@ export function useFocusManagement(options: UseFocusManagementOptions): UseFocus
   }, []);
 
   // Focus on error field
-  const focusErrorField = useCallback((fieldId?: string) => {
-    let errorField: HTMLElement | null = null;
+  const focusErrorField = useCallback(
+    (fieldId?: string) => {
+      let errorField: HTMLElement | null = null;
 
-    if (fieldId) {
-      errorField = document.getElementById(fieldId);
-    } else {
-      // Find first field with aria-invalid="true"
-      errorField = document.querySelector('[aria-invalid="true"]');
-    }
-
-    if (errorField) {
-      if (scrollToError) {
-        errorField.scrollIntoView({ 
-          behavior: getScrollBehavior() as ScrollBehavior, 
-          block: 'center' 
-        });
+      if (fieldId) {
+        errorField = document.getElementById(fieldId);
+      } else {
+        // Find first field with aria-invalid="true"
+        errorField = document.querySelector('[aria-invalid="true"]');
       }
-      errorField.focus();
-    }
-  }, [scrollToError, getScrollBehavior]);
+
+      if (errorField) {
+        if (scrollToError) {
+          errorField.scrollIntoView({
+            behavior: getScrollBehavior() as ScrollBehavior,
+            block: "center",
+          });
+        }
+        errorField.focus();
+      }
+    },
+    [scrollToError, getScrollBehavior],
+  );
 
   // Apply custom tab order
   const applyTabOrder = useCallback(() => {
     if (!containerRef?.current) return;
 
     const elements = Array.from(
-      containerRef.current.querySelectorAll(FOCUSABLE_SELECTORS)
+      containerRef.current.querySelectorAll(FOCUSABLE_SELECTORS),
     ) as HTMLElement[];
 
     if (customTabOrder.length > 0) {
       // Create a mapping of original index to custom order
       customTabOrder.forEach((targetIndex, currentIndex) => {
         if (elements[targetIndex]) {
-          elements[targetIndex].setAttribute('tabindex', String(currentIndex + 1));
+          elements[targetIndex].setAttribute(
+            "tabindex",
+            String(currentIndex + 1),
+          );
         }
       });
     } else {
       // Default tab order
       elements.forEach((element, index) => {
-        element.setAttribute('tabindex', String(index + 1));
+        element.setAttribute("tabindex", String(index + 1));
       });
     }
   }, [containerRef, customTabOrder]);
@@ -200,42 +215,45 @@ export function useFocusManagement(options: UseFocusManagementOptions): UseFocus
     if (!containerRef?.current) return;
 
     const elements = Array.from(
-      containerRef.current.querySelectorAll('[tabindex]')
+      containerRef.current.querySelectorAll("[tabindex]"),
     ) as HTMLElement[];
 
-    elements.forEach(element => {
-      element.removeAttribute('tabindex');
+    elements.forEach((element) => {
+      element.removeAttribute("tabindex");
     });
   }, [containerRef]);
 
   // Announce focus changes for screen readers
-  const announceFocusChange = useCallback((message: string) => {
-    if (!announceChanges) return;
+  const announceFocusChange = useCallback(
+    (message: string) => {
+      if (!announceChanges) return;
 
-    // Use existing live region or create one
-    let liveRegion = document.getElementById('focus-announcer');
-    if (!liveRegion) {
-      liveRegion = document.createElement('div');
-      liveRegion.id = 'focus-announcer';
-      liveRegion.setAttribute('aria-live', 'polite');
-      liveRegion.setAttribute('aria-atomic', 'true');
-      liveRegion.style.position = 'absolute';
-      liveRegion.style.left = '-10000px';
-      liveRegion.style.width = '1px';
-      liveRegion.style.height = '1px';
-      liveRegion.style.overflow = 'hidden';
-      document.body.appendChild(liveRegion);
-    }
+      // Use existing live region or create one
+      let liveRegion = document.getElementById("focus-announcer");
+      if (!liveRegion) {
+        liveRegion = document.createElement("div");
+        liveRegion.id = "focus-announcer";
+        liveRegion.setAttribute("aria-live", "polite");
+        liveRegion.setAttribute("aria-atomic", "true");
+        liveRegion.style.position = "absolute";
+        liveRegion.style.left = "-10000px";
+        liveRegion.style.width = "1px";
+        liveRegion.style.height = "1px";
+        liveRegion.style.overflow = "hidden";
+        document.body.appendChild(liveRegion);
+      }
 
-    liveRegion.textContent = message;
-  }, [announceChanges]);
+      liveRegion.textContent = message;
+    },
+    [announceChanges],
+  );
 
   // Handle skip links
   const handleSkipLink = useCallback((targetId: string) => {
     const target = document.getElementById(targetId);
     if (target) {
       target.focus();
-      target.setAttribute('tabindex', '-1');
+      target.setAttribute("tabindex", "-1");
     }
   }, []);
 
@@ -245,7 +263,7 @@ export function useFocusManagement(options: UseFocusManagementOptions): UseFocus
 
     const currentElement = document.activeElement as HTMLElement;
     if (currentElement && currentElement !== document.body) {
-      setFocusHistory(prev => [...prev, currentElement]);
+      setFocusHistory((prev) => [...prev, currentElement]);
       historyIndexRef.current = focusHistory.length;
     }
   }, [trackHistory, focusHistory.length]);
@@ -271,10 +289,10 @@ export function useFocusManagement(options: UseFocusManagementOptions): UseFocus
   useEffect(() => {
     if (trapFocus && containerRef?.current) {
       const container = containerRef.current;
-      container.addEventListener('keydown', handleKeyDown as any);
-      
+      container.addEventListener("keydown", handleKeyDown as any);
+
       return () => {
-        container.removeEventListener('keydown', handleKeyDown as any);
+        container.removeEventListener("keydown", handleKeyDown as any);
       };
     }
   }, [trapFocus, containerRef, handleKeyDown]);

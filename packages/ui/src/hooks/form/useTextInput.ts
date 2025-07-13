@@ -21,12 +21,12 @@ interface UseTextInputOptions {
 
 /**
  * Hook for managing text input state and validation
- * 
+ *
  * @description
  * Provides complete text input management including value state,
  * validation, error handling, and touch tracking. Supports various
  * validation rules and custom validators.
- * 
+ *
  * @example
  * ```typescript
  * const emailInput = useTextInput({
@@ -39,7 +39,7 @@ interface UseTextInputOptions {
  *     return null;
  *   }
  * });
- * 
+ *
  * return (
  *   <input
  *     value={emailInput.value}
@@ -49,14 +49,16 @@ interface UseTextInputOptions {
  * );
  * ```
  */
-export function useTextInput(options: UseTextInputOptions = {}): UseInputReturn<string> {
+export function useTextInput(
+  options: UseTextInputOptions = {},
+): UseInputReturn<string> {
   const {
     initialValue = "",
     required = false,
     minLength,
     maxLength,
     pattern,
-    customValidator
+    customValidator,
   } = options;
 
   const [value, setValue] = useState<string>(initialValue);
@@ -105,12 +107,15 @@ export function useTextInput(options: UseTextInputOptions = {}): UseInputReturn<
     }
   }, [value, touched, validate]);
 
-  const handleChange = useCallback((newValue: string) => {
-    setValue(newValue);
-    if (!touched) {
-      setTouched(true);
-    }
-  }, [touched]);
+  const handleChange = useCallback(
+    (newValue: string) => {
+      setValue(newValue);
+      if (!touched) {
+        setTouched(true);
+      }
+    },
+    [touched],
+  );
 
   const clearErrors = useCallback(() => {
     setErrors([]);
@@ -125,7 +130,7 @@ export function useTextInput(options: UseTextInputOptions = {}): UseInputReturn<
     },
     onFocus: () => {
       // Could be used for focus tracking
-    }
+    },
   };
 
   return {
@@ -135,6 +140,6 @@ export function useTextInput(options: UseTextInputOptions = {}): UseInputReturn<
     validate,
     isValid: errors.length === 0,
     clearErrors,
-    handlers
+    handlers,
   };
 }

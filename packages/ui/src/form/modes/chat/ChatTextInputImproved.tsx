@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowDown, Type } from 'lucide-react';
-import { cn } from '../../../lib/utils';
+import React, { useEffect, useRef } from "react";
+import { motion } from "framer-motion";
+import { ArrowDown, Type } from "lucide-react";
+import { cn } from "../../../lib/utils";
 // ChatInputContainer deleted - this component may need refactoring
-import type { BaseTextInputProps } from '../../primitives/BaseTextInput';
+import type { BaseTextInputProps } from "../../primitives/BaseTextInput";
 
 interface ChatTextInputImprovedProps extends BaseTextInputProps {
   showHint?: boolean;
@@ -12,7 +12,7 @@ interface ChatTextInputImprovedProps extends BaseTextInputProps {
 
 export const ChatTextInputImproved: React.FC<ChatTextInputImprovedProps> = ({
   label,
-  placeholder = 'Type your answer below...',
+  placeholder = "Type your answer below...",
   description,
   showHint = true,
   hintDelay = 1000,
@@ -39,17 +39,13 @@ export const ChatTextInputImproved: React.FC<ChatTextInputImprovedProps> = ({
   }, [showHint, props.value, hintDelay]);
 
   return (
-    <ChatInputContainer className={cn('relative', className)}>
+    <ChatInputContainer className={cn("relative", className)}>
       <div className="space-y-6">
         {/* Question Display */}
         <div className="space-y-2">
-          <h2 className="text-2xl font-semibold text-foreground">
-            {label}
-          </h2>
+          <h2 className="text-2xl font-semibold text-foreground">{label}</h2>
           {description && (
-            <p className="text-base text-muted-foreground">
-              {description}
-            </p>
+            <p className="text-base text-muted-foreground">{description}</p>
           )}
         </div>
 

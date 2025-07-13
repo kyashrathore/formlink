@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { FormMode } from '../../primitives/types';
+import { useState, useCallback, useEffect, useRef } from "react";
+import { FormMode } from "../../primitives/types";
 
 interface UseSubmissionControlProps<T = unknown> {
   mode: FormMode;
@@ -28,7 +28,7 @@ export function useSubmissionControl<T = any>({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [lastSubmittedValue, setLastSubmittedValue] = useState<T | null>(null);
-  
+
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isMountedRef = useRef(true);
   const isSubmittingRef = useRef(false);
@@ -36,40 +36,43 @@ export function useSubmissionControl<T = any>({
   // Mode-specific debounce delays
   const getDebounceDelay = useCallback(() => {
     if (debounceDelay !== undefined) return debounceDelay;
-    
+
     switch (mode) {
-      case 'typeform':
+      case "typeform":
         return 300; // Faster for typeform
-      case 'chat':
+      case "chat":
       default:
         return 500; // Standard delay for chat
     }
   }, [mode, debounceDelay]);
 
   // Submit handler
-  const submitValue = useCallback(async (valueToSubmit: T) => {
-    if (!isValid || !isMountedRef.current || isSubmittingRef.current) {
-      return;
-    }
-
-    isSubmittingRef.current = true;
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      await onSubmit(valueToSubmit);
-      setLastSubmittedValue(valueToSubmit);
-    } catch (err) {
-      if (isMountedRef.current) {
-        setError(err instanceof Error ? err : new Error('Submission failed'));
+  const submitValue = useCallback(
+    async (valueToSubmit: T) => {
+      if (!isValid || !isMountedRef.current || isSubmittingRef.current) {
+        return;
       }
-    } finally {
-      if (isMountedRef.current) {
-        setIsSubmitting(false);
-        isSubmittingRef.current = false;
+
+      isSubmittingRef.current = true;
+      setIsSubmitting(true);
+      setError(null);
+
+      try {
+        await onSubmit(valueToSubmit);
+        setLastSubmittedValue(valueToSubmit);
+      } catch (err) {
+        if (isMountedRef.current) {
+          setError(err instanceof Error ? err : new Error("Submission failed"));
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setIsSubmitting(false);
+          isSubmittingRef.current = false;
+        }
       }
-    }
-  }, [isValid, onSubmit]);
+    },
+    [isValid, onSubmit],
+  );
 
   // Manual submit handler
   const handleSubmit = useCallback(async () => {

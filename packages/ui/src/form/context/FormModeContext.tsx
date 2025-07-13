@@ -11,7 +11,9 @@ interface FormModeContextValue {
   isTypeFormMode: boolean;
 }
 
-const FormModeContext = createContext<FormModeContextValue | undefined>(undefined);
+const FormModeContext = createContext<FormModeContextValue | undefined>(
+  undefined,
+);
 
 interface FormModeProviderProps {
   children: React.ReactNode;
@@ -26,28 +28,27 @@ interface FormModeProviderProps {
   };
 }
 
-export function FormModeProvider({ 
-  children, 
+export function FormModeProvider({
+  children,
   defaultMode = "chat",
   formSettings,
-  urlSearchParams
+  urlSearchParams,
 }: FormModeProviderProps) {
-  
   // Determine initial mode from multiple sources
   const getInitialMode = (): FormMode => {
     // 1. Check URL params first (highest priority)
     if (urlSearchParams?.mode === "typeform") return "typeform";
     if (urlSearchParams?.mode === "chat") return "chat";
-    
+
     // Legacy param support: aimode=false means typeform, otherwise chat
     if (urlSearchParams?.aimode === "false") return "typeform";
     if (urlSearchParams?.aimode === "true") return "chat";
-    
+
     // 2. Check form settings
     if (formSettings?.defaultMode) {
       return formSettings.defaultMode;
     }
-    
+
     // 3. Use provided default
     return defaultMode;
   };
@@ -57,7 +58,7 @@ export function FormModeProvider({
   // Update mode when URL params change
   useEffect(() => {
     if (!urlSearchParams) return;
-    
+
     if (urlSearchParams.mode === "typeform") {
       setMode("typeform");
     } else if (urlSearchParams.mode === "chat") {
@@ -88,10 +89,10 @@ export function useFormMode() {
   if (!context) {
     throw new Error("useFormMode must be used within a FormModeProvider");
   }
-  
+
   // Ensure we always return the expected shape
   // This handles edge cases where context might be corrupted
-  if (!context.mode || typeof context.setMode !== 'function') {
+  if (!context.mode || typeof context.setMode !== "function") {
     console.error("FormModeContext is corrupted:", context);
     return {
       mode: "chat" as FormMode,
@@ -100,6 +101,6 @@ export function useFormMode() {
       isTypeFormMode: false,
     };
   }
-  
+
   return context;
 }

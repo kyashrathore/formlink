@@ -9,7 +9,7 @@ export interface AnimationConfig {
   /** Animation delay before starting */
   delay?: string;
   /** Animation fill mode */
-  fill?: 'forwards' | 'backwards' | 'both' | 'none';
+  fill?: "forwards" | "backwards" | "both" | "none";
 }
 
 /**
@@ -58,7 +58,7 @@ export interface ButtonStyle {
 
 /**
  * Comprehensive FormJunction Theme Interface
- * 
+ *
  * @description
  * The complete theme configuration for FormJunction UI. Provides
  * design tokens, component overrides, mode-specific settings, and
@@ -75,41 +75,41 @@ export interface FormJunctionTheme {
       primaryHover: string;
       primaryActive: string;
       primaryForeground: string;
-      
+
       // Secondary colors
       secondary: string;
       secondaryHover: string;
       secondaryActive: string;
       secondaryForeground: string;
-      
+
       // Backgrounds
       background: string;
       backgroundAlt: string;
       backgroundOverlay: string;
-      
+
       // Text colors
       text: string;
       textMuted: string;
       textDisabled: string;
       textPlaceholder: string;
-      
+
       // UI colors
       border: string;
       borderFocus: string;
       borderError: string;
-      
+
       // Feedback colors
       success: string;
       error: string;
       warning: string;
       info: string;
-      
+
       // Interactive states
       hover: string;
       active: string;
       selected: string;
     };
-    
+
     // Typography
     typography: {
       fonts: {
@@ -119,171 +119,171 @@ export interface FormJunctionTheme {
         button: string;
         mono: string;
       };
-      
+
       sizes: {
         // Question sizes (TypeForm style)
-        questionXS: string;  // 16px
-        questionSM: string;  // 20px
-        questionMD: string;  // 24px
-        questionLG: string;  // 28px
-        questionXL: string;  // 32px
+        questionXS: string; // 16px
+        questionSM: string; // 20px
+        questionMD: string; // 24px
+        questionLG: string; // 28px
+        questionXL: string; // 32px
         questionXXL: string; // 40px
-        
+
         // Body text
-        bodyXS: string;      // 12px
-        bodySM: string;      // 14px
-        bodyMD: string;      // 16px
-        bodyLG: string;      // 18px
-        
+        bodyXS: string; // 12px
+        bodySM: string; // 14px
+        bodyMD: string; // 16px
+        bodyLG: string; // 18px
+
         // Input text
-        inputSM: string;     // 14px
-        inputMD: string;     // 16px
-        inputLG: string;     // 18px
-        inputXL: string;     // 20px
-        
+        inputSM: string; // 14px
+        inputMD: string; // 16px
+        inputLG: string; // 18px
+        inputXL: string; // 20px
+
         // Button text
-        buttonSM: string;    // 14px
-        buttonMD: string;    // 16px
-        buttonLG: string;    // 18px
+        buttonSM: string; // 14px
+        buttonMD: string; // 16px
+        buttonLG: string; // 18px
       };
-      
+
       weights: {
-        light: number;       // 300
-        regular: number;     // 400
-        medium: number;      // 500
-        semibold: number;    // 600
-        bold: number;        // 700
+        light: number; // 300
+        regular: number; // 400
+        medium: number; // 500
+        semibold: number; // 600
+        bold: number; // 700
       };
-      
+
       lineHeights: {
-        tight: number;       // 1.2
-        normal: number;      // 1.5
-        relaxed: number;     // 1.75
+        tight: number; // 1.2
+        normal: number; // 1.5
+        relaxed: number; // 1.75
       };
     };
-    
+
     // Spacing & Layout
     spacing: {
       questionSpacing: string;
       optionSpacing: string;
       sectionSpacing: string;
-      
-      paddingXS: string;     // 4px
-      paddingSM: string;     // 8px
-      paddingMD: string;     // 16px
-      paddingLG: string;     // 24px
-      paddingXL: string;     // 32px
-      paddingXXL: string;    // 48px
+
+      paddingXS: string; // 4px
+      paddingSM: string; // 8px
+      paddingMD: string; // 16px
+      paddingLG: string; // 24px
+      paddingXL: string; // 32px
+      paddingXXL: string; // 48px
     };
-    
+
     // Borders & Radius
     borders: {
-      widthThin: string;     // 1px
-      widthMedium: string;   // 2px
-      widthThick: string;    // 3px
-      
-      radiusNone: string;    // 0
-      radiusSM: string;      // 4px
-      radiusMD: string;      // 8px
-      radiusLG: string;      // 12px
-      radiusXL: string;      // 16px
-      radiusFull: string;    // 9999px
-      
+      widthThin: string; // 1px
+      widthMedium: string; // 2px
+      widthThick: string; // 3px
+
+      radiusNone: string; // 0
+      radiusSM: string; // 4px
+      radiusMD: string; // 8px
+      radiusLG: string; // 12px
+      radiusXL: string; // 16px
+      radiusFull: string; // 9999px
+
       inputRadius: string;
       buttonRadius: string;
       cardRadius: string;
     };
-    
+
     // Effects
     effects: {
       shadowNone: string;
       shadowSM: string;
       shadowMD: string;
       shadowLG: string;
-      
+
       focusRing: string;
       focusRingColor: string;
       focusRingWidth: string;
-      
-      blurSM: string;        // 4px
-      blurMD: string;        // 8px
-      blurLG: string;        // 16px
-      
+
+      blurSM: string; // 4px
+      blurMD: string; // 8px
+      blurLG: string; // 16px
+
       opacityDisabled: number;
       opacityHover: number;
     };
-    
+
     // Animations
     animations: {
-      durationFast: string;  // 150ms
+      durationFast: string; // 150ms
       durationNormal: string; // 200ms
-      durationSlow: string;  // 300ms
-      
+      durationSlow: string; // 300ms
+
       easingLinear: string;
       easingIn: string;
       easingOut: string;
       easingInOut: string;
       easingSpring: string;
-      
+
       questionEnter: AnimationConfig;
       questionExit: AnimationConfig;
       optionStagger: string;
-      optionHover: { scale: number; duration: string; };
+      optionHover: { scale: number; duration: string };
     };
-    
+
     // Layout Configuration
     layout: {
       maxWidth: string;
-      alignment: 'left' | 'center' | 'right';
-      questionAlignment: 'left' | 'center' | 'right';
-      optionLayout: 'vertical' | 'horizontal' | 'grid';
-      progressPosition: 'top' | 'bottom' | 'none';
-      progressStyle: 'bar' | 'dots' | 'numbers';
+      alignment: "left" | "center" | "right";
+      questionAlignment: "left" | "center" | "right";
+      optionLayout: "vertical" | "horizontal" | "grid";
+      progressPosition: "top" | "bottom" | "none";
+      progressStyle: "bar" | "dots" | "numbers";
     };
   };
-  
+
   // Component-Specific Overrides
   components: {
     textInput: {
       height: string;
-      borderStyle: 'none' | 'underline' | 'outline' | 'filled';
+      borderStyle: "none" | "underline" | "outline" | "filled";
       focusStyle: ComponentFocusStyle;
     };
-    
+
     select: {
       optionHeight: string;
       optionBorderRadius: string;
       showNumbers: boolean;
       showLetters: boolean;
-      numberStyle: 'circle' | 'square' | 'none';
+      numberStyle: "circle" | "square" | "none";
     };
-    
+
     rating: {
-      iconType: 'star' | 'heart' | 'thumbs' | 'number';
+      iconType: "star" | "heart" | "thumbs" | "number";
       iconSize: string;
       iconColor: string;
       iconColorActive: string;
     };
-    
+
     button: {
       primary: ButtonStyle;
       secondary: ButtonStyle;
     };
-    
+
     fileUpload: {
       dropzoneHeight: string;
       dropzoneBorder: string;
       dropzoneBackground: string;
       iconSize: string;
     };
-    
+
     datePicker: {
-      calendarTheme: 'light' | 'dark' | 'auto';
+      calendarTheme: "light" | "dark" | "auto";
       headerBackground: string;
       selectedDayBackground: string;
       todayBorderColor: string;
     };
-    
+
     progress: {
       bar: {
         height: string;
@@ -298,22 +298,22 @@ export interface FormJunctionTheme {
       };
     };
   };
-  
+
   // Mode-Specific Settings
   modes: {
     typeform: {
       background: {
-        type: 'color' | 'gradient' | 'image';
+        type: "color" | "gradient" | "image";
         value: string;
         overlay: string;
       };
       enableAnimations: boolean;
-      animationIntensity: 'subtle' | 'normal' | 'playful';
+      animationIntensity: "subtle" | "normal" | "playful";
       showKeyboardHints: boolean;
       autoAdvance: boolean;
       autoAdvanceDelay: number;
     };
-    
+
     chat: {
       containerBackground: string;
       messageBubbles: {
@@ -324,8 +324,8 @@ export interface FormJunctionTheme {
         maxWidth: string;
       };
       inputArea: {
-        position: 'bottom' | 'floating';
-        sendButtonStyle: 'icon' | 'text' | 'both';
+        position: "bottom" | "floating";
+        sendButtonStyle: "icon" | "text" | "both";
       };
       avatars: {
         show: boolean;
@@ -334,11 +334,11 @@ export interface FormJunctionTheme {
       };
       typingIndicator: {
         show: boolean;
-        style: 'dots' | 'text' | 'pulse';
+        style: "dots" | "text" | "pulse";
       };
     };
   };
-  
+
   // Accessibility Overrides
   accessibility: {
     highContrast: {
@@ -351,7 +351,7 @@ export interface FormJunctionTheme {
       instantTransitions: boolean;
     };
     fontSizeMultiplier: number;
-    colorBlindMode: 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia';
+    colorBlindMode: "none" | "protanopia" | "deuteranopia" | "tritanopia";
   };
 }
 
@@ -363,7 +363,13 @@ export interface ValidationResult {
 }
 
 // Theme preset type
-export type ThemePreset = 'default' | 'dark' | 'typeform' | 'minimal' | 'colorful' | 'enterprise';
+export type ThemePreset =
+  | "default"
+  | "dark"
+  | "typeform"
+  | "minimal"
+  | "colorful"
+  | "enterprise";
 
 // Partial theme for overrides
 export type PartialTheme = DeepPartial<FormJunctionTheme>;

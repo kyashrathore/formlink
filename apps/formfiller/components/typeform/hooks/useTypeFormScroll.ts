@@ -28,31 +28,31 @@ export function useTypeFormScroll({
       if (!isDropdownOpen) {
         e.preventDefault();
       }
-      
+
       const now = Date.now();
       const timeDiff = now - lastScrollTime.current;
       const navigationCooldown = now - lastNavigationTime.current;
-      
+
       // Prevent navigation if dropdown is open
       if (isDropdownOpen) {
         return;
       }
-      
+
       // Prevent navigation during cooldown period
       if (navigationCooldown < 500) {
         return;
       }
-      
+
       // Prevent navigation while already navigating
       if (isNavigating.current) {
         return;
       }
-      
+
       // Reset accumulator if enough time has passed
       if (timeDiff > 800) {
         scrollAccumulator.current = 0;
       }
-      
+
       // Normalize wheel delta for different devices
       let deltaY = e.deltaY;
       if (e.deltaMode === 1) {
@@ -62,24 +62,24 @@ export function useTypeFormScroll({
         // Page mode
         deltaY *= 800;
       }
-      
+
       scrollAccumulator.current += deltaY;
       lastScrollTime.current = now;
-      
+
       // Trigger navigation when threshold is reached
       const threshold = 250;
       if (Math.abs(scrollAccumulator.current) >= threshold) {
         isNavigating.current = true;
         lastNavigationTime.current = now;
-        
+
         if (scrollAccumulator.current > 0) {
           onNext();
         } else {
           onPrevious();
         }
-        
+
         scrollAccumulator.current = 0;
-        
+
         // Reset navigation lock after a brief delay
         setTimeout(() => {
           isNavigating.current = false;

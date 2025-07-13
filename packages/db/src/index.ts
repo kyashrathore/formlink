@@ -3,7 +3,7 @@ export { createClient as createServerClient } from "./supabase/server";
 export { createGuestServerClient } from "./supabase/server-guest";
 
 // Export only the specific types and utilities we need from Supabase
-export type { 
+export type {
   SupabaseClient,
   PostgrestError,
   PostgrestResponse,
@@ -12,7 +12,7 @@ export type {
   Session,
   AuthError,
   AuthResponse,
-  AuthTokenResponse
+  AuthTokenResponse,
 } from "@supabase/supabase-js";
 
 export * from "./types/database.types";

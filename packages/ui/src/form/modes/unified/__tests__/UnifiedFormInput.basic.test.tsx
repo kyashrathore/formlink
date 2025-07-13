@@ -13,7 +13,7 @@ describe("UnifiedFormInput Basic Tests", () => {
 
     // Chat text input shows instruction message, not actual input
     expect(
-      screen.getByText(/Type your answer in the message field below/)
+      screen.getByText(/Type your answer in the message field below/),
     ).toBeInTheDocument();
     expect(screen.getByText("Current answer:")).toBeInTheDocument();
     expect(screen.getByText("test value")).toBeInTheDocument();
@@ -41,7 +41,7 @@ describe("UnifiedFormInput Basic Tests", () => {
         options={options}
         {...mockProps}
         value="option1"
-      />
+      />,
     );
 
     // Chat select renders as button elements with option text
@@ -62,7 +62,7 @@ describe("UnifiedFormInput Basic Tests", () => {
         options={options}
         {...mockProps}
         value="option1"
-      />
+      />,
     );
 
     // TypeForm select renders as card-style buttons
@@ -83,7 +83,7 @@ describe("UnifiedFormInput Basic Tests", () => {
 
     expect(screen.getByText(/Unsupported component/)).toBeInTheDocument();
     expect(consoleSpy).toHaveBeenCalledWith(
-      "No component found for mode: chat, type: invalid-type"
+      "No component found for mode: chat, type: invalid-type",
     );
 
     consoleSpy.mockRestore();
@@ -94,7 +94,7 @@ describe("UnifiedFormInput Basic Tests", () => {
 
     // Chat mode text input behavior - shows message, no input field
     const { rerender } = render(
-      <UnifiedFormInput mode="chat" type="text" {...mockProps} />
+      <UnifiedFormInput mode="chat" type="text" {...mockProps} />,
     );
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     expect(screen.getByText(/Type your answer/)).toBeInTheDocument();
@@ -115,7 +115,7 @@ describe("UnifiedFormInput Basic Tests", () => {
         options={options}
         {...mockProps}
         value={[]}
-      />
+      />,
     );
 
     // Should render multiselect component (checkboxes in chat mode)
@@ -129,7 +129,7 @@ describe("UnifiedFormInput Basic Tests", () => {
         value={null}
         onChange={mockProps.onChange}
         onSubmit={mockProps.onSubmit}
-      />
+      />,
     );
 
     // Should render file upload component

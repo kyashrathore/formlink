@@ -14,9 +14,9 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Evaluates a JSONata condition against responses.
  */
- function evaluateCondition(
+function evaluateCondition(
   condition: string,
-  responses: Record<string, any>
+  responses: Record<string, any>,
 ): boolean {
   try {
     const expression = jsonata(condition);
@@ -33,9 +33,9 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Determines if a question should be shown based on conditional logic.
  */
- function shouldShowQuestion(
+function shouldShowQuestion(
   question: Question | undefined,
-  responses: Record<string, any>
+  responses: Record<string, any>,
 ): boolean {
   if (!question) return false;
 
@@ -61,7 +61,7 @@ export function cn(...inputs: ClassValue[]) {
     if (conditions.length === 0) continue;
 
     const conditionResults = conditions.map((cond: string) =>
-      cond ? evaluateCondition(cond, responses) : false
+      cond ? evaluateCondition(cond, responses) : false,
     );
 
     if (rule.logic === "AND") {
@@ -95,7 +95,7 @@ export function cn(...inputs: ClassValue[]) {
 /**
  * Returns the latest user message from a list of messages.
  */
-export function getLatestUserMessage(messages: Message[]): Message | undefined {
+function getLatestUserMessage(messages: Message[]): Message | undefined {
   const userMessages = messages.filter((m) => m.role === "user");
   if (userMessages.length === 0) return undefined;
 
@@ -105,7 +105,7 @@ export function getLatestUserMessage(messages: Message[]): Message | undefined {
 /**
  * Extracts the value from a user message.
  */
-export function getUserMessageValue(message: Message | undefined) {
+function getUserMessageValue(message: Message | undefined) {
   return (
     (typeof message?.content === "string" && message?.content) ||
     message?.parts?.filter((p) => p.type === "text")?.[0]?.text
@@ -115,7 +115,7 @@ export function getUserMessageValue(message: Message | undefined) {
 /**
  * Checks if a message is the initiating message.
  */
-export function isInitiatingMessage(message: Message | undefined) {
+function isInitiatingMessage(message: Message | undefined) {
   return getUserMessageValue(message) === "Let's Start";
 }
 
@@ -125,7 +125,7 @@ export function isInitiatingMessage(message: Message | undefined) {
 export function findNextQuestion(
   currentQuestion: Question,
   questions: Question[],
-  responses: Record<string, any>
+  responses: Record<string, any>,
 ): Question | undefined {
   if (!currentQuestion || !questions || !Array.isArray(questions)) {
     return undefined;

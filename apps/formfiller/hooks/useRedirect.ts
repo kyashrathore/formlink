@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 
 /**
  * Custom hook to handle conditional redirection with a delay.
@@ -10,7 +10,7 @@ import { useState, useEffect } from 'react';
 export function useRedirect(
   shouldRedirectCondition: boolean,
   redirectUrl?: string,
-  delay: number = 500
+  delay: number = 500,
 ): boolean {
   const [isActuallyRedirecting, setIsActuallyRedirecting] = useState(false);
 
@@ -19,15 +19,22 @@ export function useRedirect(
 
     if (shouldRedirectCondition && redirectUrl && redirectUrl.trim() !== "") {
       setIsActuallyRedirecting(true);
-      console.log(`[useRedirect] Conditions met. Will attempt redirect to "${redirectUrl}" in ${delay}ms.`);
+      console.log(
+        `[useRedirect] Conditions met. Will attempt redirect to "${redirectUrl}" in ${delay}ms.`,
+      );
 
       timerId = setTimeout(() => {
-        console.log(`[useRedirect] Timeout fired. Redirecting to "${redirectUrl}".`);
+        console.log(
+          `[useRedirect] Timeout fired. Redirecting to "${redirectUrl}".`,
+        );
         try {
           window.location.href = redirectUrl;
           // If redirect succeeds, the component typically unmounts, so no need to set isActuallyRedirecting to false.
         } catch (e) {
-          console.error(`[useRedirect] Error during window.location.href assignment to "${redirectUrl}":`, e);
+          console.error(
+            `[useRedirect] Error during window.location.href assignment to "${redirectUrl}":`,
+            e,
+          );
           setIsActuallyRedirecting(false); // Reset on error to allow potential re-attempts or UI updates.
         }
       }, delay);
@@ -35,14 +42,18 @@ export function useRedirect(
       // If conditions are not met (e.g., shouldRedirectCondition is false, or URL is invalid),
       // ensure we are not in a redirecting state.
       if (isActuallyRedirecting) {
-        console.log(`[useRedirect] Conditions for redirect no longer met or URL invalid. Resetting isActuallyRedirecting state.`);
+        console.log(
+          `[useRedirect] Conditions for redirect no longer met or URL invalid. Resetting isActuallyRedirecting state.`,
+        );
         setIsActuallyRedirecting(false);
       }
     }
 
     return () => {
       if (timerId) {
-        console.log(`[useRedirect] Cleanup: Clearing timer for URL "${redirectUrl}".`);
+        console.log(
+          `[useRedirect] Cleanup: Clearing timer for URL "${redirectUrl}".`,
+        );
         clearTimeout(timerId);
       }
     };

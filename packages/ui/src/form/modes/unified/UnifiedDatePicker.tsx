@@ -1,14 +1,14 @@
 "use client";
 
-import React from 'react';
-import { motion } from 'motion/react';
-import { BaseDatePicker } from '../../primitives/BaseDatePicker';
-import { cn } from '../../../lib/utils';
-import { Button } from '../../../ui/button';
-import { ArrowRight, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../ui/popover';
+import React from "react";
+import { motion } from "motion/react";
+import { BaseDatePicker } from "../../primitives/BaseDatePicker";
+import { cn } from "../../../lib/utils";
+import { Button } from "../../../ui/button";
+import { ArrowRight, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
 
-export type FormMode = 'chat' | 'typeform';
+export type FormMode = "chat" | "typeform";
 
 export interface UnifiedDatePickerProps {
   mode: FormMode;
@@ -39,14 +39,13 @@ export function UnifiedDatePicker({
   maxDate,
   disabledDates = [],
 }: UnifiedDatePickerProps) {
-  
   const datePicker = BaseDatePicker({
     value,
     onChange,
     disabled,
     required,
     placeholder,
-    autoFocus: mode === 'typeform' ? autoFocus : false,
+    autoFocus: mode === "typeform" ? autoFocus : false,
     minDate,
     maxDate,
     disabledDates,
@@ -79,28 +78,33 @@ export function UnifiedDatePicker({
     "w-full flex items-center justify-between px-3 py-2 border rounded-lg transition-all duration-200",
     "text-base bg-background hover:bg-accent/50",
     "focus:outline-none focus:border-primary focus:ring-0",
-    hasError ? "border-red-500" : value ? "border-green-500" : "border-border hover:border-border-hover",
-    disabled && "opacity-50 cursor-not-allowed"
+    hasError
+      ? "border-red-500"
+      : value
+        ? "border-green-500"
+        : "border-border hover:border-border-hover",
+    disabled && "opacity-50 cursor-not-allowed",
   );
 
-  const containerClass = mode === 'chat' ? "space-y-6" : "space-y-4";
+  const containerClass = mode === "chat" ? "space-y-6" : "space-y-4";
 
   return (
     <div className={cn(containerClass, className)}>
-      <Popover open={isCalendarOpen} onOpenChange={(open) => open ? openCalendar() : closeCalendar()}>
+      <Popover
+        open={isCalendarOpen}
+        onOpenChange={(open) => (open ? openCalendar() : closeCalendar())}
+      >
         <PopoverTrigger asChild>
-          <button
-            {...triggerProps}
-            className={triggerClass}
-            type="button"
-          >
-            <span className={value ? "text-foreground" : "text-muted-foreground"}>
+          <button {...triggerProps} className={triggerClass} type="button">
+            <span
+              className={value ? "text-foreground" : "text-muted-foreground"}
+            >
               {value ? formattedValue : placeholder}
             </span>
             <Calendar className="h-5 w-5 text-muted-foreground" />
           </button>
         </PopoverTrigger>
-        
+
         <PopoverContent className="w-auto p-0" align="start">
           <div className="p-3">
             {/* Calendar Header */}
@@ -112,14 +116,14 @@ export function UnifiedDatePicker({
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              
+
               <h4 className="font-semibold text-sm">
-                {calendar.currentMonth.toLocaleDateString('en-US', { 
-                  month: 'long', 
-                  year: 'numeric' 
+                {calendar.currentMonth.toLocaleDateString("en-US", {
+                  month: "long",
+                  year: "numeric",
                 })}
               </h4>
-              
+
               <button
                 onClick={calendar.nextMonth}
                 className="p-1 hover:bg-accent rounded"
@@ -132,12 +136,15 @@ export function UnifiedDatePicker({
             {/* Calendar Grid */}
             <div className="grid grid-cols-7 gap-1">
               {/* Day headers */}
-              {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => (
-                <div key={day} className="h-8 w-8 flex items-center justify-center text-xs font-medium text-muted-foreground">
+              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day) => (
+                <div
+                  key={day}
+                  className="h-8 w-8 flex items-center justify-center text-xs font-medium text-muted-foreground"
+                >
                   {day}
                 </div>
               ))}
-              
+
               {/* Calendar days */}
               {calendar.getDaysInMonth().map((day, index) => (
                 <button
@@ -149,9 +156,11 @@ export function UnifiedDatePicker({
                     day.isCurrentMonth
                       ? "text-foreground"
                       : "text-muted-foreground/50",
-                    day.isSelected && "bg-primary text-primary-foreground hover:bg-primary/90",
+                    day.isSelected &&
+                      "bg-primary text-primary-foreground hover:bg-primary/90",
                     day.isToday && !day.isSelected && "bg-accent font-semibold",
-                    day.isDisabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
+                    day.isDisabled &&
+                      "opacity-50 cursor-not-allowed hover:bg-transparent",
                   )}
                   {...day.props}
                   disabled={day.isDisabled}
@@ -187,17 +196,17 @@ export function UnifiedDatePicker({
       )}
 
       {/* Continue Button - ONLY for Chat Mode */}
-      {mode === 'chat' && onSubmit && value && (
+      {mode === "chat" && onSubmit && value && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
           className="flex items-center mt-4"
         >
-          <Button 
+          <Button
             onClick={handleContinue}
             disabled={disabled || hasError}
-            size="lg" 
+            size="lg"
             className="group"
           >
             Continue
@@ -205,7 +214,7 @@ export function UnifiedDatePicker({
           </Button>
         </motion.div>
       )}
-      
+
       {/* TypeForm Mode: No continue button - let parent handle navigation */}
     </div>
   );

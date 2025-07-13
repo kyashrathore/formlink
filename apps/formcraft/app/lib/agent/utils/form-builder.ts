@@ -7,9 +7,9 @@ export function buildFormFromState(agentState: AgentState): Form {
     formId: agentState.formId,
     hasJourneyScript: !!agentState.journeyScript,
     journeyScriptLength: agentState.journeyScript?.length,
-    journeyScriptPreview: agentState.journeyScript?.substring(0, 50) + "..."
+    journeyScriptPreview: agentState.journeyScript?.substring(0, 50) + "...",
   })
-  
+
   // Ensure generatedQuestionSchemas are valid Questions.
   // This might involve parsing or validating if they are not already in the correct format.
   // For now, we assume they are mostly compatible but might need ID and questionNo.
@@ -54,25 +54,27 @@ export function buildFormFromState(agentState: AgentState): Form {
   const version_id = uuidv4() // Placeholder: always new for this snapshot utility
 
   // Check if this is a new form (no questions generated yet)
-  const isNewForm = questions.length === 0 && 
-                    (!agentState.formMetadata?.title || agentState.formMetadata.title === "Untitled Form")
-  
+  const isNewForm =
+    questions.length === 0 &&
+    (!agentState.formMetadata?.title ||
+      agentState.formMetadata.title === "Untitled Form")
+
   // Don't include journey script for new forms to prevent stale data
   const settings: any = {
     ...agentState.settings,
     resultPageGenerationPrompt: agentState.resultPageGenerationPrompt || "",
   }
-  
+
   // Only include journey script if it's not a new form
   if (!isNewForm && agentState.journeyScript) {
     settings.journeyScript = agentState.journeyScript
   }
-  
+
   console.log("[buildFormFromState] Form settings", {
     isNewForm,
-    includesJourneyScript: !!settings.journeyScript
+    includesJourneyScript: !!settings.journeyScript,
   })
-  
+
   return {
     id: agentState.formId,
     short_id: agentState.shortId,
