@@ -1,0 +1,8 @@
+# Ignore artifacts and compiled files
+.next/
+.open-next/
+.wrangler/
+bundled/
+coverage/
+*.tsbuildinfo
+next-env.d.ts

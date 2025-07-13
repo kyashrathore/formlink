@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/f",
+      "destination": "https://forms.formlink.ai/"
+    },
+    {
+      "source": "/f/:path+",
+      "destination": "https://forms.formlink.ai/:path+"
+    }
+  ]
+}

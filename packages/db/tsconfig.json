@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler", // Use "bundler" for modern TS/JS interop
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true, // Let tsup handle emitting files
+    "jsx": "react-jsx", // Keep if any utils might involve JSX, otherwise remove
+    "declaration": true, // Generate .d.ts files (tsup will use this)
+    "declarationMap": true, // Optional: Generate sourcemaps for .d.ts files
+    "sourceMap": true, // Generate .map files
+    "outDir": "./dist", // Although tsup handles emit, this helps TS understand output structure
+    "rootDir": "./src",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"] // Allow internal aliased imports if needed
+    },
+  },
+  "include": ["src/**/*", "src/supabase"],
+  "exclude": ["node_modules", "dist"]
+}

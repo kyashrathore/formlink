@@ -1,0 +1,29 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "declarationDir": "./dist"
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/base/**/*",
+    "src/test-*.tsx",
+    "src/test/**/*",
+    "src/theme/**/*",
+    "src/lib/config.ts",
+    "src/form/modes/chat/ChatTextInputImproved.tsx",
+    "src/form/modes/unified/example.tsx",
+    "**/*.stories.tsx",
+    "**/*.test.tsx",
+    "**/*.test.ts"
+  ]
+}

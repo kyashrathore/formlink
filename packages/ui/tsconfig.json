@@ -1,0 +1,18 @@
+{
+  "extends": "@formlink/typescript-config/react-library.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@formlink/ui/*": ["./src/*"]
+    },
+    "outDir": "./dist",
+    "rootDir": "./src"
+  },
+  "include": [
+    "src/**/*",
+    "!src/base/**/*",
+    ".storybook/**/*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "src/base/**/*", "**/*.stories.tsx"]
+}

@@ -1,0 +1,21 @@
+{
+    "$schema": "https://ui.shadcn.com/schema.json",
+    "style": "new-york",
+    "rsc": true,
+    "tsx": true,
+    "tailwind": {
+      "config": "",
+      "css": "src/styles/globals.css",
+      "baseColor": "zinc",
+      "cssVariables": true
+    },
+    "iconLibrary": "lucide",
+    "aliases": {
+      "components": "@formlink/ui/components",
+      "utils": "@formlink/ui/lib/utils",
+      "hooks": "@formlink/ui/hooks",
+      "lib": "@formlink/ui/lib",
+      "ui": "@formlink/ui/components"
+    }
+  }
+  

@@ -1,0 +1,30 @@
+{
+  "name": "ui-docs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "storybook": "PORT=5003 storybook dev",
+    "build-storybook": "storybook build",
+    "test": "echo \"No tests specified for ui-docs (Storybook documentation app)\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@storybook/addon-a11y": "^8.6.12",
+    "@storybook/addon-essentials": "^8.6.12",
+    "@storybook/addon-interactions": "^8.6.12",
+    "@storybook/addon-links": "^8.6.12",
+    "@storybook/addon-styling": "^1.3.7",
+    "@storybook/addon-themes": "8.0.0",
+    "@storybook/blocks": "^8.6.12",
+    "@storybook/nextjs": "^8.6.12",
+    "@storybook/react": "^8.6.12",
+    "@storybook/test": "^8.6.12",
+    "storybook-dark-mode": "^4.0.2"
+  },
+  "dependencies": {
+    "@formlink/ui": "workspace:*"
+  }
+}

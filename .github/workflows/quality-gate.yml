@@ -1,0 +1,83 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  quality-gate:
+    name: Quality Gate Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: '10.10.0'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run comprehensive quality check
+        run: pnpm quality-check
+
+      - name: Comment PR with results
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            
+            // Get quality check results
+            let qualityStatus = '✅ All quality checks passed!';
+            let details = 'All code quality requirements have been met.';
+            
+            try {
+              execSync('pnpm quality-check', { stdio: 'inherit' });
+            } catch (error) {
+              qualityStatus = '❌ Quality checks failed';
+              details = 'Some quality requirements are not met. Please fix the issues and try again.';
+            }
+
+            const comment = `## 🔍 Quality Gate Results
+
+            ${qualityStatus}
+
+            ### Details
+            ${details}
+
+            ### What was checked:
+            - ✅ ESLint (code quality)
+            - ✅ TypeScript (type safety)  
+            - ✅ Prettier (code formatting)
+            - ✅ Tests (functionality)
+            - ✅ Security audit
+
+            ---
+            *This check runs automatically on every PR to ensure code quality.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+      - name: Fail if quality gate not met
+        run: |
+          if ! pnpm quality-check; then
+            echo "❌ Quality gate failed - PR cannot be merged"
+            exit 1
+          fi
+          echo "✅ Quality gate passed - PR ready for review"
