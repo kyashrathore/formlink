@@ -105,3 +105,5 @@ zen-mcp-server/
 # Extracted scripts (moved to separate repos)
 notion-content-automation/
 aiseo/
+.opencode.json
+.opencode/

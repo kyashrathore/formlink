@@ -20,8 +20,13 @@ export function FeedbackBubble() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Don't show on feedback page itself
-  if (pathname === "/feedback") return null
+  // Don't show on feedback page itself, test-ui pages, or forms/formId pages
+  if (
+    pathname === "/feedback" ||
+    pathname.startsWith("/test-ui") ||
+    pathname.startsWith("/dashboard/forms/")
+  )
+    return null
 
   const handleClick = () => {
     posthog.capture("feedback_bubble_clicked", {
@@ -37,7 +42,7 @@ export function FeedbackBubble() {
     >
       <div className="relative">
         {/* Pulse animation ring */}
-        <div className="bg-primary absolute inset-0 animate-ping rounded-full opacity-25" />
+        <div className="bg-primary w-rounded-full absolute inset-0 opacity-25" />
 
         <Button
           asChild

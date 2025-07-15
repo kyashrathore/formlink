@@ -423,7 +423,7 @@ export async function GET(request: Request, { params }: any) {
   }
 
   const cookieStore = await cookies()
-  const supabase = createServerClient(cookieStore)
+  const supabase = await createServerClient(cookieStore)
 
   try {
     let formSchema: Form | null = null
@@ -453,8 +453,12 @@ export async function GET(request: Request, { params }: any) {
     return NextResponse.json(formSchema)
   } catch (error) {
     // API Error fetching form schema
+    console.error("[API] Error fetching form schema:", error)
     return NextResponse.json(
-      { error: "Internal Server Error" },
+      {
+        error: "Internal Server Error",
+        details: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     )
   }
