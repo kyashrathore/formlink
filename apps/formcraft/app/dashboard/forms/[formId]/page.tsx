@@ -1,167 +1,382 @@
-import { cn } from "@/app/lib/utils"
-import { createServerClient, User } from "@formlink/db"
-import { Button, Skeleton } from "@formlink/ui"
-import { AlertCircle, FileQuestion } from "lucide-react"
-import { cookies } from "next/headers"
-import { unstable_ViewTransition as ViewTransition } from "react"
-import FormPageClient from "./FormPageClient"
+"use client"
 
-const FormEditorError: React.FC<{ error: string }> = ({ error }) => (
-  <div className="text-destructive flex h-screen flex-col items-center justify-center p-4 text-center">
-    <AlertCircle className="mb-4 h-12 w-12" />
-    <h2 className="mb-2 text-xl font-semibold">Error Loading Form Data</h2>
-    <p className="text-sm">{error}</p>
+import { useAuth } from "@/app/hooks/useAuth"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
+import { Suspense, useEffect, useState } from "react"
+import { v4 as uuidv4 } from "uuid"
+import ChatDesignPanel from "./components/ChatDesignPanel"
+import ChatTabContent from "./components/ChatTabContent"
+import DesignTabContent from "./components/DesignTabContent"
+import FloatingPanel from "./components/FloatingPanel"
+import NavigationBar from "./components/NavigationBar"
+import TabContentManager from "./components/TabContentManager"
+import TwoColumnLayout from "./components/TwoColumnLayout"
+import { usePanelState } from "./hooks/usePanelState"
+import { useFormAgentStore } from "./stores/formAgentStore"
+import { getDefaultSettings, useFormStore } from "./stores/useFormStore"
 
-    <Button variant="outline" className="mt-4" onClick={() => {}}>
-      Try Again
-    </Button>
-  </div>
-)
-
-const FormEditorNoData: React.FC = () => (
-  <div className="text-muted-foreground flex h-screen flex-col items-center justify-center p-4 text-center">
-    <FileQuestion className="mb-4 h-12 w-12" />
-    <p>No form data loaded or available.</p>
-
-    <Button variant="outline" className="mt-4" onClick={() => {}}>
-      Load Example Data
-    </Button>
-  </div>
-)
-
-export default async function FormPage({
-  params,
-}: {
-  params: Promise<{ formId: string }>
-}) {
-  const { formId } = await params
-
-  const cookieStore = await cookies()
-  const supabase = await createServerClient(cookieStore)
-
+function TestUIPageContent() {
   const {
-    data: { user },
-  } = await supabase.auth.getUser()
+    leftPanelWidth,
+    isResizing,
+    panelState,
+    isFloating,
+    setIsResizing,
+    setPanelWidth,
+  } = usePanelState()
 
-  const { data: formData, error: formError } = await supabase
-    .from("forms")
-    .select(
-      "id, current_published_version_id, current_draft_version_id, short_id"
+  // Get authenticated user for API calls
+  const { user, loading } = useAuth()
+  const userId = user?.id || null
+
+  // Router and URL params for form ID management
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const params = useParams()
+
+  // Get formId from URL path params
+  const formIdFromUrl = params.formId as string
+  const [formId, setFormId] = useState(() => formIdFromUrl || uuidv4())
+
+  // Update URL when formId changes
+  useEffect(() => {
+    if (!formIdFromUrl && formId) {
+      // If no formId in URL, navigate to form route
+      router.replace(`/dashboard/forms/${formId}`)
+    } else if (formIdFromUrl && formIdFromUrl !== formId) {
+      // If URL has different formId, use that
+      setFormId(formIdFromUrl)
+    }
+  }, [formId, formIdFromUrl, router])
+
+  // Initialize agent connection for this form on mount
+  useEffect(() => {
+    console.log("[TestUIPage] Mounting with formId:", formId)
+    const currentAgentState = useFormAgentStore.getState()
+    console.log("[TestUIPage] Current agent store state:", {
+      formId: currentAgentState.formId,
+      hasCurrentForm: !!currentAgentState.currentForm,
+      currentFormId: currentAgentState.currentForm?.id,
+    })
+
+    // Always initialize connection for the current form
+    useFormAgentStore.getState().initializeConnection(formId)
+
+    console.log(
+      "[TestUIPage] After initializeConnection - initialized for formId:",
+      formId
     )
-    .eq("id", formId)
-    .single()
+  }, [formId])
 
-  // If formData is not found, it might be a new client-side generated formId.
-  // We'll pass null for initialDbForm and let FormPageClient handle it.
-  // Only show hard errors if formError indicates a real DB issue other than not found.
-  if (formError && formError.code !== "PGRST116") {
-    // PGRST116: "Fetched result not found"
-    console.error("[FormPage Server] Error fetching form metadata:", formError)
-    return (
-      <FormEditorError
-        error={
-          formError.message || "Failed to load form data due to a server error."
-        }
-      />
-    )
-  }
+  // Load existing form data on mount and set placeholder (mirrors FormPageClient pattern)
+  useEffect(() => {
+    const currentStoreForm = useFormStore.getState().form
 
-  if (formData) {
-    // Existing form found, proceed to fetch version data
-    let versionId = formData.current_draft_version_id
-    // let versionStatus: "draft" | "published" = "draft" // Not directly used for now
+    // If we're switching to a different form, reset and set placeholder immediately
+    if (currentStoreForm && currentStoreForm.id !== formId) {
+      console.log("[TestUIPage] Different form detected, resetting", {
+        oldFormId: currentStoreForm.id,
+        newFormId: formId,
+      })
 
-    if (!versionId) {
-      versionId = formData.current_published_version_id
-      // if (versionId) {
-      //   versionStatus = "published"
-      // }
+      // Reset form store when switching forms
+      useFormStore.getState().resetForm()
+
+      // Set placeholder form immediately to prevent showing old data
+      const placeholderForm = {
+        id: formId,
+        version_id: uuidv4(),
+        title: "Untitled Form",
+        description: "",
+        questions: [],
+        settings: getDefaultSettings(),
+        current_draft_version_id: null,
+        current_published_version_id: null,
+        short_id: undefined,
+      }
+
+      console.log("[TestUIPage] Setting placeholder form", {
+        formId: placeholderForm.id,
+      })
+      useFormStore.getState().setForm(placeholderForm)
+      return // Exit early since we've already set the form
     }
 
-    if (!versionId) {
-      console.error(
-        "[FormPage Server] No draft or published version ID found for existing form:",
-        formId
-      )
-      // This is an error for an existing form
-      return <FormEditorNoData />
-    }
+    // Load existing form data from API
+    async function loadExistingFormData() {
+      if (!formId) return
 
-    const { data: versionData, error: versionError } = await supabase
-      .from("form_versions")
-      .select("version_id, title, description, questions, settings")
-      .eq("version_id", versionId)
-      .single()
+      try {
+        console.log(
+          "[TestUIPage] Attempting to load existing form data for:",
+          formId
+        )
+        const response = await fetch(`/api/forms/${formId}`)
 
-    if (versionError || !versionData) {
-      console.error(
-        "[FormPage Server] Error fetching form version data for existing form:",
-        versionError
-      )
-      return (
-        <FormEditorError
-          error={versionError?.message || "Failed to load form version."}
-        />
-      )
-    }
+        if (response.ok) {
+          const existingForm = await response.json()
+          console.log("[TestUIPage] Loaded existing form data:", {
+            formId: existingForm.id,
+            title: existingForm.title,
+            hasQuestions: existingForm.questions?.length > 0,
+          })
 
-    const formSchemaCandidate = {
-      id: formData.id,
-      version_id: versionData.version_id,
-      title: typeof versionData.title === "string" ? versionData.title : "",
-      description:
-        typeof versionData.description === "string"
-          ? versionData.description
-          : "",
-      questions: Array.isArray(versionData.questions)
-        ? versionData.questions
-        : [],
-      settings:
-        typeof versionData.settings === "object" &&
-        versionData.settings !== null
-          ? versionData.settings
-          : {},
-      current_published_version_id: formData.current_published_version_id,
-      current_draft_version_id: formData.current_draft_version_id,
-      short_id: formData.short_id, // Make sure short_id is passed
-    }
-
-    const { FormSchema } = await import("@formlink/schema")
-    const validationResult = FormSchema.safeParse(formSchemaCandidate)
-
-    if (!validationResult.success) {
-      console.error(
-        "[FormPage Server] Schema validation error for existing form:",
-        validationResult.error.errors
-      )
-      return (
-        <FormEditorError
-          error={
-            "Server Schema Validation Error: " +
-            validationResult.error.errors
-              .map((e: any) => `${e.path.join(".")}: ${e.message}`)
-              .join("; ")
+          // Set form data in store
+          if (!currentStoreForm || currentStoreForm.id !== existingForm.id) {
+            useFormStore.getState().setForm(existingForm)
           }
-        />
-      )
+        } else if (response.status === 404) {
+          console.log(
+            "[TestUIPage] Form not found in database - checking for agent data"
+          )
+          // Check if valid agent form data exists before creating placeholder
+          const agentForm = useFormAgentStore.getState().currentForm
+          const hasValidAgentData =
+            agentForm && agentForm.id === formId && agentForm.version_id
+
+          if (
+            !hasValidAgentData &&
+            (!currentStoreForm || currentStoreForm.id !== formId)
+          ) {
+            const newPlaceholderForm = {
+              id: formId,
+              version_id: uuidv4(),
+              title: "Untitled Form",
+              description: "",
+              questions: [],
+              settings: getDefaultSettings(),
+              current_draft_version_id: null,
+              current_published_version_id: null,
+              short_id: undefined,
+            }
+
+            console.log(
+              "[TestUIPage] Creating new placeholder form (no agent data)",
+              {
+                formId: newPlaceholderForm.id,
+              }
+            )
+            useFormStore.getState().setForm(newPlaceholderForm)
+          } else if (hasValidAgentData) {
+            console.log(
+              "[TestUIPage] Skipping placeholder creation - valid agent data exists"
+            )
+          }
+        } else {
+          console.error(
+            "[TestUIPage] Error loading form data:",
+            response.status,
+            response.statusText
+          )
+          // Try to get more error details from the response
+          try {
+            const errorData = await response.json()
+            console.error("[TestUIPage] Error details:", errorData)
+          } catch (e) {
+            console.error("[TestUIPage] Could not parse error response")
+          }
+        }
+      } catch (error) {
+        console.error("[TestUIPage] Failed to load existing form:", error)
+        // Check if valid agent form data exists before creating placeholder
+        const agentForm = useFormAgentStore.getState().currentForm
+        const hasValidAgentData =
+          agentForm && agentForm.id === formId && agentForm.version_id
+
+        if (
+          !hasValidAgentData &&
+          (!currentStoreForm || currentStoreForm.id !== formId)
+        ) {
+          const errorPlaceholderForm = {
+            id: formId,
+            version_id: uuidv4(),
+            title: "Untitled Form",
+            description: "",
+            questions: [],
+            settings: getDefaultSettings(),
+            current_draft_version_id: null,
+            current_published_version_id: null,
+            short_id: undefined,
+          }
+
+          console.log(
+            "[TestUIPage] Creating error placeholder form (no agent data)",
+            {
+              formId: errorPlaceholderForm.id,
+            }
+          )
+          useFormStore.getState().setForm(errorPlaceholderForm)
+        } else if (hasValidAgentData) {
+          console.log(
+            "[TestUIPage] Skipping error placeholder creation - valid agent data exists"
+          )
+        }
+      }
     }
+
+    loadExistingFormData()
+  }, [formId])
+
+  // Subscribe to the agent store for the current form - BRIDGE PATTERN
+  const formAgent_currentForm = useFormAgentStore((state) =>
+    state.currentForm?.id === formId ? state.currentForm : null
+  )
+
+  // Bridge agent form updates to the form store (mirrors FormPageClient pattern)
+  useEffect(() => {
+    console.log("[TestUIPage] Agent form update effect triggered", {
+      hasAgentForm: !!formAgent_currentForm,
+      agentFormId: formAgent_currentForm?.id,
+      formId: formId,
+      idsMatch: formAgent_currentForm?.id === formId,
+    })
+
+    if (formAgent_currentForm) {
+      const currentFormInStore = useFormStore.getState().form
+
+      console.log("[TestUIPage] Current form store state:", {
+        formId: currentFormInStore?.id,
+        title: currentFormInStore?.title,
+      })
+
+      // Bridge the agent form to the form store - same pattern as FormPageClient
+      const newFormForStore = {
+        // Core fields from the agent's Form object
+        id: formAgent_currentForm.id,
+        version_id: formAgent_currentForm.version_id,
+        title: formAgent_currentForm.title,
+        description: formAgent_currentForm.description,
+        questions: formAgent_currentForm.questions,
+        settings: formAgent_currentForm.settings,
+        short_id:
+          formAgent_currentForm.short_id || currentFormInStore?.short_id,
+
+        // Update draft version ID, preserve published ID
+        current_draft_version_id: formAgent_currentForm.version_id,
+        current_published_version_id:
+          currentFormInStore?.current_published_version_id || null,
+      }
+
+      // Basic change detection to avoid unnecessary re-renders
+      if (
+        currentFormInStore?.version_id !== newFormForStore.version_id ||
+        JSON.stringify(currentFormInStore?.questions) !==
+          JSON.stringify(newFormForStore.questions) ||
+        currentFormInStore?.title !== newFormForStore.title ||
+        currentFormInStore?.description !== newFormForStore.description ||
+        JSON.stringify(currentFormInStore?.settings) !==
+          JSON.stringify(newFormForStore.settings)
+      ) {
+        console.log(
+          "[TestUIPage] Syncing agent form to store:",
+          newFormForStore
+        )
+        useFormStore.getState().setForm(newFormForStore as any)
+      }
+    }
+  }, [formAgent_currentForm, formId])
+
+  // Function to start new form creation
+  const handleStartNewForm = () => {
+    const newFormId = uuidv4()
+    console.log("[FormPage] Starting new form creation with ID:", newFormId)
+
+    // Navigate to new form route
+    router.push(`/dashboard/forms/${newFormId}`)
+
+    // State will update via useEffect when URL changes
+  }
+
+  // Show loading state while authentication is being checked
+  if (loading) {
     return (
-      <ViewTransition>
-        <FormPageClient
-          formIdFromUrl={formId}
-          initialDbForm={validationResult.data}
-          user={user as User | null}
-        />
-      </ViewTransition>
-    )
-  } else {
-    // formData is null, and no critical db error. This is a new client-side formId.
-    return (
-      <FormPageClient
-        formIdFromUrl={formId}
-        initialDbForm={null}
-        user={user as User | null}
-      />
+      <div className="flex h-screen items-center justify-center">
+        <div className="text-muted-foreground">Loading...</div>
+      </div>
     )
   }
+
+  const handleResizeStart = () => {
+    setIsResizing(true)
+  }
+
+  const handleResize = (width: number) => {
+    setPanelWidth(width)
+  }
+
+  const handleResizeEnd = () => {
+    setIsResizing(false)
+  }
+
+  const handleSaveForm = () => {
+    console.log("Form saved!")
+  }
+
+  const handlePublishForm = () => {
+    console.log("Form published!")
+  }
+
+  // Chat and design content - pass authentication data and form ID
+  const chatContent = <ChatTabContent userId={userId} formId={formId} />
+  const designContent = <DesignTabContent />
+
+  // Left panel content
+  const leftPanel = (
+    <ChatDesignPanel chatContent={chatContent} designContent={designContent} />
+  )
+
+  // Right panel content - pass form ID and new form handler to TabContentManager
+  const rightPanel = (
+    <div className="flex h-full flex-col">
+      <NavigationBar
+        formId={formId}
+        onSaveForm={handleSaveForm}
+        onPublishForm={handlePublishForm}
+      />
+      <TabContentManager formId={formId} />
+    </div>
+  )
+
+  return (
+    <div className="relative">
+      {/* Main Layout */}
+      <TwoColumnLayout
+        leftPanel={leftPanel}
+        rightPanel={rightPanel}
+        leftPanelWidth={leftPanelWidth}
+        isResizing={isResizing}
+        onResizeStart={handleResizeStart}
+        onResize={handleResize}
+        onResizeEnd={handleResizeEnd}
+        panelState={panelState}
+      />
+
+      {/* Floating Panel */}
+      {isFloating && (
+        <FloatingPanel>
+          {({ onHeaderMouseDown }) => (
+            <ChatDesignPanel
+              chatContent={<ChatTabContent userId={userId} formId={formId} />}
+              designContent={designContent}
+              onHeaderMouseDown={onHeaderMouseDown}
+            />
+          )}
+        </FloatingPanel>
+      )}
+    </div>
+  )
+}
+
+export default function TestUIPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      }
+    >
+      <TestUIPageContent />
+    </Suspense>
+  )
 }

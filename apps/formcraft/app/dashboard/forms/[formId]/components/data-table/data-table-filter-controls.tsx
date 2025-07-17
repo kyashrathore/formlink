@@ -1,7 +1,5 @@
 "use client"
 
-import { useFormStore } from "@/app/dashboard/forms/[formId]/FormEditor/useFormStore"
-import { generateFilterFieldsFromForm } from "@/app/dashboard/forms/[formId]/responses/generateFilterFieldsFromForm"
 import {
   Accordion,
   AccordionContent,
@@ -10,6 +8,8 @@ import {
 } from "@formlink/ui"
 import type React from "react"
 import { useEffect } from "react"
+import { generateFilterFieldsFromForm } from "../../lib/responses/generateFilterFieldsFromForm"
+import { useFormStore } from "../../stores/useFormStore"
 import { DataTableFilterCheckbox } from "./data-table-filter-checkbox"
 import { DataTableFilterInput } from "./data-table-filter-input"
 import { DataTableFilterRadio } from "./data-table-filter-radio"

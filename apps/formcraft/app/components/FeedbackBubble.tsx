@@ -20,12 +20,8 @@ export function FeedbackBubble() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Don't show on feedback page itself, test-ui pages, or forms/formId pages
-  if (
-    pathname === "/feedback" ||
-    pathname.startsWith("/test-ui") ||
-    pathname.startsWith("/dashboard/forms/")
-  )
+  // Don't show on feedback page itself or forms/formId pages
+  if (pathname === "/feedback" || pathname.startsWith("/dashboard/forms/"))
     return null
 
   const handleClick = () => {

@@ -1,8 +1,5 @@
-import {
-  selectIsDirty,
-  useFormStore,
-} from "@/app/dashboard/forms/[formId]/stores/useFormStore"
 import { useEffect } from "react"
+import { selectIsDirty, useFormStore } from "../stores/useFormStore"
 
 export function useWarnIfUnsavedChanges() {
   const isDirty = useFormStore(selectIsDirty)

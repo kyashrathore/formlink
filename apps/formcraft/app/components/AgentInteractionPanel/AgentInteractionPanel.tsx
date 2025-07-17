@@ -1,5 +1,5 @@
 import Chat from "@/app/components/chat/chat"
-import { useFormStore } from "@/app/dashboard/forms/[formId]/FormEditor/useFormStore"
+import { useFormStore } from "@/app/dashboard/forms/[formId]/stores/useFormStore"
 import { cn } from "@/app/lib"
 import { analytics } from "@/app/lib/analytics"
 import { MODEL_DEFAULT } from "@/app/lib/config"

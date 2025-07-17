@@ -1,7 +1,7 @@
 "use client"
 
-import { useFormStore } from "@/app/dashboard/forms/[formId]/FormEditor/useFormStore"
-import { generateFilterFieldsFromForm } from "@/app/dashboard/forms/[formId]/responses/generateFilterFieldsFromForm"
+import { generateFilterFieldsFromForm } from "@/app/dashboard/forms/[formId]/lib/responses/generateFilterFieldsFromForm"
+import { useFormStore } from "@/app/dashboard/forms/[formId]/stores/useFormStore"
 import {
   Accordion,
   AccordionContent,
