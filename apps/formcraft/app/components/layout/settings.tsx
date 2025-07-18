@@ -1,5 +1,6 @@
 "use client"
 
+import { SubscriptionInfo } from "@/app/components/subscription"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { AUTH_DAILY_MESSAGE_LIMIT, MODEL_DEFAULT } from "@/app/lib/config"
 import { cn } from "@/lib/utils"
@@ -185,7 +186,14 @@ function SettingsContent({
         </div>
       </div>
 
-      {}
+      {/* Subscription */}
+      <div className="border-border border-t">
+        <div className="px-6 py-4">
+          <SubscriptionInfo />
+        </div>
+      </div>
+
+      {/* Account */}
       <div className="border-border border-t">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
