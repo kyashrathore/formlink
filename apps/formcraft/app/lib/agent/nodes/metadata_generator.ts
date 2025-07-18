@@ -177,9 +177,9 @@ export async function generateMetadataAndTasksNode(
     console.log(
       "[AGENT] Stream processing completed, calling handleStreamWithTimeout..."
     )
-    console.log("[AGENT] Timeout set to 5000ms")
+    console.log("[AGENT] Timeout set to 60000ms (1 minute)")
 
-    const aiResponseData = await handleStreamWithTimeout(streamResult, 5000) // Ensure full object
+    const aiResponseData = await handleStreamWithTimeout(streamResult, 60000) // Ensure full object
 
     console.log("[AGENT] AI Response Data received successfully")
     console.log(
