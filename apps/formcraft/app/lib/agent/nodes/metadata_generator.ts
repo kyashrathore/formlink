@@ -41,11 +41,25 @@ export async function generateMetadataAndTasksNode(
   const _agentEvents: AgentEvent[] = []
   let currentEventSequence = state.eventSequence
 
+  console.log("[AGENT] Starting metadata generation for formId:", state.formId)
+  console.log("[AGENT] User ID:", state.userId)
+  console.log("[AGENT] Event sequence:", currentEventSequence)
+
   const allEnv = getEnvVars()
+  console.log("[AGENT] Getting OpenRouter API key...")
   const apiKey = getRequiredEnvVar("OPENROUTER_API_KEY", allEnv)
+  console.log(
+    "[AGENT] OpenRouter API key obtained:",
+    apiKey ? "present" : "missing"
+  )
+
   const selectedModel = state.selectedModel || MODEL_DEFAULT
+  console.log("[AGENT] Selected model:", selectedModel)
+
   // API Key check already done, assuming it's present or getRequiredEnvVar throws
+  console.log("[AGENT] Creating OpenRouter provider...")
   const openRouterProvider = createOpenRouter({ apiKey })
+  console.log("[AGENT] OpenRouter provider created successfully")
 
   const messages: BaseMessage[] = [...(state.agentMessages ?? [])]
 
@@ -97,11 +111,23 @@ export async function generateMetadataAndTasksNode(
   let questionDetailsCount = 0
 
   try {
+    console.log("[AGENT] Preparing AI system prompt...")
     const systemPromptTemplate = ENHANCED_METADATA_PROMPT || ""
     const aiSystemPromptWithInput = systemPromptTemplate.replace(
       "{{userInput}}",
       state.normalizedInputContent
     )
+    console.log(
+      "[AGENT] System prompt prepared, length:",
+      aiSystemPromptWithInput.length
+    )
+
+    console.log("[AGENT] Calling OpenRouter API with streamObject...")
+    console.log("[AGENT] Stream parameters:", {
+      model: selectedModel,
+      schemaKeys: Object.keys(MetadataResponseSchema.shape),
+      promptLength: state.normalizedInputContent.length,
+    })
 
     const streamResult = await streamObject({
       model: openRouterProvider(selectedModel),
@@ -109,6 +135,10 @@ export async function generateMetadataAndTasksNode(
       system: aiSystemPromptWithInput,
       prompt: state.normalizedInputContent,
     })
+
+    console.log(
+      "[AGENT] OpenRouter streamObject call completed, starting stream processing..."
+    )
 
     // Iterate for streaming experience (though this node resolves once fully done)
     let tempTitle: string | undefined
@@ -143,7 +173,19 @@ export async function generateMetadataAndTasksNode(
         }
       }
     }
+
+    console.log(
+      "[AGENT] Stream processing completed, calling handleStreamWithTimeout..."
+    )
+    console.log("[AGENT] Timeout set to 5000ms")
+
     const aiResponseData = await handleStreamWithTimeout(streamResult, 5000) // Ensure full object
+
+    console.log("[AGENT] AI Response Data received successfully")
+    console.log(
+      "[AGENT] Response data keys:",
+      Object.keys(aiResponseData || {})
+    )
 
     // AI Response Data received
 
