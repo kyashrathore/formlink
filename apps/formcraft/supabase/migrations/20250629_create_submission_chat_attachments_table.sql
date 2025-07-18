@@ -50,7 +50,8 @@ TO authenticated
 USING (
   EXISTS (
     SELECT 1 FROM public.form_submissions fs
-    JOIN public.forms f ON fs.form_id = f.id
+    JOIN public.form_versions fv ON fs.form_version_id = fv.version_id
+    JOIN public.forms f ON fv.form_id = f.id
     WHERE fs.submission_id = submission_chat_attachments.submission_id
     AND f.user_id = auth.uid()
   )

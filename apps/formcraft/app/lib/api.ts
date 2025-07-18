@@ -239,7 +239,7 @@ export async function updateChatModel(chatId: string, model: string) {
   }
 }
 
-export async function signInWithGoogle(supabase: SupabaseClient) {
+export async function signInWithGoogle(supabase: SupabaseClient): Promise<any> {
   try {
     const isDev = getenv("NODE_ENV") === "development"
 
