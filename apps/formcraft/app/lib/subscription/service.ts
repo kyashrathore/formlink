@@ -54,8 +54,8 @@ export class SubscriptionManager {
         const result = {
           isActive: false,
           isPro: false,
-          plan: "free",
-          status: "canceled",
+          plan: "free" as const,
+          status: "canceled" as const,
         }
         console.log("[SUBSCRIPTION] Returning free tier result:", result)
         return result

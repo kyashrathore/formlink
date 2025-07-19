@@ -2,16 +2,7 @@
 
 import { toast } from "@formlink/ui"
 import { useMutation } from "@tanstack/react-query"
-import {
-  BarChart3,
-  Check,
-  FileText,
-  Loader2,
-  Save,
-  Settings,
-  Share2,
-  X,
-} from "lucide-react"
+import { Check, Loader2, X } from "lucide-react"
 import { useState } from "react"
 import { usePanelState } from "../hooks/usePanelState"
 import { selectIsDirty, useFormStore } from "../stores/useFormStore"
@@ -161,8 +152,8 @@ export default function NavigationBar({
   }
 
   return (
-    <div className="bg-card border-border flex items-center justify-between border-b px-4 py-2">
-      {/* Left side - Compressed Navigation */}
+    <div className="bg-card border-border flex items-center justify-between rounded-t-lg border-b px-4 py-2">
+      {/* Left side - Navigation */}
       <div className="flex space-x-1">
         <button
           onClick={() => setActiveMainTab("form")}
@@ -172,7 +163,6 @@ export default function NavigationBar({
               : "text-muted-foreground hover:text-foreground hover:bg-accent"
           } `}
         >
-          <FileText className="h-4 w-4" />
           <span>Form</span>
         </button>
 
@@ -184,7 +174,6 @@ export default function NavigationBar({
               : "text-muted-foreground hover:text-foreground hover:bg-accent"
           } `}
         >
-          <BarChart3 className="h-4 w-4" />
           <span>Responses</span>
         </button>
 
@@ -196,7 +185,6 @@ export default function NavigationBar({
               : "text-muted-foreground hover:text-foreground hover:bg-accent"
           } `}
         >
-          <Share2 className="h-4 w-4" />
           <span>Share</span>
         </button>
 
@@ -208,7 +196,6 @@ export default function NavigationBar({
               : "text-muted-foreground hover:text-foreground hover:bg-accent"
           } `}
         >
-          <Settings className="h-4 w-4" />
           <span>Settings</span>
         </button>
       </div>
@@ -230,7 +217,6 @@ export default function NavigationBar({
           {getButtonContent(
             saveState,
             <>
-              <Save className="h-4 w-4" />
               {updateFormMutation.isPending ? "Saving..." : "Save Form"}
               {isDirty && !updateFormMutation.isPending && (
                 <span
@@ -254,7 +240,6 @@ export default function NavigationBar({
           {getButtonContent(
             publishState,
             <>
-              <Share2 className="h-4 w-4" />
               {publishFormMutation.isPending ? "Publishing..." : "Publish Form"}
             </>,
             "Publishing..."

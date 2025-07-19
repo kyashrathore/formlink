@@ -39,10 +39,10 @@ export default function TwoColumnLayout({
   const actualLeftWidth = getLeftPanelWidth()
 
   return (
-    <div className="bg-background flex h-screen">
-      {/* Left Panel - Dense Control Center */}
+    <div className="bg-muted/20 flex h-full gap-1 p-1">
+      {/* Left Panel - Chat/Design Card */}
       <div
-        className={`bg-card border-border border-r transition-all duration-300 ease-in-out ${panelState === "hidden" ? "hidden" : ""} ${isResizing ? "transition-none" : ""} `}
+        className={`bg-card border-border rounded-lg border shadow-sm transition-all duration-300 ease-in-out ${panelState === "hidden" ? "hidden" : ""} ${isResizing ? "transition-none" : ""} `}
         style={{
           width: `${actualLeftWidth}px`,
           minWidth: panelState === "collapsed" ? "40px" : "300px",
@@ -54,35 +54,42 @@ export default function TwoColumnLayout({
 
       {/* Resize Handle */}
       {panelState !== "hidden" && (
-        <div
-          className={`bg-border hover:bg-primary w-1 cursor-col-resize transition-all duration-200 ease-in-out ${isResizing ? "bg-primary w-2 shadow-lg" : ""} `}
-          onMouseDown={(e) => {
-            e.preventDefault()
-            onResizeStart()
+        <div className="group relative flex w-2 cursor-col-resize items-center justify-center">
+          <div
+            className={`bg-border group-hover:bg-primary h-full w-0.5 opacity-0 transition-all duration-200 ease-in-out group-hover:opacity-100 ${isResizing ? "bg-primary opacity-100 shadow-lg" : ""} `}
+            onMouseDown={(e) => {
+              e.preventDefault()
+              onResizeStart()
 
-            const startX = e.clientX
-            const startWidth = actualLeftWidth
+              const startX = e.clientX
+              const startWidth = actualLeftWidth
 
-            const handleMouseMove = (e: MouseEvent) => {
-              const deltaX = e.clientX - startX
-              const newWidth = Math.max(300, Math.min(600, startWidth + deltaX))
-              onResize(newWidth)
-            }
+              const handleMouseMove = (e: MouseEvent) => {
+                const deltaX = e.clientX - startX
+                const newWidth = Math.max(
+                  300,
+                  Math.min(600, startWidth + deltaX)
+                )
+                onResize(newWidth)
+              }
 
-            const handleMouseUp = () => {
-              document.removeEventListener("mousemove", handleMouseMove)
-              document.removeEventListener("mouseup", handleMouseUp)
-              onResizeEnd()
-            }
+              const handleMouseUp = () => {
+                document.removeEventListener("mousemove", handleMouseMove)
+                document.removeEventListener("mouseup", handleMouseUp)
+                onResizeEnd()
+              }
 
-            document.addEventListener("mousemove", handleMouseMove)
-            document.addEventListener("mouseup", handleMouseUp)
-          }}
-        />
+              document.addEventListener("mousemove", handleMouseMove)
+              document.addEventListener("mouseup", handleMouseUp)
+            }}
+          />
+        </div>
       )}
 
-      {/* Right Panel - Spacious Preview Canvas */}
-      <div className="bg-background flex-1 overflow-hidden">{rightPanel}</div>
+      {/* Right Panel - Preview Card */}
+      <div className="bg-card border-border flex-1 overflow-hidden rounded-lg border shadow-sm">
+        {rightPanel}
+      </div>
     </div>
   )
 }

@@ -22,13 +22,14 @@ import { format } from "date-fns"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { startTransition, useEffect, useState } from "react" // Added useState, useEffect, startTransition
+import { startTransition, useCallback, useEffect, useState } from "react" // Added useState, useEffect, startTransition, useCallback
 
 import { v4 as uuidv4 } from "uuid"
 import FormlinkLogo from "../components/FormlinkLogo"
 import { AppInfo } from "../components/layout/app-info"
 import UserMenu from "../components/layout/user-menu"
 import { APP_NAME } from "../lib/config"
+import { DashboardChat } from "./components/DashboardChat"
 // Stream connection now managed by dashboard layout
 import { FormWithVersions } from "./types"
 
@@ -67,19 +68,26 @@ function Home({ forms, user }: HomeProps) {
   const sidebar = useSidebar()
   const isSidebarExpanded = sidebar?.state === "expanded"
   const isLoggedIn = user !== null
-  const { resetStore, eventsLog, initializeConnection, questionTaskCount } =
-    useFormAgentStore((state) => ({
-      resetStore: state.resetStore,
-      eventsLog: state.eventsLog,
-      initializeConnection: state.initializeConnection,
-      questionTaskCount: state.questionTaskCount,
-    })) // Get resetStore, eventsLog, initializeConnection, and questionTaskCount
+  const {
+    resetStore,
+    eventsLog,
+    initializeConnection,
+    questionTaskCount,
+    setInitialPrompt,
+  } = useFormAgentStore((state) => ({
+    resetStore: state.resetStore,
+    eventsLog: state.eventsLog,
+    initializeConnection: state.initializeConnection,
+    questionTaskCount: state.questionTaskCount,
+    setInitialPrompt: state.setInitialPrompt,
+  })) // Get resetStore, eventsLog, initializeConnection, questionTaskCount, and setInitialPrompt
 
   const [formIdForAgentPanel, setFormIdForAgentPanel] = useState<string | null>(
     null
   )
   const [navigatedFormId, setNavigatedFormId] = useState<string | null>(null)
   const [formCreationStartTime] = useState<number>(Date.now())
+  const [isNavigating, setIsNavigating] = useState(false)
 
   // Reset store on mount and when navigating back to dashboard
   useEffect(() => {
@@ -124,6 +132,26 @@ function Home({ forms, user }: HomeProps) {
     navigatedFormId,
     formCreationStartTime,
   ])
+
+  const handleStartFormCreation = useCallback(
+    (message: string) => {
+      if (!formIdForAgentPanel) return
+
+      setIsNavigating(true)
+
+      // Set initial message in store for forms page to pick up
+      setInitialPrompt(message)
+
+      // Track form creation started
+      analytics.formCreationStarted("ai_chat")
+
+      // Navigate to forms page
+      startTransition(() => {
+        router.push(`/dashboard/forms/${formIdForAgentPanel}`)
+      })
+    },
+    [formIdForAgentPanel, setInitialPrompt, router]
+  )
 
   const userData = {
     ...user,
@@ -229,7 +257,10 @@ function Home({ forms, user }: HomeProps) {
             )}
           </Sidebar>
           <SidebarInset>
-            {/* AgentInteractionPanel removed from here */}
+            <DashboardChat
+              onSubmit={handleStartFormCreation}
+              isNavigating={isNavigating}
+            />
           </SidebarInset>
         </div>
       </div>

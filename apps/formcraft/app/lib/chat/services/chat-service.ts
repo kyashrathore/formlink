@@ -3,21 +3,45 @@ import logger from "../../logger"
 export class ChatService {
   constructor(private supabase: any) {}
 
+  async saveMessage(
+    formId: string,
+    userId: string,
+    message: any
+  ): Promise<void> {
+    const { error } = await this.supabase.from("messages").insert({
+      form_id: formId,
+      user_id: userId,
+      role: message.role,
+      content: message.content || "",
+      parts: message.parts || null,
+    })
+
+    if (error) {
+      logger.error("Error saving message to DB", {
+        formId,
+        userId,
+        role: message.role,
+        messageContent: message.content?.substring(0, 100) + "...",
+        error,
+      })
+      // Only throw for user messages to ensure they're saved
+      // For assistant messages, we'll log but continue
+      if (message.role === "user") {
+        throw new Error(`Failed to save user message: ${error.message}`)
+      }
+    }
+  }
+
+  // Keep backward compatibility methods
   async saveUserMessage(
     formId: string,
     userId: string,
     content: string
   ): Promise<void> {
-    const { error } = await this.supabase.from("messages").insert({
-      form_id: formId,
-      user_id: userId,
+    await this.saveMessage(formId, userId, {
       role: "user",
       content: content,
     })
-
-    if (error) {
-      logger.error("Error saving user message to DB", { formId, userId, error })
-    }
   }
 
   async saveAssistantMessage(
@@ -25,20 +49,10 @@ export class ChatService {
     userId: string,
     content: string
   ): Promise<void> {
-    const { error } = await this.supabase.from("messages").insert({
-      form_id: formId,
-      user_id: userId,
+    await this.saveMessage(formId, userId, {
       role: "assistant",
       content: content,
     })
-
-    if (error) {
-      logger.error("Error saving assistant message to DB", {
-        formId,
-        userId,
-        error,
-      })
-    }
   }
 
   async getChatHistory(formId: string): Promise<any[]> {
@@ -56,7 +70,14 @@ export class ChatService {
       throw new Error(`Failed to fetch chat history: ${error.message}`)
     }
 
-    return data || []
+    // Reconstruct proper AI SDK message format
+    return (data || []).map((row: any) => ({
+      id: row.id.toString(), // Convert bigint to string for AI SDK compatibility
+      role: row.role,
+      content: row.content,
+      createdAt: row.created_at ? new Date(row.created_at) : new Date(),
+      ...(row.parts && { parts: row.parts }),
+    }))
   }
 
   writeStreamEvent(dataStream: any, eventType: string, payload?: any): void {

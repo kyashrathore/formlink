@@ -1,8 +1,11 @@
 "use client"
 
+import FormlinkLogo from "@/app/components/FormlinkLogo"
+import UserMenu from "@/app/components/layout/user-menu"
 import { useAuth } from "@/app/hooks/useAuth"
+import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { Suspense, useEffect, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import ChatDesignPanel from "./components/ChatDesignPanel"
 import ChatTabContent from "./components/ChatTabContent"
@@ -28,6 +31,24 @@ function TestUIPageContent() {
   // Get authenticated user for API calls
   const { user, loading } = useAuth()
   const userId = user?.id || null
+
+  // Memoize user data for UserMenu
+  const userData = useMemo(() => {
+    if (!user) return null
+    return {
+      id: user.id,
+      email: user.email || "",
+      display_name: user.user_metadata.name || null,
+      profile_image: user.user_metadata.avatar_url || null,
+      created_at: user.created_at || null,
+      anonymous: false,
+      daily_message_count: null,
+      daily_reset: null,
+      message_count: null,
+      preferred_model: null,
+      premium: null,
+    }
+  }, [user])
 
   // Router and URL params for form ID management
   const router = useRouter()
@@ -338,18 +359,31 @@ function TestUIPageContent() {
   )
 
   return (
-    <div className="relative">
+    <div className="flex h-screen flex-col">
+      {/* Header */}
+      <div className="flex flex-shrink-0 items-center justify-between px-6">
+        <Link
+          href="/dashboard"
+          className="text-foreground hover:text-primary flex items-center text-xl font-semibold transition-colors"
+        >
+          <FormlinkLogo /> Formlink
+        </Link>
+        {userData && <UserMenu user={userData} />}
+      </div>
+
       {/* Main Layout */}
-      <TwoColumnLayout
-        leftPanel={leftPanel}
-        rightPanel={rightPanel}
-        leftPanelWidth={leftPanelWidth}
-        isResizing={isResizing}
-        onResizeStart={handleResizeStart}
-        onResize={handleResize}
-        onResizeEnd={handleResizeEnd}
-        panelState={panelState}
-      />
+      <div className="flex-1 overflow-hidden">
+        <TwoColumnLayout
+          leftPanel={leftPanel}
+          rightPanel={rightPanel}
+          leftPanelWidth={leftPanelWidth}
+          isResizing={isResizing}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeEnd={handleResizeEnd}
+          panelState={panelState}
+        />
+      </div>
 
       {/* Floating Panel */}
       {isFloating && (

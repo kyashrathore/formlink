@@ -1,6 +1,7 @@
 import logger from "@/app/lib/logger"
 import { getEnvVars, getRequiredEnvVar } from "@/app/lib/utils/env"
-import { createServerClient, Database, Json } from "@formlink/db"
+import { openai } from "@ai-sdk/openai"
+import { createServerClient } from "@formlink/db"
 import {
   ChoiceQuestionSchema,
   LikertScaleQuestionSchema,
@@ -159,7 +160,7 @@ async function processGenerateQuestionSchema(
     ).length || 1
 
   const generateSchemaResult = await generateObject({
-    model: MODEL,
+    model: openai("gpt-4o"),
     schema: specificQuestionZodSchema,
     system: populatedQuestionSystemPrompt,
     prompt: `Generate a complete JSON schema for the question: "${questionTitle}" (type: ${schemaTaskDef.question_type}). This is question ${schemaTaskDef.order + 1} of ${totalQuestions}.`,

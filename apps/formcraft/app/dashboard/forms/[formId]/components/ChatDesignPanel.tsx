@@ -44,10 +44,10 @@ export default function ChatDesignPanel({
   }
 
   return (
-    <div className="bg-card flex h-full flex-col">
+    <div className="flex h-full flex-col">
       {/* Header with tabs and dock/close button */}
       <div
-        className={`border-border bg-muted/30 flex items-center justify-between border-b ${isFloating ? "cursor-grab rounded-t-lg" : ""}`}
+        className={`border-border bg-muted/30 flex items-center justify-between border-b ${isFloating ? "cursor-grab rounded-t-lg" : "rounded-t-lg"}`}
         onMouseDown={isFloating ? onHeaderMouseDown : undefined}
       >
         <div className="flex">

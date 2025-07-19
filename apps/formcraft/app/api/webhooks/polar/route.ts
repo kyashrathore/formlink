@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      userId = subscription.user_id
+      userId = subscription.user_id || ""
     }
 
     console.log("Processing Polar webhook:", {

@@ -1,5 +1,6 @@
 "use client"
 
+import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import ChatPanel from "./chat/ChatPanel"
 
 interface ChatTabContentProps {
@@ -11,14 +12,15 @@ export default function ChatTabContent({
   userId,
   formId,
 }: ChatTabContentProps) {
-  // Use the formId passed from parent (no longer need hardcoded fallback)
+  // Get initial prompt from the global store
+  const initialPrompt = useFormAgentStore((state) => state.initialPrompt)
 
   return (
     <ChatPanel
       formId={formId}
       userId={userId || undefined}
       showSuggestions={true}
-      initialMessage={undefined}
+      initialMessage={initialPrompt || undefined}
     />
   )
 }

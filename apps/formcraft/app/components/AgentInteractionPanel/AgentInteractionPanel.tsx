@@ -47,22 +47,8 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
   // const totalTasks = progress?.total ?? 0; // We will now use totalTaskCount from the store
 
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
-  const [isPanelExpanded, setIsPanelExpanded] = useState(() => {
-    // Persist panel state in localStorage
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("agentPanelExpanded")
-      return saved !== null ? saved === "true" : true
-    }
-    return true
-  })
+  const [isPanelExpanded, setIsPanelExpanded] = useState(true)
   const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
-
-  // Save panel state to localStorage whenever it changes
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("agentPanelExpanded", isPanelExpanded.toString())
-    }
-  }, [isPanelExpanded])
 
   // Store initial message locally to prevent timing issues
   const [storedInitialMessage] = useState<string | undefined>(

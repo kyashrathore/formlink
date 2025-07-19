@@ -31,9 +31,16 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
 
-  const [storedInitialMessage] = useState<string | undefined>(
-    () => initialMessage
-  )
+  const [storedInitialMessage, setStoredInitialMessage] = useState<
+    string | undefined
+  >(() => initialMessage)
+
+  // Update stored initial message when the prop changes
+  useEffect(() => {
+    if (initialMessage && initialMessage !== storedInitialMessage) {
+      setStoredInitialMessage(initialMessage)
+    }
+  }, [initialMessage, storedInitialMessage])
 
   const {
     messages: vercelChatMessages,
@@ -124,6 +131,14 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
             content: storedInitialMessage,
           })
           setHasUserInteracted(true)
+
+          // Clear the prompt from global store after using it
+          // This prevents the prompt from lingering and being reused
+          if (window.location.pathname.includes("/dashboard/forms/")) {
+            const { setInitialPrompt } =
+              require("@/app/stores/formAgentStore").useFormAgentStore.getState()
+            setInitialPrompt(null)
+          }
         }
       }, 200)
 

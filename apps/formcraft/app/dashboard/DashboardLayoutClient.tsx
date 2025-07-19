@@ -1,6 +1,5 @@
 "use client"
 
-import AgentInteractionPanel from "@/app/components/AgentInteractionPanel"
 import { useAuth } from "@/app/hooks/useAuth"
 import { usePostHogAuth } from "@/app/hooks/usePostHogAuth"
 import { useFormAgentStore } from "@/app/stores/formAgentStore"
@@ -19,8 +18,7 @@ export default function DashboardLayoutClient({
   const [activeFormId, setActiveFormId] = useState<string | null>(null)
 
   // Get user from the useAuth hook
-  const { user, loading } = useAuth()
-  const userId = user?.id || null
+  const { user } = useAuth()
 
   // Initialize PostHog user identification
   usePostHogAuth()
@@ -53,10 +51,11 @@ export default function DashboardLayoutClient({
     }
   }, [params.formId, currentStreamingFormId])
 
-  // Clear initial prompt after it's been used
+  // Clear initial prompt after it's been used (only for URL-based prompts)
   useEffect(() => {
-    if (initialPrompt && activeFormId) {
-      // Initial prompt detected from store (not URL)
+    if (initialPrompt && activeFormId && urlPrompt) {
+      // Only clear URL-based prompts, not dashboard-initiated ones
+      // Initial prompt detected from URL (not dashboard navigation)
 
       // Clear the store prompt after a delay
       const timer = setTimeout(() => {
@@ -67,28 +66,5 @@ export default function DashboardLayoutClient({
     }
   }, [initialPrompt, activeFormId, setInitialPrompt, urlPrompt])
 
-  return (
-    <>
-      {children}
-      {activeFormId && userId && (
-        <AgentInteractionPanel
-          key={activeFormId}
-          formId={activeFormId}
-          userId={userId}
-          layoutId="agent-panel-shared"
-          showSuggestions={true}
-          initialMessage={
-            (console.log("[DashboardLayout] Rendering AgentInteractionPanel", {
-              activeFormId,
-              hasInitialPrompt: !!initialPrompt,
-              hasUrlPrompt: !!urlPrompt,
-              initialPrompt,
-              urlPrompt,
-            }),
-            urlPrompt || initialPrompt || undefined)
-          }
-        />
-      )}
-    </>
-  )
+  return <>{children}</>
 }

@@ -1,12 +1,11 @@
 import { getEnvVars, getRequiredEnvVar } from "@/app/lib/utils/env"
-import { createServerClient, Database } from "@formlink/db"
+import { openai } from "@ai-sdk/openai"
+import { createServerClient } from "@formlink/db"
 import { QuestionTypeEnumSchema } from "@formlink/schema"
 import { BaseMessage } from "@langchain/core/messages"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { streamObject } from "ai"
 import { v4 as uuidv4 } from "uuid"
 import { z } from "zod"
-import { MODEL_DEFAULT } from "../../config"
 import { ENHANCED_METADATA_PROMPT } from "../../prompts"
 import { AgentEvent, createAgentEvent } from "../../types/agent-events"
 import {
@@ -46,20 +45,21 @@ export async function generateMetadataAndTasksNode(
   console.log("[AGENT] Event sequence:", currentEventSequence)
 
   const allEnv = getEnvVars()
-  console.log("[AGENT] Getting OpenRouter API key...")
-  const apiKey = getRequiredEnvVar("OPENROUTER_API_KEY", allEnv)
+  console.log("[AGENT] Getting OpenAI API key...")
+  const apiKey = getRequiredEnvVar("OPENAI_API_KEY", allEnv)
   console.log(
-    "[AGENT] OpenRouter API key obtained:",
+    "[AGENT] OpenAI API key obtained:",
     apiKey ? "present" : "missing"
   )
 
-  const selectedModel = state.selectedModel || MODEL_DEFAULT
+  // Use OpenAI GPT-4o model directly instead of OpenRouter
+  const selectedModel = "gpt-4o" // Always use OpenAI o3 model
   console.log("[AGENT] Selected model:", selectedModel)
 
   // API Key check already done, assuming it's present or getRequiredEnvVar throws
-  console.log("[AGENT] Creating OpenRouter provider...")
-  const openRouterProvider = createOpenRouter({ apiKey })
-  console.log("[AGENT] OpenRouter provider created successfully")
+  console.log("[AGENT] Creating OpenAI provider...")
+  // const openAIProvider = openai({ apiKey })
+  console.log("[AGENT] OpenAI provider created successfully")
 
   const messages: BaseMessage[] = [...(state.agentMessages ?? [])]
 
@@ -122,7 +122,7 @@ export async function generateMetadataAndTasksNode(
       aiSystemPromptWithInput.length
     )
 
-    console.log("[AGENT] Calling OpenRouter API with streamObject...")
+    console.log("[AGENT] Calling OpenAI API with streamObject...")
     console.log("[AGENT] Stream parameters:", {
       model: selectedModel,
       schemaKeys: Object.keys(MetadataResponseSchema.shape),
@@ -130,14 +130,14 @@ export async function generateMetadataAndTasksNode(
     })
 
     const streamResult = await streamObject({
-      model: openRouterProvider(selectedModel),
+      model: openai("gpt-4o"),
       schema: MetadataResponseSchema,
       system: aiSystemPromptWithInput,
       prompt: state.normalizedInputContent,
     })
 
     console.log(
-      "[AGENT] OpenRouter streamObject call completed, starting stream processing..."
+      "[AGENT] OpenAI streamObject call completed, starting stream processing..."
     )
 
     // Iterate for streaming experience (though this node resolves once fully done)

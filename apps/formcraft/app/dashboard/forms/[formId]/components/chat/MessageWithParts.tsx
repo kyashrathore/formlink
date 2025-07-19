@@ -1,6 +1,6 @@
 import { cn } from "@/app/lib"
 import { Message, MessageContent } from "@formlink/ui"
-import { Loader2 } from "lucide-react"
+import { CheckCircle, Loader2, XCircle } from "lucide-react"
 import React from "react"
 import { formatChatMessageTime } from "./utils"
 
@@ -12,11 +12,12 @@ interface TextPart {
 interface ToolInvocationPart {
   type: "tool-invocation"
   toolInvocation: {
-    state: "partial-call" | "call" | "result"
+    state: "partial-call" | "call" | "result" | "error"
     toolCallId: string
     toolName: string
     args?: any
     result?: any
+    error?: any
   }
 }
 
@@ -102,25 +103,60 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
             ) : null
 
           case "tool-invocation":
-            if (!isLastMessage || part.toolInvocation.state === "result") {
-              return null
+            const { state, toolName } = part.toolInvocation
+
+            // Show loading for active calls, success/error for completed
+            if (!isLastMessage && state !== "result" && state !== "error") {
+              return null // Only hide non-final states for historical messages
             }
 
-            const toolName = part.toolInvocation.toolName
-            const toolStatus =
-              part.toolInvocation.state === "partial-call"
-                ? `Preparing ${toolName}...`
-                : `Running ${toolName}...`
+            const getStatusDisplay = () => {
+              switch (state) {
+                case "result":
+                  return {
+                    icon: CheckCircle,
+                    text: `✓ Completed ${toolName}`,
+                    className: "bg-green-50 text-green-700 border-green-200",
+                  }
+                case "error":
+                  return {
+                    icon: XCircle,
+                    text: `✗ Failed ${toolName}`,
+                    className: "bg-red-50 text-red-700 border-red-200",
+                  }
+                case "partial-call":
+                  return {
+                    icon: Loader2,
+                    text: `Preparing ${toolName}...`,
+                    className: "bg-muted/30 text-foreground border-border",
+                  }
+                default: // "call"
+                  return {
+                    icon: Loader2,
+                    text: `Running ${toolName}...`,
+                    className: "bg-muted/30 text-foreground border-border",
+                  }
+              }
+            }
+
+            const statusDisplay = getStatusDisplay()
+            const IconComponent = statusDisplay.icon
+            const isSpinning = state === "partial-call" || state === "call"
 
             return (
               <div
                 key={index}
-                className="bg-muted/30 border-border mb-2 rounded-lg border p-3"
+                className={cn(
+                  "mb-2 rounded-lg border p-3",
+                  statusDisplay.className
+                )}
               >
                 <div className="mb-2 flex items-center gap-2">
-                  <Loader2 className="text-primary h-4 w-4 animate-spin" />
-                  <span className="text-foreground text-sm font-medium">
-                    🔧 {toolStatus}
+                  <IconComponent
+                    className={cn("h-4 w-4", isSpinning && "animate-spin")}
+                  />
+                  <span className="text-sm font-medium">
+                    🔧 {statusDisplay.text}
                   </span>
                 </div>
                 {displaySummaryMessage && (

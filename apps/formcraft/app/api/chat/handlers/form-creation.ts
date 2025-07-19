@@ -43,15 +43,11 @@ export async function handleChatRequest(
     throw error
   }
 
-  // Save user message
+  // Save user message with complete structure
   const chatService = new ChatService(supabase)
   const lastMessage = messages[messages.length - 1]
   if (lastMessage && lastMessage.role === "user") {
-    await chatService.saveUserMessage(
-      currentFormId,
-      userId,
-      lastMessage.content
-    )
+    await chatService.saveMessage(currentFormId, userId, lastMessage)
   }
 
   return createDataStreamResponse({
@@ -98,21 +94,55 @@ export async function handleChatRequest(
         maxSteps: 5,
         // Enable streaming of tool calls and steps for AI SDK 4.3.16
         experimental_toolCallStreaming: true,
-        onFinish: async (event) => {
+        onFinish: async ({
+          text,
+          toolCalls,
+          toolResults,
+          finishReason,
+          usage,
+        }) => {
           logger.info("Chat completion finished", {
             userId,
             formId: currentFormId,
-            text: event.text,
-            usage: event.usage,
-            finishReason: event.finishReason,
+            text,
+            usage,
+            finishReason,
           })
 
-          if (event.text) {
-            await chatService.saveAssistantMessage(
+          try {
+            // Create assistant message from the completion event
+            const assistantMessage = {
+              role: "assistant",
+              content: text,
+              parts: toolCalls || null,
+            }
+
+            logger.info("Attempting to save assistant message", {
+              formId: currentFormId,
+              userId,
+              messageRole: assistantMessage.role,
+              messageContent:
+                assistantMessage.content?.substring(0, 100) + "...",
+              hasToolCalls: !!toolCalls,
+            })
+
+            await chatService.saveMessage(
               currentFormId,
               userId,
-              event.text
+              assistantMessage
             )
+
+            logger.info("Assistant message saved successfully", {
+              formId: currentFormId,
+              userId,
+            })
+          } catch (error) {
+            logger.error("Error saving assistant message", {
+              formId: currentFormId,
+              userId,
+              error,
+            })
+            // Don't throw - let the response complete even if message saving fails
           }
           chatService.writeStreamEvent(dataStream, "chat_completed")
         },
@@ -122,6 +152,28 @@ export async function handleChatRequest(
             formId: currentFormId,
             error,
           })
+
+          // Save error message to chat history
+          try {
+            await chatService.saveMessage(currentFormId, userId, {
+              role: "assistant",
+              content:
+                "I encountered an error while processing your request. Please try again.",
+              parts: [
+                {
+                  type: "tool-invocation",
+                  toolInvocation: {
+                    state: "error",
+                    toolName: "system",
+                    error:
+                      error instanceof Error ? error.message : String(error),
+                  },
+                },
+              ],
+            })
+          } catch (saveError) {
+            logger.error("Failed to save error message", { saveError })
+          }
         },
       })
 
