@@ -1,5 +1,7 @@
 import { createServerClient } from "@formlink/db"
+import { Polar } from "@polar-sh/sdk"
 import { cookies } from "next/headers"
+import { redirect } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
 
 // Simple rate limiting
@@ -36,6 +38,12 @@ function checkRateLimit(identifier: string): boolean {
   current.count++
   return true
 }
+
+// Initialize Polar client
+const polar = new Polar({
+  accessToken: process.env.POLAR_ACCESS_TOKEN!,
+  server: (process.env.POLAR_SERVER as "sandbox" | "production") || "sandbox",
+})
 
 export async function GET(request: NextRequest) {
   try {
@@ -77,38 +85,33 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get environment variables
-    const polarOrganization = process.env.POLAR_ORGANIZATION
+    const customerId = subscription.external_customer_id || user.id
 
-    if (!polarOrganization) {
-      console.error("Missing POLAR_ORGANIZATION environment variable")
-      return NextResponse.json(
-        { error: "Payment system configuration error" },
-        { status: 500 }
-      )
-    }
-
-    // Build Polar.sh customer portal URL
-    const portalParams = new URLSearchParams({
-      organization: polarOrganization,
-      customer_id: subscription.external_customer_id || user.id,
-      return_url: `${request.nextUrl.origin}/dashboard`,
+    // Create customer portal session using Polar SDK
+    const customerSession = await polar.customerSessions.create({
+      customerId: customerId,
     })
-
-    const portalUrl = `https://polar.sh/customer-portal?${portalParams.toString()}`
 
     console.log("Redirecting to Polar.sh customer portal:", {
       userId: user.id,
-      customerId: subscription.external_customer_id,
-      portalUrl,
+      customerId: customerId,
+      portalUrl: customerSession.customerPortalUrl,
     })
 
-    // Return redirect URL
-    return NextResponse.json({
-      portalUrl,
-      customerId: subscription.external_customer_id || user.id,
-    })
+    // Redirect to Polar.sh customer portal
+    redirect(customerSession.customerPortalUrl)
   } catch (error) {
+    // Don't catch redirect errors - let Next.js handle them
+    if (
+      error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      typeof error.digest === "string" &&
+      error.digest.includes("NEXT_REDIRECT")
+    ) {
+      throw error
+    }
+
     console.error("Customer portal endpoint error:", error)
     return NextResponse.json(
       { error: "Internal server error" },
@@ -117,15 +120,4 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  // Handle POST requests the same way as GET for simplicity
-  const response = await GET(request)
-  const data = await response.json()
-
-  if (data.portalUrl) {
-    // For POST, redirect instead of returning JSON
-    return NextResponse.redirect(data.portalUrl)
-  }
-
-  return response
-}
+export const POST = GET

@@ -2,7 +2,11 @@
 
 import { SubscriptionInfo } from "@/app/components/subscription"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
-import { AUTH_DAILY_MESSAGE_LIMIT, MODEL_DEFAULT } from "@/app/lib/config"
+import {
+  AUTH_DAILY_MESSAGE_LIMIT,
+  ENABLE_BILLING,
+  MODEL_DEFAULT,
+} from "@/app/lib/config"
 import { cn } from "@/lib/utils"
 import { createBrowserClient } from "@formlink/db"
 import type { Database } from "@formlink/db"
@@ -187,11 +191,13 @@ function SettingsContent({
       </div>
 
       {/* Subscription */}
-      <div className="border-border border-t">
-        <div className="px-6 py-4">
-          <SubscriptionInfo />
+      {ENABLE_BILLING && (
+        <div className="border-border border-t">
+          <div className="px-6 py-4">
+            <SubscriptionInfo />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Account */}
       <div className="border-border border-t">

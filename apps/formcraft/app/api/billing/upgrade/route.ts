@@ -1,4 +1,5 @@
 import { createServerClient } from "@formlink/db"
+import { Polar } from "@polar-sh/sdk"
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
@@ -38,7 +39,13 @@ function checkRateLimit(identifier: string): boolean {
   return true
 }
 
-export async function POST(request: NextRequest) {
+// Initialize Polar client
+const polar = new Polar({
+  accessToken: process.env.POLAR_ACCESS_TOKEN!,
+  server: (process.env.POLAR_SERVER as "sandbox" | "production") || "sandbox",
+})
+
+export async function GET(request: NextRequest) {
   try {
     // Get user from auth
     const cookieStore = await cookies()
@@ -81,40 +88,42 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get environment variables
-    const polarOrganization = process.env.POLAR_ORGANIZATION
-    const polarProductId = process.env.POLAR_PRODUCT_ID
-
-    if (!polarOrganization || !polarProductId) {
-      console.error("Missing Polar.sh configuration:", {
-        polarOrganization: !!polarOrganization,
-        polarProductId: !!polarProductId,
-      })
+    const productId = process.env.POLAR_PRODUCT_ID
+    if (!productId) {
       return NextResponse.json(
-        { error: "Payment system configuration error" },
+        { error: "Product configuration error" },
         { status: 500 }
       )
     }
 
-    // Build Polar.sh checkout URL
-    const checkoutParams = new URLSearchParams({
-      organization: polarOrganization,
-      product: polarProductId,
-      customer_id: user.id, // Use Supabase user ID as customer ID
-      success_url: `${request.nextUrl.origin}/dashboard?upgraded=true`,
-      cancel_url: `${request.nextUrl.origin}/dashboard?upgrade_cancelled=true`,
+    // Create checkout session using Polar SDK
+    const checkout = await polar.checkouts.create({
+      products: [productId],
+      customerEmail: user.email || undefined,
+      successUrl: `${request.nextUrl.origin}/dashboard?upgraded=true`,
+      // Don't pass customerId - let Polar create customer automatically
     })
 
-    const checkoutUrl = `https://polar.sh/checkout?${checkoutParams.toString()}`
-
-    console.log("Redirecting to Polar.sh checkout:", {
+    console.log("Redirecting user to Polar.sh checkout:", {
       userId: user.id,
-      checkoutUrl,
+      checkoutId: checkout.id,
+      checkoutUrl: checkout.url,
     })
 
     // Redirect to Polar.sh checkout
-    return redirect(checkoutUrl)
+    redirect(checkout.url)
   } catch (error) {
+    // Don't catch redirect errors - let Next.js handle them
+    if (
+      error &&
+      typeof error === "object" &&
+      "digest" in error &&
+      typeof error.digest === "string" &&
+      error.digest.includes("NEXT_REDIRECT")
+    ) {
+      throw error
+    }
+
     console.error("Upgrade endpoint error:", error)
     return NextResponse.json(
       { error: "Internal server error" },
@@ -123,7 +132,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Handle GET requests (for direct navigation)
-export async function GET(request: NextRequest) {
-  return POST(request)
-}
+export const POST = GET
