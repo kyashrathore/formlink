@@ -243,13 +243,14 @@ export async function signInWithGoogle(supabase: SupabaseClient): Promise<any> {
   try {
     const isDev = getenv("NODE_ENV") === "development"
 
-    const baseUrl = isDev
-      ? "http://localhost:3000"
-      : typeof window !== "undefined"
+    const baseUrl =
+      typeof window !== "undefined"
         ? window.location.origin
-        : getenv("NEXT_PUBLIC_VERCEL_URL")
-          ? `https://${getenv("NEXT_PUBLIC_VERCEL_URL")}`
-          : APP_DOMAIN
+        : isDev
+          ? "http://localhost:3000"
+          : getenv("NEXT_PUBLIC_VERCEL_URL")
+            ? `https://${getenv("NEXT_PUBLIC_VERCEL_URL")}`
+            : APP_DOMAIN
 
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
