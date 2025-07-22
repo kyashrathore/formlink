@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@formlink/ui/globals.css";
 import { ThemeProvider } from "next-themes";
-import DarkModeToggle from "@/components/DarkModeToggle";
 import {
   PostHogProviderWrapper,
   PostHogPageview,
@@ -95,10 +94,7 @@ export default function RootLayout({
             <Suspense fallback={null}>
               <PostHogPageview />
             </Suspense>
-            <div className="flex justify-end p-4">
-              <DarkModeToggle />
-            </div>
-            <div className="h-[calc(100dvh-64px)]">{children}</div>
+            <div className="h-screen">{children}</div>
           </ThemeProvider>
         </PostHogProviderWrapper>
       </body>

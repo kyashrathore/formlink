@@ -111,7 +111,6 @@ const formStore: StateCreator<
   selectedQuestionId: null,
 
   resetForm: () => {
-    console.log("[FormStore] resetForm called")
     set((state) => {
       state.form = null
       state.initialFormSnapshot = null
@@ -122,15 +121,6 @@ const formStore: StateCreator<
   },
 
   setForm: (form: FormWithVersionIds) => {
-    console.log("[FormStore] setForm called", {
-      formId: form.id,
-      hasJourneyScript: !!form.settings?.journeyScript,
-      journeyScriptLength: form.settings?.journeyScript?.length,
-      journeyScriptPreview:
-        form.settings?.journeyScript?.substring(0, 50) + "...",
-      settingsKeys: form.settings ? Object.keys(form.settings) : [],
-    })
-
     const firstQuestionId = form.questions?.[0]?.id ?? null
 
     const questionsWithLists: QuestionWithLists[] = form.questions.map(

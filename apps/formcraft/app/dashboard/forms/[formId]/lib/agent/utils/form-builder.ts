@@ -3,13 +3,6 @@ import { v4 as uuidv4 } from "uuid"
 import { AgentState } from "../state"
 
 export function buildFormFromState(agentState: AgentState): Form {
-  console.log("[buildFormFromState] Building form", {
-    formId: agentState.formId,
-    hasJourneyScript: !!agentState.journeyScript,
-    journeyScriptLength: agentState.journeyScript?.length,
-    journeyScriptPreview: agentState.journeyScript?.substring(0, 50) + "...",
-  })
-
   // Ensure generatedQuestionSchemas are valid Questions.
   // This might involve parsing or validating if they are not already in the correct format.
   // For now, we assume they are mostly compatible but might need ID and questionNo.
@@ -69,11 +62,6 @@ export function buildFormFromState(agentState: AgentState): Form {
   if (!isNewForm && agentState.journeyScript) {
     settings.journeyScript = agentState.journeyScript
   }
-
-  console.log("[buildFormFromState] Form settings", {
-    isNewForm,
-    includesJourneyScript: !!settings.journeyScript,
-  })
 
   return {
     id: agentState.formId,

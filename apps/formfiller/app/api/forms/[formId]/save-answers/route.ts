@@ -69,9 +69,6 @@ async function handleIntegration(
         }
       });
 
-      console.log(
-        `[API] Sending standardized webhook for submissionId ${webhookPayload.submissionId} to ${webhookUrl}`,
-      );
       try {
         const response = await fetch(webhookUrl, {
           method: "POST",
@@ -84,27 +81,13 @@ async function handleIntegration(
           console.error(
             `[API] Webhook call to ${webhookUrl} failed with status ${response.status}: ${await response.text()}`,
           );
-        } else {
-          console.log(`[API] Webhook successfully sent to ${webhookUrl}`);
         }
       } catch (e: any) {
         console.error(
           `[API] Webhook call to ${webhookUrl} threw an error: ${e.message}`,
         );
       }
-    } else {
-      console.log(
-        `[API] Webhook URL not configured or invalid for form version ${versionId}`,
-      );
     }
-  } else if (form) {
-    console.log(
-      `[API] Form settings are not a valid object for form version ${versionId}, skipping webhook.`,
-    );
-  } else {
-    console.log(
-      `[API] No form data found for version ${versionId}, skipping webhook.`,
-    );
   }
 }
 

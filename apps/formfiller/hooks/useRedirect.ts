@@ -19,14 +19,8 @@ export function useRedirect(
 
     if (shouldRedirectCondition && redirectUrl && redirectUrl.trim() !== "") {
       setIsActuallyRedirecting(true);
-      console.log(
-        `[useRedirect] Conditions met. Will attempt redirect to "${redirectUrl}" in ${delay}ms.`,
-      );
 
       timerId = setTimeout(() => {
-        console.log(
-          `[useRedirect] Timeout fired. Redirecting to "${redirectUrl}".`,
-        );
         try {
           window.location.href = redirectUrl;
           // If redirect succeeds, the component typically unmounts, so no need to set isActuallyRedirecting to false.
@@ -42,18 +36,12 @@ export function useRedirect(
       // If conditions are not met (e.g., shouldRedirectCondition is false, or URL is invalid),
       // ensure we are not in a redirecting state.
       if (isActuallyRedirecting) {
-        console.log(
-          `[useRedirect] Conditions for redirect no longer met or URL invalid. Resetting isActuallyRedirecting state.`,
-        );
         setIsActuallyRedirecting(false);
       }
     }
 
     return () => {
       if (timerId) {
-        console.log(
-          `[useRedirect] Cleanup: Clearing timer for URL "${redirectUrl}".`,
-        );
         clearTimeout(timerId);
       }
     };

@@ -40,26 +40,14 @@ export async function generateMetadataAndTasksNode(
   const _agentEvents: AgentEvent[] = []
   let currentEventSequence = state.eventSequence
 
-  console.log("[AGENT] Starting metadata generation for formId:", state.formId)
-  console.log("[AGENT] User ID:", state.userId)
-  console.log("[AGENT] Event sequence:", currentEventSequence)
-
   const allEnv = getEnvVars()
-  console.log("[AGENT] Getting OpenAI API key...")
   const apiKey = getRequiredEnvVar("OPENAI_API_KEY", allEnv)
-  console.log(
-    "[AGENT] OpenAI API key obtained:",
-    apiKey ? "present" : "missing"
-  )
 
   // Use OpenAI GPT-4o model directly instead of OpenRouter
   const selectedModel = "gpt-4o" // Always use OpenAI o3 model
-  console.log("[AGENT] Selected model:", selectedModel)
 
   // API Key check already done, assuming it's present or getRequiredEnvVar throws
-  console.log("[AGENT] Creating OpenAI provider...")
   // const openAIProvider = openai({ apiKey })
-  console.log("[AGENT] OpenAI provider created successfully")
 
   const messages: BaseMessage[] = [...(state.agentMessages ?? [])]
 
@@ -111,23 +99,11 @@ export async function generateMetadataAndTasksNode(
   let questionDetailsCount = 0
 
   try {
-    console.log("[AGENT] Preparing AI system prompt...")
     const systemPromptTemplate = ENHANCED_METADATA_PROMPT || ""
     const aiSystemPromptWithInput = systemPromptTemplate.replace(
       "{{userInput}}",
       state.normalizedInputContent
     )
-    console.log(
-      "[AGENT] System prompt prepared, length:",
-      aiSystemPromptWithInput.length
-    )
-
-    console.log("[AGENT] Calling OpenAI API with streamObject...")
-    console.log("[AGENT] Stream parameters:", {
-      model: selectedModel,
-      schemaKeys: Object.keys(MetadataResponseSchema.shape),
-      promptLength: state.normalizedInputContent.length,
-    })
 
     const streamResult = await streamObject({
       model: openai("gpt-4o"),
@@ -135,10 +111,6 @@ export async function generateMetadataAndTasksNode(
       system: aiSystemPromptWithInput,
       prompt: state.normalizedInputContent,
     })
-
-    console.log(
-      "[AGENT] OpenAI streamObject call completed, starting stream processing..."
-    )
 
     // Iterate for streaming experience (though this node resolves once fully done)
     let tempTitle: string | undefined
@@ -174,18 +146,7 @@ export async function generateMetadataAndTasksNode(
       }
     }
 
-    console.log(
-      "[AGENT] Stream processing completed, calling handleStreamWithTimeout..."
-    )
-    console.log("[AGENT] Timeout set to 60000ms (1 minute)")
-
     const aiResponseData = await handleStreamWithTimeout(streamResult, 60000) // Ensure full object
-
-    console.log("[AGENT] AI Response Data received successfully")
-    console.log(
-      "[AGENT] Response data keys:",
-      Object.keys(aiResponseData || {})
-    )
 
     // AI Response Data received
 

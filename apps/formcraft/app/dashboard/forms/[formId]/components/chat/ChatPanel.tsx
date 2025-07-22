@@ -53,6 +53,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
     api: "/api/chat",
     body: { formId, userId: userId || "anonymous", selectedModel },
     onError: (error) => {
+      console.error("[ChatPanel] AI SDK Error:", error)
       const lastEvent =
         eventsLog.length > 0 ? eventsLog[eventsLog.length - 1] : null
       const errorEvent: AgentErrorEvent = {
@@ -64,9 +65,11 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
         userId: userId || "anonymous",
         sequence: lastEvent ? lastEvent.sequence + 1 : 0,
         data: {
-          message: "Chat Connection Error: " + error.message,
+          message:
+            "Chat Connection Error: " +
+            (error?.message || "Unknown streaming error"),
           details: error,
-          recoverable: false,
+          recoverable: true, // Make it recoverable so user can retry
         },
       }
       processEvent(errorEvent)

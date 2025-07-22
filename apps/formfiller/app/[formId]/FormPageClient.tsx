@@ -8,6 +8,7 @@ import TypeFormView from "@/components/typeform/TypeFormView";
 import { FormModeProvider, useFormMode } from "@/contexts/FormModeContext";
 import { mapFormToUI } from "@/lib/mappers/schema-to-ui";
 import { useAppFormStore } from "@/lib/stores/useAppFormStore";
+import { useThemeLoader } from "@/hooks/useThemeLoader";
 
 interface FormPageContentProps {
   formSchema: Form;
@@ -22,6 +23,29 @@ function FormPageContent({
   queryDataForForm,
 }: FormPageContentProps) {
   const { isAIMode, isTypeFormMode } = useFormMode();
+
+  // Load and apply themes from database
+  const themeLoader = useThemeLoader(formSchema);
+
+  // Log theme loading status for debugging
+  React.useEffect(() => {
+    if (!themeLoader.isLoading) {
+      if (themeLoader.themeApplied) {
+      } else if (themeLoader.error) {
+        console.error(
+          `Form ${formSchema.id}: Theme loading failed:`,
+          themeLoader.error,
+        );
+      } else {
+      }
+    }
+  }, [
+    themeLoader.isLoading,
+    themeLoader.themeApplied,
+    themeLoader.error,
+    themeLoader.appliedVariables.length,
+    formSchema.id,
+  ]);
 
   // Convert schema to UI format for components
   const uiFormSchema = mapFormToUI(formSchema);
@@ -77,6 +101,18 @@ function FormPageContent({
         break;
     }
   };
+
+  // Show minimal loading state while theme is being applied to prevent content flash
+  if (themeLoader.isLoading) {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading form...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isAIMode) {
     return (

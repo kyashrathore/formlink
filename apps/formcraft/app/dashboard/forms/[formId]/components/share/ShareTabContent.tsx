@@ -25,9 +25,13 @@ const EMBED_TYPES: { type: EmbedType; label: string }[] = [
 export default function ShareTabContent({
   formId,
   shortId,
+  shortIdLoading,
+  shortIdError,
 }: {
   formId: string
   shortId?: string
+  shortIdLoading?: boolean
+  shortIdError?: string | null
 }) {
   const { systemTheme, theme } = useTheme()
   const appliedTheme = theme === "system" ? systemTheme : theme

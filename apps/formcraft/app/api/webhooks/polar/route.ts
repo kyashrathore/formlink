@@ -25,11 +25,6 @@ async function withRetry<T>(
 
       // Exponential backoff: 1s, 2s, 4s
       const delay = baseDelay * Math.pow(2, attempt)
-      console.log(
-        `Webhook attempt ${attempt + 1} failed, retrying in ${delay}ms:`,
-        error
-      )
-
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
   }
@@ -162,14 +157,6 @@ export async function POST(request: NextRequest) {
       userId = subscription.user_id || ""
     }
 
-    console.log("Processing Polar webhook:", {
-      type,
-      subscriptionId,
-      customerId: customer_id,
-      userId,
-      status,
-    })
-
     const subscriptionManager = new SubscriptionManager()
 
     // Handle different webhook types with retry logic
@@ -211,17 +198,11 @@ export async function POST(request: NextRequest) {
           break
 
         default:
-          console.log("Polar webhook: Unhandled event type", type)
           // Return success even for unhandled events to avoid retries
           break
       }
     })
 
-    console.log("Polar webhook processed successfully:", {
-      type,
-      userId,
-      status,
-    })
     return NextResponse.json({ received: true }, { status: 200 })
   } catch (error) {
     console.error("Polar webhook processing error:", error)

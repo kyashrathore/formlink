@@ -5,7 +5,7 @@ import UserMenu from "@/app/components/layout/user-menu"
 import { useAuth } from "@/app/hooks/useAuth"
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { Suspense, useEffect, useMemo, useState } from "react"
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import ChatDesignPanel from "./components/ChatDesignPanel"
 import ChatTabContent from "./components/ChatTabContent"
@@ -59,6 +59,57 @@ function TestUIPageContent() {
   const formIdFromUrl = params.formId as string
   const [formId, setFormId] = useState(() => formIdFromUrl || uuidv4())
 
+  // Handle shadcn CSS application
+  const [shadcnStatus, setShadcnStatus] = useState<{
+    loading: boolean
+    error?: string
+    success?: boolean
+    appliedRootVariables?: string[]
+    appliedDarkVariables?: string[]
+    warnings?: string[]
+  }>({ loading: false })
+
+  // Shadcn CSS data for prop-based message sending
+  const [shadcnCSSData, setShadcnCSSData] = useState<{
+    cssText: string
+    version: number
+  } | null>(null)
+
+  const handleShadcnCSSApply = useCallback((cssText: string) => {
+    setShadcnStatus({ loading: true })
+
+    // Trigger message sending by updating shadcnCSSData prop
+    // The FormPreview component will send the message using its iframeRef
+    setShadcnCSSData({
+      cssText,
+      version: Date.now(), // Use timestamp as version for uniqueness
+    })
+  }, [])
+
+  const handleShadcnApplied = useCallback(
+    (result: {
+      success: boolean
+      error?: string
+      appliedRootVariables: string[]
+      appliedDarkVariables: string[]
+      warnings?: string[]
+    }) => {
+      setShadcnStatus({
+        loading: false,
+        error: result.error,
+        success: result.success,
+        appliedRootVariables: result.appliedRootVariables,
+        appliedDarkVariables: result.appliedDarkVariables,
+        warnings: result.warnings || [],
+      })
+
+      if (result.error) {
+        console.error("Shadcn CSS application failed:", result.error)
+      }
+    },
+    []
+  )
+
   // Update URL when formId changes
   useEffect(() => {
     if (!formIdFromUrl && formId) {
@@ -72,38 +123,17 @@ function TestUIPageContent() {
 
   // Initialize agent connection for this form on mount
   useEffect(() => {
-    console.log("[TestUIPage] Mounting with formId:", formId)
-    const currentAgentState = useFormAgentStore.getState()
-    console.log("[TestUIPage] Current agent store state:", {
-      formId: currentAgentState.formId,
-      hasCurrentForm: !!currentAgentState.currentForm,
-      currentFormId: currentAgentState.currentForm?.id,
-    })
-
     // Always initialize connection for the current form
     useFormAgentStore.getState().initializeConnection(formId)
-
-    console.log(
-      "[TestUIPage] After initializeConnection - initialized for formId:",
-      formId
-    )
   }, [formId])
 
   // Load existing form data on mount and set placeholder (mirrors FormPageClient pattern)
   useEffect(() => {
     const currentStoreForm = useFormStore.getState().form
 
-    // If we're switching to a different form, reset and set placeholder immediately
-    if (currentStoreForm && currentStoreForm.id !== formId) {
-      console.log("[TestUIPage] Different form detected, resetting", {
-        oldFormId: currentStoreForm.id,
-        newFormId: formId,
-      })
-
-      // Reset form store when switching forms
-      useFormStore.getState().resetForm()
-
-      // Set placeholder form immediately to prevent showing old data
+    // Always set placeholder form IMMEDIATELY for instant UI rendering
+    // This prevents the "fucking lot of time" loading issue
+    if (!currentStoreForm || currentStoreForm.id !== formId) {
       const placeholderForm = {
         id: formId,
         version_id: uuidv4(),
@@ -116,73 +146,30 @@ function TestUIPageContent() {
         short_id: undefined,
       }
 
-      console.log("[TestUIPage] Setting placeholder form", {
-        formId: placeholderForm.id,
-      })
       useFormStore.getState().setForm(placeholderForm)
-      return // Exit early since we've already set the form
     }
 
-    // Load existing form data from API
+    // If we're switching to a different form, reset first
+    if (currentStoreForm && currentStoreForm.id !== formId) {
+      useFormStore.getState().resetForm()
+    }
+
+    // Load existing form data from API (NON-BLOCKING - happens in background)
     async function loadExistingFormData() {
       if (!formId) return
 
       try {
-        console.log(
-          "[TestUIPage] Attempting to load existing form data for:",
-          formId
-        )
         const response = await fetch(`/api/forms/${formId}`)
 
         if (response.ok) {
           const existingForm = await response.json()
-          console.log("[TestUIPage] Loaded existing form data:", {
-            formId: existingForm.id,
-            title: existingForm.title,
-            hasQuestions: existingForm.questions?.length > 0,
-          })
 
           // Set form data in store
           if (!currentStoreForm || currentStoreForm.id !== existingForm.id) {
             useFormStore.getState().setForm(existingForm)
           }
         } else if (response.status === 404) {
-          console.log(
-            "[TestUIPage] Form not found in database - checking for agent data"
-          )
-          // Check if valid agent form data exists before creating placeholder
-          const agentForm = useFormAgentStore.getState().currentForm
-          const hasValidAgentData =
-            agentForm && agentForm.id === formId && agentForm.version_id
-
-          if (
-            !hasValidAgentData &&
-            (!currentStoreForm || currentStoreForm.id !== formId)
-          ) {
-            const newPlaceholderForm = {
-              id: formId,
-              version_id: uuidv4(),
-              title: "Untitled Form",
-              description: "",
-              questions: [],
-              settings: getDefaultSettings(),
-              current_draft_version_id: null,
-              current_published_version_id: null,
-              short_id: undefined,
-            }
-
-            console.log(
-              "[TestUIPage] Creating new placeholder form (no agent data)",
-              {
-                formId: newPlaceholderForm.id,
-              }
-            )
-            useFormStore.getState().setForm(newPlaceholderForm)
-          } else if (hasValidAgentData) {
-            console.log(
-              "[TestUIPage] Skipping placeholder creation - valid agent data exists"
-            )
-          }
+          // 404 is fine - placeholder is already set, agent will populate it
         } else {
           console.error(
             "[TestUIPage] Error loading form data:",
@@ -199,43 +186,12 @@ function TestUIPageContent() {
         }
       } catch (error) {
         console.error("[TestUIPage] Failed to load existing form:", error)
-        // Check if valid agent form data exists before creating placeholder
-        const agentForm = useFormAgentStore.getState().currentForm
-        const hasValidAgentData =
-          agentForm && agentForm.id === formId && agentForm.version_id
-
-        if (
-          !hasValidAgentData &&
-          (!currentStoreForm || currentStoreForm.id !== formId)
-        ) {
-          const errorPlaceholderForm = {
-            id: formId,
-            version_id: uuidv4(),
-            title: "Untitled Form",
-            description: "",
-            questions: [],
-            settings: getDefaultSettings(),
-            current_draft_version_id: null,
-            current_published_version_id: null,
-            short_id: undefined,
-          }
-
-          console.log(
-            "[TestUIPage] Creating error placeholder form (no agent data)",
-            {
-              formId: errorPlaceholderForm.id,
-            }
-          )
-          useFormStore.getState().setForm(errorPlaceholderForm)
-        } else if (hasValidAgentData) {
-          console.log(
-            "[TestUIPage] Skipping error placeholder creation - valid agent data exists"
-          )
-        }
+        // Error is fine - placeholder is already set, agent will populate it
       }
     }
 
-    loadExistingFormData()
+    // Call asynchronously to prevent blocking page render
+    setTimeout(() => loadExistingFormData(), 0)
   }, [formId])
 
   // Subscribe to the agent store for the current form - BRIDGE PATTERN
@@ -245,20 +201,8 @@ function TestUIPageContent() {
 
   // Bridge agent form updates to the form store (mirrors FormPageClient pattern)
   useEffect(() => {
-    console.log("[TestUIPage] Agent form update effect triggered", {
-      hasAgentForm: !!formAgent_currentForm,
-      agentFormId: formAgent_currentForm?.id,
-      formId: formId,
-      idsMatch: formAgent_currentForm?.id === formId,
-    })
-
     if (formAgent_currentForm) {
       const currentFormInStore = useFormStore.getState().form
-
-      console.log("[TestUIPage] Current form store state:", {
-        formId: currentFormInStore?.id,
-        title: currentFormInStore?.title,
-      })
 
       // Bridge the agent form to the form store - same pattern as FormPageClient
       const newFormForStore = {
@@ -278,20 +222,15 @@ function TestUIPageContent() {
           currentFormInStore?.current_published_version_id || null,
       }
 
-      // Basic change detection to avoid unnecessary re-renders
-      if (
+      // Optimized change detection - avoid expensive JSON.stringify
+      const hasChanges =
         currentFormInStore?.version_id !== newFormForStore.version_id ||
-        JSON.stringify(currentFormInStore?.questions) !==
-          JSON.stringify(newFormForStore.questions) ||
         currentFormInStore?.title !== newFormForStore.title ||
         currentFormInStore?.description !== newFormForStore.description ||
-        JSON.stringify(currentFormInStore?.settings) !==
-          JSON.stringify(newFormForStore.settings)
-      ) {
-        console.log(
-          "[TestUIPage] Syncing agent form to store:",
-          newFormForStore
-        )
+        currentFormInStore?.questions?.length !==
+          newFormForStore.questions?.length
+
+      if (hasChanges) {
         useFormStore.getState().setForm(newFormForStore as any)
       }
     }
@@ -300,7 +239,6 @@ function TestUIPageContent() {
   // Function to start new form creation
   const handleStartNewForm = () => {
     const newFormId = uuidv4()
-    console.log("[FormPage] Starting new form creation with ID:", newFormId)
 
     // Navigate to new form route
     router.push(`/dashboard/forms/${newFormId}`)
@@ -330,16 +268,22 @@ function TestUIPageContent() {
   }
 
   const handleSaveForm = () => {
-    console.log("Form saved!")
+    // Form save logic would go here
   }
 
   const handlePublishForm = () => {
-    console.log("Form published!")
+    // Form publish logic would go here
   }
 
   // Chat and design content - pass authentication data and form ID
   const chatContent = <ChatTabContent userId={userId} formId={formId} />
-  const designContent = <DesignTabContent />
+  const designContent = (
+    <DesignTabContent
+      formId={formId}
+      onShadcnCSSApply={handleShadcnCSSApply}
+      shadcnStatus={shadcnStatus}
+    />
+  )
 
   // Left panel content
   const leftPanel = (
@@ -354,7 +298,11 @@ function TestUIPageContent() {
         onSaveForm={handleSaveForm}
         onPublishForm={handlePublishForm}
       />
-      <TabContentManager formId={formId} />
+      <TabContentManager
+        formId={formId}
+        shadcnCSSData={shadcnCSSData || undefined}
+        onShadcnApplied={handleShadcnApplied}
+      />
     </div>
   )
 

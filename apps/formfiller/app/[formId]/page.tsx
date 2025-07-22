@@ -33,7 +33,6 @@ async function getFormSchemaById(shortId: string): Promise<Form | null> {
   }
 
   if (!versionId) {
-    console.log(`Form ${shortId} has no published or draft version set.`);
     return null;
   }
 

@@ -19,11 +19,18 @@ import {
   Form,
 } from "./utils";
 
-// Initialize OpenRouter provider
+// Initialize OpenRouter provider with debugging
+const apiKey = process.env.OPENROUTER_API_KEY || "";
+if (!apiKey) {
+  console.error("OPENROUTER_API_KEY not found in environment");
+}
+
 const openRouterProvider = createOpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY || "",
+  apiKey,
 });
-const MODEL = openRouterProvider("google/gemini-2.5-flash-preview");
+
+// Use a more stable model
+const MODEL = openRouterProvider("google/gemini-2.5-flash");
 
 // Helper function to save message to database
 async function saveMessage(
@@ -541,7 +548,7 @@ export async function POST(req: Request) {
       systemPrompt += `\n\n## FORM-SPECIFIC JOURNEY SCRIPT:\n${formSchema.settings.journeyScript}`;
     }
 
-    // Stream AI response with error handling
+    // Stream AI response with enhanced error handling
     try {
       const result = await streamText({
         model: MODEL,
@@ -551,30 +558,49 @@ export async function POST(req: Request) {
         toolChoice: "auto",
         maxSteps: 5,
         onFinish: async ({ text, toolCalls, toolResults }) => {
-          // Save assistant message
-          await saveMessage(activeSubmissionId, "assistant", text, userId);
+          try {
+            // Save assistant message
+            await saveMessage(activeSubmissionId, "assistant", text, userId);
 
-          // Track AI performance
-          const duration = Date.now() - startTime;
-          trackServerEvent("api.form_assist.duration", {
-            duration,
-            formId: formSchema.id,
-            toolCallCount: toolCalls?.length || 0,
-          });
-
-          // Track tool usage
-          toolCalls?.forEach((call) => {
-            trackServerEvent("tool.usage", {
-              toolName: call.toolName,
+            // Track AI performance
+            const duration = Date.now() - startTime;
+            trackServerEvent("api.form_assist.duration", {
+              duration,
               formId: formSchema.id,
+              toolCallCount: toolCalls?.length || 0,
             });
-          });
+
+            // Track tool usage
+            toolCalls?.forEach((call) => {
+              trackServerEvent("tool.usage", {
+                toolName: call.toolName,
+                formId: formSchema.id,
+              });
+            });
+          } catch (finishError) {
+            console.error("Error in onFinish callback:", finishError);
+            // Don't throw - let response complete
+          }
         },
         onError: async (error: any) => {
+          console.error("StreamText onError:", error);
           trackServerEvent("api.form_assist.error", {
             formId: formSchema.id,
             errorType: error?.name || "unknown",
+            errorMessage: error?.message || "unknown",
           });
+
+          // Try to save error message for user context
+          try {
+            await saveMessage(
+              activeSubmissionId,
+              "assistant",
+              "I encountered an error while processing your request. Please try again.",
+              userId,
+            );
+          } catch (saveError) {
+            console.error("Failed to save error message:", saveError);
+          }
         },
       });
 
@@ -584,7 +610,13 @@ export async function POST(req: Request) {
         },
       });
     } catch (aiError: any) {
-      console.error("AI processing failed:", aiError);
+      console.error("AI processing failed:", {
+        error: aiError,
+        message: aiError?.message,
+        name: aiError?.name,
+        stack: aiError?.stack,
+        cause: aiError?.cause,
+      });
 
       // Fallback response
       if (validationResult && !validationResult.isValid) {
@@ -618,12 +650,27 @@ export async function POST(req: Request) {
         },
       );
     }
-  } catch (error) {
-    console.error("Form assist API error:", error);
+  } catch (error: any) {
+    console.error("Form assist API critical error:", {
+      error,
+      message: error?.message,
+      name: error?.name,
+      stack: error?.stack,
+      cause: error?.cause,
+    });
     trackServerEvent("api.form_assist.critical_error");
 
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        details: error?.message || "Unknown error",
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
   }
 }

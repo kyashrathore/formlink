@@ -52,132 +52,149 @@ export async function handleChatRequest(
 
   return createDataStreamResponse({
     execute: async (dataStream) => {
-      if (isNewChat) {
-        // dataStream.writeData({ type: 'form_session_initialized', payload: { formId: currentFormId } });
-      }
-      chatService.writeStreamEvent(dataStream, "chat_initialized")
-
-      // Create tool context
-      const toolContext = {
-        dataStream,
-        formId: currentFormId,
-        supabase,
-        userId,
-        options,
-        isFirstMessage,
-      }
-
-      const tools = createChatTools(toolContext)
-
-      // Set up AI provider
-      const apiKey = getenv("OPENROUTER_API_KEY") || ""
-      const openRouterProvider = createOpenRouter({ apiKey })
-      const MODEL = openRouterProvider("openai/gpt-4o")
-
-      // Build contextual system prompt
-      const contextualSystemPrompt = buildContextualSystemPrompt(
-        SYSTEM_PROMPT,
-        {
-          isFirstMessage,
-          isNewChat,
-          currentFormId,
+      try {
+        if (isNewChat) {
+          // dataStream.writeData({ type: 'form_session_initialized', payload: { formId: currentFormId } });
         }
-      )
+        chatService.writeStreamEvent(dataStream, "chat_initialized")
 
-      const result = await streamText({
-        model: MODEL,
-        messages,
-        tools,
-        system: contextualSystemPrompt,
-        temperature: options?.temperature || 0.7,
-        maxTokens: options?.maxTokens || 4000,
-        maxSteps: 5,
-        // Enable streaming of tool calls and steps for AI SDK 4.3.16
-        experimental_toolCallStreaming: true,
-        onFinish: async ({
-          text,
-          toolCalls,
-          toolResults,
-          finishReason,
-          usage,
-        }) => {
-          logger.info("Chat completion finished", {
-            userId,
-            formId: currentFormId,
+        // Create tool context
+        const toolContext = {
+          dataStream,
+          formId: currentFormId,
+          supabase,
+          userId,
+          options,
+          isFirstMessage,
+        }
+
+        const tools = createChatTools(toolContext)
+
+        // Set up AI provider
+        const apiKey = getenv("OPENROUTER_API_KEY") || ""
+        const openRouterProvider = createOpenRouter({ apiKey })
+        const MODEL = openRouterProvider("openai/gpt-4o")
+
+        // Build contextual system prompt
+        const contextualSystemPrompt = buildContextualSystemPrompt(
+          SYSTEM_PROMPT,
+          {
+            isFirstMessage,
+            isNewChat,
+            currentFormId,
+          }
+        )
+
+        const result = await streamText({
+          model: MODEL,
+          messages,
+          tools,
+          system: contextualSystemPrompt,
+          temperature: options?.temperature || 0.7,
+          maxTokens: options?.maxTokens || 4000,
+          maxSteps: 5,
+          // Enable streaming of tool calls and steps for AI SDK 4.3.16
+          experimental_toolCallStreaming: true,
+          onFinish: async ({
             text,
-            usage,
+            toolCalls,
+            toolResults,
             finishReason,
-          })
+            usage,
+          }) => {
+            logger.info("Chat completion finished", {
+              userId,
+              formId: currentFormId,
+              text,
+              usage,
+              finishReason,
+            })
 
-          try {
-            // Create assistant message from the completion event
-            const assistantMessage = {
-              role: "assistant",
-              content: text,
-              parts: toolCalls || null,
+            try {
+              // Create assistant message from the completion event
+              const assistantMessage = {
+                role: "assistant",
+                content: text,
+                parts: toolCalls || null,
+              }
+
+              logger.info("Attempting to save assistant message", {
+                formId: currentFormId,
+                userId,
+                messageRole: assistantMessage.role,
+                messageContent:
+                  assistantMessage.content?.substring(0, 100) + "...",
+                hasToolCalls: !!toolCalls,
+              })
+
+              await chatService.saveMessage(
+                currentFormId,
+                userId,
+                assistantMessage
+              )
+
+              logger.info("Assistant message saved successfully", {
+                formId: currentFormId,
+                userId,
+              })
+            } catch (error) {
+              logger.error("Error saving assistant message", {
+                formId: currentFormId,
+                userId,
+                error,
+              })
+              // Don't throw - let the response complete even if message saving fails
             }
-
-            logger.info("Attempting to save assistant message", {
+            chatService.writeStreamEvent(dataStream, "chat_completed")
+          },
+          onError: async (error) => {
+            logger.error("Chat completion error", {
+              userId,
               formId: currentFormId,
-              userId,
-              messageRole: assistantMessage.role,
-              messageContent:
-                assistantMessage.content?.substring(0, 100) + "...",
-              hasToolCalls: !!toolCalls,
-            })
-
-            await chatService.saveMessage(
-              currentFormId,
-              userId,
-              assistantMessage
-            )
-
-            logger.info("Assistant message saved successfully", {
-              formId: currentFormId,
-              userId,
-            })
-          } catch (error) {
-            logger.error("Error saving assistant message", {
-              formId: currentFormId,
-              userId,
               error,
             })
-            // Don't throw - let the response complete even if message saving fails
-          }
-          chatService.writeStreamEvent(dataStream, "chat_completed")
-        },
-        onError: async (error) => {
-          logger.error("Chat completion error", {
-            userId,
-            formId: currentFormId,
-            error,
-          })
 
-          // Save error message to chat history
-          try {
-            await chatService.saveMessage(currentFormId, userId, {
-              role: "assistant",
-              content:
-                "I encountered an error while processing your request. Please try again.",
-              parts: [
-                {
-                  type: "tool-invocation",
-                  toolInvocation: {
-                    state: "error",
-                    toolName: "system",
-                    error:
-                      error instanceof Error ? error.message : String(error),
+            // Save error message to chat history
+            try {
+              await chatService.saveMessage(currentFormId, userId, {
+                role: "assistant",
+                content:
+                  "I encountered an error while processing your request. Please try again.",
+                parts: [
+                  {
+                    type: "tool-invocation",
+                    toolInvocation: {
+                      state: "error",
+                      toolName: "system",
+                      error:
+                        error instanceof Error ? error.message : String(error),
+                    },
                   },
-                },
-              ],
-            })
-          } catch (saveError) {
-            logger.error("Failed to save error message", { saveError })
-          }
-        },
-      })
+                ],
+              })
+            } catch (saveError) {
+              logger.error("Failed to save error message", { saveError })
+            }
+          },
+        })
 
-      result.mergeIntoDataStream(dataStream)
+        result.mergeIntoDataStream(dataStream)
+      } catch (executeError) {
+        logger.error("Error in chat stream execution", {
+          userId,
+          formId: currentFormId,
+          error: executeError,
+        })
+
+        // Write error to stream in AI SDK compatible format
+        dataStream.writeData({
+          type: "error",
+          message:
+            executeError instanceof Error
+              ? executeError.message
+              : "Stream execution error",
+        })
+      }
     },
     onError: (error) => {
       logger.error("Error in chat stream:", { error })

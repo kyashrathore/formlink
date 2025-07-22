@@ -33,6 +33,7 @@ interface PanelState {
   setFloatingPosition: (position: { x: number; y: number }) => void
   setPreviewMode: (mode: "chat" | "conversation") => void
   toggleEditMode: () => void
+  setEditMode: (editMode: boolean) => void
 }
 
 export const usePanelState = create<PanelState>()(
@@ -45,7 +46,7 @@ export const usePanelState = create<PanelState>()(
       activeMainTab: "form",
       activeChatTab: "chat",
       previewMode: "chat",
-      editMode: false,
+      editMode: true, // Start with edit mode for chat tab
       isFloating: false,
       floatingPosition: { x: 50, y: 50 },
 
@@ -88,7 +89,18 @@ export const usePanelState = create<PanelState>()(
         }
       },
 
-      setActiveChatTab: (tab) => set({ activeChatTab: tab }),
+      setActiveChatTab: (tab) => {
+        set({ activeChatTab: tab })
+
+        // Auto-sync preview modes with tab selection
+        if (tab === "design") {
+          // Design tab should show preview mode
+          set({ editMode: false })
+        } else if (tab === "chat") {
+          // Chat tab should show edit mode
+          set({ editMode: true })
+        }
+      },
 
       setPanelWidth: (width) => {
         const constrainedWidth = Math.max(300, Math.min(600, width))
@@ -146,6 +158,8 @@ export const usePanelState = create<PanelState>()(
       setPreviewMode: (mode) => set({ previewMode: mode }),
 
       toggleEditMode: () => set({ editMode: !get().editMode }),
+
+      setEditMode: (editMode) => set({ editMode }),
     }),
     {
       name: "panel-state",

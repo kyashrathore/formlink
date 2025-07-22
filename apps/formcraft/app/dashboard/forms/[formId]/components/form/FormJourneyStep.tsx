@@ -108,22 +108,9 @@ const FormJourneyStep = ({
   const isMobile = useMobile()
   const shouldHideControls = isMobile && selectedTab === "content"
 
-  console.log("[FormJourneyStep] Component rendered", {
-    formId: form?.id,
-    hasJourneyScript: !!form?.settings?.journeyScript,
-    journeyScriptLength: form?.settings?.journeyScript?.length,
-    journeyScriptPreview:
-      form?.settings?.journeyScript?.substring(0, 50) + "...",
-  })
-
   // Get initial content from form settings
   const getInitialContent = useCallback(() => {
     const journeyScript = form?.settings?.journeyScript
-
-    console.log("[FormJourneyStep] getInitialContent called", {
-      hasJourneyScript: !!journeyScript,
-      journeyScriptType: typeof journeyScript,
-    })
 
     if (!journeyScript) return ""
 
@@ -156,10 +143,6 @@ const FormJourneyStep = ({
 
   // Reset state when form ID changes
   useEffect(() => {
-    console.log("[FormJourneyStep] Form ID changed, resetting state", {
-      formId: form?.id,
-      hadContent: !!journeyScriptContent,
-    })
     setJourneyScriptContent(getInitialContent())
     setIsModified(false)
     setIsPreviewMode(true)

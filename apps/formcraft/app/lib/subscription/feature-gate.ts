@@ -61,54 +61,24 @@ export async function hasFeature(
   userId: string,
   feature: PremiumFeature
 ): Promise<boolean> {
-  console.log(
-    "[FEATURE-GATE] Checking feature access for user:",
-    userId,
-    "feature:",
-    feature
-  )
-  const startTime = performance.now()
-
   try {
     // Check cache first
     let subscription = getCachedSubscription(userId)
 
     if (!subscription) {
-      console.log("[FEATURE-GATE] Cache miss - fetching from database")
       // Cache miss - fetch from database
       const subscriptionManager = new SubscriptionManager()
       subscription = await subscriptionManager.getSubscriptionStatus(userId)
       setCachedSubscription(userId, subscription)
-      console.log(
-        "[FEATURE-GATE] Subscription fetched and cached:",
-        subscription
-      )
-    } else {
-      console.log(
-        "[FEATURE-GATE] Cache hit - using cached subscription:",
-        subscription
-      )
     }
 
     // Pro users get all features
     if (subscription.isPro && subscription.isActive) {
-      console.log("[FEATURE-GATE] Pro user - granting feature access")
-      console.log(
-        "[FEATURE-GATE] Feature check completed in",
-        performance.now() - startTime,
-        "ms"
-      )
       return true
     }
 
     // Free tier features
     const hasAccess = FREE_FEATURES.includes(feature)
-    console.log("[FEATURE-GATE] Free tier user - feature access:", hasAccess)
-    console.log(
-      "[FEATURE-GATE] Feature check completed in",
-      performance.now() - startTime,
-      "ms"
-    )
     return hasAccess
   } catch (error) {
     console.error("[FEATURE-GATE] Error checking feature access:", error)
@@ -123,28 +93,16 @@ export interface AIUsageLimit {
 }
 
 export async function checkAILimit(userId: string): Promise<AIUsageLimit> {
-  console.log("[AI-LIMIT] Checking AI limit for user:", userId)
-  const startTime = performance.now()
-
   try {
     const subscriptionManager = new SubscriptionManager()
     const subscription = await subscriptionManager.getSubscriptionStatus(userId)
-    console.log("[AI-LIMIT] Subscription status retrieved:", subscription)
 
     // Pro users get unlimited AI usage
     if (subscription.isPro && subscription.isActive) {
-      console.log("[AI-LIMIT] Pro user - unlimited AI usage")
-      console.log(
-        "[AI-LIMIT] AI limit check completed in",
-        performance.now() - startTime,
-        "ms"
-      )
       return { allowed: true, current: 0, limit: -1 } // -1 indicates unlimited
     }
 
     // Check free tier limit using existing daily_message_count from users table
-    console.log("[AI-LIMIT] Checking free tier limit from users table...")
-    const dbStartTime = performance.now()
     const cookieStore = await cookies()
     const supabase = await createServerClient(cookieStore, "anon")
 
@@ -154,15 +112,10 @@ export async function checkAILimit(userId: string): Promise<AIUsageLimit> {
       .eq("id", userId)
       .single()
 
-    const dbTime = performance.now() - dbStartTime
-    console.log("[AI-LIMIT] Users table query completed in", dbTime, "ms")
-
     if (error) {
       console.error("[AI-LIMIT] Error checking AI limit:", error)
       // Fail safe - allow but log error
-      const result = { allowed: true, current: 0, limit: 5 }
-      console.log("[AI-LIMIT] Returning fail-safe result:", result)
-      return result
+      return { allowed: true, current: 0, limit: 5 }
     }
 
     const current = user?.daily_message_count || 0
@@ -174,12 +127,6 @@ export async function checkAILimit(userId: string): Promise<AIUsageLimit> {
       limit,
     }
 
-    console.log("[AI-LIMIT] AI limit check result:", result)
-    console.log(
-      "[AI-LIMIT] Total AI limit check time:",
-      performance.now() - startTime,
-      "ms"
-    )
     return result
   } catch (error) {
     console.error("[AI-LIMIT] Unexpected error in checkAILimit:", error)
@@ -188,32 +135,17 @@ export async function checkAILimit(userId: string): Promise<AIUsageLimit> {
 }
 
 export async function incrementAIUsage(userId: string): Promise<void> {
-  console.log("[AI-INCREMENT] Incrementing AI usage for user:", userId)
-  const startTime = performance.now()
-
   try {
     const cookieStore = await cookies()
     const supabase = await createServerClient(cookieStore, "anon")
 
-    const rpcStartTime = performance.now()
     const { error } = await supabase.rpc("increment_daily_message_count", {
       user_id: userId,
     })
 
-    const rpcTime = performance.now() - rpcStartTime
-    console.log("[AI-INCREMENT] RPC call completed in", rpcTime, "ms")
-
     if (error) {
       console.error("[AI-INCREMENT] Error incrementing AI usage:", error)
-    } else {
-      console.log("[AI-INCREMENT] AI usage incremented successfully")
     }
-
-    console.log(
-      "[AI-INCREMENT] Total increment time:",
-      performance.now() - startTime,
-      "ms"
-    )
   } catch (error) {
     console.error("[AI-INCREMENT] Unexpected error in incrementAIUsage:", error)
     throw error

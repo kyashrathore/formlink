@@ -48,8 +48,6 @@ export const createClient = async (
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
             });
-          } else {
-            console.log("No cookie store found");
           }
         } catch (error) {
           console.error("Error setting cookies:", error);

@@ -92,12 +92,6 @@ export async function GET(request: NextRequest) {
       customerId: customerId,
     })
 
-    console.log("Redirecting to Polar.sh customer portal:", {
-      userId: user.id,
-      customerId: customerId,
-      portalUrl: customerSession.customerPortalUrl,
-    })
-
     // Redirect to Polar.sh customer portal
     redirect(customerSession.customerPortalUrl)
   } catch (error) {

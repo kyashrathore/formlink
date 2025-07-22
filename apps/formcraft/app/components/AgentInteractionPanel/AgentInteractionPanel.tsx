@@ -141,28 +141,14 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
   useEffect(() => {
     let isMounted = true
 
-    console.log("[AgentInteractionPanel] Initial message effect", {
-      formId,
-      hasStoredInitialMessage: !!storedInitialMessage,
-      storedInitialMessage,
-      messagesLength: vercelChatMessages.length,
-      hasUserInteracted,
-    })
-
     if (
       storedInitialMessage &&
       vercelChatMessages.length === 0 &&
       !hasUserInteracted
     ) {
-      console.log("[AgentInteractionPanel] Scheduling initial message send")
-
       // Small delay just to ensure UI is ready
       const timer = setTimeout(() => {
         if (isMounted) {
-          console.log(
-            "[AgentInteractionPanel] Sending initial message:",
-            storedInitialMessage
-          )
           append({
             role: "user",
             content: storedInitialMessage,

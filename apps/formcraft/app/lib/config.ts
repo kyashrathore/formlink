@@ -128,11 +128,31 @@ export const APP_NAME = "FormFiller"
 export const APP_DOMAIN = "https://app.formlink.ai"
 
 export function getFormFillerFBasePath() {
+  const customBaseUrl = getenv("NEXT_PUBLIC_FORMFILLER_BASE_URL")
+  if (customBaseUrl) {
+    return `${customBaseUrl}/f`
+  }
+
+  // Fallback to existing logic if environment variable is not set
   const isDev = getenv("NODE_ENV") === "development"
   if (isDev) {
-    return "http://localhost:3001/f"
+    return "http://localhost:3001"
   }
   return "https://formlink.ai/f"
+}
+
+export function getFormFillerPreviewBasePath() {
+  const customBaseUrl = getenv("NEXT_PUBLIC_FORMFILLER_BASE_URL")
+  if (customBaseUrl) {
+    return `${customBaseUrl}/preview`
+  }
+
+  // Fallback to existing logic if environment variable is not set
+  const isDev = getenv("NODE_ENV") === "development"
+  if (isDev) {
+    return "http://localhost:3001/preview"
+  }
+  return "https://formlink.ai/preview"
 }
 
 export const APP_DESCRIPTION = "FormLink is ..."

@@ -32,8 +32,6 @@ export async function saveIndividualFormAnswer(
 
   if (saveError) {
     console.error("Error saving response to DB:", saveError);
-  } else {
-    console.log(`[API] Saved answer for question ${questionId} successfully.`);
   }
 }
 
@@ -64,7 +62,6 @@ export async function saveAllFormAnswers(
   }
 
   if (Object.keys(allResponses).length === 0) {
-    console.log("[API] No responses to save, but submission record upserted.");
     return;
   }
 
@@ -82,7 +79,5 @@ export async function saveAllFormAnswers(
 
   if (saveError) {
     console.error("Error bulk saving responses to DB:", saveError);
-  } else {
-    console.log("[API] All answers saved successfully.");
   }
 }

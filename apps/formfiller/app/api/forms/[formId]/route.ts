@@ -30,7 +30,6 @@ async function getFormSchemaById(
   const versionId = formData[versionIdColumn];
 
   if (!versionId) {
-    console.log(`Form ${formId} has no ${versionStatus} version set.`);
     return null;
   }
 

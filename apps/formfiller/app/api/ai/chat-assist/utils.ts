@@ -508,7 +508,6 @@ export function trackServerEvent(
   properties?: Record<string, any>,
 ) {
   if (process.env.NODE_ENV === "development") {
-    console.log("PostHog Event:", event, properties);
     return;
   }
 

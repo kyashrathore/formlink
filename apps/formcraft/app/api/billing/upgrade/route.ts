@@ -104,12 +104,6 @@ export async function GET(request: NextRequest) {
       // Don't pass customerId - let Polar create customer automatically
     })
 
-    console.log("Redirecting user to Polar.sh checkout:", {
-      userId: user.id,
-      checkoutId: checkout.id,
-      checkoutUrl: checkout.url,
-    })
-
     // Redirect to Polar.sh checkout
     redirect(checkout.url)
   } catch (error) {

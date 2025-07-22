@@ -31,11 +31,6 @@ export async function GET(request: NextRequest) {
       user.id
     )
 
-    console.log("Subscription status requested:", {
-      userId: user.id,
-      status: subscriptionStatus,
-    })
-
     return NextResponse.json({
       subscription: subscriptionStatus,
       logs: subscriptionLogs.slice(0, 10), // Return last 10 logs

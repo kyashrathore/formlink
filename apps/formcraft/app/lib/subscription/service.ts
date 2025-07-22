@@ -15,53 +15,24 @@ export class SubscriptionManager {
   }
 
   async getSubscriptionStatus(userId: string): Promise<SubscriptionStatus> {
-    console.log("[SUBSCRIPTION] Getting subscription status for user:", userId)
-    const startTime = performance.now()
-
     try {
       const supabase = await this.getClient()
-      console.log(
-        "[SUBSCRIPTION] Supabase client created in",
-        performance.now() - startTime,
-        "ms"
-      )
-
-      const queryStartTime = performance.now()
       const { data: subscription, error } = await supabase
         .from("user_subscriptions")
         .select("plan_type, status, current_period_end")
         .eq("user_id", userId)
         .single()
 
-      const queryTime = performance.now() - queryStartTime
-      console.log("[SUBSCRIPTION] Database query completed in", queryTime, "ms")
-
-      if (error) {
-        console.log(
-          "[SUBSCRIPTION] Query error:",
-          error.message,
-          "Code:",
-          error.code
-        )
-        if (error.code === "PGRST116") {
-          console.log(
-            "[SUBSCRIPTION] No subscription found, returning free tier"
-          )
-        }
-      }
-
       if (error || !subscription || subscription.status === "canceled") {
-        const result = {
+        return {
           isActive: false,
           isPro: false,
           plan: "free" as const,
           status: "canceled" as const,
         }
-        console.log("[SUBSCRIPTION] Returning free tier result:", result)
-        return result
       }
 
-      const result = {
+      return {
         isActive: subscription.status === "active",
         isPro: subscription.plan_type === "pro",
         plan: subscription.plan_type as "free" | "pro",
@@ -70,14 +41,6 @@ export class SubscriptionManager {
           ? new Date(subscription.current_period_end)
           : undefined,
       }
-
-      console.log("[SUBSCRIPTION] Returning subscription result:", result)
-      console.log(
-        "[SUBSCRIPTION] Total subscription check time:",
-        performance.now() - startTime,
-        "ms"
-      )
-      return result
     } catch (error) {
       console.error(
         "[SUBSCRIPTION] Unexpected error in getSubscriptionStatus:",
@@ -93,32 +56,11 @@ export class SubscriptionManager {
     status: "active" | "canceled" | "past_due",
     currentPeriodEnd?: Date
   ): Promise<void> {
-    console.log(
-      "[SUBSCRIPTION] Updating subscription for user:",
-      userId,
-      "to status:",
-      status
-    )
-    const startTime = performance.now()
-
     try {
       const supabase = await this.getServiceClient()
-      console.log(
-        "[SUBSCRIPTION] Service client created in",
-        performance.now() - startTime,
-        "ms"
-      )
 
       // Get old status for logging
-      console.log("[SUBSCRIPTION] Getting old status for comparison...")
-      const oldStatusStartTime = performance.now()
       const oldStatus = await this.getSubscriptionStatus(userId)
-      console.log(
-        "[SUBSCRIPTION] Old status retrieved in",
-        performance.now() - oldStatusStartTime,
-        "ms:",
-        oldStatus
-      )
 
       // Use provided period end or calculate default if none provided
       const periodEnd =
@@ -127,11 +69,7 @@ export class SubscriptionManager {
           ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default 30 days fallback
           : null)
 
-      console.log("[SUBSCRIPTION] Calculated period end:", periodEnd)
-
       // Upsert subscription
-      console.log("[SUBSCRIPTION] Upserting subscription record...")
-      const upsertStartTime = performance.now()
       const { error: subscriptionError } = await supabase
         .from("user_subscriptions")
         .upsert(
@@ -148,12 +86,6 @@ export class SubscriptionManager {
           }
         )
 
-      console.log(
-        "[SUBSCRIPTION] Subscription upsert completed in",
-        performance.now() - upsertStartTime,
-        "ms"
-      )
-
       if (subscriptionError) {
         console.error(
           "[SUBSCRIPTION] Subscription upsert error:",
@@ -165,8 +97,6 @@ export class SubscriptionManager {
       }
 
       // Log the change
-      console.log("[SUBSCRIPTION] Logging subscription change...")
-      const logStartTime = performance.now()
       const { error: logError } = await supabase
         .from("subscription_logs")
         .insert({
@@ -175,12 +105,6 @@ export class SubscriptionManager {
           old_status: oldStatus.status,
           new_status: status,
         })
-
-      console.log(
-        "[SUBSCRIPTION] Subscription log completed in",
-        performance.now() - logStartTime,
-        "ms"
-      )
 
       if (logError) {
         console.error(
@@ -191,14 +115,7 @@ export class SubscriptionManager {
       }
 
       // Invalidate cache after successful update
-      console.log("[SUBSCRIPTION] Invalidating cache for user:", userId)
       invalidateSubscriptionCache(userId)
-
-      console.log(
-        "[SUBSCRIPTION] Total update time:",
-        performance.now() - startTime,
-        "ms"
-      )
     } catch (error) {
       console.error(
         "[SUBSCRIPTION] Unexpected error in updateSubscription:",

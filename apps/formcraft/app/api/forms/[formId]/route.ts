@@ -282,6 +282,7 @@ export async function PATCH(request: Request, { params }: any) {
 
   try {
     const updates: Record<string, any> = await request.json()
+
     if (!updates || typeof updates !== "object") {
       return NextResponse.json(
         { error: "Invalid request body" },
@@ -375,6 +376,7 @@ export async function PATCH(request: Request, { params }: any) {
 
     if (versionError) {
       // Supabase error updating version
+      console.error("[API] Database update error:", versionError)
       return NextResponse.json({ error: versionError.message }, { status: 500 })
     }
 

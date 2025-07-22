@@ -6,11 +6,15 @@ import ShareTabContent from "./share/ShareTabContent"
 interface ShareTabContentWrapperProps {
   formId: string
   shortId?: string
+  shortIdLoading?: boolean
+  shortIdError?: string | null
 }
 
 export default function ShareTabContentWrapper({
   formId,
   shortId,
+  shortIdLoading,
+  shortIdError,
 }: ShareTabContentWrapperProps) {
   return (
     <div className="bg-background flex h-full">

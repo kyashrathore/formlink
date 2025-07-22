@@ -273,10 +273,6 @@
 
           if (isLikelyReady) {
             chatbotContainer.classList.remove("loading");
-          } else {
-            console.log(
-              "Formlink Chatbot: Iframe src unchanged, waiting for load event."
-            );
           }
         }
       }
