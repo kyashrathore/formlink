@@ -21,6 +21,12 @@ const eslintConfig = [
       "no-console": "error",
     },
   },
+  {
+    files: ["**/__tests__/**/*", "**/*.test.*", "**/*.spec.*"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
 ]
 
 export default eslintConfig

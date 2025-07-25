@@ -14,7 +14,7 @@ async function computeDerivedFields(
   formSchema: Form | null,
   currentInputs: Record<string, any>,
 ) {
-  let responsesWithComputedFields = { ...currentInputs };
+  const responsesWithComputedFields = { ...currentInputs };
   const computedFields =
     formSchema?.settings?.additionalFields?.computedFromResponses;
   if (Array.isArray(computedFields) && computedFields.length > 0) {
@@ -96,11 +96,11 @@ async function handleAiFormCompletion(
     console.error("Missing IDs for AI form completion save");
     return;
   }
-  let responsesWithComputedFields = await computeDerivedFields(
+  const responsesWithComputedFields = await computeDerivedFields(
     storeData.formSchema,
     currentInputs,
   );
-  let finalSubmissionStatus = submissionStatusOverride || "completed";
+  const finalSubmissionStatus = submissionStatusOverride || "completed";
   saveAnswerToApi(
     {
       formId: storeData.formId,
@@ -302,7 +302,7 @@ export const useChatStore = create<ChatState>()(
 
         // Always start with empty chat history for startFormInteraction
         // This ensures the AI system message can be sent properly
-        let initialChatHistoryMessages: MessageType[] = [];
+        const initialChatHistoryMessages: MessageType[] = [];
 
         const newState = {
           chatHistoryMessages: initialChatHistoryMessages,
@@ -379,7 +379,7 @@ export const useChatStore = create<ChatState>()(
         set({ currentInputs: newInputs, lastError: null });
 
         // Determine submission status
-        let submissionStatus = "in_progress";
+        const submissionStatus = "in_progress";
 
         // Save answer (partial)
         saveAnswerToApi(
@@ -406,13 +406,13 @@ export const useChatStore = create<ChatState>()(
         } else {
           // Form complete
           // Compute computed fields before saving all answers
-          let responsesWithComputedFields = await computeDerivedFields(
+          const responsesWithComputedFields = await computeDerivedFields(
             formSchema,
             newInputs,
           );
 
           // Determine status for full submission
-          let finalSubmissionStatus = "completed";
+          const finalSubmissionStatus = "completed";
 
           // Save all answers
           saveAnswerToApi(

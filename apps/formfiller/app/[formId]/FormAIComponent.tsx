@@ -1,24 +1,25 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import { Conversation } from "@/components/chat/conversation";
+import { useChatStore } from "@/components/chat/store/useChatStore";
+import { findNextQuestion } from "@/lib/utils";
+import { useChat } from "@ai-sdk/react";
 import { Form } from "@formlink/schema";
 import type { UIForm } from "@formlink/ui";
-import { Button, Alert, AlertDescription, SubmissionError } from "@formlink/ui";
-import { ArrowRight, AlertCircle, RefreshCw } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
 import {
+  Alert,
+  AlertDescription,
+  Button,
   PromptInput,
   PromptInputAction,
   PromptInputActions,
   PromptInputTextarea,
 } from "@formlink/ui";
-import { useChat } from "@ai-sdk/react";
+import { AlertCircle, ArrowRight, RefreshCw } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import React, { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
-import { useChatStore } from "@/components/chat/store/useChatStore";
-import { Conversation } from "@/components/chat/conversation";
 import { useRedirect } from "../../hooks/useRedirect";
-import RedirectCountdown from "@/components/RedirectCountdown";
-import { findNextQuestion } from "@/lib/utils";
 import { apiConfig } from "../../lib/api-config";
 
 type FormAIComponentProps = {
@@ -435,10 +436,6 @@ export default function FormAIComponent({
   }
 
   const showThankYou = isFormSaved || isFormCompleted;
-
-  const lastAssistantMessage = chatHistoryMessages
-    .filter((m: any) => m.role === "assistant")
-    .at(-1);
 
   return (
     <div className="flex flex-col h-full">

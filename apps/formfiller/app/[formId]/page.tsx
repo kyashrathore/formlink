@@ -121,7 +121,7 @@ export default async function FormPage({
         : false;
 
   // Extract query parameters specified in formSchema.settings.additionalFields.queryParamater
-  let queryDataForForm: Record<string, any> = {};
+  const queryDataForForm: Record<string, any> = {};
   const queryParamList = Array.isArray(
     formSchema?.settings?.additionalFields?.queryParamater,
   )
