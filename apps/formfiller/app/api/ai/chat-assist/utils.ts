@@ -1,41 +1,19 @@
-import { z } from "zod";
-import { Question, Form } from "@formlink/schema";
+import { Question, Form, AddressData } from "@formlink/schema";
 import posthog from "posthog-js";
+import type {
+  ValidationResult,
+  AIContext,
+  QuestionResponse,
+  ExtendedValidations,
+  QuestionWithOptions,
+  WebhookData,
+  FileData,
+} from "@/lib/types";
 
-// Re-export Question and Form types
-export type { Question, Form };
+// Re-export types
+export type { Question, Form, ValidationResult, AIContext };
 
-// Types
-export interface ValidationResult {
-  isValid: boolean;
-  error?: string;
-  normalizedValue?: any;
-  warnings?: string[];
-}
-
-export interface AIContext {
-  userInput: string;
-  submissionBehavior: "auto" | "manualClear" | "manualUnclear" | null;
-  formSchema: Form;
-  currentQuestionId: string | null;
-  responses: Record<string, any>;
-  validationResult?: ValidationResult;
-  justSavedAnswer?: {
-    questionId: string;
-    value: any;
-  };
-  progress: {
-    answered: number;
-    total: number;
-    percentage: number;
-  };
-  responseSummary?: {
-    totalAnswered: number;
-    truncated: boolean;
-    earliestIncluded: string;
-  };
-  journeyScript?: string;
-}
+// Types are now imported from @/lib/types
 
 // Form Validator Class
 export class FormValidator {
@@ -48,7 +26,7 @@ export class FormValidator {
       const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
 
       // Custom domain validation if specified (check if property exists)
-      const customRules = question.validations as any;
+      const customRules = question.validations as ExtendedValidations;
       if (
         isValid &&
         customRules?.customRules?.allowedDomains &&
@@ -99,7 +77,7 @@ export class FormValidator {
         const url = new URL(val);
 
         // Check allowed protocols
-        const customRules = question.validations as any;
+        const customRules = question.validations as ExtendedValidations;
         const allowedProtocols = customRules?.customRules?.allowedProtocols || [
           "http:",
           "https:",
@@ -127,8 +105,9 @@ export class FormValidator {
       }
 
       // Range validation
-      const minRule = (question.validations as any)?.min;
-      const maxRule = (question.validations as any)?.max;
+      const extValidations = question.validations as ExtendedValidations;
+      const minRule = extValidations?.min;
+      const maxRule = extValidations?.max;
 
       if (minRule?.value !== undefined && num < minRule.value) {
         return {
@@ -181,7 +160,10 @@ export class FormValidator {
     },
   };
 
-  static validate(input: any, question: Question): ValidationResult {
+  static validate(
+    input: QuestionResponse | unknown,
+    question: Question,
+  ): ValidationResult {
     // Handle different input types
     if (typeof input === "object" && input !== null) {
       // Special handling for complex types
@@ -264,7 +246,10 @@ export class FormValidator {
   }
 
   // Validation methods for complex types
-  static validateAddress(input: any, question: Question): ValidationResult {
+  static validateAddress(
+    input: AddressData | unknown,
+    question: Question,
+  ): ValidationResult {
     if (!input || typeof input !== "object") {
       return { isValid: false, error: "Invalid address format" };
     }
@@ -303,8 +288,8 @@ export class FormValidator {
 
     // Validate all selections are valid options
     // Type assertion since we know multiple choice questions have options
-    const mcQuestion = question as any;
-    const validOptions = mcQuestion.options?.map((opt: any) => opt.value) || [];
+    const mcQuestion = question as QuestionWithOptions;
+    const validOptions = mcQuestion.options?.map((opt) => opt.value) || [];
     const invalidSelections = input.filter(
       (val) => !validOptions.includes(val),
     );
@@ -316,7 +301,10 @@ export class FormValidator {
     return { isValid: true, normalizedValue: input };
   }
 
-  static validateFileUpload(input: any, question: Question): ValidationResult {
+  static validateFileUpload(
+    input: File | FileData | unknown,
+    question: Question,
+  ): ValidationResult {
     if (!input) {
       if (question.validations?.required) {
         return { isValid: false, error: "Please upload a file" };
@@ -341,9 +329,9 @@ export class FormValidator {
 
     // Check if all options are ranked
     // Type assertion since we know ranking questions have options
-    const rankingQuestion = question as any;
+    const rankingQuestion = question as QuestionWithOptions;
     const expectedOptions =
-      rankingQuestion.options?.map((opt: any) => opt.value) || [];
+      rankingQuestion.options?.map((opt) => opt.value) || [];
     if (input.length !== expectedOptions.length) {
       return { isValid: false, error: "Please rank all options" };
     }
@@ -354,12 +342,12 @@ export class FormValidator {
   // Cross-field validation
   static validateCrossField(
     questionId: string,
-    value: any,
-    allResponses: Record<string, any>,
+    value: QuestionResponse,
+    allResponses: Record<string, QuestionResponse>,
     formSchema: Form,
   ): ValidationResult {
     const question = formSchema.questions.find((q) => q.id === questionId);
-    const customRules = question?.validations as any;
+    const customRules = question?.validations as ExtendedValidations;
 
     if (!customRules?.crossField) {
       return { isValid: true };
@@ -434,7 +422,7 @@ export class ContextManager {
 
   private static getRelevantQuestions(
     allQuestions: Question[],
-    responses: Record<string, any>,
+    responses: Record<string, QuestionResponse>,
     currentQuestionId: string | null,
   ): Question[] {
     const relevant = new Set<string>();
@@ -469,16 +457,23 @@ export class ContextManager {
 
   private static evaluateCondition(
     question: Question,
-    responses: Record<string, any>,
+    responses: Record<string, QuestionResponse>,
   ): boolean {
     if (!question.conditionalLogic) return true;
 
     // Handle different conditional logic types
-    const logic = question.conditionalLogic as any;
+    const logic = question.conditionalLogic as {
+      conditions?: Array<{
+        questionId: string;
+        operator: string;
+        value: string | number;
+      }>;
+      action?: string;
+    };
 
     // If it has conditions and action properties (standard format)
     if (logic.conditions && logic.action) {
-      const conditionsMet = logic.conditions.every((condition: any) => {
+      const conditionsMet = logic.conditions.every((condition) => {
         const answer = responses[condition.questionId];
         switch (condition.operator) {
           case "equals":
@@ -505,7 +500,7 @@ export class ContextManager {
 // PostHog Analytics Helper
 export function trackServerEvent(
   event: string,
-  properties?: Record<string, any>,
+  properties?: Record<string, unknown>,
 ) {
   if (process.env.NODE_ENV === "development") {
     return;
@@ -521,7 +516,7 @@ export function trackServerEvent(
 }
 
 // Helper functions
-export function sanitizeUserInput(input: any): string {
+export function sanitizeUserInput(input: unknown): string {
   if (!input || typeof input !== "string") return "";
 
   // Remove potential prompt injection patterns
@@ -534,7 +529,7 @@ export function sanitizeUserInput(input: any): string {
     .slice(0, 1000); // Limit length
 }
 
-export async function triggerWebhook(url: string, data: any) {
+export async function triggerWebhook(url: string, data: WebhookData) {
   try {
     await fetch(url, {
       method: "POST",

@@ -16,7 +16,7 @@ if (typeof window !== "undefined") {
       maskAllInputs: false, // We want to see form inputs in replays
       maskTextSelector: "[data-private]",
     },
-    loaded: (posthog) => {
+    loaded: () => {
       // Test user exclusion logic can be added here
       if (typeof window !== "undefined") {
         // Add your test user detection logic
@@ -39,7 +39,7 @@ export function PostHogPageview() {
         $current_url: url,
       });
     }
-  }, [pathname, searchParams]);
+  }, [pathname, searchParams]); // posthog is a stable global, no need to add it
 
   return null;
 }

@@ -1,21 +1,10 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
-import { Question } from "@formlink/schema";
 import { useTypeFormDropdown } from "@formlink/ui";
+import { useCallback, useEffect } from "react";
+import { UseTypeFormKeyboardProps } from "../../../lib/types";
 
-interface UseTypeFormKeyboardProps {
-  currentQuestion: Question | null;
-  onAnswer: (
-    questionId: string,
-    value: any,
-    questionType: Question["questionType"],
-  ) => void;
-  onNext: () => void;
-  onPrevious?: () => void;
-  showHelp?: () => void;
-  getCurrentResponse?: (questionId: string) => any;
-}
+// UseTypeFormKeyboardProps is now imported from types.ts
 
 export function useTypeFormKeyboard({
   currentQuestion,
@@ -26,6 +15,82 @@ export function useTypeFormKeyboard({
   getCurrentResponse,
 }: UseTypeFormKeyboardProps) {
   const { isDropdownOpen } = useTypeFormDropdown();
+
+  const handleScaleSelection = useCallback(
+    (num: number) => {
+      if (!currentQuestion) return;
+
+      if (currentQuestion.questionType === "rating") {
+        const ratingQuestion = currentQuestion as typeof currentQuestion & {
+          ratingConfig: { max: number; min?: number };
+        };
+        const config = ratingQuestion.ratingConfig;
+        const min = config.min || 1;
+        if (config && num >= min && num <= config.max) {
+          onAnswer(currentQuestion.id, num, currentQuestion.questionType);
+        }
+      } else if (currentQuestion.questionType === "linearScale") {
+        const scaleQuestion = currentQuestion as typeof currentQuestion & {
+          linearScaleConfig: { start: number; end: number };
+        };
+        const config = scaleQuestion.linearScaleConfig;
+        if (config && num >= config.start && num <= config.end) {
+          onAnswer(currentQuestion.id, num, currentQuestion.questionType);
+        }
+      }
+    },
+    [currentQuestion, onAnswer],
+  );
+
+  const handleChoiceSelection = useCallback(
+    (letter: string) => {
+      if (!currentQuestion) return;
+
+      // Check if question has options (choice or ranking questions)
+      if (
+        currentQuestion.questionType !== "singleChoice" &&
+        currentQuestion.questionType !== "multipleChoice" &&
+        currentQuestion.questionType !== "ranking"
+      ) {
+        return;
+      }
+
+      const choiceQuestion = currentQuestion as typeof currentQuestion & {
+        options: Array<{ value: string; label: string }>;
+      };
+      const options = choiceQuestion.options;
+      if (!options) return;
+
+      const index = letter.charCodeAt(0) - "A".charCodeAt(0);
+      if (index >= 0 && index < options.length) {
+        const selectedOption = options[index];
+
+        if (currentQuestion.questionType === "singleChoice") {
+          onAnswer(
+            currentQuestion.id,
+            selectedOption.value,
+            currentQuestion.questionType,
+          );
+        } else if (currentQuestion.questionType === "multipleChoice") {
+          // For multiple choice, toggle the selection
+          const currentResponse = getCurrentResponse
+            ? getCurrentResponse(currentQuestion.id)
+            : [];
+          const currentArray = Array.isArray(currentResponse)
+            ? (currentResponse as string[])
+            : [];
+
+          const newValue = currentArray.includes(selectedOption.value)
+            ? currentArray.filter((v) => v !== selectedOption.value)
+            : [...currentArray, selectedOption.value];
+
+          onAnswer(currentQuestion.id, newValue, currentQuestion.questionType);
+        }
+      }
+    },
+    [currentQuestion, onAnswer, getCurrentResponse],
+  );
+
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
       // Don't handle if user is typing in an input
@@ -108,64 +173,14 @@ export function useTypeFormKeyboard({
     },
     [
       currentQuestion,
-      onAnswer,
       onNext,
       onPrevious,
       showHelp,
-      getCurrentResponse,
       isDropdownOpen,
+      handleChoiceSelection,
+      handleScaleSelection,
     ],
   );
-
-  const handleScaleSelection = (num: number) => {
-    if (!currentQuestion) return;
-
-    if (currentQuestion.questionType === "rating") {
-      const config = (currentQuestion as any).ratingConfig;
-      if (config && num >= config.min && num <= config.max) {
-        onAnswer(currentQuestion.id, num, currentQuestion.questionType);
-      }
-    } else if (currentQuestion.questionType === "linearScale") {
-      const config = (currentQuestion as any).linearScaleConfig;
-      if (config && num >= config.start && num <= config.end) {
-        onAnswer(currentQuestion.id, num, currentQuestion.questionType);
-      }
-    }
-  };
-
-  const handleChoiceSelection = (letter: string) => {
-    if (!currentQuestion) return;
-
-    const options = (currentQuestion as any).options;
-    if (!options) return;
-
-    const index = letter.charCodeAt(0) - "A".charCodeAt(0);
-    if (index >= 0 && index < options.length) {
-      const selectedOption = options[index];
-
-      if (currentQuestion.questionType === "singleChoice") {
-        onAnswer(
-          currentQuestion.id,
-          selectedOption.value,
-          currentQuestion.questionType,
-        );
-      } else if (currentQuestion.questionType === "multipleChoice") {
-        // For multiple choice, toggle the selection
-        const currentResponse = getCurrentResponse
-          ? getCurrentResponse(currentQuestion.id)
-          : [];
-        const currentArray = Array.isArray(currentResponse)
-          ? currentResponse
-          : [];
-
-        const newValue = currentArray.includes(selectedOption.value)
-          ? currentArray.filter((v) => v !== selectedOption.value)
-          : [...currentArray, selectedOption.value];
-
-        onAnswer(currentQuestion.id, newValue, currentQuestion.questionType);
-      }
-    }
-  };
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyPress);

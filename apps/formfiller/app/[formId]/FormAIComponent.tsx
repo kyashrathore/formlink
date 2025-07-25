@@ -2,9 +2,8 @@
 
 import { Conversation } from "@/components/chat/conversation";
 import { useChatStore } from "@/components/chat/store/useChatStore";
-import { findNextQuestion } from "@/lib/utils";
 import { useChat } from "@ai-sdk/react";
-import { Form } from "@formlink/schema";
+import { Form, Question } from "@formlink/schema";
 import type { UIForm } from "@formlink/ui";
 import {
   Alert,
@@ -21,27 +20,34 @@ import React, { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { useRedirect } from "../../hooks/useRedirect";
 import { apiConfig } from "../../lib/api-config";
+import type {
+  QueryDataForForm,
+  ChatError,
+  InputChangeEvent,
+  FormWithVersions,
+  QuestionResponse,
+} from "../../lib/types";
+import type { Message } from "@ai-sdk/react";
 
 type FormAIComponentProps = {
   formId: string;
   formSchema: Form;
   uiFormSchema: UIForm;
   isTestSubmission: boolean;
-  queryDataForForm?: Record<string, any>;
+  queryDataForForm?: QueryDataForForm;
 };
 
 export default function FormAIComponent({
   formId,
   formSchema,
-  uiFormSchema,
   isTestSubmission,
   queryDataForForm,
 }: FormAIComponentProps) {
   const store = useChatStore();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showRetry, setShowRetry] = useState(false);
-  const [isInFallbackMode, setIsInFallbackMode] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [isInFallbackMode] = useState(false);
+  const [userId] = useState<string | null>(null);
 
   const {
     formDisplayState,
@@ -52,14 +58,11 @@ export default function FormAIComponent({
     processAssistantResponse,
     setFormDisplayState,
     setLastError,
-    lastError,
     submissionId,
-    getCurrentQuestion,
     currentInputs,
     triggerUserMessageForSelection,
     clearTriggerUserMessageForSelection,
     setChatHistoryMessages,
-    restartForm,
     handleFileUpload,
     setCurrentInput,
   } = store;
@@ -72,19 +75,40 @@ export default function FormAIComponent({
   useEffect(() => {
     if (!submissionId || store.formId !== formId) {
       const versionToUse =
-        (formSchema as any).current_published_version_id ||
-        (formSchema as any).current_draft_version_id ||
+        (formSchema as FormWithVersions).current_published_version_id ||
+        (formSchema as FormWithVersions).current_draft_version_id ||
         "";
+      // Convert queryDataForForm to proper QuestionResponse format
+      const initialData: Record<string, QuestionResponse> = {};
+      if (queryDataForForm) {
+        Object.entries(queryDataForForm).forEach(([key, value]) => {
+          // Convert boolean to string for compatibility
+          if (typeof value === "boolean") {
+            initialData[key] = value.toString();
+          } else if (value !== undefined && value !== null) {
+            initialData[key] = value;
+          }
+        });
+      }
+
       initializeForm(
         formSchema,
         formId,
         versionToUse,
         true,
-        queryDataForForm || {},
+        initialData,
         isTestSubmission,
       );
     }
-  }, [formId, formSchema, submissionId, isTestSubmission, queryDataForForm]);
+  }, [
+    formId,
+    formSchema,
+    submissionId,
+    isTestSubmission,
+    queryDataForForm,
+    initializeForm,
+    store.formId,
+  ]);
 
   const chat = useChat({
     api: apiConfig.getChatAssistUrl(),
@@ -97,13 +121,13 @@ export default function FormAIComponent({
       currentQuestionId,
       isTestSubmission,
     },
-    onFinish: (message: any) => {
-      processAssistantResponse(message, currentQuestionIdRef.current);
+    onFinish: (message: Message) => {
+      processAssistantResponse();
 
       // Check for tool invocations
       if (message.toolInvocations) {
         // Update local state for any saveAnswer tool calls
-        message.toolInvocations.forEach((toolCall: any) => {
+        message.toolInvocations.forEach((toolCall) => {
           if (
             toolCall.toolName === "saveAnswer" &&
             toolCall.state === "result"
@@ -122,7 +146,7 @@ export default function FormAIComponent({
         // Check for completion
         if (
           message.toolInvocations.some(
-            (t: any) => t.toolName === "completeSubmission",
+            (t) => t.toolName === "completeSubmission",
           )
         ) {
           setFormDisplayState("completed");
@@ -140,19 +164,21 @@ export default function FormAIComponent({
         if (matches.length > 0) {
           // Use the last question link found (most likely the current question)
           const lastMatch = matches[matches.length - 1];
-          const newQuestionId = lastMatch[1];
+          const newQuestionId = lastMatch?.[1];
 
           // Validate that this question exists in the form schema
-          const questionExists = formSchema?.questions?.some(
-            (q: any) => q.id === newQuestionId,
-          );
-
-          if (questionExists) {
-            store.setCurrentQuestionId(newQuestionId);
-          } else {
-            console.warn(
-              `[FormAIComponent] Question ID ${newQuestionId} not found in form schema`,
+          if (newQuestionId) {
+            const questionExists = formSchema?.questions?.some(
+              (q: Question) => q.id === newQuestionId,
             );
+
+            if (questionExists) {
+              store.setCurrentQuestionId(newQuestionId);
+            } else {
+              console.warn(
+                `[FormAIComponent] Question ID ${newQuestionId} not found in form schema`,
+              );
+            }
           }
         }
       } catch (error) {
@@ -165,7 +191,7 @@ export default function FormAIComponent({
       setErrorMessage(null);
       setShowRetry(false);
     },
-    onError: (error: any) => {
+    onError: (error: ChatError) => {
       console.error("Chat error:", error);
 
       // Handle different error types
@@ -213,7 +239,7 @@ export default function FormAIComponent({
     if (historyLastMsg?.id !== newMsg?.id) {
       setChatHistoryMessages(messages);
     }
-  }, [messages]);
+  }, [messages, setChatHistoryMessages, chatHistoryMessages]);
 
   useEffect(() => {
     if (triggerUserMessageForSelection && append && formSchema) {
@@ -228,17 +254,7 @@ export default function FormAIComponent({
           setCurrentInput(questionId, value);
 
           // Find next question (but don't update currentQuestionId yet)
-          const currentQuestion = formSchema.questions.find(
-            (q: any) => q.id === questionId,
-          );
           const updatedInputs = { ...currentInputs, [questionId]: value };
-          const nextQuestion = currentQuestion
-            ? findNextQuestion(
-                currentQuestion,
-                formSchema.questions,
-                updatedInputs,
-              )
-            : null;
 
           // Don't update currentQuestionId here - let the QuestionWrapper handle it
           // when the AI presents the next question
@@ -288,6 +304,9 @@ export default function FormAIComponent({
     currentInputs,
     setFormDisplayState,
     setCurrentInput,
+    submissionId,
+    userId,
+    isTestSubmission,
   ]);
 
   const handleAISubmit = (
@@ -350,10 +369,6 @@ export default function FormAIComponent({
 
   useRedirect(isFormSaved, formRedirectUrl);
 
-  const handleRestartClick = () => {
-    restartForm();
-  };
-
   // Track if we've sent the initial message
   const hasInitiatedRef = useRef(false);
 
@@ -405,6 +420,7 @@ export default function FormAIComponent({
     submissionId,
     userId,
     setFormDisplayState,
+    isTestSubmission,
   ]);
 
   // Calculate isChatActive early
@@ -414,18 +430,6 @@ export default function FormAIComponent({
       (formDisplayState === "displaying_question_classical" ||
         formDisplayState === "chatting_ai_ready"))
   );
-
-  const pageVariants = {
-    initial: { opacity: 0, y: 20 },
-    in: { opacity: 1, y: 0 },
-    out: { opacity: 0, y: -20 },
-  };
-
-  const pageTransition = {
-    type: "tween",
-    ease: "anticipate",
-    duration: 0.5,
-  };
 
   if (!submissionId) {
     return (
@@ -503,7 +507,7 @@ export default function FormAIComponent({
                               onValueChange={(value: string) =>
                                 handleInputChange?.({
                                   target: { value },
-                                } as any)
+                                } as InputChangeEvent)
                               }
                               onSubmit={handleAISubmit}
                             >

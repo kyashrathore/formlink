@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { Form, Question } from "@formlink/schema";
-import type { UIForm, UIQuestion } from "@formlink/ui";
+import type { UIForm } from "@formlink/ui";
+import type { QuestionResponse } from "@/lib/types";
 import { AnimatePresence } from "motion/react";
 import { TypeFormDropdownProvider, FormModeProvider } from "@formlink/ui";
 import TypeFormLayout from "./TypeFormLayout";
@@ -22,29 +23,28 @@ interface TypeFormViewProps {
   uiFormSchema: UIForm;
   formId?: string;
   // Props down: business state
-  questions: any[];
-  questionResponses: Record<string, any>;
+  questions: Question[];
+  questionResponses: Record<string, QuestionResponse>;
   isCompleted: boolean;
   // Callbacks up: business actions
-  onInitialize: (schema: any, id?: string) => Promise<void>;
+  onInitialize: (schema: Form, id?: string) => Promise<void>;
   onStartQuiz: () => void;
   onRestart: () => Promise<void>;
   onAnswerChange: (
     questionId: string,
-    value: any,
+    value: QuestionResponse,
     questionType: Question["questionType"],
   ) => void;
   onFileUpload: (questionId: string, file: File) => Promise<string | null>;
   onNavigateNext: (currentIndex: number) => number | null;
   onMarkCompleted: () => void;
-  shouldShowQuestion: (question: any) => boolean;
-  getCurrentQuestion: (activeIndex: number) => any | null;
+  shouldShowQuestion: (question: Question) => boolean;
+  getCurrentQuestion: (activeIndex: number) => Question | null;
   getProgress: (activeIndex: number) => number;
 }
 
 export default function TypeFormView({
   formSchema,
-  uiFormSchema,
   formId,
   questions,
   questionResponses,
@@ -68,7 +68,6 @@ export default function TypeFormView({
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(-1); // -1 for intro screen
   const [showConfetti, setShowConfetti] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   const currentQuestion: Question | null =
     getCurrentQuestion(activeQuestionIndex);
@@ -77,7 +76,25 @@ export default function TypeFormView({
     if (formSchema) {
       onInitialize(formSchema, formId);
     }
-  }, [formSchema, formId]); // Initialize on mount
+  }, [formSchema, formId, onInitialize]); // Initialize on mount
+
+  // Track direction for next navigation
+  const handleNextWithDirection = useCallback(() => {
+    setDirection(1); // Going forwards
+    const nextIndex = onNavigateNext(activeQuestionIndex);
+    if (nextIndex !== null) {
+      setActiveQuestionIndex(nextIndex);
+    } else {
+      // No more questions, mark as completed
+      onMarkCompleted();
+      setShowConfetti(true);
+      setActiveQuestionIndex(questions.length);
+    }
+  }, [activeQuestionIndex, onNavigateNext, onMarkCompleted, questions.length]);
+
+  const handleNavigateToNextValidQuestion = useCallback(() => {
+    handleNextWithDirection();
+  }, [handleNextWithDirection]);
 
   useEffect(() => {
     if (activeQuestionIndex < 0 || isCompleted || !currentQuestion) return;
@@ -90,11 +107,12 @@ export default function TypeFormView({
     currentQuestion,
     shouldShowQuestion,
     isCompleted,
+    handleNavigateToNextValidQuestion,
   ]);
 
   const handleSelectAndNavigate = (
     questionId: string,
-    value: any,
+    value: QuestionResponse,
     questionType: Question["questionType"],
   ) => {
     // Call the business logic callback
@@ -125,24 +143,6 @@ export default function TypeFormView({
         }
       }
     }
-  };
-
-  // Track direction for next navigation
-  const handleNextWithDirection = () => {
-    setDirection(1); // Going forwards
-    const nextIndex = onNavigateNext(activeQuestionIndex);
-    if (nextIndex !== null) {
-      setActiveQuestionIndex(nextIndex);
-    } else {
-      // No more questions, mark as completed
-      onMarkCompleted();
-      setShowConfetti(true);
-      setActiveQuestionIndex(questions.length);
-    }
-  };
-
-  const handleNavigateToNextValidQuestion = () => {
-    handleNextWithDirection();
   };
 
   // Setup keyboard navigation

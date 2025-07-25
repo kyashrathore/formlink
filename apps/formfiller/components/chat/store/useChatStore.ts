@@ -3,16 +3,16 @@ import { persist } from "zustand/middleware";
 import { Message as MessageType } from "@ai-sdk/react";
 import { v4 as uuidv4 } from "uuid";
 import { Form, Question } from "@formlink/schema";
-import { JSONValue } from "ai";
 import jsonata from "jsonata";
 import { findNextQuestion } from "../../../lib/utils";
 import { apiConfig, apiServices } from "../../../lib/api-config";
+import type { QuestionResponse } from "../../../lib/types";
 
 // --- Pure Helper Functions (top-level, no store dependency) ---
 
 async function computeDerivedFields(
   formSchema: Form | null,
-  currentInputs: Record<string, any>,
+  currentInputs: Record<string, QuestionResponse>,
 ) {
   const responsesWithComputedFields = { ...currentInputs };
   const computedFields =
@@ -51,8 +51,8 @@ function saveAnswerToApi(
   },
   payload: {
     questionId?: string;
-    answerValue?: any;
-    allResponses?: Record<string, any>;
+    answerValue?: QuestionResponse;
+    allResponses?: Record<string, QuestionResponse>;
     isPartial: boolean;
     submissionStatus: string;
   },
@@ -80,43 +80,6 @@ function saveAnswerToApi(
   });
 }
 
-async function handleAiFormCompletion(
-  storeData: {
-    formSchema: Form | null;
-    versionId: string | null;
-    isTestSubmission: boolean;
-    formId: string | null;
-    submissionId: string | null;
-  },
-  currentInputs: Record<string, any>,
-  setFormDisplayState: (newState: FormDisplayState) => void, // Added setFormDisplayState
-  submissionStatusOverride?: string,
-) {
-  if (!storeData.formId || !storeData.versionId || !storeData.submissionId) {
-    console.error("Missing IDs for AI form completion save");
-    return;
-  }
-  const responsesWithComputedFields = await computeDerivedFields(
-    storeData.formSchema,
-    currentInputs,
-  );
-  const finalSubmissionStatus = submissionStatusOverride || "completed";
-  saveAnswerToApi(
-    {
-      formId: storeData.formId,
-      versionId: storeData.versionId,
-      submissionId: storeData.submissionId,
-      isTestSubmission: storeData.isTestSubmission,
-    },
-    {
-      allResponses: responsesWithComputedFields,
-      isPartial: false,
-      submissionStatus: finalSubmissionStatus,
-    },
-  );
-  setFormDisplayState("saved"); // Transition to saved state
-}
-
 type FormDisplayState =
   | "idle"
   | "displaying_question_classical"
@@ -130,7 +93,7 @@ type FormDisplayState =
 interface ChatState {
   aiMode: boolean;
   formSchema: Form | null;
-  currentInputs: Record<string, any>;
+  currentInputs: Record<string, QuestionResponse>;
   submissionId: string | null;
   versionId: string | null;
   formId: string | null;
@@ -145,7 +108,7 @@ interface ChatState {
   triggerUserMessageForSelection: {
     assistantMessageId: string;
     questionId: string;
-    value: any;
+    value: QuestionResponse;
     displayText: string;
     timestamp: number;
   } | null;
@@ -156,7 +119,7 @@ interface ChatState {
     formIdVal: string,
     versionIdVal: string,
     aiModeFlag: boolean,
-    initialData?: Record<string, any>,
+    initialData?: Record<string, QuestionResponse>,
     isTestSubmissionFlag?: boolean,
   ) => void;
   startFormInteraction: () => void;
@@ -165,23 +128,20 @@ interface ChatState {
     formIdVal: string,
     versionIdVal: string,
     aiModeFlag: boolean,
-    initialData?: Record<string, any>,
+    initialData?: Record<string, QuestionResponse>,
     isTestSubmissionFlag?: boolean,
   ) => void;
-  submitAnswerClassical: (answerValue: any) => void;
-  processAssistantResponse: (
-    assistantMessage: MessageType,
-    currentQuestionIdBeforeAIMaybe: string | null,
-  ) => void;
+  submitAnswerClassical: (answerValue: QuestionResponse) => void;
+  processAssistantResponse: () => void;
   getCurrentQuestion: () => Question | undefined;
   setFormDisplayState: (newState: FormDisplayState) => void;
   setLastError: (errorMsg: string) => void;
   setChatHistoryMessages: (messages: MessageType[]) => void;
-  setCurrentInput: (questionId: string, value: any) => void;
+  setCurrentInput: (questionId: string, value: QuestionResponse) => void;
   setTriggerUserMessageForSelection: (
     assistantMessageId: string,
     questionId: string,
-    value: any,
+    value: QuestionResponse,
     displayText: string,
   ) => void;
   clearTriggerUserMessageForSelection: () => void;
@@ -428,10 +388,7 @@ export const useChatStore = create<ChatState>()(
         }
       },
 
-      processAssistantResponse: async (
-        assistantMessage,
-        currentQuestionIdBeforeAIMaybe,
-      ) => {
+      processAssistantResponse: async () => {
         // This function is now a stub, as the primary logic
         // for handling question transitions is managed by the link-based system
         // and the backend's `processUserAnswer` endpoint.
@@ -540,24 +497,6 @@ export const useChatStore = create<ChatState>()(
 
       restartForm: () => {
         set((state) => {
-          // Preserve essential IDs and schema, and initial data source
-          const {
-            submissionId,
-            formId,
-            formSchema,
-            versionId,
-            aiMode, // Persist AI mode
-            // queryDataForForm is not directly in store, but initialData in setupFormCore acts like it
-            // We need to access the initialData that was used during setupFormCore.
-            // However, setupFormCore's initialData is not stored directly.
-            // The closest is currentInputs being reset to an empty object or what initialData was.
-            // For simplicity and given the current store structure, we'll reset currentInputs
-            // to what it would be on a fresh initialize without specific queryDataForForm.
-            // If queryDataForForm needs to be re-applied, initializeForm might be better,
-            // but the request was to keep submissionId.
-            isTestSubmission,
-          } = state;
-
           // Get initial data used for the current form setup.
           // This is a bit tricky as initialData isn't stored directly.
           // We'll assume initialData was {} if not provided during the last setupFormCore.

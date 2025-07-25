@@ -1,8 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import jsonata from "jsonata";
-import { Message } from "ai";
 import { Question } from "@formlink/schema";
+import { QuestionResponseMap } from "./types";
 
 /**
  * Tailwind/classnames utility
@@ -16,7 +16,7 @@ export function cn(...inputs: ClassValue[]) {
  */
 function evaluateCondition(
   condition: string,
-  responses: Record<string, any>,
+  responses: QuestionResponseMap,
 ): boolean {
   try {
     const expression = jsonata(condition);
@@ -35,7 +35,7 @@ function evaluateCondition(
  */
 function shouldShowQuestion(
   question: Question | undefined,
-  responses: Record<string, any>,
+  responses: QuestionResponseMap,
 ): boolean {
   if (!question) return false;
 
@@ -93,39 +93,12 @@ function shouldShowQuestion(
 }
 
 /**
- * Returns the latest user message from a list of messages.
- */
-function getLatestUserMessage(messages: Message[]): Message | undefined {
-  const userMessages = messages.filter((m) => m.role === "user");
-  if (userMessages.length === 0) return undefined;
-
-  return userMessages.at(-1);
-}
-
-/**
- * Extracts the value from a user message.
- */
-function getUserMessageValue(message: Message | undefined) {
-  return (
-    (typeof message?.content === "string" && message?.content) ||
-    message?.parts?.filter((p) => p.type === "text")?.[0]?.text
-  );
-}
-
-/**
- * Checks if a message is the initiating message.
- */
-function isInitiatingMessage(message: Message | undefined) {
-  return getUserMessageValue(message) === "Let's Start";
-}
-
-/**
  * Finds the next question to show based on current question and responses.
  */
 export function findNextQuestion(
   currentQuestion: Question,
   questions: Question[],
-  responses: Record<string, any>,
+  responses: QuestionResponseMap,
 ): Question | undefined {
   if (!currentQuestion || !questions || !Array.isArray(questions)) {
     return undefined;

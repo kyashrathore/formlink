@@ -2,51 +2,16 @@
 
 import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
-import { apiConfig, apiServices } from "../api-config";
+import { apiServices } from "../api-config";
+import { Form, Question } from "@formlink/schema";
+import { AppFormState, AppFormActions, QuestionResponse } from "../types";
 
 // Helper function to get all questions from the form schema
-const getAllQuestions = (formSchema: any): any[] => {
+const getAllQuestions = (formSchema: Form): Question[] => {
   return formSchema.questions || [];
 };
 
-// App-level store - handles all business logic and API calls
-interface AppFormState {
-  formSchema: any | null;
-  formId: string | undefined;
-  submissionId: string | undefined;
-  questions: any[];
-  questionResponses: Record<string, any>; // Stores answers: { questionId: answer }
-  isCompleted: boolean;
-}
-
-interface AppFormActions {
-  // Core business logic
-  initialize: (schema: any, id?: string) => Promise<void>;
-  restart: () => Promise<void>;
-
-  // Question response management
-  setQuestionResponse: (questionId: string, value: any) => void;
-  handleSingleChoiceChange: (questionId: string, value: string) => void;
-  handleMultipleChoiceChange: (
-    questionId: string,
-    value: string,
-    checked: boolean,
-  ) => void;
-  handleTextChange: (questionId: string, value: string) => void;
-
-  // Navigation logic
-  shouldShowQuestion: (question: any) => boolean;
-  getNextValidQuestionIndex: (currentIndex: number) => number | null;
-  markAsCompleted: () => void;
-
-  // File upload business logic
-  handleFileUpload: (questionId: string, file: File) => Promise<string | null>;
-
-  // Utilities
-  getCurrentQuestion: (activeIndex: number) => any | null;
-  getProgress: (activeIndex: number) => number;
-  reset: () => void;
-}
+// Note: AppFormState and AppFormActions are now imported from types.ts
 
 const initialAppState: AppFormState = {
   formSchema: null,
@@ -61,7 +26,7 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
   (set, get) => ({
     ...initialAppState,
 
-    initialize: async (schema, id) => {
+    initialize: async (schema: Form, id?: string) => {
       const submissionId = uuidv4();
       const allQuestions = getAllQuestions(schema);
 
@@ -105,7 +70,7 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
       }
     },
 
-    setQuestionResponse: (questionId: string, value: any) => {
+    setQuestionResponse: (questionId: string, value: QuestionResponse) => {
       set((state) => ({
         questionResponses: {
           ...state.questionResponses,
@@ -134,7 +99,7 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
       get().setQuestionResponse(questionId, value);
     },
 
-    shouldShowQuestion: (question) => {
+    shouldShowQuestion: () => {
       // Basic implementation: always show.
       // TODO: Implement actual conditional logic based on question.conditionalLogic
       // and current questionResponses

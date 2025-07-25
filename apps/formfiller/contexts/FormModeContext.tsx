@@ -7,6 +7,7 @@ import {
   useFormMode as useUIFormMode,
   type FormMode as UIFormMode,
 } from "@formlink/ui";
+import type { ExtendedFormModeContext } from "@/lib/types";
 
 export type AppFormMode = "ai" | "typeform";
 
@@ -69,15 +70,15 @@ export function FormModeProvider({
 // Create a compatibility layer that maps UI package modes back to app modes
 export function useFormMode() {
   const context = useUIFormMode();
-  const { mode, setMode } = context;
-  const isChatMode = (context as any).isChatMode ?? (mode as string) === "chat";
-  const isTypeFormMode =
-    (context as any).isTypeFormMode ?? (mode as string) === "typeform";
+  const extendedContext = context as ExtendedFormModeContext;
+  const { mode, setMode } = extendedContext;
+  const isChatMode = extendedContext.isChatMode ?? mode === "chat";
+  const isTypeFormMode = extendedContext.isTypeFormMode ?? mode === "typeform";
 
   return {
-    mode: (mode as string) === "chat" ? ("ai" as const) : (mode as AppFormMode),
+    mode: mode === "chat" ? ("ai" as const) : (mode as AppFormMode),
     setMode: (newMode: AppFormMode) => {
-      setMode(newMode === "ai" ? ("chat" as any) : (newMode as any));
+      setMode(newMode === "ai" ? "chat" : newMode);
     },
     isAIMode: isChatMode,
     isTypeFormMode: isTypeFormMode,

@@ -1,24 +1,21 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React from "react";
 import { Question } from "@formlink/schema";
 import { motion } from "motion/react";
 import { InputContainer } from "@formlink/ui";
 import { mapQuestionToUI } from "@/lib/mappers/schema-to-ui";
 import { Button } from "@formlink/ui";
-import {
-  ArrowRight,
-  ArrowLeft,
-  ArrowRight as ArrowRightIcon,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib";
+import type { QuestionResponse } from "@/lib/types";
 
 interface TypeFormQuestionProps {
   question: Question;
-  response: any;
+  response: QuestionResponse;
   onAnswer: (
     questionId: string,
-    value: any,
+    value: QuestionResponse,
     questionType: Question["questionType"],
   ) => void;
   onFileUpload?: (questionId: string, file: File) => Promise<void>;
@@ -38,9 +35,6 @@ export default function TypeFormQuestion({
   onNext,
   questionNumber,
 }: TypeFormQuestionProps) {
-  const isTextInput = question.questionType === "text";
-  const isTextarea = isTextInput && question.display?.inputType === "textarea";
-
   // Comprehensive response check for all question types
   const hasResponse = (() => {
     if (response === null || response === undefined) return false;
@@ -79,13 +73,6 @@ export default function TypeFormQuestion({
     }
   })();
 
-  const handleTextSubmit = (value: string) => {
-    if (value.trim()) {
-      onAnswer(question.id, value, question.questionType);
-      onNext();
-    }
-  };
-
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className="w-full max-w-4xl space-y-8">
@@ -114,7 +101,7 @@ export default function TypeFormQuestion({
             <InputContainer
               currentQuestion={mapQuestionToUI(question)}
               currentResponse={response}
-              handleSelect={(qId: string, value: any) => {
+              handleSelect={(qId: string, value: QuestionResponse) => {
                 onAnswer(qId, value, question.questionType);
               }}
               handleFileUpload={onFileUpload}

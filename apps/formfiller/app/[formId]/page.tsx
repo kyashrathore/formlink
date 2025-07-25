@@ -3,7 +3,6 @@ import { FormSchema, Form } from "@formlink/schema";
 import FormPageClient from "@/app/[formId]/FormPageClient";
 import { createServerClient } from "@formlink/db";
 import { notFound } from "next/navigation";
-import { FormErrorState } from "@formlink/ui";
 
 async function getFormSchemaById(shortId: string): Promise<Form | null> {
   const supabase = await createServerClient(null, "service");
@@ -121,7 +120,7 @@ export default async function FormPage({
         : false;
 
   // Extract query parameters specified in formSchema.settings.additionalFields.queryParamater
-  const queryDataForForm: Record<string, any> = {};
+  const queryDataForForm: Record<string, string | number | boolean> = {};
   const queryParamList = Array.isArray(
     formSchema?.settings?.additionalFields?.queryParamater,
   )

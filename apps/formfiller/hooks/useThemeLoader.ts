@@ -9,6 +9,7 @@ import {
   type ShadcnVariableResult,
 } from "@/lib/theme/ThemeApplicator";
 import { Form } from "@formlink/schema";
+import type { FormSettings } from "@/lib/types";
 
 interface ThemeLoaderResult {
   isLoading: boolean;
@@ -40,8 +41,8 @@ export function useThemeLoader(formSchema: Form): ThemeLoaderResult {
         setError(null);
 
         // Extract theme from form settings
-        const savedTheme = (formSchema.settings as any)?.theme_overrides
-          ?.shadcn_css;
+        const settings = formSchema.settings as FormSettings;
+        const savedTheme = settings?.theme_overrides?.shadcn_css;
 
         if (savedTheme && typeof savedTheme === "string") {
           // Apply the saved theme
@@ -80,7 +81,8 @@ export function useThemeLoader(formSchema: Form): ThemeLoaderResult {
     } else {
       setIsLoading(false);
     }
-  }, [formSchema]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps since we use hasLoadedRef to prevent re-runs
 
   return {
     isLoading,

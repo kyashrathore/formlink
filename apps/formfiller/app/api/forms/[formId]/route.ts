@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { FormSchema } from "@formlink/schema";
 import { createServerClient } from "@formlink/db";
-import { cookies } from "next/headers";
 
 async function getFormSchemaById(
   formId: string,
@@ -51,14 +50,13 @@ async function getFormSchemaById(
   }
 
   try {
-    const v: any = versionData;
     const formSchemaResult: z.infer<typeof FormSchema> = {
       id: formId,
-      version_id: v.version_id,
-      title: v.title,
-      description: v.description,
-      questions: v.questions,
-      settings: v.settings,
+      version_id: versionData.version_id,
+      title: versionData.title,
+      description: versionData.description,
+      questions: versionData.questions,
+      settings: versionData.settings,
     };
     return formSchemaResult;
   } catch (castError) {
@@ -70,7 +68,10 @@ async function getFormSchemaById(
   }
 }
 
-export async function GET(request: Request, { params }: any) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ formId: string }> },
+) {
   const formId = (await params).formId;
 
   if (!formId) {
@@ -78,14 +79,7 @@ export async function GET(request: Request, { params }: any) {
   }
 
   try {
-    const url = new URL(request.url);
-    const versionParam = url.searchParams.get("version");
-    const schemaParam = url.searchParams.get("schema"); // "simple" or "json"
     let formSchema: z.infer<typeof FormSchema> | null = null;
-    let versionStatus: "published" | "draft" = "published";
-    let versionIdColumn:
-      | "current_published_version_id"
-      | "current_draft_version_id" = "current_published_version_id";
 
     // Try published first, then draft if not found
     formSchema = await getFormSchemaById(
@@ -99,8 +93,6 @@ export async function GET(request: Request, { params }: any) {
         "current_draft_version_id",
         "draft",
       );
-      versionStatus = "draft";
-      versionIdColumn = "current_draft_version_id";
     }
 
     if (!formSchema) {

@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerClient, SupabaseClient } from "@formlink/db";
+import { createServerClient, SupabaseClient, Database } from "@formlink/db";
 import { saveAllFormAnswers, saveIndividualFormAnswer } from "./utils";
+import type {
+  SaveAnswersRequestBody,
+  FormSettings,
+  WebhookPayload,
+  QuestionResponse,
+} from "@/lib/types";
 
 async function handleIntegration(
-  supabase: SupabaseClient<any, "public", any>, // Adjust SupabaseClient type as needed
+  supabase: SupabaseClient<Database>,
   versionId: string,
-  originalBody: any, // Renamed for clarity, consider defining a more specific type
+  originalBody: SaveAnswersRequestBody,
 ) {
   const { data: form, error: formError } = await supabase
     .from("form_versions")
@@ -26,9 +32,7 @@ async function handleIntegration(
     form.settings !== null &&
     !Array.isArray(form.settings)
   ) {
-    const settings = form.settings as {
-      integrations?: { webhookUrl?: string };
-    };
+    const settings = form.settings as FormSettings;
 
     if (
       settings.integrations &&
@@ -38,25 +42,15 @@ async function handleIntegration(
       const webhookUrl = settings.integrations.webhookUrl;
 
       // Construct the new standardized webhook payload
-      const webhookPayload: {
-        submissionId: string;
-        versionId: string;
-        submissionStatus?: string;
-        testmode?: boolean;
-        answers: Array<{
-          q_id: string;
-          answer: any;
-          is_additional_field: boolean;
-        }>;
-      } = {
+      const webhookPayload: WebhookPayload = {
         submissionId: originalBody.submissionId,
-        versionId: originalBody.versionId,
+        versionId: originalBody.formVersionId,
         submissionStatus: originalBody.submissionStatus,
         testmode: originalBody.testmode,
         answers: originalBody.allResponses
           ? Object.entries(originalBody.allResponses).map(([q_id, answer]) => ({
               q_id,
-              answer,
+              answer: answer as QuestionResponse,
               is_additional_field: false,
             }))
           : [],
@@ -64,8 +58,9 @@ async function handleIntegration(
 
       // Remove undefined keys from the payload to keep it clean
       Object.keys(webhookPayload).forEach((key) => {
-        if ((webhookPayload as any)[key] === undefined) {
-          delete (webhookPayload as any)[key];
+        const typedKey = key as keyof WebhookPayload;
+        if (webhookPayload[typedKey] === undefined) {
+          delete webhookPayload[typedKey];
         }
       });
 
@@ -82,9 +77,9 @@ async function handleIntegration(
             `[API] Webhook call to ${webhookUrl} failed with status ${response.status}: ${await response.text()}`,
           );
         }
-      } catch (e: any) {
+      } catch (e) {
         console.error(
-          `[API] Webhook call to ${webhookUrl} threw an error: ${e.message}`,
+          `[API] Webhook call to ${webhookUrl} threw an error: ${e instanceof Error ? e.message : String(e)}`,
         );
       }
     }
@@ -93,7 +88,7 @@ async function handleIntegration(
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as SaveAnswersRequestBody;
     const {
       submissionId,
       formVersionId: versionId,
@@ -150,10 +145,12 @@ export async function POST(req: NextRequest) {
       // email creator
       return NextResponse.json({ success: true, partial: false });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error in save-answers API:", error);
     return NextResponse.json(
-      { error: error.message || "Internal server error" },
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 },
     );
   }

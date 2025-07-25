@@ -3,6 +3,7 @@ import { cn } from "@formlink/ui/lib/utils";
 import { Message as MessageType } from "@ai-sdk/react";
 import { MessageReasoning } from "./message-reasoning";
 import { useQuestionRenderer } from "./hooks/useQuestionRenderer";
+import type { MessagePart } from "@/lib/types";
 import { motion } from "motion/react";
 
 type MessageAssistantProps = {
@@ -61,7 +62,7 @@ export function MessageAssistant({
           </MessageContent>
         ) : (
           // Handle parts if content is not available
-          parts?.map((part: any, index: number) => {
+          parts?.map((part: MessagePart, index: number) => {
             const { type } = part;
             const key = `part-${index}`;
 

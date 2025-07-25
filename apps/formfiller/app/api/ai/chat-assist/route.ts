@@ -5,7 +5,7 @@ import { z } from "zod";
 import { headers } from "next/headers";
 import { v4 as uuidv4 } from "uuid";
 
-import { findNextQuestion } from "@/lib/utils";
+import type { ChatContext, FormAnswer, QuestionResponse } from "@/lib/types";
 import { createServerClient } from "@formlink/db";
 import {
   FormValidator,
@@ -16,7 +16,6 @@ import {
   AIContext,
   ValidationResult,
   Question,
-  Form,
 } from "./utils";
 
 // Initialize OpenRouter provider with debugging
@@ -59,18 +58,19 @@ async function saveMessage(
 }
 
 // Create tools factory function to access context
-function createTools(context: {
-  submissionId: string;
-  userId?: string;
-  formSchema?: any;
-  responses?: Record<string, any>;
-}) {
+function createTools(context: ChatContext) {
   return {
     saveAnswer: tool({
       description: "Save a validated answer to the database",
       parameters: z.object({
         questionId: z.string(),
-        answer: z.any(),
+        answer: z.union([
+          z.string(),
+          z.number(),
+          z.boolean(),
+          z.array(z.string()),
+          z.null(),
+        ]),
       }),
       execute: async ({ questionId, answer }) => {
         try {
@@ -111,7 +111,7 @@ function createTools(context: {
                   setTimeout(resolve, 1000 * (4 - retries)),
                 );
               }
-            } catch (e: any) {
+            } catch (e) {
               lastError = e;
               retries--;
             }
@@ -158,14 +158,14 @@ function createTools(context: {
 
           const responses =
             answersResult.data?.reduce(
-              (acc: any, ans: any) => ({
+              (acc: Record<string, QuestionResponse>, ans: FormAnswer) => ({
                 ...acc,
                 [ans.question_id]: ans.answer_value,
               }),
               {},
             ) || {};
 
-          const result: any = {
+          const result: Record<string, unknown> = {
             responses,
             answerCount: Object.keys(responses).length,
             status: submissionResult.data?.status,
@@ -254,7 +254,7 @@ function createTools(context: {
           });
 
           return { completed: true };
-        } catch (error) {
+        } catch {
           trackServerEvent("tool.complete_submission.failure");
           return { completed: false, error: "Failed to complete submission" };
         }
@@ -376,9 +376,6 @@ Adapt based on the form's journeyScript strategy section if provided, otherwise 
 
 Remember: Guide users to completion through genuine value and psychological comfort, not manipulation.
 `;
-
-// Simpler fallback prompt for when journey script is not available
-const UNIFIED_FORM_ASSISTANT_PROMPT = ENHANCED_FORM_ASSISTANT_PROMPT;
 
 export async function POST(req: Request) {
   const startTime = Date.now();
@@ -557,7 +554,7 @@ export async function POST(req: Request) {
         tools,
         toolChoice: "auto",
         maxSteps: 5,
-        onFinish: async ({ text, toolCalls, toolResults }) => {
+        onFinish: async ({ text, toolCalls }) => {
           try {
             // Save assistant message
             await saveMessage(activeSubmissionId, "assistant", text, userId);
@@ -582,7 +579,7 @@ export async function POST(req: Request) {
             // Don't throw - let response complete
           }
         },
-        onError: async (error: any) => {
+        onError: async (error: Error) => {
           console.error("StreamText onError:", error);
           trackServerEvent("api.form_assist.error", {
             formId: formSchema.id,
@@ -609,7 +606,7 @@ export async function POST(req: Request) {
           "X-Submission-Id": activeSubmissionId,
         },
       });
-    } catch (aiError: any) {
+    } catch (aiError) {
       console.error("AI processing failed:", {
         error: aiError,
         message: aiError?.message,
@@ -650,7 +647,7 @@ export async function POST(req: Request) {
         },
       );
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error("Form assist API critical error:", {
       error,
       message: error?.message,

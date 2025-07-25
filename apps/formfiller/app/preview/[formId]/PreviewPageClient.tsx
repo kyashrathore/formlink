@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { Form } from "@formlink/schema";
 import FormPageClient from "@/app/[formId]/FormPageClient";
 import { ThemeApplicator } from "@/lib/theme/ThemeApplicator";
@@ -30,16 +30,6 @@ interface FormShadcnCSSUpdateMessage {
 interface PreviewReadyMessage {
   type: "FORMFILLER_PREVIEW_READY";
   formId: string;
-}
-
-interface ThemeAppliedMessage {
-  type: "FORMFILLER_THEME_APPLIED";
-  payload: {
-    success: boolean;
-    error?: string;
-    appliedProperties: string[];
-    timestamp: number;
-  };
 }
 
 interface ShadcnCSSAppliedMessage {
@@ -121,100 +111,82 @@ export default function PreviewPageClient({
     }
   }, [initialFormSchema.id]);
 
-  // Function to send theme applied message
-  const sendThemeAppliedMessage = (
-    success: boolean,
-    error?: string,
-    appliedProperties: string[] = [],
-  ) => {
-    if (
-      typeof window !== "undefined" &&
-      window.parent &&
-      window.parent !== window
-    ) {
-      const message: ThemeAppliedMessage = {
-        type: "FORMFILLER_THEME_APPLIED",
-        payload: {
-          success,
-          error,
-          appliedProperties,
-          timestamp: Date.now(),
-        },
-      };
-      window.parent.postMessage(message, "*");
-    }
-  };
-
   // Function to send shadcn CSS applied message
-  const sendShadcnAppliedMessage = (
-    success: boolean,
-    error?: string,
-    appliedRootVariables: string[] = [],
-    appliedDarkVariables: string[] = [],
-    warnings: string[] = [],
-  ) => {
-    if (
-      typeof window !== "undefined" &&
-      window.parent &&
-      window.parent !== window
-    ) {
-      const message: ShadcnCSSAppliedMessage = {
-        type: "FORMFILLER_SHADCN_CSS_APPLIED",
-        payload: {
-          success,
-          error,
-          appliedRootVariables,
-          appliedDarkVariables,
-          warnings,
-          timestamp: Date.now(),
-        },
-      };
-      window.parent.postMessage(message, "*");
-    }
-  };
+  const sendShadcnAppliedMessage = useCallback(
+    (
+      success: boolean,
+      error?: string,
+      appliedRootVariables: string[] = [],
+      appliedDarkVariables: string[] = [],
+      warnings: string[] = [],
+    ) => {
+      if (
+        typeof window !== "undefined" &&
+        window.parent &&
+        window.parent !== window
+      ) {
+        const message: ShadcnCSSAppliedMessage = {
+          type: "FORMFILLER_SHADCN_CSS_APPLIED",
+          payload: {
+            success,
+            error,
+            appliedRootVariables,
+            appliedDarkVariables,
+            warnings,
+            timestamp: Date.now(),
+          },
+        };
+        window.parent.postMessage(message, "*");
+      }
+    },
+    [],
+  );
 
   // Function to apply shadcn CSS variables directly
-  const applyShadcnCSS = (cssText: string) => {
-    try {
-      const result = themeApplicator.current.applyShadcnVariables(cssText);
+  const applyShadcnCSS = useCallback(
+    (cssText: string) => {
+      try {
+        const result = themeApplicator.current.applyShadcnVariables(cssText);
 
-      if (result.success) {
-        sendShadcnAppliedMessage(
-          true,
-          undefined,
-          result.appliedRootVariables,
-          result.appliedDarkVariables,
-          result.warnings,
-        );
-        console.log(
-          `Applied ${result.appliedRootVariables.length} root variables and ${result.appliedDarkVariables.length} dark variables`,
-        );
-      } else {
-        console.error("Shadcn CSS application failed:", result);
+        if (result.success) {
+          sendShadcnAppliedMessage(
+            true,
+            undefined,
+            result.appliedRootVariables,
+            result.appliedDarkVariables,
+            result.warnings,
+          );
+          console.log(
+            `Applied ${result.appliedRootVariables.length} root variables and ${result.appliedDarkVariables.length} dark variables`,
+          );
+        } else {
+          console.error("Shadcn CSS application failed:", result);
+          sendShadcnAppliedMessage(
+            false,
+            result.error || "Shadcn CSS application failed",
+            [],
+            [],
+            result.warnings,
+          );
+        }
+
+        // Log warnings if any
+        if (result.warnings.length > 0) {
+          console.warn("Shadcn CSS application warnings:", result.warnings);
+        }
+      } catch (error) {
+        console.error("Failed to apply shadcn CSS:", error);
         sendShadcnAppliedMessage(
           false,
-          result.error || "Shadcn CSS application failed",
+          error instanceof Error ? error.message : "Unknown error",
           [],
           [],
-          result.warnings,
+          [],
         );
       }
-
-      // Log warnings if any
-      if (result.warnings.length > 0) {
-        console.warn("Shadcn CSS application warnings:", result.warnings);
-      }
-    } catch (error) {
-      console.error("Failed to apply shadcn CSS:", error);
-      sendShadcnAppliedMessage(
-        false,
-        error instanceof Error ? error.message : "Unknown error",
-        [],
-        [],
-        [],
-      );
-    }
-  };
+    },
+    [sendShadcnAppliedMessage],
+  );
 
   // Set up postMessage listener
   useEffect(() => {
@@ -252,7 +224,7 @@ export default function PreviewPageClient({
         window.removeEventListener("message", handleMessage);
       };
     }
-  }, []);
+  }, [applyShadcnCSS]);
 
   // Create search params that force the desired form mode
   const searchParams = {

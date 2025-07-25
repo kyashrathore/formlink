@@ -1,10 +1,13 @@
+import { SupabaseClient, Database } from "@formlink/db";
+import type { QuestionResponse } from "@/lib/types";
+
 // Save a single answer (partial saving)
 export async function saveIndividualFormAnswer(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   submissionId: string,
   versionId: string,
   questionId: string,
-  answerValue: any,
+  answerValue: QuestionResponse,
   isComplete: boolean,
   testmode: boolean,
 ) {
@@ -37,10 +40,10 @@ export async function saveIndividualFormAnswer(
 
 // Save all answers at once (bulk save)
 export async function saveAllFormAnswers(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   submissionId: string,
   versionId: string,
-  allResponses: Record<string, any>,
+  allResponses: Record<string, QuestionResponse>,
   isComplete: boolean,
   testmode: boolean,
 ) {

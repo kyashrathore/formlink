@@ -1,8 +1,13 @@
 import React, { useEffect, useRef } from "react";
 import { useChatStore } from "./store/useChatStore";
 import { InputContainer } from "@formlink/ui";
-import { Question } from "@formlink/schema";
+import { Question, AddressData } from "@formlink/schema";
 import { mapQuestionToUI } from "@/lib/mappers/schema-to-ui";
+import type {
+  QuestionResponse,
+  FileData,
+  QuestionWithPlaceholder,
+} from "@/lib/types";
 
 interface QuestionWrapperProps {
   questionId: string;
@@ -13,7 +18,10 @@ interface QuestionWrapperProps {
 }
 
 // Format response based on question type
-const formatResponse = (question: Question, response: any): string => {
+const formatResponse = (
+  question: Question,
+  response: QuestionResponse,
+): string => {
   if (!response) return "";
 
   switch (question.questionType) {
@@ -30,14 +38,19 @@ const formatResponse = (question: Question, response: any): string => {
 
     case "address": {
       // Format address object
-      if (typeof response === "object" && response !== null) {
+      if (
+        typeof response === "object" &&
+        response !== null &&
+        !Array.isArray(response)
+      ) {
+        const addr = response as AddressData;
         const addressParts = [];
-        if (response.street1) addressParts.push(response.street1);
-        if (response.street2) addressParts.push(response.street2);
-        if (response.city) addressParts.push(response.city);
-        if (response.stateProvince) addressParts.push(response.stateProvince);
-        if (response.postalCode) addressParts.push(response.postalCode);
-        if (response.country) addressParts.push(response.country);
+        if (addr.street1) addressParts.push(addr.street1);
+        if (addr.street2) addressParts.push(addr.street2);
+        if (addr.city) addressParts.push(addr.city);
+        if (addr.stateProvince) addressParts.push(addr.stateProvince);
+        if (addr.postalCode) addressParts.push(addr.postalCode);
+        if (addr.country) addressParts.push(addr.country);
         return addressParts.join(", ");
       }
       return String(response);
@@ -76,11 +89,16 @@ const formatResponse = (question: Question, response: any): string => {
       // Handle file upload responses
       if (typeof response === "object" && response !== null) {
         if (Array.isArray(response)) {
-          return response
+          const files = response as FileData[];
+          return files
             .map((file) => file.name || file.filename || "File")
             .join(", ");
         }
-        return response.name || response.filename || "File uploaded";
+        if (response instanceof File) {
+          return response.name;
+        }
+        const fileData = response as FileData;
+        return fileData.name || fileData.filename || "File uploaded";
       }
       return "File uploaded";
     }
@@ -168,7 +186,8 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
 
       return () => clearTimeout(timeoutId);
     }
-  }, [isLast, variant, response, question, questionId]); // Note: currentQuestionId NOT in deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLast, variant, response, question, questionId]); // Note: currentQuestionId NOT in deps to prevent render loops
 
   if (!question) return null;
 
@@ -247,9 +266,9 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
       !question.validations?.pattern &&
       !question.validations?.minLength &&
       !question.validations?.maxLength &&
-      !(question as any).placeholder?.includes("@") && // Allow email-like inputs
-      !(question as any).placeholder?.includes("phone") && // Allow phone-like inputs
-      !(question as any).placeholder?.includes("url")
+      !(question as QuestionWithPlaceholder).placeholder?.includes("@") && // Allow email-like inputs
+      !(question as QuestionWithPlaceholder).placeholder?.includes("phone") && // Allow phone-like inputs
+      !(question as QuestionWithPlaceholder).placeholder?.includes("url")
     ) {
       // Allow URL-like inputs
       return null;
@@ -259,7 +278,7 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
       <InputContainer
         currentQuestion={mapQuestionToUI(question)}
         currentResponse={response}
-        handleSelect={(qId: string, value: any) => {
+        handleSelect={(qId: string, value: QuestionResponse) => {
           setCurrentInput(qId, value);
 
           // For single select and other types, trigger submission immediately
@@ -281,7 +300,7 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
         }}
         handleFileUpload={handleFileUpload}
         isUploading={formDisplayState === "uploading_file"}
-        uploadedFile={response ? (response as File) : null}
+        uploadedFile={response instanceof File ? response : null}
         onFileSelect={(file: File | null) => {
           // Chat mode: Store file directly as response
           if (file) {

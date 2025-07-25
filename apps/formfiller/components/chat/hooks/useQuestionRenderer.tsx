@@ -1,6 +1,7 @@
 import React from "react";
 import { Element } from "hast";
 import { QuestionWrapper } from "../QuestionWrapper";
+import type { MarkdownComponentProps } from "@/lib/types";
 
 export const useQuestionRenderer = (
   messageId: string,
@@ -9,13 +10,15 @@ export const useQuestionRenderer = (
   handleFileUpload?: (questionId: string, file: File) => Promise<void>,
 ) => {
   const components = {
-    p: ({ node, children, ...props }: any) => {
+    p: ({ node, children, ...props }: MarkdownComponentProps) => {
       if (!node) return null;
-      const hasQuestionLink = node.children.some((child: any) => {
-        if (child.type !== "element" || child.tagName !== "a") return false;
-        const linkNode = (child as Element).children?.[0];
-        return linkNode?.type === "text" && linkNode.value === "question";
-      });
+      const hasQuestionLink = node.children.some(
+        (child: Element | { type: string }) => {
+          if (child.type !== "element" || child.tagName !== "a") return false;
+          const linkNode = (child as Element).children?.[0];
+          return linkNode?.type === "text" && linkNode.value === "question";
+        },
+      );
 
       if (hasQuestionLink) {
         // Don't render the paragraph content, just render children which will be our QuestionWrapper
@@ -23,7 +26,7 @@ export const useQuestionRenderer = (
       }
       return <p {...props}>{children}</p>;
     },
-    a: ({ node, ...props }: any) => {
+    a: ({ node, ...props }: MarkdownComponentProps) => {
       const linkText =
         node?.children?.[0]?.type === "text" ? node.children[0].value : "";
 

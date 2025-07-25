@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Form, Question } from "@formlink/schema";
-import type { UIForm } from "@formlink/ui";
+import type { QueryDataForForm, QuestionResponse } from "@/lib/types";
 import FormAIComponent from "@/app/[formId]/FormAIComponent";
 import TypeFormView from "@/components/typeform/TypeFormView";
 import { FormModeProvider, useFormMode } from "@/contexts/FormModeContext";
@@ -13,7 +13,7 @@ import { useThemeLoader } from "@/hooks/useThemeLoader";
 interface FormPageContentProps {
   formSchema: Form;
   isTestSubmission: boolean;
-  queryDataForForm: Record<string, any>;
+  queryDataForForm: QueryDataForForm;
 }
 
 // This component must be used INSIDE FormModeProvider
@@ -22,7 +22,7 @@ function FormPageContent({
   isTestSubmission,
   queryDataForForm,
 }: FormPageContentProps) {
-  const { isAIMode, isTypeFormMode } = useFormMode();
+  const { isAIMode } = useFormMode();
 
   // Load and apply themes from database
   const themeLoader = useThemeLoader(formSchema);
@@ -43,7 +43,6 @@ function FormPageContent({
     themeLoader.isLoading,
     themeLoader.themeApplied,
     themeLoader.error,
-    themeLoader.appliedVariables.length,
     formSchema.id,
   ]);
 
@@ -59,7 +58,6 @@ function FormPageContent({
     restart,
     setQuestionResponse,
     handleSingleChoiceChange,
-    handleMultipleChoiceChange,
     handleTextChange,
     shouldShowQuestion,
     getNextValidQuestionIndex,
@@ -75,7 +73,7 @@ function FormPageContent({
 
   const handleAnswerChange = (
     questionId: string,
-    value: any,
+    value: QuestionResponse,
     questionType: Question["questionType"],
   ) => {
     // Route to appropriate business logic based on question type
@@ -154,7 +152,7 @@ function FormPageContent({
 interface FormPageClientProps {
   formSchema: Form;
   isTestSubmission: boolean;
-  queryDataForForm: Record<string, any>;
+  queryDataForForm: QueryDataForForm;
   searchParams: { [key: string]: string | string[] | undefined };
 }
 

@@ -3,6 +3,12 @@
  * Centralizes URL construction to eliminate environment logic duplication.
  */
 
+import {
+  SaveAnswersRequest,
+  SaveAnswersResponse,
+  UploadResponse,
+} from "./types";
+
 /**
  * Get the base API URL based on environment
  */
@@ -50,7 +56,7 @@ export const apiServices = {
   /**
    * Upload file to server
    */
-  uploadFile: async (formData: FormData): Promise<any> => {
+  uploadFile: async (formData: FormData): Promise<UploadResponse> => {
     const response = await fetch(apiConfig.getUploadUrl(), {
       method: "POST",
       body: formData,
@@ -66,7 +72,10 @@ export const apiServices = {
   /**
    * Save form answers to server
    */
-  saveAnswers: async (formId: string, payload: any): Promise<any> => {
+  saveAnswers: async (
+    formId: string,
+    payload: SaveAnswersRequest,
+  ): Promise<SaveAnswersResponse> => {
     const response = await fetch(apiConfig.getSaveAnswersUrl(formId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },

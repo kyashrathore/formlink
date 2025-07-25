@@ -9,8 +9,10 @@ import { Message } from "./message";
 import { MessageLoading } from "./message-loading";
 
 import { Message as MessageType } from "@ai-sdk/react";
+import { Form } from "@formlink/schema";
+
 type ConversationProps = {
-  data: any; // Changed type to any for now to accommodate currentQuestion
+  data?: Form | null;
   messages: MessageType[];
   status?: "streaming" | "ready" | "submitted" | "error";
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
@@ -40,7 +42,10 @@ export function Conversation({
   const initialMessageCount = useRef(messages.length);
 
   // Filter out hidden messages
-  const visibleMessages = messages.filter((msg) => !(msg as any).hidden);
+  const visibleMessages = messages.filter((msg) => {
+    const msgWithHidden = msg as MessageType & { hidden?: boolean };
+    return !msgWithHidden.hidden;
+  });
 
   return (
     <StickToBottom

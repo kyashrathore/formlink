@@ -9,15 +9,28 @@ import { Form, Question, Option } from "@formlink/schema";
 
 import { UIForm, UIQuestion, UIOption, UIQuestionType } from "@formlink/ui";
 
+// Extended Option interface for UI mapping
+interface ExtendedOption extends Option {
+  description?: string;
+}
+
+// Extended Settings interface for UI mapping
+interface ExtendedSettings {
+  requireAuth?: boolean;
+  submitOnce?: boolean;
+  [key: string]: unknown;
+}
+
 // ============================================================================
 // Option Mapping
 // ============================================================================
 
 function mapOptionToUI(option: Option): UIOption {
+  const extendedOption = option as ExtendedOption;
   return {
     label: option.label,
     value: option.value,
-    description: (option as any).description, // Optional field
+    description: extendedOption.description, // Optional field
   };
 }
 
@@ -30,35 +43,67 @@ function mapOptionsToUI(options: Option[]): UIOption[] {
 // ============================================================================
 
 export function mapQuestionToUI(question: Question): UIQuestion {
-  const q = question as any; // Cast to any to handle schema type mismatches
-  return {
-    id: q.id,
-    title: q.title,
-    description: q.description,
-    questionType: q.type as UIQuestionType,
-    required: q.required || false,
-    placeholder: q.settings?.placeholder,
-    options: q.options ? mapOptionsToUI(q.options) : undefined,
-    validations: q.validations || {},
+  const baseQuestion = {
+    id: question.id,
+    title: question.title,
+    description: question.description,
+    questionType: question.questionType as UIQuestionType,
+    required: (question.validations?.required?.value as boolean) || false,
+    validations: question.validations || {},
     display: {
-      placeholder: q.settings?.placeholder,
-      helpText: q.description,
+      helpText: question.description,
     },
-    // Map type-specific configurations
-    linearScaleConfig: q.settings?.steps
-      ? {
-          min: q.settings.start_at_zero ? 0 : 1,
-          max: q.settings.steps,
-          startLabel: q.settings.labels?.[0],
-          endLabel: q.settings.labels?.[1],
-        }
-      : undefined,
-    ratingConfig: q.settings?.steps
-      ? {
-          max: q.settings.steps,
-        }
-      : undefined,
   };
+
+  // Handle choice questions with options
+  if (
+    question.questionType === "multipleChoice" ||
+    question.questionType === "singleChoice" ||
+    question.questionType === "ranking"
+  ) {
+    const choiceQuestion = question as typeof question & { options: Option[] };
+    return {
+      ...baseQuestion,
+      options: choiceQuestion.options
+        ? mapOptionsToUI(choiceQuestion.options)
+        : undefined,
+    };
+  }
+
+  // Handle rating questions
+  if (question.questionType === "rating") {
+    const ratingQuestion = question as typeof question & {
+      ratingConfig: { max: number; min?: number };
+    };
+    return {
+      ...baseQuestion,
+      ratingConfig: ratingQuestion.ratingConfig,
+    };
+  }
+
+  // Handle linear scale questions
+  if (question.questionType === "linearScale") {
+    const scaleQuestion = question as typeof question & {
+      linearScaleConfig: {
+        start: number;
+        end: number;
+        startLabel?: string;
+        endLabel?: string;
+      };
+    };
+    return {
+      ...baseQuestion,
+      linearScaleConfig: {
+        min: scaleQuestion.linearScaleConfig.start,
+        max: scaleQuestion.linearScaleConfig.end,
+        startLabel: scaleQuestion.linearScaleConfig.startLabel,
+        endLabel: scaleQuestion.linearScaleConfig.endLabel,
+      },
+    };
+  }
+
+  // Default case for simple questions
+  return baseQuestion;
 }
 
 function mapQuestionsToUI(questions: Question[]): UIQuestion[] {
@@ -70,6 +115,7 @@ function mapQuestionsToUI(questions: Question[]): UIQuestion[] {
 // ============================================================================
 
 export function mapFormToUI(form: Form): UIForm {
+  const extendedSettings = (form.settings || {}) as ExtendedSettings;
   return {
     id: form.id,
     title: form.title,
@@ -77,9 +123,9 @@ export function mapFormToUI(form: Form): UIForm {
     questions: mapQuestionsToUI(form.questions || []),
     version_id: form.version_id,
     settings: {
-      allowAnonymous: !(form.settings as any)?.requireAuth,
-      requireAuth: (form.settings as any)?.requireAuth || false,
-      submitOnce: (form.settings as any)?.submitOnce || false,
+      allowAnonymous: !extendedSettings.requireAuth,
+      requireAuth: extendedSettings.requireAuth || false,
+      submitOnce: extendedSettings.submitOnce || false,
     },
   };
 }

@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   const filePath = `${formId}/${submissionId}+${questionId}_${fileName}`;
 
   try {
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from("form-submissions-uploads")
       .upload(filePath, file);
 

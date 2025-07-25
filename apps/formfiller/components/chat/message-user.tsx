@@ -12,11 +12,7 @@ type MessageUserProps = {
   id: string;
 };
 
-export function MessageUser({
-  hasScrollAnchor,
-  message,
-  id,
-}: MessageUserProps) {
+export function MessageUser({ hasScrollAnchor, message }: MessageUserProps) {
   return (
     <MessageContainer
       className={cn(
