@@ -6,18 +6,16 @@ import { validateChatRequest } from "../../lib/chat/utils/validation"
 import logger from "../../lib/logger"
 import { handleChatRequest } from "./handlers"
 
-// POST handler for chat messages
 export async function POST(req: NextRequest) {
   try {
-    // Require authentication
     const { requireAuth, authErrorResponse } = await import(
       "../../lib/middleware/auth"
     )
     let authResult
     try {
       authResult = await requireAuth(req)
-    } catch (error: any) {
-      return authErrorResponse(error)
+    } catch (error) {
+      return authErrorResponse(error as any)
     }
 
     const body = await req.json()
@@ -27,11 +25,9 @@ export async function POST(req: NextRequest) {
       options,
     } = validateChatRequest(body)
 
-    // Use authenticated user's ID
     const userId = authResult.user.id
     const isGuest = authResult.isGuest
 
-    // Check guest limits if applicable
     if (isGuest && !initialFormId) {
       const { verifyGuestUserLimits } = await import(
         "../../lib/middleware/authorization"
@@ -48,12 +44,11 @@ export async function POST(req: NextRequest) {
     const cookieStore = await cookies()
     const supabase = await createServerClient(cookieStore)
 
-    // Handle the chat request
     return await handleChatRequest(
-      messages,
+      messages as any,
       initialFormId,
       userId,
-      supabase,
+      supabase as any,
       options
     )
   } catch (error) {
@@ -72,17 +67,15 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// GET handler for fetching chat history
 export async function GET(req: NextRequest) {
-  // Require authentication
   const { requireAuth, authErrorResponse } = await import(
     "../../lib/middleware/auth"
   )
   let authResult
   try {
     authResult = await requireAuth(req)
-  } catch (error: any) {
-    return authErrorResponse(error)
+  } catch (error) {
+    return authErrorResponse(error as any)
   }
 
   const { searchParams } = new URL(req.url)
@@ -99,15 +92,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    // Verify user owns the form
     const { verifyUserOwnsForm } = await import(
       "../../lib/middleware/authorization"
     )
-    const ownership = await verifyUserOwnsForm(
-      formId,
-      authResult.user.id,
-      authResult.isGuest
-    )
+    const ownership = await verifyUserOwnsForm(formId, authResult.user.id)
 
     if (!ownership.formExists) {
       return new Response(JSON.stringify({ error: "Form not found" }), {
@@ -139,7 +127,7 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: { "Content-Type": "application/json" },
     })
-  } catch (error: any) {
+  } catch (error) {
     logger.error("Unexpected error in /api/chat GET (history)", {
       formId,
       error,
@@ -147,7 +135,7 @@ export async function GET(req: NextRequest) {
     return new Response(
       JSON.stringify({
         error: "Internal server error",
-        details: error.message,
+        details: error instanceof Error ? error.message : String(error),
       }),
       {
         status: 500,

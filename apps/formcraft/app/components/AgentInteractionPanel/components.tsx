@@ -1,17 +1,9 @@
 import { Button, ChatContainer, ScrollButton } from "@formlink/ui"
-import {
-  Activity,
-  AlertTriangle,
-  ChevronDown,
-  Eye,
-  Loader2,
-} from "lucide-react"
+import { Activity, AlertTriangle, ChevronDown, Eye } from "lucide-react"
 import Link from "next/link"
-import React, { forwardRef, useRef, useState } from "react" // Added useRef, forwardRef
-
+import React, { forwardRef, useRef, useState } from "react"
 import { MessageWithParts } from "./MessageWithParts"
-import type { AgentState, ChatMessage, FormattedLogEvent } from "./types"
-import { formatChatMessageTime } from "./utils"
+import type { ChatMessage, FormattedLogEvent } from "./types"
 
 interface TaskProgressProps {
   currentTask: number
@@ -22,17 +14,14 @@ export const TaskProgress: React.FC<TaskProgressProps> = ({
   currentTask,
   totalTasks,
 }) => {
-  // Show progress bar even when totalTasks is 0 for debugging, or when there's actual progress
   const progressPercentage =
     totalTasks > 0 ? (currentTask / totalTasks) * 100 : 0
   const showProgress = totalTasks > 0 || currentTask > 0
 
-  // Always show for debugging purposes - remove this condition later
   const alwaysShow = false
 
   if (!showProgress && !alwaysShow) return null
 
-  // Calculate how many blocks should be filled (out of 10)
   const filledBlocks = Math.floor((progressPercentage / 100) * 10)
 
   return (
@@ -65,6 +54,7 @@ interface CollapsedPanelProps {
 export const CollapsedPanel: React.FC<CollapsedPanelProps> = ({
   displaySummaryMessage,
   onExpand,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isStreaming = false,
 }) => (
   <Button
@@ -91,6 +81,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   shortId,
   currentTask,
   totalTasks,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   isStreaming = false,
 }) => (
   <div className="flex items-center justify-between px-3 pt-3 pb-2">
@@ -105,7 +96,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       {shortId && (
         <Link
           title="Preview"
-          href={`http://localhost:3001/${shortId}?formlinkai_testmode=true`}
+          href={`http://localhost:3000/f/${shortId}`}
           target="_blank"
         >
           <Eye />
@@ -142,7 +133,7 @@ export const ChatMessages = forwardRef<
   return (
     <div className="relative m-1">
       {" "}
-      {/* Wrapper for positioning ScrollButton */}
+      {}
       <ChatContainer
         ref={
           typeof forwardedRef === "function"
@@ -151,7 +142,7 @@ export const ChatMessages = forwardRef<
         }
         scrollToRef={scrollAnchorRef}
         autoScroll={true}
-        className="bg-background max-h-60 overflow-y-auto rounded-lg p-3" // Removed space-y-2, Message component will handle spacing
+        className="bg-background max-h-60 overflow-y-auto rounded-lg p-3"
         style={{ scrollbarGutter: "stable both-edges" }}
       >
         {chatMessages?.map((message, index) => {
@@ -166,7 +157,7 @@ export const ChatMessages = forwardRef<
             />
           )
         })}
-        {/* Empty div at the end to serve as the scroll anchor */}
+        {}
         <div ref={scrollAnchorRef} style={{ height: "1px" }} />
       </ChatContainer>
       <ScrollButton
@@ -250,7 +241,7 @@ export const FailedState: React.FC<FailedStateProps> = ({ onRetry }) => (
 export interface ExpandedPanelProps {
   chatMessages?: ChatMessage[]
   logsToShow: FormattedLogEvent[]
-  chatContainerRef?: React.RefObject<HTMLDivElement | null> // This ref is for the ChatContainer
+  chatContainerRef?: React.RefObject<HTMLDivElement | null>
   logsContainerRef: React.RefObject<HTMLDivElement | null>
   onCollapse: () => void
   displaySummaryMessage: string
@@ -263,7 +254,7 @@ export interface ExpandedPanelProps {
 export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   chatMessages,
   logsToShow,
-  chatContainerRef, // This will be passed as ref to ChatMessages
+  chatContainerRef,
   logsContainerRef,
   onCollapse,
   displaySummaryMessage,
@@ -284,10 +275,7 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         isStreaming={isStreaming}
       />
       {chatMessages && chatMessages.length > 0 && (
-        <ChatMessages
-          chatMessages={chatMessages}
-          ref={chatContainerRef} // Pass the ref here
-        />
+        <ChatMessages chatMessages={chatMessages} ref={chatContainerRef} />
       )}
 
       {!showDetailedLogs && (

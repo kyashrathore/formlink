@@ -2,11 +2,7 @@
 
 import { SubscriptionInfo } from "@/app/components/subscription"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
-import {
-  AUTH_DAILY_MESSAGE_LIMIT,
-  ENABLE_BILLING,
-  MODEL_DEFAULT,
-} from "@/app/lib/config"
+import { ENABLE_BILLING } from "@/app/lib/config"
 import { cn } from "@/lib/utils"
 import { createBrowserClient } from "@formlink/db"
 import type { Database } from "@formlink/db"
@@ -86,29 +82,8 @@ function SettingsContent({
 }) {
   const { theme, setTheme } = useTheme()
   const [selectedTheme, setSelectedTheme] = useState(theme || "system")
-  const [selectedModelId, setSelectedModelId] = useState<string>(
-    user?.preferred_model || MODEL_DEFAULT
-  )
   const supabase = createBrowserClient()
   const router = useRouter()
-
-  const handleModelChange = async (value: string) => {
-    setSelectedModelId(value)
-
-    try {
-      const supabase = createBrowserClient()
-      const { error } = await supabase
-        .from("users")
-        .update({ preferred_model: value })
-        .eq("id", user.id)
-
-      if (error) {
-        console.error("Error updating preferred model:", error)
-      }
-    } catch (err) {
-      console.error("Failed to update preferred model:", err)
-    }
-  }
 
   const themes = [
     { id: "system", name: "System", colors: ["#ffffff", "#1a1a1a"] },
@@ -190,7 +165,7 @@ function SettingsContent({
         </div>
       </div>
 
-      {/* Subscription */}
+      {}
       {ENABLE_BILLING && (
         <div className="border-border border-t">
           <div className="px-6 py-4">
@@ -199,7 +174,7 @@ function SettingsContent({
         </div>
       )}
 
-      {/* Account */}
+      {}
       <div className="border-border border-t">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">

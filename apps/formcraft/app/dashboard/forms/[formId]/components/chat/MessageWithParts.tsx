@@ -15,9 +15,9 @@ interface ToolInvocationPart {
     state: "partial-call" | "call" | "result" | "error"
     toolCallId: string
     toolName: string
-    args?: any
-    result?: any
-    error?: any
+    args?: unknown
+    result?: unknown
+    error?: unknown
   }
 }
 
@@ -44,7 +44,6 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
   parts,
   isLastMessage = false,
   displaySummaryMessage = "",
-  isStreaming = false,
 }) => {
   if (!parts || parts.length === 0) {
     return (
@@ -105,9 +104,8 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
           case "tool-invocation":
             const { state, toolName } = part.toolInvocation
 
-            // Show loading for active calls, success/error for completed
             if (!isLastMessage && state !== "result" && state !== "error") {
-              return null // Only hide non-final states for historical messages
+              return null
             }
 
             const getStatusDisplay = () => {
@@ -130,7 +128,7 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
                     text: `Preparing ${toolName}...`,
                     className: "bg-muted/30 text-foreground border-border",
                   }
-                default: // "call"
+                default:
                   return {
                     icon: Loader2,
                     text: `Running ${toolName}...`,

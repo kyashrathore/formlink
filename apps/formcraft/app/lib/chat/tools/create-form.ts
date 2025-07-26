@@ -5,6 +5,15 @@ import { CreateFormAgentSchema } from "../../types/chat"
 import { TOOL_DESCRIPTIONS } from "../prompts"
 import { ChatToolContext, FormCreationResult } from "../types"
 
+interface DataStream {
+  writeData: (data: unknown) => void
+}
+
+interface FormAgentOptions {
+  model?: string
+  [key: string]: unknown
+}
+
 export function createFormTool(context: ChatToolContext) {
   return tool({
     description: TOOL_DESCRIPTIONS.createFormAgent,
@@ -13,7 +22,6 @@ export function createFormTool(context: ChatToolContext) {
       const { dataStream, formId, supabase, userId, options } = context
 
       try {
-        // Get the shortId from the existing form
         const { data: formData, error: fetchError } = await supabase
           .from("forms")
           .select("short_id")
@@ -53,12 +61,12 @@ export function createFormTool(context: ChatToolContext) {
 }
 
 async function processFormCreation(
-  dataStream: any,
+  dataStream: DataStream,
   formId: string,
   shortId: string,
   userId: string,
   prompt: string,
-  options?: any
+  options?: FormAgentOptions
 ): Promise<FormCreationResult> {
   logger.info("[TOOL] createFormAgent called", {
     formId,
@@ -88,7 +96,7 @@ async function processFormCreation(
 
     dataStream.writeData({
       type: "custom_agent_event",
-      payload: agentEvent as any,
+      payload: agentEvent,
     })
 
     if (

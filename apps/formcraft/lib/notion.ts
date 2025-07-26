@@ -25,34 +25,48 @@ export interface BlogPost {
 export interface NotionBlock {
   id: string
   type: string
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export interface BlogPostPageData extends BlogPost {
   content: NotionBlock[]
 }
 
-function extractRichText(richTextArray: any[]): string {
+interface RichTextItem {
+  plain_text: string
+}
+
+function extractRichText(richTextArray: RichTextItem[]): string {
   return richTextArray?.map((text) => text.plain_text).join("") || ""
 }
 
-function extractMultiSelect(multiSelectArray: any[]): string[] {
-  return multiSelectArray?.map((item) => item.name) || []
+interface RelationItem {
+  id: string
 }
 
-function extractRelation(relationArray: any[]): string[] {
+function extractRelation(relationArray: RelationItem[]): string[] {
   return relationArray?.map((item) => item.id) || []
 }
 
-function extractDate(dateProperty: any): string {
+interface DateProperty {
+  start?: string
+}
+
+function extractDate(dateProperty: DateProperty | null): string {
   return dateProperty?.start || ""
 }
 
-function extractCheckbox(checkboxProperty: any): boolean {
+function extractCheckbox(
+  checkboxProperty: boolean | null | undefined
+): boolean {
   return checkboxProperty || false
 }
 
-function extractUrl(urlProperty: any): string | null {
+interface UrlProperty {
+  url?: string
+}
+
+function extractUrl(urlProperty: UrlProperty | null): string | null {
   return urlProperty?.url || null
 }
 
@@ -74,10 +88,14 @@ export async function getPublishedBlogPosts(): Promise<BlogPost[]> {
       ],
     })
 
-    return response.results.map((page: any) => {
-      const properties = page.properties
+    return response.results.map((page) => {
+      const pageWithProperties = page as {
+        id: string
+        properties: Record<string, any>
+      }
+      const properties = pageWithProperties.properties
       return {
-        id: page.id,
+        id: pageWithProperties.id,
         title: extractRichText(properties.Name?.title || []),
         slug: extractRichText(properties.Slug?.rich_text || []),
         date: extractDate(properties["Publish Date"]?.date),
@@ -95,8 +113,7 @@ export async function getPublishedBlogPosts(): Promise<BlogPost[]> {
       }
     })
   } catch (error) {
-    console.error("Error fetching blog posts:", error)
-    throw new Error("Failed to fetch blog posts")
+    throw new Error("Failed to fetch blog posts", { cause: error })
   }
 }
 
@@ -104,7 +121,6 @@ export async function getBlogPostBySlug(
   slug: string
 ): Promise<BlogPostPageData | null> {
   try {
-    // First, find the page by slug
     const response = await notion.databases.query({
       database_id: databaseId,
       filter: {
@@ -128,10 +144,12 @@ export async function getBlogPostBySlug(
       return null
     }
 
-    const page = response.results[0] as any
+    const page = response.results[0] as {
+      id: string
+      properties: Record<string, any>
+    }
     const properties = page.properties
 
-    // Get the page content blocks
     const blocksResponse = await notion.blocks.children.list({
       block_id: page.id,
     })
@@ -159,8 +177,7 @@ export async function getBlogPostBySlug(
       content: blocksResponse.results as NotionBlock[],
     }
   } catch (error) {
-    console.error("Error fetching blog post by slug:", error)
-    throw new Error("Failed to fetch blog post")
+    throw new Error("Failed to fetch blog post", { cause: error })
   }
 }
 
@@ -176,12 +193,12 @@ export async function getAllPostSlugs(): Promise<string[]> {
       },
     })
 
-    const slugs = response.results.map((page: any) => {
-      const properties = page.properties
+    const slugs = response.results.map((page) => {
+      const pageWithProperties = page as { properties: Record<string, any> }
+      const properties = pageWithProperties.properties
       return extractRichText(properties.Slug?.rich_text || [])
     })
 
-    // Check for duplicate slugs
     const uniqueSlugs = new Set(slugs)
     if (uniqueSlugs.size !== slugs.length) {
       const duplicates = slugs.filter(
@@ -192,7 +209,6 @@ export async function getAllPostSlugs(): Promise<string[]> {
 
     return slugs
   } catch (error) {
-    console.error("Error fetching post slugs:", error)
     throw error
   }
 }
@@ -211,8 +227,6 @@ export async function updateOgImageUrl(
       },
     })
   } catch (error) {
-    console.error(`Failed to update OG image URL for page ${pageId}:`, error)
-    // We don't re-throw here to avoid breaking the image generation flow
-    // The error is logged, and we can handle it offline if needed.
+    console.error("Error updating OG image URL", error)
   }
 }

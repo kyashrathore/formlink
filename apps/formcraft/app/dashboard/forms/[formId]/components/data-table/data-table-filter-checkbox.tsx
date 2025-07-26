@@ -98,7 +98,6 @@ export function DataTableFilterCheckbox<TData>({
                       { id: value, value: newValue },
                     ]
 
-                    // Column filters updated on checkbox change
                     return updated
                   })
                 }}
@@ -133,7 +132,6 @@ export function DataTableFilterCheckbox<TData>({
                         { id: value, value: [optVal] },
                       ]
 
-                      // Column filters updated on only button click
                       return updated
                     })
                   }}

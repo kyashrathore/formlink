@@ -19,51 +19,39 @@ export function useAuth() {
         } = await supabase.auth.getUser()
 
         if (authError) {
-          // Auth error occurred
           setLoading(false)
           return
         }
 
         setUser(user)
 
-        // Check if user is anonymous
         if (user) {
-          // For anonymous users, check the email pattern first
           const isAnonymousEmail =
             user.email?.endsWith("@anonymous.local") ||
             user.email?.includes("@anonymous.example") ||
             !user.email
 
-          // If it looks like an anonymous email, set it immediately
           if (isAnonymousEmail) {
             setIsAnonymous(true)
           }
 
-          // Then try to verify from the database
           try {
             const { data: userData, error: dbError } = await supabase
               .from("users")
               .select("anonymous")
               .eq("id", user.id)
-              .maybeSingle() // Use maybeSingle instead of single to handle 0 rows gracefully
+              .maybeSingle()
 
             if (dbError) {
-              // Database error checking anonymous status
-              // Keep the email-based detection if DB query fails
               if (!isAnonymousEmail) {
                 setIsAnonymous(false)
               }
             } else if (!userData) {
-              // User record doesn't exist yet - use email-based detection
-              // User record not found yet, using email-based detection
-              // Keep the email-based detection
             } else {
-              // We have data from DB, use it
               setIsAnonymous(userData.anonymous || false)
             }
-          } catch (error) {
-            // Error checking anonymous status
-            // Keep the email-based detection if error occurs
+          } catch (_error) {
+            console.error("Error fetching user data", _error)
             if (!isAnonymousEmail) {
               setIsAnonymous(false)
             }
@@ -71,8 +59,10 @@ export function useAuth() {
         } else {
           setIsAnonymous(false)
         }
-      } catch (error) {
-        // Unexpected error in getUser
+      } catch (_error) {
+        console.error("Error getting user", _error)
+        setUser(null)
+        setIsAnonymous(false)
       } finally {
         setLoading(false)
       }
@@ -80,57 +70,44 @@ export function useAuth() {
 
     getUser()
 
-    // Add timeout to prevent infinite loading
     const timeout = setTimeout(() => {
       if (loading) {
-        // Auth loading timeout - forcing loading to false
         setLoading(false)
       }
-    }, 5000) // 5 second timeout
+    }, 5000)
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      async (_event, session) => {
         try {
           setUser(session?.user ?? null)
 
-          // Check if user is anonymous on auth state change
           if (session?.user) {
-            // For anonymous users, check the email pattern first
             const isAnonymousEmail =
               session.user.email?.endsWith("@anonymous.local") ||
               session.user.email?.includes("@anonymous.example") ||
               !session.user.email
 
-            // If it looks like an anonymous email, set it immediately
             if (isAnonymousEmail) {
               setIsAnonymous(true)
             }
 
-            // Then try to verify from the database
             try {
               const { data: userData, error: dbError } = await supabase
                 .from("users")
                 .select("anonymous")
                 .eq("id", session.user.id)
-                .maybeSingle() // Use maybeSingle to handle 0 rows gracefully
+                .maybeSingle()
 
               if (dbError) {
-                // Database error in auth state change
-                // Keep the email-based detection if DB query fails
                 if (!isAnonymousEmail) {
                   setIsAnonymous(false)
                 }
               } else if (!userData) {
-                // User record doesn't exist yet - use email-based detection
-                // User record not found in auth state change, using email-based detection
-                // Keep the email-based detection
               } else {
-                // We have data from DB, use it
                 setIsAnonymous(userData.anonymous || false)
               }
-            } catch (error) {
-              // Error checking anonymous status in auth state change
-              // Keep the email-based detection if error occurs
+            } catch (_error) {
+              console.error("Error fetching user data", _error)
               if (!isAnonymousEmail) {
                 setIsAnonymous(false)
               }
@@ -138,8 +115,10 @@ export function useAuth() {
           } else {
             setIsAnonymous(false)
           }
-        } catch (error) {
-          // Error in auth state change handler
+        } catch (_error) {
+          console.error("Error during auth state change", _error)
+          setUser(null)
+          setIsAnonymous(false)
         } finally {
           setLoading(false)
         }

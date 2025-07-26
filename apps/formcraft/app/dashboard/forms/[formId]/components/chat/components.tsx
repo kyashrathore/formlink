@@ -1,16 +1,9 @@
 import { Button, ChatContainer, ScrollButton } from "@formlink/ui"
-import {
-  Activity,
-  AlertTriangle,
-  ChevronDown,
-  Eye,
-  Loader2,
-} from "lucide-react"
+import { Activity, AlertTriangle, ChevronDown, Eye } from "lucide-react"
 import Link from "next/link"
 import React, { forwardRef, useRef, useState } from "react"
 import { MessageWithParts } from "./MessageWithParts"
-import type { AgentState, ChatMessage, FormattedLogEvent } from "./types"
-import { formatChatMessageTime } from "./utils"
+import type { ChatMessage, FormattedLogEvent } from "./types"
 
 interface TaskProgressProps {
   currentTask: number
@@ -55,13 +48,11 @@ export const TaskProgress: React.FC<TaskProgressProps> = ({
 interface CollapsedPanelProps {
   displaySummaryMessage: string
   onExpand: () => void
-  isStreaming?: boolean
 }
 
 export const CollapsedPanel: React.FC<CollapsedPanelProps> = ({
   displaySummaryMessage,
   onExpand,
-  isStreaming = false,
 }) => (
   <Button
     variant="outline"
@@ -79,7 +70,6 @@ interface PanelHeaderProps {
   currentTask: number
   totalTasks: number
   shortId: string
-  isStreaming?: boolean
 }
 
 export const PanelHeader: React.FC<PanelHeaderProps> = ({
@@ -87,7 +77,6 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
   shortId,
   currentTask,
   totalTasks,
-  isStreaming = false,
 }) => (
   <div className="flex items-center justify-between px-3 pt-3 pb-2">
     <div className="flex items-center gap-3">
@@ -101,7 +90,7 @@ export const PanelHeader: React.FC<PanelHeaderProps> = ({
       {shortId && (
         <Link
           title="Preview"
-          href={`http://localhost:3001/${shortId}?formlinkai_testmode=true`}
+          href={`http://localhost:3001/${shortId}`}
           target="_blank"
         >
           <Eye />
@@ -250,7 +239,6 @@ export interface ExpandedPanelProps {
   currentTask: number
   totalTasks: number
   shortId: string
-  isStreaming?: boolean
 }
 
 export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
@@ -263,7 +251,6 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
   currentTask,
   totalTasks,
   shortId,
-  isStreaming = false,
 }) => {
   const [showDetailedLogs, setShowDetailedLogs] = useState(false)
 
@@ -274,7 +261,6 @@ export const ExpandedPanel: React.FC<ExpandedPanelProps> = ({
         currentTask={currentTask}
         totalTasks={totalTasks}
         shortId={shortId}
-        isStreaming={isStreaming}
       />
       {chatMessages && chatMessages.length > 0 && (
         <ChatMessages chatMessages={chatMessages} ref={chatContainerRef} />

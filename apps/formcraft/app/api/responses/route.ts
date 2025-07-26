@@ -4,14 +4,13 @@ import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
   try {
-    // Require authentication
     const { requireAuth, authErrorResponse } = await import(
       "../../lib/middleware/auth"
     )
     let authResult
     try {
       authResult = await requireAuth(request)
-    } catch (error: any) {
+    } catch (error) {
       return authErrorResponse(error)
     }
 
@@ -22,11 +21,11 @@ export async function GET(request: NextRequest) {
     const pageParam = request.nextUrl.searchParams.get("page")
     const pageSizeParam = request.nextUrl.searchParams.get("pageSize")
 
-    let filters: Record<string, any> = {}
+    let filters: Record<string, unknown> = {}
     if (searchParam) {
       try {
         filters = JSON.parse(searchParam)
-      } catch (e) {
+      } catch {
         return NextResponse.json(
           { success: false, error: "Invalid search param" },
           { status: 400 }
@@ -37,7 +36,6 @@ export async function GET(request: NextRequest) {
     let validQuestionIds: string[] = []
     const formVersionId = filters.form_version_id
     if (formVersionId) {
-      // Verify user has access to this form version
       const { verifyUserCanAccessFormVersion } = await import(
         "../../lib/middleware/authorization"
       )
@@ -66,7 +64,7 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      let questionsArr: any[] = []
+      let questionsArr: Array<{ id?: string }> = []
       if (Array.isArray(formVersion.questions)) {
         questionsArr = formVersion.questions
       } else if (typeof formVersion.questions === "string") {
@@ -89,8 +87,8 @@ export async function GET(request: NextRequest) {
       "completed_at",
       "testmode",
     ]
-    const submissionFilters: Record<string, any> = {}
-    const answerFilters: Record<string, any> = {}
+    const submissionFilters: Record<string, unknown> = {}
+    const answerFilters: Record<string, unknown> = {}
 
     for (const [key, value] of Object.entries(filters)) {
       if (allowedSubmissionFilters.includes(key)) {
@@ -114,18 +112,13 @@ export async function GET(request: NextRequest) {
     )
 
     if (error) {
-      console.error("Error in get_filtered_submissions RPC:", error)
       return NextResponse.json(
         { success: false, error: "Failed to fetch form responses" },
         { status: 500 }
       )
     }
 
-    // The RPC returns an array with a single object containing all fields
     if (!rpcResponseArray || rpcResponseArray.length === 0) {
-      console.error(
-        "Unexpected empty response from get_filtered_submissions RPC"
-      )
       return NextResponse.json(
         { success: false, error: "Failed to process form responses" },
         { status: 500 }
@@ -136,7 +129,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: result?.data || [], // data is a JSONB array of submissions
+      data: result?.data || [],
       page,
       pageSize: page_size,
       totalCount: result?.total_count || 0,
@@ -146,8 +139,7 @@ export async function GET(request: NextRequest) {
       completedCount: result?.completed_count || 0,
       inProgressCount: result?.in_progress_count || 0,
     })
-  } catch (error) {
-    console.error("Error fetching form responses:", error)
+  } catch {
     return NextResponse.json(
       { success: false, error: "Failed to fetch form responses" },
       { status: 500 }

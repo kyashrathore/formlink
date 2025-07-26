@@ -8,7 +8,7 @@ import {
 } from "@formlink/schema"
 import { customAlphabet } from "nanoid"
 import { z } from "zod"
-import { app } from "../agent/graph" // Your main LangGraph app instance
+import { app } from "../agent/graph"
 import { AgentState, createInitialAgentState } from "../agent/state"
 import logger from "../logger"
 import {
@@ -16,12 +16,12 @@ import {
   createAgentEvent,
   StateSnapshotEvent,
 } from "../types/agent-events"
-import { UpdateFormSchema } from "../types/chat" // For params.updates type
+import { UpdateFormSchema } from "../types/chat"
 
 const nanoid = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-",
   10
-) // For new question IDs
+)
 
 export async function* createFormAgent(
   params: {
@@ -38,7 +38,7 @@ export async function* createFormAgent(
       `[SIMPLE_AGENT_WRAPPER] Initializing LangGraph for formId: ${params.formId}, prompt: "${params.prompt}"`
     )
 
-    let initialState: AgentState = createInitialAgentState(
+    const initialState: AgentState = createInitialAgentState(
       params.formId,
       params.shortId,
       userId,
@@ -157,12 +157,12 @@ export async function* updateFormAgent(
   let currentSequence = 0
   const { formId, updates } = params
 
-  let agentState: AgentState = {
+  const agentState: AgentState = {
     formId,
     shortId: formId.substring(0, 8),
     userId,
     originalInput: updates,
-    inputType: "prompt", // Representing the update request as a "prompt" to the agent
+    inputType: "prompt",
     selectedModel: params.selectedModel,
     tasksToPersist: [],
     generatedQuestionSchemas: [],
@@ -187,7 +187,6 @@ export async function* updateFormAgent(
   agentState.eventSequence = currentSequence
   agentState.status = "PROCESSING"
 
-  // Helper to build a valid Form object for StateSnapshotEvents
   const buildFormForEvent = (
     dbVersionData: Partial<z.infer<typeof FullFormSchema>> | null,
     tempVersionId?: string
@@ -206,7 +205,7 @@ export async function* updateFormAgent(
       description: baseDescription,
       questions: dbVersionData?.questions || [],
       settings: dbVersionData?.settings || {},
-      // Optional fields from FullFormSchema, might not always be present or needed for snapshot
+
       current_draft_version_id:
         dbVersionData?.current_draft_version_id || undefined,
       current_published_version_id:
@@ -221,14 +220,12 @@ export async function* updateFormAgent(
       `[updateFormAgent] Supabase client created for formId: ${formId}`
     )
 
-    // Initial state snapshot before fetching
-    let initialFormSnapshot = buildFormForEvent(null) // Empty form initially
+    const initialFormSnapshot = buildFormForEvent(null)
     agentState.formMetadata = {
       title: initialFormSnapshot.title,
       description: initialFormSnapshot.description || "",
     }
     agentState.settings = initialFormSnapshot.settings
-    // agentState.generatedQuestionSchemas = initialFormSnapshot.questions; // Not directly assignable
 
     yield createAgentEvent(
       "state_snapshot",
@@ -246,7 +243,7 @@ export async function* updateFormAgent(
 
     const { data: currentFormDbRecord, error: formError } = await supabase
       .from("forms")
-      .select("current_draft_version_id, short_id") // Also fetch short_id
+      .select("current_draft_version_id, short_id")
       .eq("id", formId)
       .single()
 
@@ -279,14 +276,13 @@ export async function* updateFormAgent(
       `[updateFormAgent] Fetched form version data for formId: ${formId}`
     )
 
-    // Construct a FullFormSchema compatible object from DB data
     const currentFullFormSchemaCompliant: z.infer<typeof FullFormSchema> = {
       id: formId,
       version_id: currentVersionDataFromDb.version_id,
-      title: String(currentVersionDataFromDb.title), // Ensure string
+      title: String(currentVersionDataFromDb.title),
       description: currentVersionDataFromDb.description
         ? String(currentVersionDataFromDb.description)
-        : undefined, // Ensure string or undefined
+        : undefined,
       questions: (currentVersionDataFromDb.questions
         ? Array.isArray(currentVersionDataFromDb.questions)
           ? currentVersionDataFromDb.questions
@@ -298,8 +294,7 @@ export async function* updateFormAgent(
         ? currentVersionDataFromDb.settings
         : {}) as z.infer<typeof FullFormSchema>["settings"],
       current_draft_version_id: currentFormDbRecord.current_draft_version_id,
-      // current_published_version_id might be on forms table or form_versions, adjust as needed
-      // short_id is on forms table
+
       short_id: currentFormDbRecord.short_id || undefined,
     }
 
@@ -308,14 +303,12 @@ export async function* updateFormAgent(
       description: currentFullFormSchemaCompliant.description || "",
     }
     agentState.settings = currentFullFormSchemaCompliant.settings
-    // agentState.generatedQuestionSchemas = currentFullFormSchemaCompliant.questions; // Not directly assignable
 
-    let updatedFormData: Partial<z.infer<typeof FullFormSchema>> = {
-      ...currentFullFormSchemaCompliant, // Start with valid, type-coerced data
+    const updatedFormData: Partial<z.infer<typeof FullFormSchema>> = {
+      ...currentFullFormSchemaCompliant,
     }
-    // These are not part of the FullFormSchema for update purposes directly, they are for context or new version
+
     delete updatedFormData.version_id
-    // created_at, updated_at, published_at, status are specific to form_versions table structure, not FullFormSchema for update content
 
     if (updates.title !== undefined) updatedFormData.title = updates.title
     if (updates.description !== undefined)
@@ -357,7 +350,6 @@ export async function* updateFormAgent(
     const rawQuestionsForValidation = updatedFormData.questions || []
     const settingsForValidation = updatedFormData.settings || {}
 
-    // Validate each question individually before including in FullFormSchema validation
     const validatedQuestionsForSchema: Question[] = []
     for (const q of rawQuestionsForValidation) {
       const qValidationResult = QuestionSchema.safeParse(q)
@@ -368,31 +360,24 @@ export async function* updateFormAgent(
           `[updateFormAgent] Individual question validation failed for a question in formId ${formId}:`,
           qValidationResult.error.issues
         )
-        validatedQuestionsForSchema.push(q as Question) // Push as is, hoping repair or FullFormSchema handles it
+        validatedQuestionsForSchema.push(q as Question)
       }
     }
 
     const dataToValidate = {
       id: formId,
-      version_id: nanoid(), // Temporary for validation
+      version_id: nanoid(),
       title: updatedFormData.title!,
       description: updatedFormData.description,
-      questions: validatedQuestionsForSchema, // Pass the validated Question[] array
+      questions: validatedQuestionsForSchema,
       settings: settingsForValidation,
       current_draft_version_id: currentFormDbRecord.current_draft_version_id,
       short_id: currentFormDbRecord.short_id || undefined,
     }
 
-    // Bypassing FullFormSchema.safeParse due to persistent issues with discriminated union array validation.
-    // We are relying on:
-    // 1. Individual QuestionSchema.safeParse for each question in validatedQuestionsForSchema.
-    // 2. repairQuestionInputTypes to fix common inputType/submissionBehavior issues.
-    // 3. Type safety of UpdateFormSchema for the incoming AI request.
-    // 4. Database constraints.
-    // This means validatedFormPart will be dataToValidate directly, assuming its components are correct.
     const validatedFormPart = dataToValidate as any as z.infer<
       typeof FullFormSchema
-    > // Force cast to proceed
+    >
     logger.info(
       `[updateFormAgent] Form data prepared (FullFormSchema.safeParse bypassed) for formId: ${formId}`
     )
@@ -402,7 +387,6 @@ export async function* updateFormAgent(
       description: validatedFormPart.description || "",
     }
     agentState.settings = validatedFormPart.settings
-    // agentState.generatedQuestionSchemas = validatedFormPart.questions;
 
     yield createAgentEvent(
       "state_snapshot",
@@ -426,8 +410,8 @@ export async function* updateFormAgent(
       user_id: userId,
       title: validatedFormPart.title,
       description: validatedFormPart.description,
-      questions: validatedFormPart.questions as any, // Cast to 'any' for Supabase insert if Json type is too strict
-      settings: validatedFormPart.settings as any, // Cast to 'any' for Supabase insert
+      questions: validatedFormPart.questions as any,
+      settings: validatedFormPart.settings as any,
       status: "draft" as const,
     }
 
@@ -472,13 +456,12 @@ export async function* updateFormAgent(
       description: validatedFormPart.description || "",
     }
     agentState.settings = validatedFormPart.settings
-    // agentState.generatedQuestionSchemas = validatedFormPart.questions;
 
     yield createAgentEvent(
       "state_snapshot",
       "state",
       {
-        form: buildFormForEvent(validatedFormPart, newVersion.version_id), // Use the actual new version_id
+        form: buildFormForEvent(validatedFormPart, newVersion.version_id),
         agentState: { ...agentState, status: "COMPLETED" },
         isComplete: true,
       },
@@ -487,7 +470,8 @@ export async function* updateFormAgent(
       currentSequence++
     ) as StateSnapshotEvent
     agentState.eventSequence = currentSequence
-  } catch (error: any) {
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
     logger.error(
       `[updateFormAgent] Error during form update for formId ${formId}:`,
       error
@@ -495,7 +479,7 @@ export async function* updateFormAgent(
     agentState.status = "FAILED"
     agentState.errorDetails = {
       node: "updateFormAgent",
-      message: error.message,
+      message: errorMessage,
       originalError: error,
     }
 
@@ -513,20 +497,19 @@ export async function* updateFormAgent(
     yield createAgentEvent(
       "agent_error",
       "error",
-      { message: error.message, details: error, recoverable: false },
+      { message: errorMessage, details: error, recoverable: false },
       formId,
       userId,
       currentSequence++
     )
     agentState.eventSequence = currentSequence
 
-    // Yield a final state snapshot on error
     yield createAgentEvent(
       "state_snapshot",
       "state",
       {
         form: errorFormSnapshot,
-        agentState: { ...agentState }, // agentState already updated with FAILED status
+        agentState: { ...agentState },
         isComplete: true,
       },
       formId,
@@ -535,7 +518,6 @@ export async function* updateFormAgent(
     ) as StateSnapshotEvent
     agentState.eventSequence = currentSequence
   } finally {
-    // Ensure status is one of the allowed values for AgentState
     const finalStatus =
       agentState.status === "COMPLETED" ? "COMPLETED" : "FAILED"
     agentState.status = finalStatus

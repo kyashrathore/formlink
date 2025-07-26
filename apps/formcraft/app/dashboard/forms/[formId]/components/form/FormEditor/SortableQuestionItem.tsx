@@ -5,7 +5,6 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { Question } from "@formlink/schema"
 import { Card } from "@formlink/ui"
-import { GripVertical } from "lucide-react"
 import React from "react"
 import QuestionDetail from "./QuestionDetails"
 
@@ -22,14 +21,10 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
   isPublishedMode,
   selectedTab,
 }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: question.id, disabled: isPublishedMode })
+  const { setNodeRef, transform, transition, isDragging } = useSortable({
+    id: question.id,
+    disabled: isPublishedMode,
+  })
 
   const style = {
     transform: CSS.Transform.toString(transform),

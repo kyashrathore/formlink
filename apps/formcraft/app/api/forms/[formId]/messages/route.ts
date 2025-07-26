@@ -3,14 +3,6 @@ import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
-// Define an interface for the message structure from Supabase
-interface SupabaseMessage {
-  id: string
-  role: "user" | "assistant" // Or whatever roles are stored
-  content: string
-  created_at: string // Assuming ISO string format
-}
-
 const paramsSchema = z.object({
   formId: z.string().uuid(),
 })
@@ -19,14 +11,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ formId: string }> }
 ) {
-  // Require authentication
   const { requireAuth, authErrorResponse } = await import(
     "../../../../lib/middleware/auth"
   )
   let authResult
   try {
     authResult = await requireAuth(request)
-  } catch (error: any) {
+  } catch (error) {
     return authErrorResponse(error)
   }
 
@@ -47,7 +38,6 @@ export async function GET(
 
   const { formId } = paramsValidation.data
 
-  // Verify user owns the form
   const { verifyUserOwnsForm } = await import(
     "../../../../lib/middleware/authorization"
   )
@@ -70,24 +60,22 @@ export async function GET(
 
   const { data: messages, error } = await supabase
     .from("messages")
-    .select("role, content, created_at, id") // Assuming 'created_at' is the timestamp
+    .select("role, content, created_at, id")
     .eq("form_id", formId)
     .order("created_at", { ascending: true })
 
   if (error) {
-    console.error("Error fetching messages from Supabase:", error)
     return NextResponse.json(
       { error: "Failed to fetch messages", details: error.message },
       { status: 500 }
     )
   }
 
-  // Transform to match the expected structure in the frontend store if necessary
-  const formattedMessages = messages.map((msg: any) => ({
-    id: msg.id, // Keep id if needed for keys
+  const formattedMessages = messages.map((msg) => ({
+    id: msg.id,
     role: msg.role,
     content: msg.content,
-    timestamp: msg.created_at, // Ensure this matches what the store expects
+    timestamp: msg.created_at,
   }))
 
   return NextResponse.json(formattedMessages, { status: 200 })

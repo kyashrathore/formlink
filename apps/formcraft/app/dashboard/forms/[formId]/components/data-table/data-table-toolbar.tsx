@@ -1,20 +1,9 @@
 "use client"
 
-import { useHotKey } from "@/app/hooks/use-hot-key"
 import { formatCompactNumber } from "@/app/lib/format"
-import {
-  Button,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@formlink/ui"
-import type { Table } from "@tanstack/react-table"
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react"
+import type { ColumnFiltersState, Table } from "@tanstack/react-table"
 import { useMemo } from "react"
-import { Kbd } from "../custom/kbd"
 import { DataTableFilterControlsDrawer } from "./data-table-filter-controls-drawer"
-import { useDataTable } from "./data-table-provider"
 import { DataTableResetButton } from "./data-table-reset-button"
 import { DataTableViewOptions } from "./data-table-view-options"
 
@@ -22,7 +11,7 @@ interface DataTableToolbarProps<TData = unknown> {
   table: Table<TData>
   renderActions?: () => React.ReactNode
   isLoading?: boolean
-  columnFilters?: any
+  columnFilters?: ColumnFiltersState
   enableColumnOrdering?: boolean
 }
 

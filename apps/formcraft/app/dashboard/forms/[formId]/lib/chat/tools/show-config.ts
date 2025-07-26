@@ -12,9 +12,8 @@ export function showConfigButtonTool(context: ChatToolContext) {
       formId: targetFormIdFromTool,
       metadata,
     }): Promise<ShowConfigResult> => {
-      const { dataStream, formId, userId } = context
+      const { dataStream, formId } = context
 
-      // Use targetFormIdFromTool if provided by AI, otherwise fallback to session formId
       const finalTargetFormId = targetFormIdFromTool || formId
 
       dataStream.writeData({

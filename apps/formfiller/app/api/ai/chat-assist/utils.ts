@@ -34,7 +34,7 @@ export class FormValidator {
       ) {
         const domain = trimmed.split("@")[1];
         const allowed = customRules.customRules.allowedDomains;
-        if (!allowed.includes(domain)) {
+        if (domain && !allowed.includes(domain)) {
           return {
             isValid: false,
             error: `Email must be from one of these domains: ${allowed.join(", ")}`,
@@ -262,7 +262,9 @@ export class FormValidator {
       "postalCode",
       "country",
     ];
-    const missingFields = requiredFields.filter((field) => !input[field]);
+    const missingFields = requiredFields.filter(
+      (field) => !(input as any)[field],
+    );
 
     if (question.validations?.required && missingFields.length > 0) {
       return {
@@ -349,15 +351,18 @@ export class FormValidator {
     const question = formSchema.questions.find((q) => q.id === questionId);
     const customRules = question?.validations as ExtendedValidations;
 
-    if (!customRules?.crossField) {
+    if (!customRules?.customRules?.crossField) {
       return { isValid: true };
     }
 
     // Example: end date must be after start date
-    const rules = customRules.crossField;
+    const rules = customRules.customRules.crossField;
     if (rules.mustBeAfter) {
       const compareValue = allResponses[rules.mustBeAfter];
-      if (compareValue && new Date(value) <= new Date(compareValue)) {
+      if (
+        compareValue &&
+        new Date(value as string) <= new Date(compareValue as string)
+      ) {
         const compareQuestion = formSchema.questions.find(
           (q) => q.id === rules.mustBeAfter,
         );
@@ -405,7 +410,9 @@ export class ContextManager {
     if (answeredIds.length > this.MAX_RESPONSE_HISTORY) {
       const recentIds = answeredIds.slice(-this.MAX_RESPONSE_HISTORY);
       compressed.responses = Object.fromEntries(
-        recentIds.map((id) => [id, context.responses[id]]),
+        recentIds
+          .map((id) => [id, context.responses[id]])
+          .filter(([, value]) => value !== undefined),
       );
       compressed.responseSummary = {
         totalAnswered: answeredIds.length,

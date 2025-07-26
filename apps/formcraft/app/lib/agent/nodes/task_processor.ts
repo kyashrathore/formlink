@@ -1,5 +1,4 @@
 import logger from "@/app/lib/logger"
-import { getEnvVars, getRequiredEnvVar } from "@/app/lib/utils/env"
 import { openai } from "@ai-sdk/openai"
 import { createServerClient } from "@formlink/db"
 import {
@@ -13,28 +12,25 @@ import {
   repairQuestionInputTypes,
   SimpleQuestionSchema,
 } from "@formlink/schema"
-import { BaseMessage } from "@langchain/core/messages"
-import { RunnableConfig } from "@langchain/core/runnables"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
 import { z } from "zod"
+import { AgentMessage } from "../../../dashboard/forms/[formId]/lib/agent/state"
 import { QUESTION_SCHEMA_PROMPT } from "../../prompts"
 import { AgentEvent, createAgentEvent } from "../../types/agent-events"
 import { AgentState, AgentTask, GenerateSchemaTaskDef } from "../state"
 import { buildFormFromState } from "../utils/form-builder"
 
 const NODE_NAME = "processSingleTaskNode"
-const DEFAULT_MODEL = "google/gemini-2.5-flash-preview-05-20"
 
 interface TaskProcessingResult {
-  taskOutput: any
+  taskOutput: unknown
   newGeneratedSchema?: Question
   taskError?: string
 }
 
 interface ProcessedTask extends AgentTask {
   status: "completed" | "failed"
-  output?: any
+  output?: unknown
   error?: string
   completed_at: string
 }
@@ -73,7 +69,7 @@ async function updateTaskStatusInDB(
   supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
   taskId: string,
   status: string,
-  additionalFields: Record<string, any> = {}
+  additionalFields: Record<string, unknown> = {}
 ): Promise<void> {
   const { error } = await supabase
     .from("tasks")
@@ -117,8 +113,7 @@ function buildQuestionPrompt(
 
 async function processGenerateQuestionSchema(
   currentTask: AgentTask,
-  state: AgentState,
-  MODEL: any
+  state: AgentState
 ): Promise<TaskProcessingResult> {
   const schemaTaskDef = currentTask.task_definition as GenerateSchemaTaskDef
 
@@ -142,10 +137,10 @@ async function processGenerateQuestionSchema(
     specificQuestionZodSchema = getSpecificQuestionSchema(
       schemaTaskDef.question_type
     )
-  } catch (e: any) {
+  } catch (e) {
     return {
       taskOutput: null,
-      taskError: `Failed to get Zod schema for type "${schemaTaskDef.question_type}": ${e.message}`,
+      taskError: `Failed to get Zod schema for type "${schemaTaskDef.question_type}": ${(e as Error).message}`,
     }
   }
 
@@ -178,7 +173,7 @@ async function processGenerateQuestionSchema(
     currentTask.order ?? (state.generatedQuestionSchemas?.length || 0) + 1
 
   const constructedQuestion: Question = {
-    ...(aiGeneratedSpecificSchema as any),
+    ...(aiGeneratedSpecificSchema as Question),
     questionNo: order,
     type: "question" as const,
   }
@@ -200,20 +195,13 @@ async function processTask(
   currentTask: AgentTask,
   state: AgentState
 ): Promise<TaskProcessingResult> {
-  const allEnv = getEnvVars()
-  const openRouterProvider = createOpenRouter({
-    apiKey: getRequiredEnvVar("OPENROUTER_API_KEY", allEnv),
-  })
-  const MODEL = openRouterProvider(state.selectedModel || DEFAULT_MODEL)
-
   switch (currentTask.task_definition.type) {
     case "generate_question_schema":
-      return await processGenerateQuestionSchema(currentTask, state, MODEL)
+      return await processGenerateQuestionSchema(currentTask, state)
     default:
-      const taskDefForError = currentTask.task_definition as any
       return {
         taskOutput: null,
-        taskError: `Unknown task type: ${taskDefForError?.type || "undefined"}`,
+        taskError: `Unknown task type: ${currentTask.task_definition?.type || "undefined"}`,
       }
   }
 }
@@ -237,7 +225,7 @@ function createTaskEvents(
         taskType: taskTypeForEvent,
         current: 0,
         total: 1,
-        message: `Starting task: ${taskTypeForEvent} - ${(currentTask.task_definition as any)?.question_title || taskId}`,
+        message: `Starting task: ${taskTypeForEvent} - ${(currentTask.task_definition as GenerateSchemaTaskDef)?.question_title || taskId}`,
       },
       state.formId,
       state.userId,
@@ -309,7 +297,6 @@ function createTaskEvents(
         )
       )
 
-      // Create state snapshot with the newly generated question
       const intermediateAgentStateForSnapshot = {
         ...state,
         generatedQuestionSchemas: [
@@ -361,8 +348,7 @@ function createTaskEvents(
 async function handleDatabaseOperations(
   supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
   currentTask: AgentTask,
-  processedTask: ProcessedTask,
-  messages: BaseMessage[]
+  processedTask: ProcessedTask
 ): Promise<void> {
   const startTime = new Date().toISOString()
   const taskId = currentTask.id || "unknown_task_id"
@@ -380,7 +366,7 @@ async function handleDatabaseOperations(
 
   try {
     await updateTaskStatusInDB(supabase, taskId, processedTask.status, {
-      output: processedTask.output as any,
+      output: processedTask.output,
       error: processedTask.error ?? null,
       completed_at: processedTask.completed_at,
     })
@@ -390,14 +376,15 @@ async function handleDatabaseOperations(
 }
 
 export async function processSingleTaskNode(
-  state: AgentState,
-  config?: RunnableConfig
+  state: AgentState
 ): Promise<Partial<AgentState>> {
   const _agentEvents: AgentEvent[] = []
   let currentEventSequence = state.eventSequence
 
-  const currentTask = (state as any).task_to_process as AgentTask | undefined
-  const messages: BaseMessage[] = [...(state.agentMessages ?? [])]
+  const currentTask = (state as AgentState & { task_to_process?: AgentTask })
+    .task_to_process
+
+  const messages: AgentMessage[] = [...(state.agentMessages ?? [])]
 
   logger.debug(
     {
@@ -519,12 +506,7 @@ export async function processSingleTaskNode(
       completed_at: new Date().toISOString(),
     }
 
-    await handleDatabaseOperations(
-      supabase,
-      currentTask!,
-      processedTask,
-      messages
-    )
+    await handleDatabaseOperations(supabase, currentTask!, processedTask)
 
     const taskEvents = createTaskEvents(
       currentTask!,
@@ -559,9 +541,9 @@ export async function processSingleTaskNode(
 
     logger.debug({ returnStatePartial: returnState }, `${NODE_NAME}: EXIT`)
     return returnState
-  } catch (error: any) {
-    const errorMsg = error?.message
-      ? String(error.message)
+  } catch (error) {
+    const errorMsg = (error as Error)?.message
+      ? String((error as Error).message)
       : String(error?.toString() || `Unknown error in ${NODE_NAME}`)
     logger.error(
       { error, taskId: currentTask!.id },

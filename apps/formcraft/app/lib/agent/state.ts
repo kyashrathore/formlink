@@ -1,10 +1,16 @@
-import { QuestionType } from "@formlink/schema"
-import { AgentEvent } from "../types/agent-events" // Added import
+import { Question as QuestionSchema, QuestionType } from "@formlink/schema"
+import { AgentEvent } from "../types/agent-events"
+
+export interface AgentMessage {
+  role: "system" | "user" | "assistant"
+  content: string
+  timestamp?: string
+}
 
 export interface GenerateSchemaTaskDef {
   type: "generate_question_schema"
-  question_title?: string // Keep for backward compatibility
-  question_specs?: string // New field for rich markdown specs
+  question_title?: string
+  question_specs?: string
   question_type: QuestionType
   order: number
 }
@@ -33,7 +39,7 @@ export interface AgentTask {
   task_definition: TaskDefinition
   status: "pending" | "in_progress" | "completed" | "failed"
   order?: number
-  output?: any
+  output?: unknown
   error?: string
   retries?: number
   started_at?: string
@@ -54,7 +60,7 @@ export interface AgentState {
 
   selectedModel?: string
 
-  originalInput: any
+  originalInput: string | Record<string, unknown>
   inputType: "prompt" | "url" | "html"
   normalizedInputContent?: string
 
@@ -65,21 +71,21 @@ export interface AgentState {
   currentTaskBeingProcessed?: AgentTask
   current_processing_batch?: AgentTask[]
 
-  generatedQuestionSchemas: any[]
-  settings?: Record<string, any>
+  generatedQuestionSchemas: QuestionSchema[]
+  settings?: Record<string, unknown>
   resultPageGenerationPrompt?: string
   journeyScript?: string
 
   errorDetails?: {
     node: string
     message: string
-    originalError?: any
+    originalError?: unknown
   }
-  agentMessages: any[]
+  agentMessages: AgentMessage[]
 
   iteration: number
-  eventSequence: number // Added for managing event order
-  _agentEvents?: AgentEvent[] // Added to carry events through state
+  eventSequence: number
+  _agentEvents?: AgentEvent[]
 
   status?:
     | "INITIALIZING"
@@ -95,7 +101,7 @@ export function createInitialAgentState(
   formId: string,
   shortId: string,
   userId: string,
-  input: any,
+  input: string | Record<string, unknown>,
   inputType: "prompt" | "url" | "html",
   selectedModel?: string
 ): AgentState {
@@ -110,8 +116,8 @@ export function createInitialAgentState(
     generatedQuestionSchemas: [],
     agentMessages: [],
     iteration: 0,
-    eventSequence: 0, // Initialize sequence
-    _agentEvents: [], // Initialize as empty array
+    eventSequence: 0,
+    _agentEvents: [],
     resultPageGenerationPrompt: "",
   }
 }

@@ -1,9 +1,23 @@
+import { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getAllPostSlugs, getBlogPostBySlug } from "../../../lib/notion"
 import NotionBlockRenderer from "../components/NotionBlockRenderer"
 
-export const revalidate = 60 // Revalidate every minute
+export const revalidate = 60
+
+interface NotionBlock {
+  id: string
+  type: string
+  [key: string]: unknown
+}
+
+interface ListItem {
+  type: "block" | "list"
+  block?: NotionBlock
+  listType?: "bulleted" | "numbered"
+  items?: NotionBlock[]
+}
 
 export async function generateStaticParams() {
   try {
@@ -11,8 +25,7 @@ export async function generateStaticParams() {
     return slugs.map((slug) => ({
       slug,
     }))
-  } catch (error) {
-    console.error("Error generating static params:", error)
+  } catch {
     return []
   }
 }
@@ -21,8 +34,18 @@ interface BlogPostPageProps {
   params: Promise<{ slug: string }>
 }
 
-function JsonLd({ post }: { post: any }) {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+function JsonLd({
+  post,
+}: {
+  post: {
+    slug: string
+    title: string
+    summary: string
+    date: string
+    author?: string
+  }
+}) {
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://formlink.ai"
   const postUrl = `${siteUrl}/blog/${post.slug}`
   const imageUrl = `${postUrl}/opengraph-image`
   const isoDate = new Date(post.date).toISOString()
@@ -69,14 +92,14 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     if (!post) {
       notFound()
     }
-    // Group consecutive list items
+
     const groupedContent = groupListItems(post.content)
 
     return (
       <>
         <JsonLd post={post} />
         <div className="container mx-auto max-w-4xl px-4 py-8">
-          {/* Back to blog link */}
+          {}
           <div className="mb-8">
             <Link
               href="/blog"
@@ -99,7 +122,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </Link>
           </div>
 
-          {/* Article header */}
+          {}
           <header className="mb-12">
             <h1 className="text-foreground mb-6 text-4xl font-bold">
               {post.title}
@@ -144,7 +167,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             )}
           </header>
 
-          {/* Article content */}
+          {}
           <article className="prose prose-lg max-w-none">
             <div className="space-y-0">
               {groupedContent.map((item, index) => {
@@ -173,7 +196,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
             </div>
           </article>
 
-          {/* Footer */}
+          {}
           <footer className="border-border mt-16 border-t pt-8">
             <div className="text-center">
               <Link
@@ -206,16 +229,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   }
 }
 
-// Helper function to group consecutive list items
-function groupListItems(blocks: any[]) {
-  const grouped: Array<{
-    type: "block" | "list"
-    block?: any
-    listType?: "bulleted" | "numbered"
-    items?: any[]
-  }> = []
+function groupListItems(blocks: NotionBlock[]) {
+  const grouped: ListItem[] = []
 
-  let currentList: any[] = []
+  let currentList: NotionBlock[] = []
   let currentListType: "bulleted" | "numbered" | null = null
 
   for (const block of blocks) {
@@ -227,10 +244,8 @@ function groupListItems(blocks: any[]) {
         block.type === "bulleted_list_item" ? "bulleted" : "numbered"
 
       if (currentListType === listType) {
-        // Continue the current list
         currentList.push(block)
       } else {
-        // Finish the previous list if it exists
         if (currentList.length > 0) {
           grouped.push({
             type: "list",
@@ -239,12 +254,10 @@ function groupListItems(blocks: any[]) {
           })
         }
 
-        // Start a new list
         currentList = [block]
         currentListType = listType
       }
     } else {
-      // Finish the current list if it exists
       if (currentList.length > 0) {
         grouped.push({
           type: "list",
@@ -255,7 +268,6 @@ function groupListItems(blocks: any[]) {
         currentListType = null
       }
 
-      // Add the non-list block
       grouped.push({
         type: "block",
         block,
@@ -263,7 +275,6 @@ function groupListItems(blocks: any[]) {
     }
   }
 
-  // Don't forget the last list if it exists
   if (currentList.length > 0) {
     grouped.push({
       type: "list",
@@ -289,10 +300,10 @@ export async function generateMetadata({ params }: BlogPostPageProps) {
     const title = post.metaTitle || post.title
     const description =
       post.metaDescription || post.summary || `Read ${post.title} on our blog`
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://formlink.ai"
     const postUrl = `${siteUrl}/blog/${post.slug}`
 
-    const metadata: any = {
+    const metadata: Metadata = {
       title,
       description,
       keywords: post.tags,

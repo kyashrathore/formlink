@@ -7,12 +7,14 @@ export const AUTH_DAILY_MESSAGE_LIMIT = 100
 export const REMAINING_QUERY_ALERT_THRESHOLD = 2
 export const DAILY_FILE_UPLOAD_LIMIT = 10
 
+type AISDKModel = unknown
+
 export type Model = {
   id: string
   name: string
   provider: string
   available?: boolean
-  api_sdk?: any
+  api_sdk?: AISDKModel
   features?: {
     id: string
     enabled: boolean
@@ -125,7 +127,7 @@ export const PROVIDERS_OPTIONS = [
 export const MODEL_DEFAULT = "google/gemini-2.5-flash-preview-05-20"
 
 export const APP_NAME = "FormFiller"
-export const APP_DOMAIN = "https://app.formlink.ai"
+export const APP_DOMAIN = "https://formlink.ai"
 
 export function getFormFillerFBasePath() {
   const customBaseUrl = getenv("NEXT_PUBLIC_FORMFILLER_BASE_URL")
@@ -133,8 +135,9 @@ export function getFormFillerFBasePath() {
     return `${customBaseUrl}/f`
   }
 
-  // Fallback to existing logic if environment variable is not set
-  const isDev = getenv("NODE_ENV") === "development"
+  const isDev =
+    getenv("NODE_ENV") === "development" ||
+    (typeof window !== "undefined" && window.location.hostname === "localhost")
   if (isDev) {
     return "http://localhost:3001"
   }
@@ -147,9 +150,8 @@ export function getFormFillerPreviewBasePath() {
     return `${customBaseUrl}/preview`
   }
 
-  // Fallback to existing logic if environment variable is not set
   const isDev = getenv("NODE_ENV") === "development"
-  // Also check if we're running on localhost
+
   const isLocalhost =
     typeof window !== "undefined" && window.location.hostname === "localhost"
 

@@ -7,9 +7,7 @@ interface SettingsTabContentProps {
   formId: string
 }
 
-export default function SettingsTabContent({
-  formId,
-}: SettingsTabContentProps) {
+export default function SettingsTabContent({}: SettingsTabContentProps) {
   const formFromStore = useFormStore((state) => state.form)
 
   if (!formFromStore) {

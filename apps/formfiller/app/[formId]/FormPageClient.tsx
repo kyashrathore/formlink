@@ -79,7 +79,9 @@ function FormPageContent({
     // Route to appropriate business logic based on question type
     switch (questionType) {
       case "singleChoice":
-        handleSingleChoiceChange(questionId, value);
+        if (typeof value === "string") {
+          handleSingleChoiceChange(questionId, value);
+        }
         break;
       case "multipleChoice":
         if (Array.isArray(value)) {
@@ -95,7 +97,9 @@ function FormPageContent({
         }
         break;
       default:
-        handleTextChange(questionId, value);
+        if (typeof value === "string") {
+          handleTextChange(questionId, value);
+        }
         break;
     }
   };

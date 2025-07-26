@@ -4,26 +4,20 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 
 interface PanelState {
-  // Panel dimensions
   leftPanelWidth: number
   isResizing: boolean
 
-  // Panel visibility
   panelState: "expanded" | "collapsed" | "hidden"
 
-  // Active tabs
   activeMainTab: "form" | "responses" | "share" | "settings"
   activeChatTab: "chat" | "design"
 
-  // Form preview modes
   previewMode: "chat" | "conversation"
   editMode: boolean
 
-  // Floating mode
   isFloating: boolean
   floatingPosition: { x: number; y: number }
 
-  // Actions
   setActiveMainTab: (tab: "form" | "responses" | "share" | "settings") => void
   setActiveChatTab: (tab: "chat" | "design") => void
   setPanelWidth: (width: number) => void
@@ -39,34 +33,28 @@ interface PanelState {
 export const usePanelState = create<PanelState>()(
   persist(
     (set, get) => ({
-      // Initial state
       leftPanelWidth: 400,
       isResizing: false,
       panelState: "expanded",
       activeMainTab: "form",
       activeChatTab: "chat",
       previewMode: "chat",
-      editMode: true, // Start with edit mode for chat tab
+      editMode: true,
       isFloating: false,
       floatingPosition: { x: 50, y: 50 },
 
-      // Actions
       setActiveMainTab: (tab) => {
         const { isFloating } = get()
         set({ activeMainTab: tab })
 
-        // Update panel state based on active tab and floating status
         if (isFloating) {
-          // When floating panel is active
           switch (tab) {
             case "form":
-              // Keep floating panel visible, sidebar hidden
               set({ panelState: "hidden" })
               break
             case "responses":
             case "share":
             case "settings":
-              // Hide floating panel, show collapsed sidebar
               set({
                 isFloating: false,
                 panelState: "collapsed",
@@ -74,7 +62,6 @@ export const usePanelState = create<PanelState>()(
               break
           }
         } else {
-          // When sidebar panel is active
           switch (tab) {
             case "form":
               set({ panelState: "expanded" })
@@ -82,7 +69,6 @@ export const usePanelState = create<PanelState>()(
             case "responses":
             case "share":
             case "settings":
-              // Both responses, share, and settings collapse (unified behavior)
               set({ panelState: "collapsed" })
               break
           }
@@ -92,12 +78,9 @@ export const usePanelState = create<PanelState>()(
       setActiveChatTab: (tab) => {
         set({ activeChatTab: tab })
 
-        // Auto-sync preview modes with tab selection
         if (tab === "design") {
-          // Design tab should show preview mode
           set({ editMode: false })
         } else if (tab === "chat") {
-          // Chat tab should show edit mode
           set({ editMode: true })
         }
       },
@@ -115,15 +98,12 @@ export const usePanelState = create<PanelState>()(
         const { isFloating, activeMainTab } = get()
 
         if (!isFloating) {
-          // Going to floating mode - only if on Form tab
           if (activeMainTab === "form") {
             set({
               isFloating: true,
               panelState: "hidden",
             })
-          }
-          // If on Responses/Share tabs, switch to Form first then float
-          else {
+          } else {
             set({
               activeMainTab: "form",
               isFloating: true,
@@ -131,7 +111,6 @@ export const usePanelState = create<PanelState>()(
             })
           }
         } else {
-          // Going back to docked mode - restore appropriate panel state
           let newPanelState: "expanded" | "collapsed" | "hidden" = "expanded"
 
           switch (activeMainTab) {
@@ -141,7 +120,6 @@ export const usePanelState = create<PanelState>()(
             case "responses":
             case "share":
             case "settings":
-              // Unified behavior: all collapse
               newPanelState = "collapsed"
               break
           }

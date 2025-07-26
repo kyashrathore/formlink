@@ -25,11 +25,23 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo)
-
-    // You can log the error to an error reporting service here
-    if (typeof window !== "undefined" && (window as any).posthog) {
-      ;(window as any).posthog.capture("error_boundary_triggered", {
+    if (
+      typeof window !== "undefined" &&
+      (
+        window as {
+          posthog?: {
+            capture: (event: string, data: Record<string, unknown>) => void
+          }
+        }
+      ).posthog
+    ) {
+      ;(
+        window as {
+          posthog?: {
+            capture: (event: string, data: Record<string, unknown>) => void
+          }
+        }
+      ).posthog!.capture("error_boundary_triggered", {
         error: error.toString(),
         componentStack: errorInfo.componentStack,
         section: this.props.section,

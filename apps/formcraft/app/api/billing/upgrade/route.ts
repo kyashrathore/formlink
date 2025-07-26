@@ -4,16 +4,14 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { NextRequest, NextResponse } from "next/server"
 
-// Simple rate limiting
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
-const RATE_LIMIT_REQUESTS = 5 // Lower limit for payment endpoints
-const RATE_LIMIT_WINDOW = 60 * 1000 // 1 minute
+const RATE_LIMIT_REQUESTS = 5
+const RATE_LIMIT_WINDOW = 60 * 1000
 
 function checkRateLimit(identifier: string): boolean {
   const now = Date.now()
   const windowStart = now - RATE_LIMIT_WINDOW
 
-  // Clean up old entries
   for (const [key, value] of rateLimitMap.entries()) {
     if (value.resetTime < windowStart) {
       rateLimitMap.delete(key)
@@ -39,7 +37,6 @@ function checkRateLimit(identifier: string): boolean {
   return true
 }
 
-// Initialize Polar client
 const polar = new Polar({
   accessToken: process.env.POLAR_ACCESS_TOKEN!,
   server: (process.env.POLAR_SERVER as "sandbox" | "production") || "sandbox",
@@ -47,7 +44,6 @@ const polar = new Polar({
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from auth
     const cookieStore = await cookies()
     const supabase = await createServerClient(cookieStore)
 
@@ -63,7 +59,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Rate limiting check
     if (!checkRateLimit(user.id)) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Please try again later." },
@@ -71,7 +66,6 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Check if user already has an active subscription
     const { data: existingSubscription } = await supabase
       .from("user_subscriptions")
       .select("status, plan_type")
@@ -96,18 +90,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Create checkout session using Polar SDK
     const checkout = await polar.checkouts.create({
       products: [productId],
       customerEmail: user.email || undefined,
       successUrl: `${request.nextUrl.origin}/dashboard?upgraded=true`,
-      // Don't pass customerId - let Polar create customer automatically
     })
 
-    // Redirect to Polar.sh checkout
     redirect(checkout.url)
   } catch (error) {
-    // Don't catch redirect errors - let Next.js handle them
     if (
       error &&
       typeof error === "object" &&
@@ -118,7 +108,6 @@ export async function GET(request: NextRequest) {
       throw error
     }
 
-    console.error("Upgrade endpoint error:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

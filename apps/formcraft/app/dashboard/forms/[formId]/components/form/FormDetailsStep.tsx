@@ -1,6 +1,5 @@
 "use client"
 
-import { SupabaseClient } from "@formlink/db"
 import { Form } from "@formlink/schema"
 import {
   Card,

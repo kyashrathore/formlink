@@ -1,7 +1,5 @@
-import { BaseMessage } from "@langchain/core/messages"
-import { RunnableConfig } from "@langchain/core/runnables"
 import { AgentEvent, createAgentEvent } from "../../types/agent-events"
-import { AgentState } from "../state"
+import { AgentMessage, AgentState } from "../state"
 import { buildFormFromState } from "../utils/form-builder"
 
 const NODE_NAME = "normalizeInputNode"
@@ -35,7 +33,7 @@ function normalizePromptInput(originalInput: any): InputNormalizationResult {
   }
 }
 
-function normalizeUrlInput(originalInput: any): InputNormalizationResult {
+function normalizeUrlInput(): InputNormalizationResult {
   const errorMessage = "URL input processing is not yet implemented."
   return {
     normalizedContent: "",
@@ -47,7 +45,7 @@ function normalizeUrlInput(originalInput: any): InputNormalizationResult {
   }
 }
 
-function normalizeHtmlInput(originalInput: any): InputNormalizationResult {
+function normalizeHtmlInput(): InputNormalizationResult {
   const errorMessage = "HTML input processing is not yet implemented."
   return {
     normalizedContent: "",
@@ -67,9 +65,9 @@ function normalizeInput(
     case "prompt":
       return normalizePromptInput(originalInput)
     case "url":
-      return normalizeUrlInput(originalInput)
+      return normalizeUrlInput()
     case "html":
-      return normalizeHtmlInput(originalInput)
+      return normalizeHtmlInput()
     default:
       const errorMessage = `Unknown input type: ${inputType}`
       return {
@@ -135,7 +133,7 @@ function createNormalizationEvents(
 function createStateSnapshot(
   state: AgentState,
   result: InputNormalizationResult,
-  messages: BaseMessage[],
+  messages: AgentMessage[],
   formId: string,
   userId: string,
   currentSequence: number
@@ -148,7 +146,7 @@ function createStateSnapshot(
     status: result.status,
   }
 
-  const { _agentEvents, ...stateForSnapshot } = updatedState
+  const { ...stateForSnapshot } = updatedState
 
   return createAgentEvent(
     "state_snapshot",
@@ -165,12 +163,11 @@ function createStateSnapshot(
 }
 
 export async function normalizeInputNode(
-  state: AgentState,
-  config?: RunnableConfig
+  state: AgentState
 ): Promise<Partial<AgentState>> {
   const _agentEvents: AgentEvent[] = []
   let currentEventSequence = state.eventSequence
-  const messages: BaseMessage[] = [...(state.agentMessages ?? [])]
+  const messages: AgentMessage[] = [...(state.agentMessages ?? [])]
 
   const result = normalizeInput(state.inputType, state.originalInput)
 

@@ -1,4 +1,3 @@
-// TypeScript declarations for View Transitions API
 interface Document {
   startViewTransition?: (callback: () => void) => ViewTransition
 }

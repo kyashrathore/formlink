@@ -24,8 +24,6 @@ async function validateGuestUser(
   guestToken: string
 ): Promise<AuthResult | null> {
   try {
-    // For now, guest token is just the userId
-    // In production, this should be a JWT or encrypted token
     const guestUserId = guestToken
 
     const supabase = await createGuestServerClient()
@@ -54,7 +52,6 @@ export async function requireAuth(request: Request): Promise<AuthResult> {
   const cookieStore = await cookies()
   const supabase = await createServerClient(cookieStore)
 
-  // Try authenticated user first
   const {
     data: { user },
     error,
@@ -67,7 +64,6 @@ export async function requireAuth(request: Request): Promise<AuthResult> {
     }
   }
 
-  // Check for guest user token
   const guestToken = request.headers.get("X-Guest-Token")
   if (guestToken) {
     const guestResult = await validateGuestUser(guestToken)
@@ -92,7 +88,6 @@ export async function optionalAuth(
   }
 }
 
-// Helper to create consistent error responses
 export function authErrorResponse(error: AuthError) {
   return NextResponse.json(
     { error: error.message },

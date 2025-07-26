@@ -1,4 +1,3 @@
-// Import necessary schemas from your schema package
 import {
   ChoiceQuestionSchema,
   FormSchema as FullFormSchema,
@@ -11,17 +10,43 @@ import {
   SimpleQuestionSchema,
 } from "@formlink/schema"
 import { z } from "zod"
-import { AgentState } from "../agent/state"
 
-// Standardized stream event structure
-export interface StreamEvent {
-  type:
-    | "ai_text"
-    | "tool_call"
-    | "tool_result"
-    | "agent_progress"
-    | "agent_error"
-    | "ui_action"
+export interface StreamEventPayload {
+  ai_text: {
+    text: string
+    delta?: string
+  }
+  tool_call: {
+    toolName: string
+    arguments: Record<string, unknown>
+    toolCallId?: string
+  }
+  tool_result: {
+    toolName: string
+    result: unknown
+    toolCallId?: string
+  }
+  agent_progress: {
+    step: string
+    status: "started" | "in_progress" | "completed" | "failed"
+    progress?: { current: number; total: number }
+    message?: string
+  }
+  agent_error: {
+    code: string
+    message: string
+    details?: unknown
+  }
+  ui_action: {
+    action: string
+    data?: unknown
+  }
+}
+
+export interface StreamEvent<
+  T extends keyof StreamEventPayload = keyof StreamEventPayload,
+> {
+  type: T
   source:
     | "main_llm"
     | "form_creation_agent"
@@ -29,7 +54,7 @@ export interface StreamEvent {
     | "query_docs_agent"
     | string
   timestamp: number
-  payload: any
+  payload: StreamEventPayload[T]
   metadata?: {
     correlationId?: string
     userId?: string
@@ -37,45 +62,31 @@ export interface StreamEvent {
   }
 }
 
-// Tool parameter schemas
 export const CreateFormAgentSchema = z.object({
   prompt: z.string().describe("The user's request for form creation"),
 })
 
-// Schema for the 'add' action for a question
 const AddQuestionActionSchema = z.object({
   action: z.literal("add"),
   questionData: z
-    .preprocess(
-      // Repair the question data before validation
-      (val) => {
-        if (!val || typeof val !== "object") return val
+    .preprocess((val) => {
+      if (!val || typeof val !== "object") return val
 
-        // Pre-repair question data
+      const repaired = repairQuestionInputTypes([val])
+      const repairedQuestion = repaired[0]
 
-        // Repair single question wrapped in array, then extract
-        const repaired = repairQuestionInputTypes([val])
-        const repairedQuestion = repaired[0]
-
-        // Post-repair question data
-
-        return repairedQuestion
-      },
-      QuestionSchema
-    )
+      return repairedQuestion
+    }, QuestionSchema)
     .describe(
       "Complete data for the new question, conforming to QuestionSchema. The AI should generate all necessary fields."
     ),
 })
 
-// Schema for the 'update' action for a question
 const UpdateQuestionActionSchema = z.object({
   action: z.literal("update"),
   questionId: z.string().describe("ID of the question to update."),
   questionData: z
     .preprocess(
-      // For updates, we don't repair since we're working with partial data
-      // The repair will happen in the simple-agent when merging with existing question
       (val) => val,
       z.union([
         ChoiceQuestionSchema.partial(),
@@ -91,7 +102,6 @@ const UpdateQuestionActionSchema = z.object({
     ),
 })
 
-// Schema for the 'remove' action for a question
 const RemoveQuestionActionSchema = z.object({
   action: z.literal("remove"),
   questionId: z.string().describe("ID of the question to remove."),
@@ -128,7 +138,7 @@ export const UpdateFormSchema = z.object({
           "Updates to form settings. Only include fields to be changed."
         ),
     })
-    .strict() // Ensures no extra properties are passed in the 'updates' object
+    .strict()
     .describe(
       "An object containing only the specific form fields to be updated. All properties are optional. " +
         "For 'questions', provide an array of actions. For 'add', 'questionData' should be a complete new question. " +
@@ -150,7 +160,7 @@ export const ShowConfigButtonSchema = z.object({
     .describe("Type of configuration button to show"),
   formId: z.string().describe("Form ID for the configuration"),
   metadata: z
-    .record(z.any())
+    .record(z.unknown())
     .optional()
     .describe("Additional metadata for the button"),
 })
@@ -166,18 +176,29 @@ export const GetFormContextSchema = z
   })
   .describe("Parameters for retrieving the current context of a form.")
 
-// Chat message types
+export interface ToolCall {
+  toolName: string
+  arguments: Record<string, unknown>
+  toolCallId?: string
+}
+
+export interface ToolResult {
+  toolName: string
+  result: unknown
+  toolCallId?: string
+  error?: string
+}
+
 export interface ChatMessage {
   role: "user" | "assistant" | "system"
   content: string
   timestamp: string
   metadata?: {
-    toolCalls?: any[]
-    toolResults?: any[]
+    toolCalls?: ToolCall[]
+    toolResults?: ToolResult[]
   }
 }
 
-// Agent progress event types
 export interface AgentProgressEvent {
   step: string
   status: "started" | "in_progress" | "completed" | "failed"
@@ -185,14 +206,13 @@ export interface AgentProgressEvent {
     current: number
     total: number
   }
-  data?: any
+  data?: unknown
   message?: string
 }
 
-// Tool execution result types
 export interface ToolExecutionResult {
   success: boolean
-  data?: any
+  data?: unknown
   error?: string
   metadata?: {
     executionTime?: number
@@ -200,7 +220,6 @@ export interface ToolExecutionResult {
   }
 }
 
-// Chat API request/response types
 export interface ChatRequest {
   messages: ChatMessage[]
   formId?: string
@@ -214,7 +233,7 @@ export interface ChatRequest {
 
 export interface ChatResponse {
   message: ChatMessage
-  toolCalls?: any[]
+  toolCalls?: ToolCall[]
   metadata?: {
     model: string
     usage?: {
@@ -225,11 +244,10 @@ export interface ChatResponse {
   }
 }
 
-// Error types
 export interface AgentError {
   code: string
   message: string
-  details?: any
+  details?: unknown
   recoverable: boolean
   suggestedAction?: string
 }

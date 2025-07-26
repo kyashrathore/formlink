@@ -1,4 +1,9 @@
+import { SupabaseClient } from "@supabase/supabase-js"
 import { ChatRequest } from "../types/chat"
+
+interface DataStream {
+  writeData: (data: unknown) => void
+}
 
 export interface FormCreationResult {
   success: boolean
@@ -48,15 +53,15 @@ export interface GetFormContextResult {
       options?: string[]
       ratingConfig?: { min: number; max: number }
     }>
-    settings: any
+    settings: Record<string, unknown>
   }
   error?: string
 }
 
 export interface ChatToolContext {
-  dataStream: any
+  dataStream: DataStream
   formId: string
-  supabase: any
+  supabase: SupabaseClient
   userId: string
   options?: ChatRequest["options"]
   isFirstMessage: boolean

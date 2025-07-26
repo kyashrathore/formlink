@@ -5,6 +5,19 @@ import { UpdateFormSchema } from "../../types/chat"
 import { TOOL_DESCRIPTIONS } from "../prompts"
 import { ChatToolContext, FormUpdateResult } from "../types"
 
+interface DataStream {
+  writeData: (data: unknown) => void
+}
+
+interface FormAgentOptions {
+  model?: string
+  [key: string]: unknown
+}
+
+interface FormUpdate {
+  [key: string]: unknown
+}
+
 export function updateFormTool(context: ChatToolContext) {
   return tool({
     description: TOOL_DESCRIPTIONS.updateForm,
@@ -35,11 +48,11 @@ export function updateFormTool(context: ChatToolContext) {
 }
 
 async function processFormUpdate(
-  dataStream: any,
+  dataStream: DataStream,
   targetFormId: string,
   userId: string,
-  updates: any,
-  options?: any,
+  updates: FormUpdate,
+  options?: FormAgentOptions,
   isFirstMessage: boolean = false
 ): Promise<FormUpdateResult> {
   logger.info("[TOOL] Starting form update agent execution", { targetFormId })
@@ -54,7 +67,7 @@ async function processFormUpdate(
   for await (const agentEvent of updateFormAgent(agentUpdateParams, userId)) {
     dataStream.writeData({
       type: "custom_agent_event",
-      payload: agentEvent as any,
+      payload: agentEvent,
     })
 
     if (
@@ -76,7 +89,6 @@ async function processFormUpdate(
     success,
   })
 
-  // If this is the first message and the update succeeded, send a navigation hint
   if (isFirstMessage && success) {
     dataStream.writeData({
       type: "custom_agent_event",

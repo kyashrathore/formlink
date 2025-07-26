@@ -1,7 +1,5 @@
 "use client"
 
-import { useLocalStorage } from "@/app/hooks/use-local-storage"
-import { cn } from "@/app/lib"
 import {
   Table,
   TableBody,
@@ -10,40 +8,15 @@ import {
   TableHeader,
   TableRow,
 } from "@formlink/ui"
-import type {
-  ColumnDef,
-  ColumnFiltersState,
-  PaginationState,
-  SortingState,
-  Table as TTable,
-  VisibilityState,
-} from "@tanstack/react-table"
-import {
-  flexRender,
-  getCoreRowModel,
-  getFacetedMinMaxValues,
-  getFacetedRowModel,
-  getFacetedUniqueValues,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table"
+import type { ColumnDef, Table as TTable } from "@tanstack/react-table"
+import { flexRender } from "@tanstack/react-table"
 import {
   createParser,
   createSearchParamsCache,
   parseAsArrayOf,
-  parseAsBoolean,
-  parseAsInteger,
   parseAsString,
-  parseAsStringLiteral,
-  parseAsTimestamp,
 } from "nuqs/server"
-import * as React from "react"
-import { DataTableFilterCommand } from "./data-table-filter-command"
-import { DataTableFilterControls } from "./data-table-filter-controls"
 import { DataTablePagination } from "./data-table-pagination"
-import { DataTableToolbar } from "./data-table-toolbar"
 import { useDataTableStore } from "./dataTableStore"
 import type { DataTableFilterField } from "./types"
 
@@ -73,35 +46,19 @@ export const searchParamsCache = createSearchParamsCache(searchParamsParser)
 export interface DataTableProps<TData, TValue> {
   table: TTable<TData>
   columns: ColumnDef<TData, TValue>[]
-  filterFields?: DataTableFilterField<TData>[] // filterFields for DataTableFilterCommand
+  filterFields?: DataTableFilterField<TData>[]
   isLoading?: boolean
-  showFilterControls?: boolean // Prop to control visibility of filter UI
-  // setShowFilterControls is part of the interface but not used in this specific implementation path
+  showFilterControls?: boolean
 }
 
 export function DataTable<TData, TValue>({
   table,
   columns,
-  filterFields = [],
-  isLoading,
-  showFilterControls = true, // Default to true if not provided
 }: DataTableProps<TData, TValue>) {
-  // DataTableFilterCommand primarily uses filterFields from useDataTableStore.
-  // The filterFields prop passed here can be a fallback or for direct use if the store isn't populated yet.
-  // searchParamsParser is defined globally in this file.
-
   return (
     <div className="flex h-full w-full flex-col gap-3 sm:flex-row">
       <div className="flex max-w-full flex-1 flex-col gap-4 overflow-hidden p-1">
-        {/* <>
-            <DataTableFilterCommand
-              table={table}
-              filterFields={filterFields} 
-              isLoading={isLoading}
-              searchParamsParser={searchParamsParser}
-            />
-            <DataTableToolbar table={table} isLoading={isLoading} />
-          </> */}
+        {}
         <div className="z-0 rounded-md border">
           <Table>
             <TableHeader className="bg-muted/50">

@@ -3,14 +3,23 @@ import { Question } from "@formlink/schema"
 import { toast } from "@formlink/ui"
 import { useCallback } from "react"
 
+interface FormData {
+  questions: Question[]
+  [key: string]: unknown
+}
+
+interface ValidationSchema {
+  [key: string]: unknown
+}
+
 interface UseAIOperationsProps {
   question: Question | null
   userId: string
-  form: any
+  form: FormData | null
   addQuestionValidation: (
     questionId: string,
     newValidation: string,
-    schemas: any[]
+    schemas: ValidationSchema[]
   ) => void
   addQuestionCondition: (
     questionId: string,
@@ -63,10 +72,13 @@ export const useAIOperations = ({
             status: "warning",
           })
         }
-      } catch (error: any) {
+      } catch (error) {
         toast({
           title: "Request Failed",
-          description: error.message || "Could not connect to AI service.",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Could not connect to AI service.",
           status: "warning",
         })
       }
@@ -124,10 +136,13 @@ export const useAIOperations = ({
             status: "warning",
           })
         }
-      } catch (error: any) {
+      } catch (error) {
         toast({
           title: "Request Failed",
-          description: error.message || "Could not connect to AI service.",
+          description:
+            error instanceof Error
+              ? error.message
+              : "Could not connect to AI service.",
           status: "warning",
         })
       }

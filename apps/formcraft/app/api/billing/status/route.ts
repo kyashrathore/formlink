@@ -1,11 +1,10 @@
 import { SubscriptionManager } from "@/app/lib/subscription"
 import { createServerClient } from "@formlink/db"
 import { cookies } from "next/headers"
-import { NextRequest, NextResponse } from "next/server"
+import { NextResponse } from "next/server"
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Get user from auth
     const cookieStore = await cookies()
     const supabase = await createServerClient(cookieStore)
 
@@ -26,17 +25,15 @@ export async function GET(request: NextRequest) {
       user.id
     )
 
-    // Also get subscription logs for billing history
     const subscriptionLogs = await subscriptionManager.getSubscriptionLogs(
       user.id
     )
 
     return NextResponse.json({
       subscription: subscriptionStatus,
-      logs: subscriptionLogs.slice(0, 10), // Return last 10 logs
+      logs: subscriptionLogs.slice(0, 10),
     })
-  } catch (error) {
-    console.error("Subscription status endpoint error:", error)
+  } catch {
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

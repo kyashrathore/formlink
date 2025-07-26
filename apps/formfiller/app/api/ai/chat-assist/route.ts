@@ -1,21 +1,21 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { streamText, tool } from "ai";
-import { NextResponse } from "next/server";
-import { z } from "zod";
 import { headers } from "next/headers";
+import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
 
-import type { ChatContext, FormAnswer, QuestionResponse } from "@/lib/types";
+import type { ChatContext, QuestionResponse } from "@/lib/types";
 import { createServerClient } from "@formlink/db";
 import {
-  FormValidator,
-  ContextManager,
-  sanitizeUserInput,
-  triggerWebhook,
-  trackServerEvent,
   AIContext,
-  ValidationResult,
+  ContextManager,
+  FormValidator,
   Question,
+  sanitizeUserInput,
+  trackServerEvent,
+  triggerWebhook,
+  ValidationResult,
 } from "./utils";
 
 // Initialize OpenRouter provider with debugging
@@ -97,7 +97,11 @@ function createTools(context: ChatContext) {
 
                 // Update the context responses to reflect the saved answer
                 if (context.responses) {
-                  context.responses[questionId] = answer;
+                  // Convert boolean to string to match QuestionResponse type
+                  const responseValue =
+                    typeof answer === "boolean" ? String(answer) : answer;
+                  context.responses[questionId] =
+                    responseValue as QuestionResponse;
                 }
 
                 trackServerEvent("tool.save_answer.success", { questionId });
@@ -119,7 +123,8 @@ function createTools(context: ChatContext) {
 
           trackServerEvent("tool.save_answer.failure", {
             questionId,
-            error: lastError?.message || "Unknown error",
+            error:
+              lastError instanceof Error ? lastError.message : "Unknown error",
           });
           return { saved: false, error: "Failed to save answer after retries" };
         } catch (error) {
@@ -158,9 +163,9 @@ function createTools(context: ChatContext) {
 
           const responses =
             answersResult.data?.reduce(
-              (acc: Record<string, QuestionResponse>, ans: FormAnswer) => ({
+              (acc: Record<string, QuestionResponse>, ans: any) => ({
                 ...acc,
-                [ans.question_id]: ans.answer_value,
+                [ans.question_id]: ans.answer_value as QuestionResponse,
               }),
               {},
             ) || {};
@@ -483,7 +488,10 @@ export async function POST(req: Request) {
         );
 
         // Cross-field validation if initial validation passed
-        if (validationResult.isValid) {
+        if (
+          validationResult.isValid &&
+          validationResult.normalizedValue !== undefined
+        ) {
           const crossFieldValidation = FormValidator.validateCrossField(
             currentQuestionId,
             validationResult.normalizedValue,
@@ -579,12 +587,14 @@ export async function POST(req: Request) {
             // Don't throw - let response complete
           }
         },
-        onError: async (error: Error) => {
-          console.error("StreamText onError:", error);
+        onError: async (event: { error: unknown }) => {
+          console.error("StreamText onError:", event.error);
           trackServerEvent("api.form_assist.error", {
             formId: formSchema.id,
-            errorType: error?.name || "unknown",
-            errorMessage: error?.message || "unknown",
+            errorType:
+              event.error instanceof Error ? event.error.name : "unknown",
+            errorMessage:
+              event.error instanceof Error ? event.error.message : "unknown",
           });
 
           // Try to save error message for user context
@@ -609,10 +619,10 @@ export async function POST(req: Request) {
     } catch (aiError) {
       console.error("AI processing failed:", {
         error: aiError,
-        message: aiError?.message,
-        name: aiError?.name,
-        stack: aiError?.stack,
-        cause: aiError?.cause,
+        message: aiError instanceof Error ? aiError.message : "Unknown error",
+        name: aiError instanceof Error ? aiError.name : "Unknown",
+        stack: aiError instanceof Error ? aiError.stack : undefined,
+        cause: aiError instanceof Error ? aiError.cause : undefined,
       });
 
       // Fallback response
@@ -650,17 +660,17 @@ export async function POST(req: Request) {
   } catch (error) {
     console.error("Form assist API critical error:", {
       error,
-      message: error?.message,
-      name: error?.name,
-      stack: error?.stack,
-      cause: error?.cause,
+      message: error instanceof Error ? error.message : "Unknown error",
+      name: error instanceof Error ? error.name : "Unknown",
+      stack: error instanceof Error ? error.stack : undefined,
+      cause: error instanceof Error ? error.cause : undefined,
     });
     trackServerEvent("api.form_assist.critical_error");
 
     return new Response(
       JSON.stringify({
         error: "Internal server error",
-        details: error?.message || "Unknown error",
+        details: error instanceof Error ? error.message : "Unknown error",
       }),
       {
         status: 500,

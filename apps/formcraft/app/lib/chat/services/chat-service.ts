@@ -1,12 +1,45 @@
+import { SupabaseClient } from "@supabase/supabase-js"
 import logger from "../../logger"
 
+interface ChatMessage {
+  role: string
+  content?: string
+  parts?: unknown
+}
+
+interface MessageRow {
+  id: number
+  role: string
+  content: string
+  created_at: string | null
+  parts?: unknown
+}
+
+interface ChatHistoryItem {
+  id: string
+  role: string
+  content: string
+  createdAt: Date
+  parts?: unknown
+}
+
+interface DataStream {
+  writeData: (data: unknown) => void
+}
+
+interface UIActionData {
+  action: string
+  backend_timestamp: string
+  [key: string]: unknown
+}
+
 export class ChatService {
-  constructor(private supabase: any) {}
+  constructor(private supabase: SupabaseClient) {}
 
   async saveMessage(
     formId: string,
     userId: string,
-    message: any
+    message: ChatMessage
   ): Promise<void> {
     const { error } = await this.supabase.from("messages").insert({
       form_id: formId,
@@ -24,15 +57,13 @@ export class ChatService {
         messageContent: message.content?.substring(0, 100) + "...",
         error,
       })
-      // Only throw for user messages to ensure they're saved
-      // For assistant messages, we'll log but continue
+
       if (message.role === "user") {
         throw new Error(`Failed to save user message: ${error.message}`)
       }
     }
   }
 
-  // Keep backward compatibility methods
   async saveUserMessage(
     formId: string,
     userId: string,
@@ -55,7 +86,7 @@ export class ChatService {
     })
   }
 
-  async getChatHistory(formId: string): Promise<any[]> {
+  async getChatHistory(formId: string): Promise<ChatHistoryItem[]> {
     const { data, error } = await this.supabase
       .from("messages")
       .select("*")
@@ -70,9 +101,8 @@ export class ChatService {
       throw new Error(`Failed to fetch chat history: ${error.message}`)
     }
 
-    // Reconstruct proper AI SDK message format
-    return (data || []).map((row: any) => ({
-      id: row.id.toString(), // Convert bigint to string for AI SDK compatibility
+    return (data || []).map((row: MessageRow) => ({
+      id: row.id.toString(),
       role: row.role,
       content: row.content,
       createdAt: row.created_at ? new Date(row.created_at) : new Date(),
@@ -80,7 +110,11 @@ export class ChatService {
     }))
   }
 
-  writeStreamEvent(dataStream: any, eventType: string, payload?: any): void {
+  writeStreamEvent(
+    dataStream: DataStream,
+    eventType: string,
+    payload?: unknown
+  ): void {
     if (payload) {
       dataStream.writeData({ type: eventType, payload })
     } else {
@@ -88,21 +122,26 @@ export class ChatService {
     }
   }
 
-  writeCustomAgentEvent(dataStream: any, agentEvent: any): void {
+  writeCustomAgentEvent(dataStream: DataStream, agentEvent: unknown): void {
     dataStream.writeData({
       type: "custom_agent_event",
       payload: agentEvent,
     })
   }
 
-  writeUIAction(dataStream: any, action: string, data: any): void {
+  writeUIAction(
+    dataStream: DataStream,
+    action: string,
+    data: Record<string, unknown>
+  ): void {
+    const eventData: UIActionData = {
+      action,
+      ...data,
+      backend_timestamp: new Date().toISOString(),
+    }
     dataStream.writeData({
       eventName: "ui_action",
-      eventData: {
-        action,
-        ...data,
-        backend_timestamp: new Date().toISOString(),
-      },
+      eventData,
     })
   }
 }

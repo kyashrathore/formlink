@@ -1,5 +1,3 @@
-// Note: FormSchema import removed to decouple from @formlink/schema
-// Applications should handle form parsing using their own schema types
 import type {
   CoreAssistantMessage,
   CoreToolMessage,
@@ -8,54 +6,6 @@ import type {
 } from "ai";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-
-const APP_DOMAIN =
-  process.env.NEXT_PUBLIC_APP_DOMAIN || process.env.NEXT_PUBLIC_VERCEL_URL
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-    : "";
-
-// Note: parseFormSchema function removed to decouple from @formlink/schema
-// Applications should implement their own form parsing logic
-export const parseFormSchema = (content: string | object): any => {
-  if (typeof content === "object" && content !== null) {
-    const schema = content as Record<string, any>;
-
-    if (schema.questions && typeof schema.questions === "string") {
-      try {
-        schema.questions = parseFormSchema(
-          JSON.parse(schema.questions),
-        ).questions;
-      } catch (error) {
-        console.error("Failed to parse stringified questions:", error);
-      }
-    }
-
-    if (schema.questions && Array.isArray(schema.questions)) {
-      schema.questions = schema.questions.map((question) => {
-        if (question.options && typeof question.options === "string") {
-          try {
-            question.options = JSON.parse(question.options);
-          } catch (error) {
-            console.error("Failed to parse stringified options:", error);
-          }
-        }
-        return question;
-      });
-    }
-
-    return schema;
-  }
-
-  try {
-    const parsed = JSON.parse(content as string);
-
-    return parseFormSchema(parsed);
-  } catch (error) {
-    console.error("Error parsing FormSchema:", error);
-
-    return {};
-  }
-};
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

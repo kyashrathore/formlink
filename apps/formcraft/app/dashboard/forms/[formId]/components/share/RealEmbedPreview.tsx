@@ -3,13 +3,11 @@ import React, { useEffect, useRef } from "react"
 import { EmbedCodeParts, EmbedType, getEmbedCode } from "../../lib/embed/utils"
 import { useFormPageContext } from "../../stores/formPageContext"
 
-function useHtmlPreview(embedType: string, formId: string) {
+function getHtmlPreview(embedType: string, formId: string, isLight: boolean) {
   const embedCodeParts: EmbedCodeParts = getEmbedCode(
     embedType as EmbedType,
     formId
   )
-  const { theme } = useTheme()
-  const isLight = theme === "light"
   return `
 <!DOCTYPE html>
 <html>
@@ -54,7 +52,9 @@ function useHtmlPreview(embedType: string, formId: string) {
 
 export default function RealEmbedPreview({ shortId }: { shortId: string }) {
   const { embedType } = useFormPageContext()
-  const htmlPreview = useHtmlPreview(embedType, shortId)
+  const { theme } = useTheme()
+  const isLight = theme === "light"
+  const htmlPreview = getHtmlPreview(embedType, shortId, isLight)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {

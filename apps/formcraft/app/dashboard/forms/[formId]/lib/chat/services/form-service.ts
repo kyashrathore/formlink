@@ -1,3 +1,4 @@
+import { SupabaseClient } from "@supabase/supabase-js"
 import { customAlphabet } from "nanoid"
 import logger from "../../logger"
 
@@ -6,8 +7,41 @@ const nanoid = customAlphabet(
   10
 )
 
+interface AgentState {
+  formId: string
+  userId: string
+  status: string
+}
+
+interface FormQuestion {
+  id: string
+  questionType: string
+  title: string
+  options?: Array<{ label?: string; value?: string }>
+  ratingConfig?: { min: number; max: number }
+  [key: string]: unknown
+}
+
+interface QuestionSummary {
+  questionNumber: number
+  id: string
+  type: string
+  title: string
+  options?: string[]
+  ratingConfig?: { min: number; max: number }
+}
+
+interface FormContext {
+  formId: string
+  shortId: string
+  title: string
+  description: string
+  questions: QuestionSummary[]
+  settings: unknown
+}
+
 export class FormService {
-  constructor(private supabase: any) {}
+  constructor(private supabase: SupabaseClient) {}
 
   async createNewForm(
     formId: string,
@@ -28,7 +62,7 @@ export class FormService {
           formId,
           userId,
           status: "INITIALIZING",
-        } as any,
+        } as AgentState,
         created_at: timestamp,
         updated_at: timestamp,
       })
@@ -84,7 +118,6 @@ export class FormService {
 
     logger.info(`Form ${formId} and initial version created successfully`)
 
-    // Verify form was actually created
     const { data: verifyForm, error: verifyError } = await this.supabase
       .from("forms")
       .select("id, short_id")
@@ -136,7 +169,7 @@ export class FormService {
     return { formId, shortId: existingForm.short_id }
   }
 
-  async getFormContext(formId: string): Promise<any> {
+  async getFormContext(formId: string): Promise<FormContext | null> {
     logger.info(
       `[FormService] Attempting to fetch context for formId: ${formId}`
     )
@@ -181,20 +214,20 @@ export class FormService {
       return null
     }
 
-    const questionsSummary = ((versionData.questions as any[]) || []).map(
-      (q, index) => ({
-        questionNumber: index + 1,
-        id: q.id,
-        type: q.questionType,
-        title: q.title,
-        options: q.options
-          ? (q.options as any[]).map((opt) => opt.label || opt.value)
-          : undefined,
-        ratingConfig: q.ratingConfig
-          ? { min: q.ratingConfig.min, max: q.ratingConfig.max }
-          : undefined,
-      })
-    )
+    const questionsSummary = (
+      (versionData.questions as FormQuestion[]) || []
+    ).map((q, index) => ({
+      questionNumber: index + 1,
+      id: q.id,
+      type: q.questionType,
+      title: q.title,
+      options: q.options
+        ? q.options.map((opt) => opt.label || opt.value || "")
+        : undefined,
+      ratingConfig: q.ratingConfig
+        ? { min: q.ratingConfig.min, max: q.ratingConfig.max }
+        : undefined,
+    }))
 
     return {
       formId,

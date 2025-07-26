@@ -6,7 +6,6 @@ import {
   PromptInputAction,
   PromptInputActions,
   PromptInputTextarea,
-  PromptSuggestion,
   Select,
   SelectContent,
   SelectItem,
@@ -43,15 +42,10 @@ export function ChatInput({
   onValueChange,
   onSend,
   isSubmitting,
-  files,
-  onFileUpload,
-  onFileRemove,
   selectedModel,
   onSelectModel,
-  isUserAuthenticated,
   stop,
   status,
-  hasSuggestions,
 }: ChatInputProps) {
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -78,18 +72,9 @@ export function ChatInput({
     onSend()
   }
 
-  // Initial suggestions for form creation
-  const initialFormPrompts = [
-    "Quick contact form (Name, Email)?",
-    "Survey: 'Coffee vs Tea' poll ☕🍵",
-    "Fun quiz: 3 quick questions!",
-    "Event sign-up form (easy RSVP)",
-    "Need a job form? (CV upload ready)",
-  ]
-
   return (
     <div className="relative z-60 flex w-full flex-col items-center">
-      {/* Chat Input Area */}
+      {}
       <div className="relative w-full max-w-3xl">
         <PromptInput
           className="border-input bg-popover focus-within:ring-ring relative z-10 overflow-hidden border p-0 pb-2 shadow-lg backdrop-blur-xl focus-within:ring-2"
@@ -120,10 +105,7 @@ export function ChatInput({
                       disabled={model.available === false}
                     >
                       <span className="flex items-center gap-2">
-                        {model.icon ? (
-                          // @ts-ignore: model.icon is a React component
-                          <model.icon className="h-4 w-4" />
-                        ) : null}
+                        {model.icon ? <model.icon className="h-4 w-4" /> : null}
                         {model.name}
                         {model.available === false && (
                           <span className="text-muted-foreground ml-2 text-xs">

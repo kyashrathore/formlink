@@ -1,14 +1,5 @@
-import { DynamicBreadcrumb } from "@/app/components/layout/DynamicBreadcrumb"
 import { cn } from "@/app/lib"
 import { createServerClient, Database } from "@formlink/db"
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@formlink/ui"
 import { cookies } from "next/headers"
 import Link from "next/link"
 import React from "react"

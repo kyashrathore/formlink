@@ -41,13 +41,11 @@ export async function createNewChat(
 
     return responseData.chatId
   } catch (error) {
-    // Error creating new chat
     throw error
   }
 }
 
 export async function createGuestUser(guestId: string) {
-  // Creating guest user
   if (!guestId) {
     throw new Error("Guest ID is required to create a guest user.")
   }
@@ -67,7 +65,6 @@ export async function createGuestUser(guestId: string) {
 
     return responseData
   } catch (err) {
-    // Error creating guest user
     throw err
   }
 }
@@ -211,7 +208,6 @@ export async function checkRateLimits(
     }
     return responseData
   } catch (err) {
-    // Error checking rate limits
     throw err
   }
 }
@@ -234,7 +230,6 @@ export async function updateChatModel(chatId: string, model: string) {
 
     return responseData
   } catch (error) {
-    // Error updating chat model
     throw error
   }
 }
@@ -268,7 +263,6 @@ export async function signInWithGoogle(supabase: SupabaseClient): Promise<any> {
 
     return data
   } catch (err) {
-    // Error signing in with Google
     throw err
   }
 }

@@ -1,18 +1,17 @@
 import { put } from "@vercel/blob"
 import { NextResponse } from "next/server"
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"]
 
 export async function POST(request: Request): Promise<NextResponse> {
-  // Require authentication
   const { requireAuth, authErrorResponse } = await import(
     "../../lib/middleware/auth"
   )
   let authResult
   try {
     authResult = await requireAuth(request)
-  } catch (error: any) {
+  } catch (error) {
     return authErrorResponse(error)
   }
 
@@ -27,7 +26,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
-  // Validate content type
   if (!contentType || !ALLOWED_TYPES.includes(contentType)) {
     return NextResponse.json(
       {
@@ -38,7 +36,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
-  // Check content length
   const contentLength = request.headers.get("content-length")
   if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
     return NextResponse.json(
@@ -47,7 +44,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     )
   }
 
-  // Add user ID to filename to prevent conflicts
   const userFilename = `${authResult.user.id}/${Date.now()}-${filename}`
 
   const blob = await put(userFilename, request.body, {

@@ -7,7 +7,7 @@ import type {
 } from "./types"
 
 export const findFirstAgentInitTimestamp = (
-  eventsLog: any[]
+  eventsLog: unknown[]
 ): number | null => {
   const agentInitEvent = eventsLog.find(
     (log) => log.name === "agent_init" || log.name === "agent_start"
@@ -38,7 +38,7 @@ export const formatTimeDisplay = (
 }
 
 export const formatEventsForLogView = (
-  eventsLog: any[],
+  eventsLog: unknown[],
   firstAgentInitTimestamp: number | null
 ): FormattedLogEvent[] => {
   return eventsLog.map((log) => {
@@ -47,11 +47,11 @@ export const formatEventsForLogView = (
       currentEventTime,
       firstAgentInitTimestamp
     )
-    const eventName = log.type // Use log.type from AgentEvent
+    const eventName = log.type
 
     return {
-      ...log, // Spread the original log (which includes 'type', 'category', etc.)
-      name: eventName, // Explicitly set the 'name' property for FormattedLogEvent
+      ...log,
+      name: eventName,
       displayTime: timeDisplay,
       formattedContent: `[${eventName}] ${formatEventData(eventName, log.data)} (+${timeDisplay})`,
     }
@@ -100,7 +100,7 @@ export const calculatePanelState = (
   )
 
   return {
-    isExpanded: true, // Default state, will be managed by component
+    isExpanded: true,
     showChatInput,
     displaySummaryMessage,
   }

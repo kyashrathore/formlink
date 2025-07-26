@@ -8,9 +8,8 @@ import type { DataTableFilterField } from "./types"
 export function DataTableFilterResetButton<TData>({
   value: _value,
 }: DataTableFilterField<TData>) {
-  const { columnFilters, table, setColumnFilters } = useDataTable()
+  const { columnFilters, setColumnFilters } = useDataTable()
   const value = _value as string
-  const column = table?.getColumn(value)
   const filterValue = columnFilters.find((f) => f.id === value)?.value
 
   const filters = filterValue

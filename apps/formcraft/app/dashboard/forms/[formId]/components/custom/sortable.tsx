@@ -235,10 +235,13 @@ const SortableItem = React.forwardRef<HTMLDivElement, SortableItemProps>(
           )}
           ref={
             ref
-              ? (node: any) => {
+              ? (node: HTMLElement | null) => {
                   setNodeRef(node)
                   if (typeof ref === "function") ref(node)
-                  else if (ref) (ref as any).current = node
+                  else if (ref)
+                    (
+                      ref as React.MutableRefObject<HTMLElement | null>
+                    ).current = node
                 }
               : setNodeRef
           }

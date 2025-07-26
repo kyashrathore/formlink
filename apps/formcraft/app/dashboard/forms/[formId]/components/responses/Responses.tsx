@@ -6,12 +6,11 @@ import {
   getFacetedMinMaxValues,
   getFacetedRowModel,
   getFacetedUniqueValues,
-  getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo } from "react"
 import { useFormResponsesQuery } from "../../hooks/useFormResponsesQuery"
 import {
   generateFilterFieldsFromForm,
@@ -39,7 +38,7 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     columnVisibility,
     setColumnVisibility,
     setTableInstance,
-    setFilterFields, // Add this action
+    setFilterFields,
   } = useDataTableStore()
 
   const {
@@ -50,14 +49,10 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     totalCompletedCount,
     totalInProgressCount,
     totalFilteredCount,
-    completedCount, // Filtered completed
-    inProgressCount, // Filtered in-progress
-    page, // current page from hook
-    pageSize, // current page size from hook
   } = useFormResponsesQuery(
     form?.current_draft_version_id as string,
     columnFilters,
-    pagination.pageIndex + 1, // TanStack table is 0-indexed, hook is 1-indexed
+    pagination.pageIndex + 1,
     pagination.pageSize
   )
 
@@ -68,14 +63,11 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     [form]
   )
 
-  // Generate and set filter fields in the store when the form definition is available
   useEffect(() => {
     if (form) {
       const generatedFilterFields = generateFilterFieldsFromForm(form)
       setFilterFields(generatedFilterFields)
     }
-    // Optional: Clear filter fields on unmount or when form is not available
-    // return () => setFilterFields([]);
   }, [form, setFilterFields])
 
   const tableState = useMemo(
@@ -97,24 +89,24 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     ]
   )
 
-  const table = useReactTable({
+  const table = useReactTable<any>({
     data: tableData,
     columns,
     state: tableState,
-    rowCount: totalFilteredCount, // Total number of rows available after filtering
-    manualPagination: true, // We are handling pagination server-side
-    manualFiltering: true, // We are handling filtering server-side
-    manualSorting: true, // Assuming sorting might also be server-side or needs to be wired up
+    rowCount: totalFilteredCount,
+    manualPagination: true,
+    manualFiltering: true,
+    manualSorting: true,
     onColumnFiltersChange: setColumnFilters,
     onSortingChange: setSorting,
-    onPaginationChange: setPagination, // This updates the pagination state in useDataTableStore
+    onPaginationChange: setPagination,
     onRowSelectionChange: setRowSelection,
     onColumnOrderChange: setColumnOrder,
     onColumnVisibilityChange: setColumnVisibility,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(), // Keep for client-side state if needed, but actual sort is server-side
-    getFacetedRowModel: getFacetedRowModel(), // Keep for client-side state
-    getPaginationRowModel: getPaginationRowModel(), // Manages client-side pagination state
+    getSortedRowModel: getSortedRowModel(),
+    getFacetedRowModel: getFacetedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     getFacetedMinMaxValues: getFacetedMinMaxValues(),
     getFacetedUniqueValues: getFacetedUniqueValues(),
     meta: {
@@ -144,9 +136,6 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
   }
 
   if (!table) {
-    // This case should ideally not be hit if isLoading and error are handled,
-    // as table instance should be created once data/columns are available.
-    // However, keeping it as a fallback.
     return <div>Preparing responses table...</div>
   }
 
@@ -164,7 +153,7 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
         </h3>
         <p className="text-2xl font-bold">{totalInProgressCount ?? 0}</p>
       </div>
-      {/* Placeholder for other cards if needed, e.g., total responses */}
+      {}
       <div className="bg-card text-card-foreground rounded-lg border p-4 shadow-sm md:p-6">
         <h3 className="text-muted-foreground text-sm font-medium">
           Total Responses
@@ -175,28 +164,15 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
   )
 
   const hasActiveFilters = columnFilters && columnFilters.length > 0
-  const showTable = totalFilteredCount > 0
-  const showNoResultsDueToFilters = hasActiveFilters && totalFilteredCount === 0
-  // Show this if no filters are applied AND there are no responses for the form at all.
-  // totalCount reflects all responses for the form version, ignoring table filters.
-  const showNoResultsOverall = !hasActiveFilters && totalCount === 0
 
-  // If filters are applied and result is 0, tableData will be empty.
-  // If no filters are applied and totalCount is 0, tableData will also be empty.
-  // The original `if (!tableData || tableData.length === 0)` handles the "No responses found for this form yet"
-  // when there are truly no responses for the form (totalCount === 0 and no filters).
-  // We need to refine this.
-  const showFilterToolbarAndCommand = totalCount > 0 // Show main filter UI if there are any responses at all for the form.
-  // ResponsesFilter in Sidebar is separate and shown if `form` is loaded.
+  const showFilterToolbarAndCommand = totalCount > 0
+
   return (
     <div>
       <h2 className="mb-4 text-xl font-bold">Responses</h2>
       {renderResponseCards()}
 
-      {/* 
-        If totalCount is 0, show "No responses found for this form yet." and nothing else for the table/filter area.
-        Otherwise, show the DataTable container which includes filter command/toolbar, and then conditionally the table or a message.
-      */}
+      {}
 
       {!isLoading && totalCount === 0 && (
         <div className="mt-4 flex h-40 items-center justify-center rounded-md border border-dashed">
@@ -206,26 +182,18 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
         </div>
       )}
 
-      {/* This block renders if there are any responses for the form (totalCount > 0) */}
+      {}
       {!isLoading && totalCount > 0 && (
         <>
-          {/* DataTable will render its command bar & toolbar because showFilterControls will be true.
-              It will also render the table. If tableData is empty (totalFilteredCount is 0),
-              DataTable's internal TableBody will show "No results."
-              We want to keep the filter command/toolbar visible in this case.
-          */}
+          {}
           <DataTable
             columns={columns}
             table={table}
-            showFilterControls={showFilterToolbarAndCommand} // This will be true if totalCount > 0
-            filterFields={useDataTableStore.getState().filterFields} // Pass filterFields for DataTableFilterCommand
-            // isLoading prop for DataTable might be useful for its internal states if any
+            showFilterControls={showFilterToolbarAndCommand}
+            filterFields={useDataTableStore.getState().filterFields}
           />
 
-          {/* Explicit message if filters are active and yield no results, shown *below* the DataTable's toolbar/command area.
-              The DataTable itself will show "No results." in its body. This message is more prominent.
-              Only show this if filters are active AND there are no filtered results.
-          */}
+          {}
           {hasActiveFilters && totalFilteredCount === 0 && (
             <div className="mt-4 flex h-40 items-center justify-center rounded-md border border-dashed">
               <p className="text-muted-foreground">

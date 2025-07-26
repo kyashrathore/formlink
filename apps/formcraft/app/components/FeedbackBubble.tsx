@@ -12,7 +12,6 @@ export function FeedbackBubble() {
   const [isVisible, setIsVisible] = useState(false)
 
   useEffect(() => {
-    // Show bubble after a small delay for better UX
     const timer = setTimeout(() => {
       setIsVisible(true)
     }, 1000)
@@ -20,7 +19,6 @@ export function FeedbackBubble() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Don't show on feedback page itself or forms/formId pages
   if (pathname === "/feedback" || pathname.startsWith("/dashboard/forms/"))
     return null
 
@@ -37,7 +35,7 @@ export function FeedbackBubble() {
       }`}
     >
       <div className="relative">
-        {/* Pulse animation ring */}
+        {}
         <div className="bg-primary w-rounded-full absolute inset-0 opacity-25" />
 
         <Button
@@ -52,7 +50,7 @@ export function FeedbackBubble() {
           </Link>
         </Button>
 
-        {/* Tooltip on hover */}
+        {}
         <div className="pointer-events-none absolute right-0 bottom-full mb-2">
           <div className="bg-popover text-popover-foreground rounded-md border px-3 py-1.5 text-sm whitespace-nowrap opacity-0 shadow-md transition-opacity duration-200 group-hover:opacity-100">
             Share feedback

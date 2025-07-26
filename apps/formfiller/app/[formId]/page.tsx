@@ -131,7 +131,12 @@ export default async function FormPage({
       if (typeof param === "string" && param in awaitedSearchParams) {
         const value = awaitedSearchParams[param];
         // If the value is an array, take the first value
-        queryDataForForm[param] = Array.isArray(value) ? value[0] : value;
+        if (value !== undefined) {
+          const resolvedValue = Array.isArray(value) ? value[0] : value;
+          if (resolvedValue !== undefined) {
+            queryDataForForm[param] = resolvedValue;
+          }
+        }
       }
     }
   }

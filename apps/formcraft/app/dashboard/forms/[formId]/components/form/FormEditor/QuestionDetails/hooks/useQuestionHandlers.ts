@@ -1,4 +1,4 @@
-import { EditableQuestionField, Option, Question } from "@formlink/schema"
+import { EditableQuestionField, Question } from "@formlink/schema"
 import { useCallback } from "react"
 import { useFormStore } from "../../../../../stores/useFormStore"
 

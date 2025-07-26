@@ -40,7 +40,7 @@ export default function TwoColumnLayout({
 
   return (
     <div className="bg-muted/20 flex h-full gap-1 p-1">
-      {/* Left Panel - Chat/Design Card */}
+      {}
       <div
         className={`bg-card border-border rounded-lg border shadow-sm transition-all duration-300 ease-in-out ${panelState === "hidden" ? "hidden" : ""} ${isResizing ? "transition-none" : ""} `}
         style={{
@@ -52,7 +52,7 @@ export default function TwoColumnLayout({
         {leftPanel}
       </div>
 
-      {/* Resize Handle */}
+      {}
       {panelState !== "hidden" && (
         <div className="group relative flex w-2 cursor-col-resize items-center justify-center">
           <div
@@ -86,7 +86,7 @@ export default function TwoColumnLayout({
         </div>
       )}
 
-      {/* Right Panel - Preview Card */}
+      {}
       <div className="bg-card border-border flex-1 overflow-hidden rounded-lg border shadow-sm">
         {rightPanel}
       </div>

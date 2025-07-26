@@ -5,17 +5,14 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
-  DialogHeader,
-  DialogTitle,
   DialogTrigger,
 } from "@formlink/ui"
-import React, { useEffect, useState } from "react"
+import React from "react"
 import Chat from "./chat/chat-components/chat"
 
 interface PromptDialogProps {
-  trigger?: React.ReactNode // Made trigger optional
+  trigger?: React.ReactNode
   title: string
   description: string
   onSubmit: (input: string) => void

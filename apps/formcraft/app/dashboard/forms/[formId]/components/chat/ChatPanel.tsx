@@ -1,10 +1,8 @@
 import { useChat, type Message as VercelChatMessage } from "@ai-sdk/react"
 import { Button, PromptSuggestion } from "@formlink/ui"
 import { AlertTriangle } from "lucide-react"
-import { usePathname } from "next/navigation"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
-import { useMobile } from "../../hooks/use-mobile"
 import { MODEL_DEFAULT } from "../../lib/config"
 import {
   ErrorEvent as AgentErrorEvent,
@@ -14,19 +12,21 @@ import { useFormAgentStore } from "../../stores/formAgentStore"
 import Chat from "./chat-components/chat"
 import { useAutoScroll, useFormattedEvents } from "./hooks"
 import { MessageWithParts } from "./MessageWithParts"
-import type { AgentInteractionPanelProps, ChatMessage } from "./types"
+import type {
+  AgentInteractionPanelProps,
+  ChatDataItem,
+  ChatMessage,
+  HistoryMessage,
+} from "./types"
 import { getDisplaySummaryMessage, getLastUserMessage } from "./utils"
 
 const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
   formId,
   userId,
-  showSuggestions,
   initialMessage,
 }) => {
-  const isMobile = useMobile()
-  const pathname = usePathname()
-  const isDashboard = pathname === "/dashboard"
-  const { agentState, eventsLog, processEvent } = useFormAgentStore()
+  const { agentState, eventsLog, processEvent, setInitialPrompt } =
+    useFormAgentStore()
 
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
@@ -35,7 +35,14 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
     string | undefined
   >(() => initialMessage)
 
-  // Update stored initial message when the prop changes
+  const initialFormPrompts = [
+    "Quick contact form (Name, Email)?",
+    "Survey: 'Coffee vs Tea' poll ☕🍵",
+    "Fun quiz: 3 quick questions!",
+    "Event sign-up form (easy RSVP)",
+    "Need a job form? (CV upload ready)",
+  ]
+
   useEffect(() => {
     if (initialMessage && initialMessage !== storedInitialMessage) {
       setStoredInitialMessage(initialMessage)
@@ -69,7 +76,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
             "Chat Connection Error: " +
             (error?.message || "Unknown streaming error"),
           details: error,
-          recoverable: true, // Make it recoverable so user can retry
+          recoverable: true,
         },
       }
       processEvent(errorEvent)
@@ -97,9 +104,11 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
 
         if (Array.isArray(historyMessages)) {
           const validRoles = ["user", "assistant", "system"]
-          const formattedMessages: VercelChatMessage[] = historyMessages
-            .filter((msg: any) => validRoles.includes(msg.role))
-            .map((msg: any) => ({
+          const formattedMessages: VercelChatMessage[] = (
+            historyMessages as HistoryMessage[]
+          )
+            .filter((msg) => validRoles.includes(msg.role))
+            .map((msg) => ({
               id: msg.id?.toString() || uuidv4(),
               role: msg.role as "user" | "assistant" | "system",
               content:
@@ -112,7 +121,8 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
         } else {
           setMessages([])
         }
-      } catch (error) {
+      } catch (_error) {
+        console.error("Failed to fetch chat history", _error)
         setMessages([])
       }
     }
@@ -135,11 +145,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
           })
           setHasUserInteracted(true)
 
-          // Clear the prompt from global store after using it
-          // This prevents the prompt from lingering and being reused
           if (window.location.pathname.includes("/dashboard/forms/")) {
-            const { setInitialPrompt } =
-              require("@/app/stores/formAgentStore").useFormAgentStore.getState()
             setInitialPrompt(null)
           }
         }
@@ -163,7 +169,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
 
   const chatMessages: ChatMessage[] = useMemo(() => {
     return vercelChatMessages.map(
-      (msg: any): ChatMessage => ({
+      (msg): ChatMessage => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
         timestamp: msg.createdAt?.toISOString() || new Date().toISOString(),
@@ -176,13 +182,12 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
   }, [vercelChatMessages])
   const isStreaming = chatStatus === "streaming"
 
-  // Auto-scroll to latest messages
   const chatContainerRef = useAutoScroll([chatMessages, isStreaming], true)
 
   useEffect(() => {
     if (chatData && chatData.length > lastProcessedEventIndexRef.current) {
       const newEvents = chatData.slice(lastProcessedEventIndexRef.current)
-      newEvents.forEach((dataItem: any) => {
+      newEvents.forEach((dataItem: ChatDataItem) => {
         if (
           dataItem &&
           typeof dataItem === "object" &&
@@ -223,7 +228,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
     handleSendMessageForChatComponent,
   ])
 
-  const handleInputChange = useCallback((value: string) => {
+  const handleInputChange = useCallback(() => {
     setHasUserInteracted(true)
   }, [])
 
@@ -234,15 +239,6 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
     [handleSendMessageForChatComponent, selectedModel]
   )
 
-  // Initial suggestions for form creation
-  const initialFormPrompts = [
-    "Quick contact form (Name, Email)?",
-    "Survey: 'Coffee vs Tea' poll ☕🍵",
-    "Fun quiz: 3 quick questions!",
-    "Event sign-up form (easy RSVP)",
-    "Need a job form? (CV upload ready)",
-  ]
-
   const displaySummaryMessage = getDisplaySummaryMessage(
     formattedEventsForLogView,
     agentState
@@ -250,7 +246,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
 
   return (
     <div className="flex h-full flex-col">
-      {/* Chat messages area */}
+      {}
       <div
         ref={chatContainerRef}
         className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
@@ -279,7 +275,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
               </div>
             </div>
 
-            {/* Suggestions */}
+            {}
             <div className="mx-auto flex max-w-md flex-wrap justify-center gap-2">
               {initialFormPrompts.map((prompt, index) => (
                 <PromptSuggestion
@@ -294,7 +290,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
         )}
       </div>
 
-      {/* Failed state */}
+      {}
       {agentState?.status === "FAILED" && !isStreaming && (
         <div className="border-border flex-shrink-0 border-t p-4">
           <div className="border-destructive/20 bg-destructive/10 flex items-center justify-between rounded-lg border p-3">
@@ -314,7 +310,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
         </div>
       )}
 
-      {/* Chat input - always at bottom */}
+      {}
       {agentState?.status !== "FAILED" && (
         <div className="border-border bg-background flex-shrink-0 border-t p-4">
           <Chat

@@ -1,7 +1,7 @@
 import { createServerClient } from "@formlink/db"
 import { cookies } from "next/headers"
 import { invalidateSubscriptionCache } from "./feature-gate"
-import type { Subscription, SubscriptionLog, SubscriptionStatus } from "./types"
+import type { SubscriptionLog, SubscriptionStatus } from "./types"
 
 export class SubscriptionManager {
   private async getServiceClient() {
@@ -42,10 +42,6 @@ export class SubscriptionManager {
           : undefined,
       }
     } catch (error) {
-      console.error(
-        "[SUBSCRIPTION] Unexpected error in getSubscriptionStatus:",
-        error
-      )
       throw error
     }
   }
@@ -59,17 +55,14 @@ export class SubscriptionManager {
     try {
       const supabase = await this.getServiceClient()
 
-      // Get old status for logging
       const oldStatus = await this.getSubscriptionStatus(userId)
 
-      // Use provided period end or calculate default if none provided
       const periodEnd =
         currentPeriodEnd ||
         (status === "active"
-          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default 30 days fallback
+          ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
           : null)
 
-      // Upsert subscription
       const { error: subscriptionError } = await supabase
         .from("user_subscriptions")
         .upsert(
@@ -87,16 +80,11 @@ export class SubscriptionManager {
         )
 
       if (subscriptionError) {
-        console.error(
-          "[SUBSCRIPTION] Subscription upsert error:",
-          subscriptionError
-        )
         throw new Error(
           `Failed to update subscription: ${subscriptionError.message}`
         )
       }
 
-      // Log the change
       const { error: logError } = await supabase
         .from("subscription_logs")
         .insert({
@@ -107,20 +95,10 @@ export class SubscriptionManager {
         })
 
       if (logError) {
-        console.error(
-          "[SUBSCRIPTION] Failed to log subscription change:",
-          logError
-        )
-        // Don't throw here as the main operation succeeded
       }
 
-      // Invalidate cache after successful update
       invalidateSubscriptionCache(userId)
     } catch (error) {
-      console.error(
-        "[SUBSCRIPTION] Unexpected error in updateSubscription:",
-        error
-      )
       throw error
     }
   }
@@ -132,9 +110,8 @@ export class SubscriptionManager {
   ): Promise<void> {
     const supabase = await this.getServiceClient()
 
-    // Use provided period end or calculate default if none provided
     const periodEnd =
-      currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // Default 30 days fallback
+      currentPeriodEnd || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
 
     const { error: subscriptionError } = await supabase
       .from("user_subscriptions")
@@ -152,7 +129,6 @@ export class SubscriptionManager {
       )
     }
 
-    // Log the creation
     const { error: logError } = await supabase
       .from("subscription_logs")
       .insert({
@@ -163,17 +139,14 @@ export class SubscriptionManager {
       })
 
     if (logError) {
-      console.error("Failed to log subscription creation:", logError)
     }
 
-    // Invalidate cache after successful creation
     invalidateSubscriptionCache(userId)
   }
 
   async cancelSubscription(userId: string): Promise<void> {
     const supabase = await this.getServiceClient()
 
-    // Get old status for logging
     const oldStatus = await this.getSubscriptionStatus(userId)
 
     const { error: subscriptionError } = await supabase
@@ -191,7 +164,6 @@ export class SubscriptionManager {
       )
     }
 
-    // Log the cancellation
     const { error: logError } = await supabase
       .from("subscription_logs")
       .insert({
@@ -202,10 +174,8 @@ export class SubscriptionManager {
       })
 
     if (logError) {
-      console.error("Failed to log subscription cancellation:", logError)
     }
 
-    // Invalidate cache after successful cancellation
     invalidateSubscriptionCache(userId)
   }
 

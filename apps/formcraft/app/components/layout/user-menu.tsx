@@ -14,9 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@formlink/ui"
-import { Info, User } from "@phosphor-icons/react"
-import { APP_NAME } from "../../lib/config"
-import { AppInfo } from "./app-info"
+import { User } from "@phosphor-icons/react"
 import { Settings } from "./settings"
 
 type User = Database["public"]["Tables"]["users"]["Row"]

@@ -8,7 +8,24 @@ export interface FormResponse {
   completed_at: string | null
   status: string
   testmode: boolean
-  answers: Record<string, any>
+  answers: Record<string, unknown>
+}
+
+interface FormResponsesApiResponse {
+  data: FormResponse[]
+  page: number
+  pageSize: number
+  totalCount: number
+  totalCompletedCount: number
+  totalInProgressCount: number
+  totalFilteredCount: number
+  completedCount: number
+  inProgressCount: number
+}
+
+interface FilterItem {
+  id: string
+  value: unknown
 }
 
 interface UseFormResponsesQueryResult {
@@ -25,11 +42,8 @@ interface UseFormResponsesQueryResult {
   inProgressCount: number
 }
 
-function buildSearchParam(
-  formVersionId: string,
-  filters: { id: string; value: any }[]
-) {
-  const search: Record<string, any> = {}
+function buildSearchParam(formVersionId: string, filters: FilterItem[]) {
+  const search: Record<string, unknown> = {}
   if (formVersionId) search.form_version_id = formVersionId
   filters.forEach(({ id, value }) => {
     if (value !== undefined && value !== null) {
@@ -41,7 +55,7 @@ function buildSearchParam(
 
 export function useFormResponsesQuery(
   formVersionId: string,
-  filters: { id: string; value: any }[] = [],
+  filters: FilterItem[] = [],
   page: number = 1,
   pageSize: number = 50
 ): UseFormResponsesQueryResult {
@@ -68,9 +82,9 @@ export function useFormResponsesQuery(
     fetch(url)
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to fetch responses")
-        const json = (await res.json()) as any // API response includes all counts
+        const json = (await res.json()) as FormResponsesApiResponse
         if (cancelled) return
-        setData(json.data || []) // json.data is FormResponse[]
+        setData(json.data || [])
         setCurrentPage(json.page || page)
         setCurrentPageSize(json.pageSize || pageSize)
         setTotalCount(json.totalCount || 0)

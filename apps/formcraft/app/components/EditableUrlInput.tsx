@@ -116,7 +116,7 @@ const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
                 placeholder={
                   inputType === "email"
                     ? "name@example.com"
-                    : "https://example.com/endpoint"
+                    : "https://example.com"
                 }
                 type={inputType}
                 autoFocus

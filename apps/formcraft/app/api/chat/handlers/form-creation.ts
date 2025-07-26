@@ -1,5 +1,6 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
-import { createDataStreamResponse, streamText } from "ai"
+import { SupabaseClient } from "@supabase/supabase-js"
+import { createDataStreamResponse, Message, streamText } from "ai"
 import { customAlphabet } from "nanoid"
 import { getenv } from "../../../../lib/env"
 import {
@@ -16,18 +17,22 @@ const nanoid = customAlphabet(
   10
 )
 
+interface ChatRequestOptions {
+  temperature?: number
+  maxTokens?: number
+}
+
 export async function handleChatRequest(
-  messages: any[],
+  messages: Message[],
   formId: string | undefined,
   userId: string,
-  supabase: any,
-  options?: any
+  supabase: SupabaseClient,
+  options?: ChatRequestOptions
 ) {
   const currentFormId = formId || `form_${nanoid()}`
   const isNewChat = !formId
   const isFirstMessage = messages.length === 1
 
-  // Ensure form exists
   const formService = new FormService(supabase)
   try {
     await formService.ensureFormExists(currentFormId, userId)
@@ -43,7 +48,6 @@ export async function handleChatRequest(
     throw error
   }
 
-  // Save user message with complete structure
   const chatService = new ChatService(supabase)
   const lastMessage = messages[messages.length - 1]
   if (lastMessage && lastMessage.role === "user") {
@@ -54,13 +58,11 @@ export async function handleChatRequest(
     execute: async (dataStream) => {
       try {
         if (isNewChat) {
-          // dataStream.writeData({ type: 'form_session_initialized', payload: { formId: currentFormId } });
         }
-        chatService.writeStreamEvent(dataStream, "chat_initialized")
+        chatService.writeStreamEvent(dataStream as any, "chat_initialized")
 
-        // Create tool context
         const toolContext = {
-          dataStream,
+          dataStream: dataStream as any,
           formId: currentFormId,
           supabase,
           userId,
@@ -70,12 +72,10 @@ export async function handleChatRequest(
 
         const tools = createChatTools(toolContext)
 
-        // Set up AI provider
         const apiKey = getenv("OPENROUTER_API_KEY") || ""
         const openRouterProvider = createOpenRouter({ apiKey })
         const MODEL = openRouterProvider("openai/gpt-4o")
 
-        // Build contextual system prompt
         const contextualSystemPrompt = buildContextualSystemPrompt(
           SYSTEM_PROMPT,
           {
@@ -93,15 +93,9 @@ export async function handleChatRequest(
           temperature: options?.temperature || 0.7,
           maxTokens: options?.maxTokens || 4000,
           maxSteps: 5,
-          // Enable streaming of tool calls and steps for AI SDK 4.3.16
+
           experimental_toolCallStreaming: true,
-          onFinish: async ({
-            text,
-            toolCalls,
-            toolResults,
-            finishReason,
-            usage,
-          }) => {
+          onFinish: async ({ text, toolCalls, finishReason, usage }) => {
             logger.info("Chat completion finished", {
               userId,
               formId: currentFormId,
@@ -111,7 +105,6 @@ export async function handleChatRequest(
             })
 
             try {
-              // Create assistant message from the completion event
               const assistantMessage = {
                 role: "assistant",
                 content: text,
@@ -143,9 +136,8 @@ export async function handleChatRequest(
                 userId,
                 error,
               })
-              // Don't throw - let the response complete even if message saving fails
             }
-            chatService.writeStreamEvent(dataStream, "chat_completed")
+            chatService.writeStreamEvent(dataStream as any, "chat_completed")
           },
           onError: async (error) => {
             logger.error("Chat completion error", {
@@ -154,7 +146,6 @@ export async function handleChatRequest(
               error,
             })
 
-            // Save error message to chat history
             try {
               await chatService.saveMessage(currentFormId, userId, {
                 role: "assistant",
@@ -186,7 +177,6 @@ export async function handleChatRequest(
           error: executeError,
         })
 
-        // Write error to stream in AI SDK compatible format
         dataStream.writeData({
           type: "error",
           message:

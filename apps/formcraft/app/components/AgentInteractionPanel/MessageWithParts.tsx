@@ -4,7 +4,6 @@ import { CheckCircle, Loader2, XCircle } from "lucide-react"
 import React from "react"
 import { formatChatMessageTime } from "./utils"
 
-// Types based on AI SDK 4.3.16
 interface TextPart {
   type: "text"
   text: string
@@ -16,9 +15,9 @@ interface ToolInvocationPart {
     state: "partial-call" | "call" | "result" | "error"
     toolCallId: string
     toolName: string
-    args?: any
-    result?: any
-    error?: any
+    args?: unknown
+    result?: unknown
+    error?: unknown
   }
 }
 
@@ -43,7 +42,6 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
   parts,
   isLastMessage = false,
 }) => {
-  // If no parts, render traditional message
   if (!parts || parts.length === 0) {
     return (
       <Message
@@ -69,7 +67,6 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
     )
   }
 
-  // Render message with parts
   return (
     <div
       className={cn(
@@ -104,9 +101,8 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
           case "tool-invocation":
             const { state, toolName } = part.toolInvocation
 
-            // Show loading for active calls, success/error for completed
             if (!isLastMessage && state !== "result" && state !== "error") {
-              return null // Only hide non-final states for historical messages
+              return null
             }
 
             const getStatusDisplay = () => {
@@ -129,7 +125,7 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
                     text: `Preparing ${toolName}...`,
                     className: "bg-muted/50 text-muted-foreground",
                   }
-                default: // "call"
+                default:
                   return {
                     icon: Loader2,
                     text: `Running ${toolName}...`,
@@ -158,7 +154,6 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
             )
 
           case "step-start":
-            // Optional: Add visual separator for multi-step processes
             return isLastMessage ? (
               <div key={index} className="bg-border my-2 h-px w-full" />
             ) : null
@@ -168,7 +163,7 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
         }
       })}
 
-      {/* Show timestamp for the last part */}
+      {}
       <div className="mt-1 text-xs opacity-70">
         {formatChatMessageTime(timestamp)}
       </div>

@@ -18,7 +18,6 @@ interface SubscriptionInfoProps {
 
 export function SubscriptionInfo({ className }: SubscriptionInfoProps) {
   const {
-    subscription,
     loading,
     error,
     isPro,

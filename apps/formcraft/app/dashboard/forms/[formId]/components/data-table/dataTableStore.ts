@@ -8,11 +8,10 @@ import type {
 } from "@tanstack/react-table"
 import { create } from "zustand"
 
-// Base for FilterFieldType, value is string as it can be dynamic (e.g. question IDs)
 interface FilterFieldBase {
   value: string
   label: string
-  options?: { label: string; value: string; count?: number }[] // Common enough to be here
+  options?: { label: string; value: string; count?: number }[]
   defaultOpen?: boolean
   commandDisabled?: boolean
 }
@@ -23,8 +22,8 @@ export type FilterFieldCheckbox = FilterFieldBase & {
 
 export type FilterFieldSlider = FilterFieldBase & {
   type: "slider"
-  min: number // Required for slider type
-  max: number // Required for slider type
+  min: number
+  max: number
   step?: number
 }
 
@@ -34,7 +33,6 @@ export type FilterFieldInput = FilterFieldBase & {
 
 export type FilterFieldTimerange = FilterFieldBase & {
   type: "timerange"
-  // presets?: any; // Add if presets are used by store consumers
 }
 
 export type FilterFieldRadio = FilterFieldBase & {
@@ -49,7 +47,7 @@ export type FilterFieldType =
   | FilterFieldRadio
 
 export interface DataTableZustandState {
-  table: Table<any> | null
+  table: Table<unknown> | null
   columnFilters: ColumnFiltersState
   sorting: SortingState
   rowSelection: RowSelectionState
@@ -60,7 +58,7 @@ export interface DataTableZustandState {
 }
 
 export interface DataTableZustandActions {
-  setTableInstance: (table: Table<any> | null) => void
+  setTableInstance: (table: Table<unknown> | null) => void
   setFilterFields: (filterFields: FilterFieldType[]) => void
   setColumnFilters: (
     updater:
@@ -101,7 +99,7 @@ export const initialDataTableZustandState: DataTableZustandState = {
 
 export const useDataTableStore = create<DataTableStore>((set) => ({
   ...initialDataTableZustandState,
-  setTableInstance: (table: Table<any> | null) => set({ table }),
+  setTableInstance: (table: Table<unknown> | null) => set({ table }),
   setFilterFields: (filterFields) => set({ filterFields }),
   setColumnFilters: (updater) =>
     set((state) => ({

@@ -9,10 +9,9 @@ interface FormPreviewProps {
   form: Form
   className?: string
   formMode?: "chat" | "typeform"
-  onFormModeChange?: (mode: "chat" | "typeform") => void
   shadcnCSSData?: {
     cssText: string
-    version: number // Increment to trigger updates
+    version: number
   }
   onShadcnApplied?: (result: {
     success: boolean
@@ -70,16 +69,10 @@ interface ShadcnCSSAppliedMessage {
   }
 }
 
-type PostMessage =
-  | FormUpdateMessage
-  | FormModeUpdateMessage
-  | ShadcnCSSUpdateMessage
-
 export default function FormPreview({
   form,
   className = "",
   formMode = "chat",
-  onFormModeChange,
   shadcnCSSData,
   onShadcnApplied,
 }: FormPreviewProps) {
@@ -92,24 +85,18 @@ export default function FormPreview({
   const timeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isReadyRef = useRef(false)
 
-  // Stable form identifier - prefer shortId but keep it stable once set
   const stableFormId = useMemo(() => {
-    // Once we have a shortId, always use it. Otherwise use the full ID.
-    // This prevents the URL from changing when shortId gets loaded async
     return form.short_id || form.id
   }, [form.short_id ? form.short_id : form.id])
 
-  // Stable preview URL - only changes if the stable form ID changes
   const stablePreviewUrl = useMemo(() => {
     const previewBasePath = getFormFillerPreviewBasePath()
     const finalUrl = `${previewBasePath}/${stableFormId}`
     return finalUrl
   }, [stableFormId])
 
-  // Get the FormFiller preview URL (stable reference)
   const getPreviewUrl = useCallback(() => stablePreviewUrl, [stablePreviewUrl])
 
-  // Immediate function to send form updates
   const sendFormUpdate = useCallback(
     (formData: Form) => {
       if (!iframeRef.current?.contentWindow || !isReadyRef.current) {
@@ -139,7 +126,6 @@ export default function FormPreview({
     [getPreviewUrl]
   )
 
-  // Function to send form mode updates
   const sendFormModeUpdate = useCallback(
     (mode: "chat" | "typeform") => {
       if (!iframeRef.current?.contentWindow || !isReadyRef.current) {
@@ -172,7 +158,6 @@ export default function FormPreview({
     [getPreviewUrl]
   )
 
-  // Function to send shadcn CSS updates
   const sendShadcnCSSUpdate = useCallback(
     (cssText: string) => {
       if (!iframeRef.current?.contentWindow || !isReadyRef.current) {
@@ -205,10 +190,8 @@ export default function FormPreview({
     [getPreviewUrl]
   )
 
-  // Handle messages from the iframe
   const handleMessage = useCallback(
     (event: MessageEvent) => {
-      // Validate origin
       const expectedOrigin = new URL(getPreviewUrl()).origin
 
       if (event.origin !== expectedOrigin) {
@@ -227,11 +210,9 @@ export default function FormPreview({
         isReadyRef.current = true
         setPreviewState({ type: "ready" })
 
-        // Send initial form data and mode
         sendFormUpdate(form)
         sendFormModeUpdate(formMode)
       } else if (message.type === "FORMFILLER_SHADCN_CSS_APPLIED") {
-        // Handle shadcn CSS application feedback
         if (onShadcnApplied) {
           onShadcnApplied({
             success: message.payload.success,
@@ -253,12 +234,10 @@ export default function FormPreview({
     ]
   )
 
-  // Initialize preview
   const initializePreview = useCallback(() => {
     setPreviewState({ type: "loading" })
     isReadyRef.current = false
 
-    // Set up timeout for preview initialization
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current)
     }
@@ -277,7 +256,6 @@ export default function FormPreview({
       }
     }, 10000)
 
-    // Add message listener
     window.addEventListener("message", handleMessage)
 
     return () => {
@@ -288,13 +266,8 @@ export default function FormPreview({
     }
   }, [handleMessage])
 
-  // Handle iframe load
-  const handleIframeLoad = useCallback(() => {
-    // The iframe has loaded, but we still need to wait for the FORMFILLER_PREVIEW_READY message
-    // The timeout and message handling will take care of the rest
-  }, [])
+  const handleIframeLoad = useCallback(() => {}, [])
 
-  // Handle iframe error
   const handleIframeError = useCallback(() => {
     console.error("Iframe failed to load")
     if (timeoutRef.current) {
@@ -310,40 +283,34 @@ export default function FormPreview({
     })
   }, [])
 
-  // Retry functionality
   const handleRetry = useCallback(() => {
     setRetryCount((prev) => prev + 1)
     initializePreview()
   }, [initializePreview])
 
-  // Initialize on mount and retries only - not on form changes
   useEffect(() => {
     const cleanup = initializePreview()
     return cleanup
-  }, [retryCount]) // Removed initializePreview dependency to prevent re-init on form updates
+  }, [retryCount])
 
-  // Send form updates when form changes (only if preview is ready)
   useEffect(() => {
     if (isReadyRef.current) {
       sendFormUpdate(form)
     }
   }, [form, sendFormUpdate])
 
-  // Send form mode updates when mode changes (only if preview is ready)
   useEffect(() => {
     if (isReadyRef.current) {
       sendFormModeUpdate(formMode)
     }
   }, [formMode, sendFormModeUpdate])
 
-  // Send shadcn CSS updates when shadcnCSSData changes (only if preview is ready)
   useEffect(() => {
     if (isReadyRef.current && shadcnCSSData) {
       sendShadcnCSSUpdate(shadcnCSSData.cssText)
     }
   }, [shadcnCSSData?.version, shadcnCSSData?.cssText, sendShadcnCSSUpdate])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (timeoutRef.current) {
@@ -352,7 +319,6 @@ export default function FormPreview({
     }
   }, [])
 
-  // Render error state (only for non-recoverable errors)
   if (previewState.type === "error" || previewState.type === "timeout") {
     const error = previewState.error!
     return (
@@ -388,12 +354,11 @@ export default function FormPreview({
     )
   }
 
-  // Always render iframe, with loading overlay when needed
   return (
     <div
       className={`bg-muted flex h-full items-center justify-center rounded-xl border ${className} relative`}
     >
-      {/* Loading overlay */}
+      {}
       {previewState.type === "loading" && (
         <div className="bg-muted/80 absolute inset-0 z-10 flex items-center justify-center rounded-xl">
           <div className="flex flex-col items-center space-y-4">
@@ -410,7 +375,7 @@ export default function FormPreview({
         </div>
       )}
 
-      {/* Iframe - always present */}
+      {}
       <div className="flex h-full w-full items-center justify-center">
         <iframe
           ref={iframeRef}

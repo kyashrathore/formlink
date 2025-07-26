@@ -12,7 +12,7 @@ import {
   ShoppingBag,
   Users,
 } from "lucide-react"
-import React, { useMemo } from "react"
+import React from "react"
 
 interface PromptSuggestion {
   icon: React.ReactNode

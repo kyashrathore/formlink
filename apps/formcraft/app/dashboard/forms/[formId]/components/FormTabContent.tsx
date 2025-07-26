@@ -12,7 +12,6 @@ import FormModeControls, { FormMode } from "./form/FormModeControls"
 import FormPreviewWithDevices from "./form/FormPreviewWithDevices"
 import PreviewControls from "./form/PreviewControls"
 
-// Mock user object for testing - in real app this would come from auth
 const mockUser = {
   id: "test-user-id",
 }
@@ -33,7 +32,6 @@ interface FormTabContentProps {
 }
 
 export default function FormTabContent({
-  formId,
   shadcnCSSData,
   onShadcnApplied,
 }: FormTabContentProps) {
@@ -42,16 +40,8 @@ export default function FormTabContent({
   const [formMode, setFormMode] = useState<FormMode>("chat")
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop")
 
-  // Use editMode from global state - true means edit, false means preview
   const isPreviewMode = !editMode
 
-  // Let's also check what the Share tab would show
-  const shareUrl = `${formId}` // This will be used for now
-
-  // Note: Form creation now happens through chat interactions
-  // The bridge pattern in TestUIPage syncs agent updates to useFormStore
-
-  // Wait for form data from stream - no local form creation
   if (!form) {
     return (
       <div className="bg-background flex h-full flex-col">
@@ -80,20 +70,18 @@ export default function FormTabContent({
     )
   }
 
-  // Check if form has content (questions) to show preview toggle
   const hasFormContent = form.questions && form.questions.length > 0
 
-  // Form editing interface - form data comes from real-time stream
   return (
     <div className="bg-background flex h-full flex-col overflow-auto">
-      {/* Unified Header - All controls in one row */}
+      {}
       <div
         className={cn(
           "border-border bg-background flex items-center justify-between border-b px-4",
           isPreviewMode ? "py-0" : "py-1"
         )}
       >
-        {/* Left side - Mode controls (only shown in preview) */}
+        {}
         <div className="flex items-center">
           {hasFormContent && isPreviewMode && (
             <FormModeControls
@@ -103,9 +91,9 @@ export default function FormTabContent({
           )}
         </div>
 
-        {/* Right side - Device controls and Edit/Preview toggle */}
+        {}
         <div className="flex items-center space-x-3">
-          {/* Device controls (only shown in preview) */}
+          {}
           {hasFormContent && isPreviewMode && (
             <>
               <PreviewControls
@@ -116,7 +104,7 @@ export default function FormTabContent({
             </>
           )}
 
-          {/* Edit/Preview toggle */}
+          {}
           {hasFormContent && (
             <Button
               variant="outline"
@@ -141,12 +129,12 @@ export default function FormTabContent({
       </div>
 
       <div className="relative flex-1">
-        {/* Preview Mode - always mounted but shown/hidden with CSS */}
+        {}
         <div
           className={`absolute inset-0 z-10 ${isPreviewMode ? "block" : "hidden"}`}
         >
           <div className="h-full p-4">
-            {/* Always render preview for instant switching, but only when form has content */}
+            {}
             {hasFormContent && (
               <FormPreviewWithDevices
                 form={form}
@@ -163,7 +151,7 @@ export default function FormTabContent({
           </div>
         </div>
 
-        {/* Edit Mode - always mounted but shown/hidden with CSS */}
+        {}
         <div
           className={`absolute inset-0 ${!isPreviewMode ? "block" : "hidden"}`}
         >

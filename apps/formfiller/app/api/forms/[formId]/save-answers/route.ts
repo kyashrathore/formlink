@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         versionId,
         questionId,
         answerValue,
-        submissionStatus || "in_progress",
+        (submissionStatus || "in_progress") === "completed",
         !!testmode,
       );
       return NextResponse.json({ success: true, partial: true });
@@ -131,10 +131,10 @@ export async function POST(req: NextRequest) {
         submissionId,
         versionId,
         allResponses || {}, // Default to empty object
-        submissionStatus ||
+        (submissionStatus ||
           (allResponses && Object.keys(allResponses).length > 0
             ? "completed"
-            : "in_progress"),
+            : "in_progress")) === "completed",
         !!testmode,
       );
 

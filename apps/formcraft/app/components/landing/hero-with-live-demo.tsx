@@ -6,13 +6,12 @@ import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import { createBrowserClient } from "@formlink/db"
 import { useRouter } from "next/navigation"
 import Script from "next/script"
-import React, { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { useAuth } from "../../hooks/useAuth"
 import { InlineChatInput } from "./InlineChatInput"
 import { PromptSuggestions } from "./PromptSuggestions"
 
-// Declare global turnstile
 declare global {
   interface Window {
     turnstile: any
@@ -33,18 +32,12 @@ export function HeroWithLiveDemo() {
   const supabase = createBrowserClient()
   const [inputValue, setInputValue] = useState("")
 
-  // Get the form store actions
   const { setInitialPrompt } = useFormAgentStore()
 
-  // Monitor auth state changes
-  useEffect(() => {
-    // Auth state changed
-  }, [user, loading, isSigningIn])
+  useEffect(() => {}, [user, loading, isSigningIn])
 
-  // Focus input after loading is complete
   useEffect(() => {
     if (!loading) {
-      // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
         const textarea = document.querySelector("textarea")
         if (
@@ -58,7 +51,6 @@ export function HeroWithLiveDemo() {
     }
   }, [loading])
 
-  // Initialize Turnstile when script loads
   useEffect(() => {
     const initializeTurnstile = () => {
       if (
@@ -73,33 +65,26 @@ export function HeroWithLiveDemo() {
         try {
           const siteKey = getTurnstileSiteKey()
 
-          // Turnstile configuration check
-
           if (!siteKey) {
-            // Turnstile site key is not configured
-            // Set a flag to indicate Turnstile is not available
             setTurnstileToken("TURNSTILE_NOT_CONFIGURED")
             return
           }
 
-          // Try with minimal configuration first
           const widgetId = window.turnstile.render(turnstileRef.current, {
             sitekey: siteKey,
             callback: (token: string) => {
-              // Turnstile token received
               setTurnstileToken(token)
               ;(window as any).__turnstileToken = token
-              // Hide widget after successful verification
+
               setShowTurnstile(false)
             },
-            "error-callback": (errorCode: string) => {
-              // Turnstile error callback
+            "error-callback": (_errorCode: string) => {
+              console.error("Turnstile error callback triggered", _errorCode)
               setTurnstileToken(null)
               ;(window as any).__turnstileToken = null
               setShowTurnstile(false)
             },
             "expired-callback": () => {
-              // Turnstile token expired
               setTurnstileToken(null)
               ;(window as any).__turnstileToken = null
             },
@@ -107,11 +92,9 @@ export function HeroWithLiveDemo() {
             execution: "render",
           })
 
-          // Turnstile widget rendered
           setTurnstileWidgetId(widgetId)
-        } catch (error) {
-          // Failed to initialize Turnstile
-          // Try to continue without Turnstile in case of error
+        } catch (_error) {
+          console.error("Failed to initialize Turnstile", _error)
           setTurnstileToken("INIT_ERROR")
         }
       }
@@ -132,52 +115,41 @@ export function HeroWithLiveDemo() {
   const handleStartCreating = async (prompt: string) => {
     if (isSigningIn || !prompt.trim()) return
 
-    // Store the prompt in the store
     setInitialPrompt(prompt)
 
     if (user) {
-      // For logged-in users, redirect to form editor
       if (!formIdRef.current) {
         formIdRef.current = uuidv4()
       }
-      // Clear the input after redirect
+
       setInputValue("")
-      // Pass the prompt as a query parameter
+
       const params = new URLSearchParams({ prompt: prompt })
       router.push(`/dashboard/forms/${formIdRef.current}?${params.toString()}`)
     } else {
-      // For guests, sign in anonymously first
       setIsSigningIn(true)
 
-      // Trigger Turnstile challenge if not already completed
       let captchaToken = turnstileToken
 
-      // Check if Turnstile is not configured or had initialization error
       if (
         captchaToken === "TURNSTILE_NOT_CONFIGURED" ||
         captchaToken === "INIT_ERROR"
       ) {
-        // Proceeding without Turnstile due to configuration/initialization issues
-        // Set captchaToken to null to proceed without it
         captchaToken = null
       }
 
       if (!captchaToken && window.turnstile && turnstileWidgetId) {
         ;(window as any).__turnstileToken = null
 
-        // Show the widget when executing
         setShowTurnstile(true)
 
-        // Since we're using "normal" size, we need to reset and execute
         try {
           window.turnstile.reset(turnstileWidgetId)
-          // Widget will appear automatically due to execution: "render"
-        } catch (executeError) {
-          // Failed to reset Turnstile
+        } catch (_executeError) {
+          console.error("Failed to reset Turnstile widget", _executeError)
           setShowTurnstile(false)
         }
 
-        // Wait for token
         captchaToken = await new Promise<string | null>((resolve) => {
           let attempts = 0
           const checkToken = setInterval(() => {
@@ -196,8 +168,6 @@ export function HeroWithLiveDemo() {
       }
 
       try {
-        // Attempting anonymous sign-in
-
         const { data, error } = await supabase.auth.signInAnonymously({
           options: {
             captchaToken: captchaToken || undefined,
@@ -205,22 +175,16 @@ export function HeroWithLiveDemo() {
         })
 
         if (error) {
-          // Anonymous sign-in failed
           if (error.message?.includes("captcha")) {
             if (isLocalhost()) {
               alert(
                 "CAPTCHA verification failed. Make sure Supabase local is running."
               )
             } else {
-              // Production error
-              // Turnstile verification failed in production
-
-              // Check for specific error types
               if (
                 error.message?.includes("405") ||
                 error.message?.includes("Method Not Allowed")
               ) {
-                // 405 Error: The domain might not be configured in Cloudflare Turnstile
                 alert(
                   "Security verification configuration error. The domain may not be properly configured. Please contact support."
                 )
@@ -239,18 +203,12 @@ export function HeroWithLiveDemo() {
         }
 
         if (data.user) {
-          // Anonymous sign-in successful, creating user record
-
-          // Check localStorage for existing anonymous session
           const existingAnonymousId = localStorage.getItem("anonymous_user_id")
           let userCreationSkipped = false
 
           if (existingAnonymousId === data.user.id) {
-            // Skip user creation, we know this user exists
             userCreationSkipped = true
           } else {
-            // Try to create user record in the database
-            // First, let's check if the user already exists
             const { data: existingUser, error: checkError } = await supabase
               .from("users")
               .select("id")
@@ -258,11 +216,9 @@ export function HeroWithLiveDemo() {
               .maybeSingle()
 
             if (checkError && checkError.code !== "42501") {
-              // Error checking existing user
             }
 
             if (!existingUser && !checkError) {
-              // User doesn't exist, try to create it
               const { error: userError } = await supabase.from("users").insert({
                 id: data.user.id,
                 email: data.user.email || `${data.user.id}@anonymous.local`,
@@ -274,38 +230,23 @@ export function HeroWithLiveDemo() {
               })
 
               if (userError) {
-                // Error creating user record
-
-                // Check if it's a duplicate key error
                 if (userError.code === "23505") {
-                  // User already exists, continuing
-                  // User already exists, which is fine
                 } else if (userError.code === "42501") {
-                  // RLS policy violation - this is expected for anonymous users
-                  // RLS prevents user creation, but auth is successful. Continuing
                   userCreationSkipped = true
                 } else {
-                  // Unexpected error creating user record. Continuing anyway
                   userCreationSkipped = true
                 }
               } else {
-                // User record created successfully
-                // Store the anonymous user ID for future visits
                 localStorage.setItem("anonymous_user_id", data.user.id)
               }
             } else if (existingUser) {
-              // User already exists, continuing
-              // Store the anonymous user ID for future visits
               localStorage.setItem("anonymous_user_id", data.user.id)
             } else if (checkError?.code === "42501") {
-              // RLS prevents checking user existence, continuing
               userCreationSkipped = true
             }
           }
 
-          // Skip verification if user creation was skipped due to RLS
           if (!userCreationSkipped) {
-            // Try to verify user record was created
             const { data: userRecord, error: verifyError } = await supabase
               .from("users")
               .select("id")
@@ -313,43 +254,34 @@ export function HeroWithLiveDemo() {
               .maybeSingle()
 
             if (verifyError?.code === "42501") {
-              // RLS prevents reading user record, but auth is successful
             } else if (verifyError) {
-              // Unexpected error verifying user record
             } else if (userRecord) {
-              // User record verified successfully
             }
           }
 
-          // Generate a form ID and redirect to form editor
           if (!formIdRef.current) {
             formIdRef.current = uuidv4()
           }
 
-          // Redirecting to form editor
-
-          // Clear the input after successful redirect
           setInputValue("")
 
-          // Redirect to form editor with prompt as query parameter
           const params = new URLSearchParams({ prompt: prompt })
           router.push(
             `/dashboard/forms/${formIdRef.current}?${params.toString()}`
           )
         }
-      } catch (error) {
-        // Error during anonymous sign-in
+      } catch (_error) {
+        console.error("Error signing in anonymously", _error)
       } finally {
         setIsSigningIn(false)
       }
     }
   }
 
-  // Default hero section
   return (
     <>
       <Script
-        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"
         strategy="afterInteractive"
       />
 
@@ -379,7 +311,7 @@ export function HeroWithLiveDemo() {
               <PromptSuggestions
                 onSelectPrompt={(prompt) => {
                   setInputValue(prompt)
-                  // Auto-focus the input
+
                   setTimeout(() => {
                     const textarea = document.querySelector("textarea")
                     textarea?.focus()
@@ -388,7 +320,7 @@ export function HeroWithLiveDemo() {
               />
             </div>
 
-            {/* Turnstile widget container */}
+            {}
             <div
               ref={turnstileRef}
               style={{

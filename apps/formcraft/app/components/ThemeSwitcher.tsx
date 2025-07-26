@@ -23,7 +23,7 @@ export function ThemeSwitcher() {
       onClick={() => {
         const newTheme = theme === "dark" ? "light" : "dark"
         setTheme(newTheme)
-        // Determine if we're in mobile menu based on parent elements
+
         const isInMobileMenu =
           typeof window !== "undefined" && window.innerWidth < 768
         analytics.themeSwitcherUsed(

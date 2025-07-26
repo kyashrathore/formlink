@@ -10,8 +10,7 @@ export default async function TermsPage() {
   try {
     content = await fs.readFile(markdownPath, "utf-8")
   } catch (error) {
-    console.error("Failed to read terms.md:", error)
-    // Return a user-friendly error message or a fallback UI
+    console.error("Error reading terms markdown file:", error)
     return (
       <div className="container mx-auto p-4">
         <h1 className="mb-4 text-2xl font-bold">Terms of Use</h1>
@@ -31,10 +30,6 @@ export default async function TermsPage() {
   )
 }
 
-// Enable Static Site Generation for this page
 export async function generateStaticParams() {
-  // This page doesn't have dynamic segments, so we return an empty array
-  // or an array with an empty object if required by the Next.js version
-  // for it to be considered for SSG.
   return [{}]
 }

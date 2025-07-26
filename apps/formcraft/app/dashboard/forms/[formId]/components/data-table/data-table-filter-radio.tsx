@@ -14,7 +14,6 @@ export function DataTableFilterRadio<TData>({
   const { table, columnFilters, setColumnFilters } = useDataTable()
 
   if (!table) return null
-  const column = table.getColumn(value)
 
   const filterValue = columnFilters.find((i) => i.id === value)?.value as
     | string

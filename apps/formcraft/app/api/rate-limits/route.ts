@@ -6,14 +6,13 @@ import { createServerClient } from "@formlink/db"
 import { cookies } from "next/headers"
 
 export async function GET(req: Request) {
-  // Require authentication
   const { requireAuth, authErrorResponse } = await import(
     "../../lib/middleware/auth"
   )
   let authResult
   try {
     authResult = await requireAuth(req)
-  } catch (error: any) {
+  } catch (error) {
     return authErrorResponse(error)
   }
 

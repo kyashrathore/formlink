@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Footer } from "../components/landing/footer"
 import { ThemeSwitcher } from "../components/ThemeSwitcher"
 
-const FormlinkLogo = (props: any) => (
+const FormlinkLogo = (props: React.SVGProps<SVGSVGElement>) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     width={40}
@@ -22,7 +22,7 @@ export default function BlogLayout({
 }) {
   return (
     <div className="bg-background text-foreground min-h-screen">
-      {/* Header - simplified version from landing page without navigation */}
+      {}
       <header className="bg-background/80 border-b py-3 backdrop-blur-md">
         <div className="container-custom flex items-center justify-between">
           <Link href="/" className="flex items-center space-x-2">
@@ -43,10 +43,10 @@ export default function BlogLayout({
         </div>
       </header>
 
-      {/* Blog Content */}
+      {}
       <main>{children}</main>
 
-      {/* Footer - exact from landing page */}
+      {}
       <Footer />
     </div>
   )

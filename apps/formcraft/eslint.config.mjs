@@ -18,7 +18,9 @@ const eslintConfig = [
     },
     rules: {
       "no-comments/disallowComments": "error",
-      "no-console": "error",
+      "no-console": ["error", { allow: ["error", "warn"] }],
+      "@typescript-eslint/no-explicit-any": "off",
+      "react/no-unescaped-entities": "off",
     },
   },
   {

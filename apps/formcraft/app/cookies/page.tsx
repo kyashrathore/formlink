@@ -9,9 +9,8 @@ export default async function CookiesPage() {
 
   try {
     content = await fs.readFile(markdownPath, "utf-8")
-  } catch (error) {
-    console.error("Failed to read cookies.md:", error)
-    // Return a user-friendly error message or a fallback UI
+  } catch (_error) {
+    console.error("Failed to read cookies markdown file", _error)
     return (
       <div className="container mx-auto p-4">
         <h1 className="mb-4 text-2xl font-bold">Cookie Policy</h1>
@@ -31,10 +30,6 @@ export default async function CookiesPage() {
   )
 }
 
-// Enable Static Site Generation for this page
 export async function generateStaticParams() {
-  // This page doesn't have dynamic segments, so we return an empty array
-  // or an array with an empty object if required by the Next.js version
-  // for it to be considered for SSG.
   return [{}]
 }

@@ -1,4 +1,3 @@
-import { Header } from "@/app/components/layout/header"
 import HomePageWrapper from "@/app/dashboard/Home"
 import { createServerClient } from "@formlink/db"
 import { cookies } from "next/headers"

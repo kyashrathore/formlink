@@ -12,22 +12,22 @@ import {
 
 interface FormAgentState {
   formId: string | null
-  currentForm: Form | null // Stores the latest complete form snapshot
-  agentState: AgentState | null // Stores the latest complete agent state snapshot
-  eventsLog: AgentEvent[] // Log of all structured events for UI or debugging
+  currentForm: Form | null
+  agentState: AgentState | null
+  eventsLog: AgentEvent[]
 
-  progress: ProgressEvent["data"] | null // Current progress details
-  errorDetails: ErrorEvent["data"] | null // Structured error details
-  lastSystemEvent: SystemEvent | null // Last system event received
-  totalTaskCount: number | null // To store the total number of tasks
-  completedTaskCount: number // To store the count of completed tasks
-  questionTaskCount: number | null // New property
-  initialPrompt: string | null // Initial prompt to send to agent
+  progress: ProgressEvent["data"] | null
+  errorDetails: ErrorEvent["data"] | null
+  lastSystemEvent: SystemEvent | null
+  totalTaskCount: number | null
+  completedTaskCount: number
+  questionTaskCount: number | null
+  initialPrompt: string | null
 }
 
 interface FormAgentActions {
   initializeConnection: (formId: string) => void
-  processEvent: (event: AgentEvent) => void // Changed signature
+  processEvent: (event: AgentEvent) => void
   resetStore: (keepFormId?: boolean) => void
   setInitialPrompt: (prompt: string | null) => void
 }
@@ -42,19 +42,18 @@ const initialState: FormAgentState = {
   lastSystemEvent: null,
   totalTaskCount: null,
   completedTaskCount: 0,
-  questionTaskCount: null, // New initialization
+  questionTaskCount: null,
   initialPrompt: null,
 }
 
 export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
   devtools(
-    (set, get) => ({
+    (set) => ({
       ...initialState,
 
       initializeConnection: (formId) => {
         set(
           (state) => {
-            // If we're initializing for a different form OR if we have stale form data, clear everything
             if (
               (state.formId && state.formId !== formId) ||
               (state.currentForm && state.currentForm.id !== formId)
@@ -63,19 +62,19 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
                 ...initialState,
                 formId,
                 connectionStatus: "connecting",
-                agentStreamConnectionStatus: "requested", // Or "connecting"
+                agentStreamConnectionStatus: "requested",
               }
               return newState
             }
-            // Same form, just update connection status
+
             return {
               ...state,
               formId,
               connectionStatus: "connecting",
-              agentStreamConnectionStatus: "requested", // Or "connecting"
+              agentStreamConnectionStatus: "requested",
             }
           },
-          false, // Changed from undefined to false for 'replace' behavior
+          false,
           "initializeConnection"
         )
       },
@@ -90,16 +89,14 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
             let newErrorDetails = state.errorDetails
             let newLastSystemEvent = state.lastSystemEvent
             let newTotalTaskCount = state.totalTaskCount
-            let newCompletedTaskCount = state.completedTaskCount // Initialize newCompletedTaskCount
-            let newQuestionTaskCount = state.questionTaskCount // Add this
+            let newCompletedTaskCount = state.completedTaskCount
+            let newQuestionTaskCount = state.questionTaskCount
 
-            // Processing event
             switch (event.category) {
               case "state":
                 if (event.type === "state_snapshot") {
                   const snapshotEvent = event as StateSnapshotEvent
 
-                  // Only update if this event is for the current form
                   if (snapshotEvent.formId === state.formId) {
                     newCurrentForm = snapshotEvent.data.form
                     newAgentState = snapshotEvent.data.agentState
@@ -119,9 +116,9 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
               case "system":
                 newLastSystemEvent = event as SystemEvent
                 if (event.type === "agent_initialized") {
-                  newTotalTaskCount = null // Reset task count on new initialization
-                  newCompletedTaskCount = 0 // Reset completed task count
-                  newQuestionTaskCount = null // Reset question task count
+                  newTotalTaskCount = null
+                  newCompletedTaskCount = 0
+                  newQuestionTaskCount = null
                 } else if (event.type === "agent_finalized") {
                 } else if (
                   event.type === "agent_warning" &&
@@ -134,7 +131,6 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
                   if (
                     typeof event.data.details.questionTaskCount === "number"
                   ) {
-                    // Add this for questionTaskCount
                     newQuestionTaskCount = event.data.details.questionTaskCount
                   }
                 }
@@ -142,7 +138,7 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
             }
 
             return {
-              ...state, // Preserve other parts of state like formId
+              ...state,
               eventsLog: newEventsLog,
               currentForm: newCurrentForm,
               agentState: newAgentState,
@@ -150,8 +146,8 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
               errorDetails: newErrorDetails,
               lastSystemEvent: newLastSystemEvent,
               totalTaskCount: newTotalTaskCount,
-              completedTaskCount: newCompletedTaskCount, // Return updated completedTaskCount
-              questionTaskCount: newQuestionTaskCount, // Add this
+              completedTaskCount: newCompletedTaskCount,
+              questionTaskCount: newQuestionTaskCount,
             }
           },
           false,
@@ -173,9 +169,6 @@ export const useFormAgentStore = create<FormAgentState & FormAgentActions>()(
       setInitialPrompt: (prompt: string | null) => {
         set({ initialPrompt: prompt }, false, "setInitialPrompt")
       },
-
-      // Removed chat-specific actions as per "no message event from agent anymore is needed"
-      // setInitialChatMessages, addUserMessageToChat
     }),
     { name: "FormAgentStore" }
   )

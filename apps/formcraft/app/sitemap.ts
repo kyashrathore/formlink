@@ -11,7 +11,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .map((post) => {
       let lastModified: string
 
-      // Use lastEditedTime if available, otherwise fall back to publish date
       const dateToUse = post.lastEditedTime || post.date
 
       try {
@@ -19,7 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           ? new Date(dateToUse).toISOString()
           : new Date().toISOString()
       } catch (error) {
-        // Fallback to current date if date is invalid
+        console.error(`Invalid date for post ${post.slug}: ${dateToUse}`, error)
         lastModified = new Date().toISOString()
       }
 

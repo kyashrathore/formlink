@@ -9,7 +9,6 @@ interface FormBrandingProps {
 export function FormBranding({ className }: FormBrandingProps) {
   const { isPro } = usePremium()
 
-  // Don't show branding for Pro users
   if (isPro) {
     return null
   }

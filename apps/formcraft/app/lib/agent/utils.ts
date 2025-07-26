@@ -18,8 +18,8 @@ export async function getAgentPromptText(
     try {
       const content = await fs.readFile(promptPath, "utf-8")
       return content
-    } catch (e: any) {
-      if (e.code === "ENOENT") {
+    } catch (e) {
+      if ((e as NodeJS.ErrnoException).code === "ENOENT") {
         logger.warn(
           `Prompt file not found at ${promptPath}, trying ${backupPromptPath}`
         )
@@ -37,9 +37,12 @@ export async function getAgentPromptText(
   }
 }
 
-// Helper function to handle stream with timeout and error detection
+interface StreamResult {
+  object: Promise<unknown>
+}
+
 export async function handleStreamWithTimeout(
-  streamResult: any,
+  streamResult: StreamResult,
   timeoutMs: number = 5000
 ): Promise<any> {
   const timeoutPromise = new Promise((_, reject) => {
@@ -53,28 +56,28 @@ export async function handleStreamWithTimeout(
   })
 
   try {
-    // Race between the stream object promise and timeout
     const aiResponseData = await Promise.race([
       streamResult.object,
       timeoutPromise,
     ])
 
     return aiResponseData
-  } catch (error: any) {
-    // Enhanced error detection for common issues
-    const errorMessage = error?.message || "Unknown stream error"
-    const errorStatus = error?.status || error?.response?.status
+  } catch (error) {
+    const errorMessage = (error as Error)?.message || "Unknown stream error"
+    const errorStatus =
+      (error as Error & { status?: number; response?: { status?: number } })
+        ?.status ||
+      (error as Error & { status?: number; response?: { status?: number } })
+        ?.response?.status
 
-    // Check if it's a timeout error
     if (errorMessage.includes("timeout")) {
       const timeoutError = new Error(
         "AI service request timed out - this may indicate an authentication issue (401) or network problem"
       )
-      ;(timeoutError as any).status = 408 // Request Timeout
+      ;(timeoutError as Error & { status?: number }).status = 408
       throw timeoutError
     }
 
-    // Check for authentication errors
     if (
       errorStatus === 401 ||
       errorMessage.toLowerCase().includes("api key") ||
@@ -84,11 +87,10 @@ export async function handleStreamWithTimeout(
       const authError = new Error(
         `AI service authentication failed: ${errorMessage}`
       )
-      ;(authError as any).status = 401
+      ;(authError as Error & { status?: number }).status = 401
       throw authError
     }
 
-    // Re-throw other errors as-is
     throw error
   }
 }

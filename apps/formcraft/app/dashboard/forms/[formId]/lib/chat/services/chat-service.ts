@@ -1,7 +1,20 @@
+import { SupabaseClient } from "@supabase/supabase-js"
 import logger from "../../logger"
 
+interface DataStream {
+  writeData: (data: unknown) => void
+}
+
+interface MessageRow {
+  id: number
+  role: string
+  content: string
+  created_at: string | null
+  [key: string]: unknown
+}
+
 export class ChatService {
-  constructor(private supabase: any) {}
+  constructor(private supabase: SupabaseClient) {}
 
   async saveUserMessage(
     formId: string,
@@ -41,7 +54,7 @@ export class ChatService {
     }
   }
 
-  async getChatHistory(formId: string): Promise<any[]> {
+  async getChatHistory(formId: string): Promise<MessageRow[]> {
     const { data, error } = await this.supabase
       .from("messages")
       .select("*")
@@ -59,7 +72,11 @@ export class ChatService {
     return data || []
   }
 
-  writeStreamEvent(dataStream: any, eventType: string, payload?: any): void {
+  writeStreamEvent(
+    dataStream: DataStream,
+    eventType: string,
+    payload?: unknown
+  ): void {
     if (payload) {
       dataStream.writeData({ type: eventType, payload })
     } else {
@@ -67,14 +84,18 @@ export class ChatService {
     }
   }
 
-  writeCustomAgentEvent(dataStream: any, agentEvent: any): void {
+  writeCustomAgentEvent(dataStream: DataStream, agentEvent: unknown): void {
     dataStream.writeData({
       type: "custom_agent_event",
       payload: agentEvent,
     })
   }
 
-  writeUIAction(dataStream: any, action: string, data: any): void {
+  writeUIAction(
+    dataStream: DataStream,
+    action: string,
+    data: Record<string, unknown>
+  ): void {
     dataStream.writeData({
       eventName: "ui_action",
       eventData: {

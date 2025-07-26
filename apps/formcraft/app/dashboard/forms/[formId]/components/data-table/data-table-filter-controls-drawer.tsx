@@ -25,7 +25,7 @@ import { DataTableFilterControls } from "./data-table-filter-controls"
 
 export function DataTableFilterControlsDrawer() {
   const triggerButtonRef = React.useRef<HTMLButtonElement>(null)
-  const isMobile = useMediaQuery ? useMediaQuery("(max-width: 640px)") : false
+  const isMobile = useMediaQuery("(max-width: 640px)")
 
   useHotKey(() => {
     triggerButtonRef.current?.click()

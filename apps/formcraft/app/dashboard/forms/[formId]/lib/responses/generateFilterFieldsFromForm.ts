@@ -1,5 +1,5 @@
 import type { Form } from "@formlink/schema"
-import type { ColumnDef, Row } from "@tanstack/react-table"
+import type { ColumnDef } from "@tanstack/react-table"
 import type { FilterFieldType } from "../../components/data-table/dataTableStore"
 import type { FormResponse } from "../../hooks/useFormResponsesQuery"
 
@@ -122,26 +122,6 @@ export function generateTableColumnsFromForm(
 
   const questionColumns: ColumnDef<FormResponse, any>[] = form.questions.map(
     (question) => {
-      let filterFn: any = undefined
-      switch (question.questionType) {
-        case "multipleChoice":
-        case "singleChoice":
-          filterFn = "arrIncludesSomeCaseInsensitive"
-          break
-        case "rating":
-        case "linearScale":
-          filterFn = "inNumberRange"
-          break
-        case "date":
-          filterFn = "inNumberRange"
-          break
-        case "text":
-        case "address":
-        case "fileUpload":
-        default:
-          filterFn = "includesString"
-          break
-      }
       return {
         accessorKey: question.id,
         header: question.id,

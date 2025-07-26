@@ -52,7 +52,7 @@ export default function ResizeHandle({
       className={`relative w-1 cursor-col-resize bg-gray-300 transition-all duration-200 ease-in-out hover:bg-blue-500 ${isResizing ? "w-2 bg-blue-500 shadow-lg" : ""} `}
       onMouseDown={handleMouseDown}
     >
-      {/* Visual feedback dots */}
+      {}
       <div
         className={`absolute top-1/2 left-1/2 flex -translate-x-1/2 -translate-y-1/2 transform flex-col space-y-1 transition-all duration-200 ${isResizing ? "scale-125" : ""} `}
       >

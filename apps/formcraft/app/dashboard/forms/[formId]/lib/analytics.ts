@@ -1,10 +1,6 @@
 import posthog from "posthog-js"
 
-// Analytics event helpers for Formcraft
-
-// Helper to check if analytics should be disabled
 const shouldDisableAnalytics = () => {
-  // Disable on localhost
   if (
     typeof window !== "undefined" &&
     window.location.hostname === "localhost"
@@ -12,7 +8,6 @@ const shouldDisableAnalytics = () => {
     return true
   }
 
-  // Disable for specific test user pattern
   const userId =
     typeof window !== "undefined"
       ? localStorage.getItem("userId") || sessionStorage.getItem("userId") || ""
@@ -30,7 +25,6 @@ const shouldDisableAnalytics = () => {
 }
 
 export const analytics = {
-  // User events
   userSignedUp: (method: "email" | "google", referrer: string) => {
     if (shouldDisableAnalytics()) return
     posthog.capture("user_signed_up", {
@@ -39,7 +33,6 @@ export const analytics = {
     })
   },
 
-  // Form creation events
   formCreationStarted: (method: "ai_chat" | "blank" | "template") => {
     if (shouldDisableAnalytics()) return
     posthog.capture("form_creation_started", {
@@ -78,7 +71,6 @@ export const analytics = {
     })
   },
 
-  // Form editing events
   questionAdded: (questionType: string, currentTotal: number) => {
     if (shouldDisableAnalytics()) return
     posthog.capture("question_added", {
@@ -110,7 +102,6 @@ export const analytics = {
     })
   },
 
-  // Journey script events
   journeyScriptViewed: (formId: string) => {
     if (shouldDisableAnalytics()) return
     posthog.capture("journey_script_viewed", {
@@ -134,7 +125,6 @@ export const analytics = {
     })
   },
 
-  // Share events
   formLinkCopied: (formId: string) => {
     if (shouldDisableAnalytics()) return
     posthog.capture("form_link_copied", {
@@ -149,7 +139,6 @@ export const analytics = {
     })
   },
 
-  // Response events
   responsesViewed: (formId: string, responsesCount: number) => {
     if (shouldDisableAnalytics()) return
     posthog.capture("responses_viewed", {
@@ -158,7 +147,6 @@ export const analytics = {
     })
   },
 
-  // Landing page events
   landingCTAClicked: (
     ctaType: "start_free" | "go_dashboard",
     userType: "anonymous" | "authenticated" | "unauthenticated",

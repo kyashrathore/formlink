@@ -12,8 +12,7 @@ export function DataTableFilterTimerange<TData>({
   presets,
 }: DataTableTimerangeFilterField<TData>) {
   const value = _value as string
-  const { table, columnFilters, setColumnFilters } = useDataTable()
-  const column = table?.getColumn(value)
+  const { columnFilters, setColumnFilters } = useDataTable()
   const filterValue = columnFilters.find((i) => i.id === value)?.value
 
   const date: DateRange | undefined = useMemo(

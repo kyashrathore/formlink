@@ -10,8 +10,7 @@ export default async function PrivacyPage() {
   try {
     content = await fs.readFile(markdownPath, "utf-8")
   } catch (error) {
-    console.error("Failed to read privacy.md:", error)
-    // Return a user-friendly error message or a fallback UI
+    console.error("Failed to read privacy markdown file", error)
     return (
       <div className="container mx-auto p-4">
         <h1 className="mb-4 text-2xl font-bold">Privacy Policy</h1>
@@ -32,15 +31,6 @@ export default async function PrivacyPage() {
   )
 }
 
-// Enable Static Site Generation for this page
 export async function generateStaticParams() {
-  // This page doesn't have dynamic segments, so we return an empty array
-  // or an array with an empty object if required by the Next.js version
-  // for it to be considered for SSG.
-  // For pages without dynamic routes, simply having the page file
-  // and not using dynamic functions (like cookies(), headers())
-  // typically makes it SSG by default in Next.js App Router.
-  // However, explicitly adding generateStaticParams can make intent clearer
-  // and ensure it's treated as such.
   return [{}]
 }

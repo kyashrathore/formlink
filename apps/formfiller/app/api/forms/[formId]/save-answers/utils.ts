@@ -29,7 +29,7 @@ export async function saveIndividualFormAnswer(
     {
       submission_id: submissionId,
       question_id: questionId,
-      answer_value: answerValue,
+      answer_value: answerValue as any,
     },
   ]);
 
@@ -72,7 +72,7 @@ export async function saveAllFormAnswers(
     ([question_id, answer_value]) => ({
       submission_id: submissionId,
       question_id,
-      answer_value,
+      answer_value: answer_value as any,
     }),
   );
 

@@ -51,9 +51,9 @@ Your response MUST be a **single JSON object** with the following structure:
 
 \`\`\`json
 {
-  "valid": boolean, // True if at least one valid rule was found, false otherwise
-  "message"?: string, // Required only if valid is false, explaining why no rules were found or why input was invalid (e.g., "Could not parse file size unit", "Rule type not supported")
-  "schema"?: Array<Partial<QuestionValidationsSchema>> // An array where each element represents ONE identified validation rule (e.g., [{ required: {...} }, { maxSize: {...} }]). Present only if valid is true. Each rule object maps a rule type (like 'maxSize') to an object containing { value, message, originalText }.
+  "valid": boolean,
+  "message"?: string,
+  "schema"?: Array<Partial<QuestionValidationsSchema>>
 }
 \`\`\`
 `
@@ -125,9 +125,9 @@ Your primary task is to analyze the user's request and generate a single, valid 
 
 \`\`\`json
 {
-  "valid": boolean, // True if a valid question following QuestionSchema was successfully generated
-  "message": string, // A brief explanation (e.g., "Question generated successfully." or "Could not generate question: [reason].")
-  "question": QuestionSchema | null // The generated question object if valid is true, otherwise null
+  "valid": boolean,
+  "message": string,
+  "question": QuestionSchema | null
 }
 \`\`\`
 `
@@ -163,10 +163,10 @@ Generate a JSON object with the following structure:
 
 \`\`\`json
 {
-  "valid": true, // boolean: true if successful, false if the request cannot be translated or is invalid
-  "originalText": "...", // string: The original user_prompt
-  "message": "...", // string: A confirmation message (e.g., "JSONata expression generated successfully.") or an error message if valid is false.
-  "jsonataExpression": "..." // string: The generated JSONata expression. If valid is false, this might be null or an empty string.
+  "valid": true,
+  "originalText": "...",
+  "message": "...",
+  "jsonataExpression": "..."
 }
 \`\`\`
 `
@@ -230,11 +230,11 @@ Generate a JSON object with the following structure:
 
 \`\`\`json
 {
-  "valid": true, // boolean: true if successful, false if the request cannot be translated or is invalid
-  "originalText": "...", // string: The original user_prompt
-  "targetQuestionId": "...", // string: The target_question_id this logic applies to
-  "message": "...", // string: A confirmation message or an error message if valid is false.
-  "jsonataExpression": "..." // string: The generated JSONata expression that evaluates to a boolean.
+  "valid": true,
+  "originalText": "...",
+  "targetQuestionId": "...",
+  "message": "...",
+  "jsonataExpression": "..."
 }
 \`\`\`
 `
@@ -725,7 +725,7 @@ Example: Before asking for email after travel preferences, share: "Based on your
 **User Input**: "Create a customer satisfaction survey"
 **Journey Insight**: Frame as "Help us serve you better" rather than "Rate our performance"
 
-**User Input**: "Build a job application form"  
+**User Input**: "Build a job application form"
 **Journey Insight**: Position as "Find your perfect role match" with mutual benefit framing
 
 **User Input**: "Design a product feedback form"
@@ -745,7 +745,7 @@ Provide ONLY the JSON object with no additional explanatory text. Ensure:
 
 Your response MUST include all four fields:
 1. title (string)
-2. description (string) 
+2. description (string)
 3. questionDetails (array)
 4. journeyScript (string) - This is REQUIRED and must follow the template format shown above
 

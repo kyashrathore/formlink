@@ -1,3 +1,4 @@
+import { Question } from "@formlink/schema"
 import { useMutation } from "@tanstack/react-query"
 
 interface AIRequestParams {
@@ -9,12 +10,12 @@ interface AIRequestParams {
   prompt: string
   userId: string
   isAuthenticated: boolean
-  questions: any
+  questions: Question[]
   currentQuestionId?: string
 }
 
 interface AIResponse {
-  data?: any
+  data?: unknown
   error?: boolean
   message?: string
 }

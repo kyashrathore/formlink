@@ -199,7 +199,7 @@ export function columnFiltersParser<TData>({
   searchParamsParser,
   filterFields,
 }: {
-  searchParamsParser: Record<string, ParserBuilder<any>>
+  searchParamsParser: Record<string, ParserBuilder<unknown>>
   filterFields: DataTableFilterField<TData>[]
 }) {
   return {

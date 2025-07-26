@@ -50,15 +50,17 @@ export function getFormContextTool(context: ChatToolContext) {
           formId: targetFormId,
           context: contextData,
         }
-      } catch (error: any) {
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error)
         logger.error(
           `[TOOL getFormContext] Error during context fetch for ${targetFormId}:`,
-          error.message
+          errorMessage
         )
         return {
           success: false,
           formId: targetFormId,
-          error: error.message,
+          error: errorMessage,
         }
       }
     },

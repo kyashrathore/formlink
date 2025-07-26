@@ -62,7 +62,7 @@ export default function ShadcnCSSPanel({
           <div className="relative">
             <CodeEditor
               value={cssText}
-              onChange={(value: any) => setCSSText(value || "")}
+              onChange={(value: string | undefined) => setCSSText(value || "")}
               language="css"
               height="320px"
               options={{

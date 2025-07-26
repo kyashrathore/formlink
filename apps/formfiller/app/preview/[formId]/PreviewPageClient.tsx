@@ -156,7 +156,7 @@ export default function PreviewPageClient({
             result.appliedDarkVariables,
             result.warnings,
           );
-          console.log(
+          console.error(
             `Applied ${result.appliedRootVariables.length} root variables and ${result.appliedDarkVariables.length} dark variables`,
           );
         } else {

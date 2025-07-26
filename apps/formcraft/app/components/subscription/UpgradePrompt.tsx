@@ -14,7 +14,6 @@ interface UpgradePromptProps {
 }
 
 export function UpgradePrompt({
-  feature = "Premium features",
   description = "Remove branding and get advanced analytics",
   className,
   compact = false,
@@ -23,7 +22,6 @@ export function UpgradePrompt({
   const { isPro, upgradeToProRedirect } = usePremium()
   const [dismissed, setDismissed] = useState(false)
 
-  // Don't show for Pro users or if dismissed
   if (isPro || dismissed) {
     return null
   }

@@ -2,6 +2,7 @@
 
 import { Conversation } from "@/components/chat/conversation";
 import { useChatStore } from "@/components/chat/store/useChatStore";
+import type { Message } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react";
 import { Form, Question } from "@formlink/schema";
 import type { UIForm } from "@formlink/ui";
@@ -21,13 +22,11 @@ import { v4 as uuidv4 } from "uuid";
 import { useRedirect } from "../../hooks/useRedirect";
 import { apiConfig } from "../../lib/api-config";
 import type {
-  QueryDataForForm,
   ChatError,
-  InputChangeEvent,
   FormWithVersions,
+  QueryDataForForm,
   QuestionResponse,
 } from "../../lib/types";
-import type { Message } from "@ai-sdk/react";
 
 type FormAIComponentProps = {
   formId: string;
@@ -265,7 +264,7 @@ export default function FormAIComponent({
           const newUserMessage = {
             id: uuidv4(),
             role: "user" as const,
-            content: displayText || value,
+            content: displayText || String(value || ""),
             createdAt: new Date(),
           };
 
@@ -504,11 +503,12 @@ export default function FormAIComponent({
                             <PromptInput
                               className="border-input bg-popover relative z-10 overflow-hidden border p-0 pb-2 shadow-xs backdrop-blur-xl"
                               value={input}
-                              onValueChange={(value: string) =>
-                                handleInputChange?.({
+                              onValueChange={(value: string) => {
+                                const event = {
                                   target: { value },
-                                } as InputChangeEvent)
-                              }
+                                } as React.ChangeEvent<HTMLInputElement>;
+                                handleInputChange?.(event);
+                              }}
                               onSubmit={handleAISubmit}
                             >
                               <PromptInputTextarea

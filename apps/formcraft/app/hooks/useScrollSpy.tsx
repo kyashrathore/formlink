@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 export function useScrollSpy(documentId: string, offset = 0) {
   const [containerElement, setContainerElement] = useState<HTMLElement | null>(

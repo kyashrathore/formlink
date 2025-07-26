@@ -18,11 +18,6 @@ export function DataTableFilterInput<TData>({
   const value = _value as string
   const { table, columnFilters, setColumnFilters } = useDataTableStore()
 
-  if (!table) {
-    return null
-  }
-
-  const column = table.getColumn(value)
   const filterValue = columnFilters.find((i) => i.id === value)?.value
   const filters = getFilter(filterValue)
   const [input, setInput] = useState<string | null>(filters)
@@ -45,6 +40,10 @@ export function DataTableFilterInput<TData>({
       setInput(filters)
     }
   }, [filters])
+
+  if (!table) {
+    return null
+  }
 
   return (
     <div className="grid w-full gap-1.5">

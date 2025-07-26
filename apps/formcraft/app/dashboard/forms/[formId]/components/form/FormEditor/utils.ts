@@ -37,7 +37,7 @@ export function getEmbedCode(type: EmbedType, formId: string): EmbedCodeParts {
   <button>Try Me</button>
 </div>`,
         script: `<script src="${embedScriptUrl}">
-  // add this to html head
+
 </script>`,
       }
     case "modal":
@@ -49,7 +49,7 @@ export function getEmbedCode(type: EmbedType, formId: string): EmbedCodeParts {
   <button>Try Me</button>
 </div>`,
         script: `<script src="${embedScriptUrl}">
-  // add this to html head
+
 </script>`,
       }
     case "fullPage":

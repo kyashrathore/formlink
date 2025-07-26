@@ -19,8 +19,7 @@ interface FormOwnership {
 
 export async function verifyUserOwnsForm(
   formId: string,
-  userId: string,
-  isGuest: boolean = false
+  userId: string
 ): Promise<FormOwnership> {
   const cookieStore = await cookies()
   const supabase = await createServerClient(cookieStore)
@@ -39,10 +38,8 @@ export async function verifyUserOwnsForm(
     }
   }
 
-  // Check if user owns the form
   const isOwner = form.user_id === userId
 
-  // Check if form is published (has a published version)
   const isPublic = !!form.current_published_version_id
 
   return {
@@ -109,24 +106,20 @@ export async function verifyUserCanAccessFormVersion(
     return false
   }
 
-  // If version is published, anyone can access
   if (version.status === "published") {
     return true
   }
 
-  // Otherwise, check form ownership
   const ownership = await verifyUserOwnsForm(version.form_id, userId)
   return ownership.isOwner
 }
 
-// Guest user specific checks
 export async function verifyGuestUserLimits(
   userId: string
 ): Promise<{ withinLimits: boolean; reason?: string }> {
   const cookieStore = await cookies()
   const supabase = await createServerClient(cookieStore)
 
-  // Check form count
   const { count: formCount } = await supabase
     .from("forms")
     .select("*", { count: "exact", head: true })
@@ -139,7 +132,6 @@ export async function verifyGuestUserLimits(
     }
   }
 
-  // Check total submission count across all forms
   const { data: forms } = await supabase
     .from("forms")
     .select("id")

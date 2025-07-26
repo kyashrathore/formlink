@@ -12,7 +12,6 @@ export default function ChatTabContent({
   userId,
   formId,
 }: ChatTabContentProps) {
-  // Get initial prompt from the global store
   const initialPrompt = useFormAgentStore((state) => state.initialPrompt)
 
   return (

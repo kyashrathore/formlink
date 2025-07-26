@@ -53,10 +53,10 @@ async function getFormSchemaById(
     const formSchemaResult: z.infer<typeof FormSchema> = {
       id: formId,
       version_id: versionData.version_id,
-      title: versionData.title,
-      description: versionData.description,
-      questions: versionData.questions,
-      settings: versionData.settings,
+      title: versionData.title as string,
+      description: versionData.description as string,
+      questions: versionData.questions as any,
+      settings: versionData.settings as any,
     };
     return formSchemaResult;
   } catch (castError) {

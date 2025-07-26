@@ -10,7 +10,7 @@ export interface AgentInteractionPanelProps {
 export interface FormattedLogEvent {
   name: string
   timestamp: string
-  data: any
+  data: unknown
   displayTime: string
   formattedContent: string
 }
@@ -19,8 +19,8 @@ export interface ChatMessage {
   role: "user" | "assistant"
   content: string
   timestamp: string
-  parts?: any[]
-  toolInvocations?: any[]
+  parts?: unknown[]
+  toolInvocations?: unknown[]
 }
 
 export interface AgentState {
@@ -38,4 +38,17 @@ export interface PanelState {
   isExpanded: boolean
   showChatInput: boolean
   displaySummaryMessage: string
+}
+
+export interface HistoryMessage {
+  id?: string | number
+  role: string
+  content: string | unknown
+  created_at?: string
+}
+
+export interface ChatDataItem {
+  category?: string
+  type?: string
+  payload?: unknown
 }

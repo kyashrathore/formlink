@@ -1,23 +1,18 @@
-import {
-  APP_DESCRIPTION,
-  APP_NAME,
-  getFormFillerFBasePath,
-} from "@/app/lib/config"
-import { Toaster } from "@formlink/ui"
-import type { Metadata } from "next"
-import { ThemeProvider } from "next-themes"
-import "@formlink/ui/globals.css"
-import "./view-transitions.css"
 import { FeedbackBubble } from "@/app/components/FeedbackBubble"
+import { getFormFillerFBasePath } from "@/app/lib/config"
 import {
   PostHogPageview,
   PostHogProviderWrapper,
 } from "@/app/providers/posthog-provider"
 import { ReactQueryClientProvider } from "@/app/ReactQueryClientProvider"
-import { getenv } from "@/lib/env"
+import { Toaster } from "@formlink/ui"
+import "@formlink/ui/globals.css"
+import type { Metadata } from "next"
+import { ThemeProvider } from "next-themes"
 import { Inter, Poppins } from "next/font/google"
 import Script from "next/script"
 import { Suspense } from "react"
+import "./view-transitions.css"
 
 const inter = Inter({
   variable: "--font-inter",
@@ -45,7 +40,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const isDev = getenv("NODE_ENV") === "development"
   const formlinkFBasepath = getFormFillerFBasePath()
 
   return (

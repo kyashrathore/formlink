@@ -1,10 +1,3 @@
-/**
- * Simplified theme types for shadcn/ui CSS variable system
- */
-
-/**
- * PostMessage theme communication types
- */
 export interface ShadcnCSSUpdateMessage {
   type: "SHADCN_CSS_UPDATE"
   payload: {

@@ -2,17 +2,10 @@
 
 import EditableUrlInput from "@/app/components/EditableUrlInput"
 import { Card } from "@formlink/ui"
-import React from "react"
 import { useMobile } from "../../hooks/use-mobile"
 import { useFormStore } from "../../stores/useFormStore"
 
-const RedirectOnSubmission = ({
-  userId,
-  selectedTab,
-}: {
-  userId: string
-  selectedTab: string
-}) => {
+const RedirectOnSubmission = ({ selectedTab }: { selectedTab: string }) => {
   const redirectUrl = useFormStore(
     (state) => state.form?.settings?.redirectOnSubmissionUrl || ""
   )

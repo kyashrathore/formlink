@@ -239,7 +239,6 @@ function CustomDateRange({
 
   React.useEffect(() => {
     onSelect({ from: debounceDateFrom, to: debounceDateTo })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debounceDateFrom, debounceDateTo])
 
   return (

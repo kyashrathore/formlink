@@ -10,8 +10,7 @@ interface DashboardChatProps {
 
 export function DashboardChat({ onSubmit, isNavigating }: DashboardChatProps) {
   const handleSubmit = useCallback(
-    (message: string, _model: string) => {
-      // Ignore model parameter for dashboard, just pass the message
+    (message: string) => {
       onSubmit(message)
     },
     [onSubmit]
@@ -24,7 +23,7 @@ export function DashboardChat({ onSubmit, isNavigating }: DashboardChatProps) {
           onSubmit={handleSubmit}
           isLoading={isNavigating}
           showSuggestions={true}
-          onInputChange={() => {}} // No need to track input changes on dashboard
+          onInputChange={() => {}}
         />
       </div>
     </div>

@@ -43,7 +43,6 @@ export default function FormPreviewWithDevices({
     useState<DeviceMode>("desktop")
   const [internalFormMode, setInternalFormMode] = useState<FormMode>("chat")
 
-  // Use external state if provided, otherwise use internal state
   const deviceMode = externalDeviceMode ?? internalDeviceMode
   const formMode = externalFormMode ?? internalFormMode
   const setDeviceMode = externalOnDeviceModeChange ?? setInternalDeviceMode
@@ -53,13 +52,13 @@ export default function FormPreviewWithDevices({
     <div className={`flex h-full w-full flex-col ${className}`}>
       {showControls && (
         <div className="mb-4 flex items-center justify-between">
-          {/* Mode switch on left */}
+          {}
           <FormModeControls
             formMode={formMode}
             onFormModeChange={setFormMode}
           />
 
-          {/* Device controls on right */}
+          {}
           <PreviewControls
             deviceMode={deviceMode}
             onDeviceModeChange={setDeviceMode}

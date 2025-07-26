@@ -1,8 +1,7 @@
 import { Form } from "@formlink/schema"
-import { nanoid } from "nanoid" // Added nanoid import
+import { nanoid } from "nanoid"
 import { AgentState } from "../agent/state"
 
-// Base event structure
 export interface BaseAgentEvent {
   id: string
   type: string
@@ -13,7 +12,6 @@ export interface BaseAgentEvent {
   sequence: number
 }
 
-// Specific event types
 export type AgentEvent =
   | ProgressEvent
   | StateSnapshotEvent
@@ -30,19 +28,14 @@ export interface ProgressEvent extends BaseAgentEvent {
     current: number
     total: number
     message: string
-    output?: any
+    output?: unknown
   }
 }
-
-// Utility to create a specific event type with base properties
-// Needs nanoid for ID generation. Ensure it's imported if not already.
-// For now, assuming nanoid is available in the scope where this is used, or will be added.
-// import { nanoid } from 'nanoid'; // Placeholder if direct import needed here
 
 export function createAgentEvent<
   T extends AgentEvent["type"],
   C extends AgentEvent["category"],
-  D extends AgentEvent["data"], // Ensure D matches the data structure for the given T and C
+  D extends AgentEvent["data"],
 >(
   type: T,
   category: C,
@@ -50,7 +43,7 @@ export function createAgentEvent<
   formId: string,
   userId: string,
   sequence: number,
-  idGenerator: () => string = nanoid // Use nanoid as the default ID generator
+  idGenerator: () => string = nanoid
 ): BaseAgentEvent & { type: T; category: C; data: D } {
   return {
     id: idGenerator(),
@@ -61,15 +54,15 @@ export function createAgentEvent<
     formId,
     userId,
     sequence,
-  } as BaseAgentEvent & { type: T; category: C; data: D } // Cast to ensure type correctness
+  } as BaseAgentEvent & { type: T; category: C; data: D }
 }
 
 export interface StateSnapshotEvent extends BaseAgentEvent {
   category: "state"
   type: "state_snapshot"
   data: {
-    form: Form // Complete form state from @formlink/schema
-    agentState: AgentState // Complete agent state from ../agent/state
+    form: Form
+    agentState: AgentState
     isComplete: boolean
   }
 }
@@ -79,7 +72,7 @@ export interface ErrorEvent extends BaseAgentEvent {
   type: "agent_error"
   data: {
     message: string
-    details?: any // For stack trace or other info
+    details?: unknown
     recoverable: boolean
   }
 }
@@ -89,18 +82,17 @@ export interface SystemEvent extends BaseAgentEvent {
   type: "agent_initialized" | "agent_finalized" | "agent_warning"
   data: {
     message: string
-    details?: any
+    details?: unknown
   }
 }
 
-// Event for when a single question's schema is generated
 export interface QuestionSchemaGeneratedEvent extends BaseAgentEvent {
   category: "progress"
   type: "question_schema_generated"
   data: {
     questionTitle: string
-    questionIndex: number // 0-based index of the question
-    totalQuestions: number // Total number of questions planned for generation
-    message: string // e.g., "Generated schema for question 1/4: 'Overall Satisfaction'"
+    questionIndex: number
+    totalQuestions: number
+    message: string
   }
 }

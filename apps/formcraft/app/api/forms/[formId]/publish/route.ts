@@ -2,26 +2,28 @@ import { createServerClient } from "@formlink/db"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 
-export async function POST(request: NextRequest, { params }: any) {
-  // Require authentication
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ formId: string }> }
+) {
   const { requireAuth, authErrorResponse } = await import(
     "../../../../lib/middleware/auth"
   )
   let authResult
   try {
     authResult = await requireAuth(request)
-  } catch (error: any) {
+  } catch (error) {
     return authErrorResponse(error)
   }
 
-  const formId = params?.formId
+  const awaitedParams = await params
+  const formId = awaitedParams?.formId
 
   if (!formId) {
     return NextResponse.json({ error: "Form ID is required" }, { status: 400 })
   }
 
   try {
-    // Verify user owns the form
     const { verifyUserOwnsForm } = await import(
       "../../../../lib/middleware/authorization"
     )
@@ -98,9 +100,11 @@ export async function POST(request: NextRequest, { params }: any) {
       published_version_id: draftVersionId,
       message: "Form published successfully",
     })
-  } catch (error: any) {
+  } catch (error) {
     return NextResponse.json(
-      { error: error.message || "Internal server error", originalError: error },
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 }
     )
   }

@@ -1,15 +1,14 @@
 import { useEffect, useMemo, useRef } from "react"
-import type { AgentState, FormattedLogEvent } from "./types" // Removed ChatMessage
+import type { AgentState, FormattedLogEvent } from "./types"
 import {
   calculatePanelState,
   filterLogsForEventView,
   findFirstAgentInitTimestamp,
   formatEventsForLogView,
-  // getLastUserMessage // No longer needed here
 } from "./utils"
 
 export const useFormattedEvents = (
-  eventsLog: any[]
+  eventsLog: unknown[]
 ): {
   firstAgentInitTimestamp: number | null
   formattedEventsForLogView: FormattedLogEvent[]
@@ -40,7 +39,6 @@ export const useFormattedEvents = (
 export const usePanelState = (
   agentState: AgentState | null,
   formattedEvents: FormattedLogEvent[]
-  // chatStatus?: ReturnType<typeof useChat>['status'] // Optional: if panel state needs to react to chat status
 ) => {
   return useMemo(
     () => calculatePanelState(agentState, formattedEvents),
@@ -48,7 +46,10 @@ export const usePanelState = (
   )
 }
 
-export const useAutoScroll = (dependency: any[], isPanelExpanded: boolean) => {
+export const useAutoScroll = (
+  dependency: unknown[],
+  isPanelExpanded: boolean
+) => {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -59,6 +60,3 @@ export const useAutoScroll = (dependency: any[], isPanelExpanded: boolean) => {
 
   return containerRef
 }
-
-// useAgentActions has been removed as its functionality is now integrated
-// into AgentInteractionPanel.tsx using the useChat hook.

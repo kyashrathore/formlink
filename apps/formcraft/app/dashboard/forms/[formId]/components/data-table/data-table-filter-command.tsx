@@ -37,7 +37,7 @@ interface DataTableFilterCommandProps<TData = unknown> {
     table: Table<TData>,
     columnId: string
   ) => Map<string, number>
-  searchParamsParser: Record<string, any>
+  searchParamsParser: Record<string, unknown>
 }
 
 export function DataTableFilterCommand<TData>({
@@ -49,7 +49,7 @@ export function DataTableFilterCommand<TData>({
   const { filterFields: _filterFields, setColumnFilters } =
     useDataTableStore() as unknown as {
       filterFields: DataTableFilterField<TData>[]
-      setColumnFilters: (updater: any) => void
+      setColumnFilters: (updater: unknown) => void
     }
   const columnFilters = table.getState().columnFilters
   const inputRef = useRef<HTMLInputElement>(null)
@@ -81,22 +81,10 @@ export function DataTableFilterCommand<TData>({
     const searchParams = columnParser.parse(inputValue)
 
     const currentFilters = table.getState().columnFilters
-    const currentEnabledFilters = currentFilters.filter((filter) => {
-      const field = _filterFields?.find((field) => field.value === filter.id)
-      return !field?.commandDisabled
-    })
     const currentDisabledFilters = currentFilters.filter((filter) => {
       const field = _filterFields?.find((field) => field.value === filter.id)
       return field?.commandDisabled
     })
-
-    const commandDisabledFilterKeys = currentDisabledFilters.reduce(
-      (prev, curr) => {
-        prev[curr.id] = curr.value
-        return prev
-      },
-      {} as Record<string, unknown>
-    )
 
     const newFilters = [
       ...Object.keys(searchParams).map((key) => ({
@@ -386,7 +374,6 @@ function CommandItemSuggestions<TData>({
 }: {
   field: DataTableFilterField<TData>
 }) {
-  const value = field.value as string
   switch (field.type) {
     case "checkbox": {
       return (

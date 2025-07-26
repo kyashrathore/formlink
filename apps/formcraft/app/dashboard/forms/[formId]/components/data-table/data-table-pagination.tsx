@@ -23,7 +23,7 @@ interface DataTablePaginationProps<TData = unknown> {
     pageIndex: number
     pageSize: number
   }
-  columnFilters: any
+  columnFilters: unknown
 }
 
 export function DataTablePagination<TData>({

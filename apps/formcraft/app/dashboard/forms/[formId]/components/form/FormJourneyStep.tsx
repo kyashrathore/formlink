@@ -7,19 +7,11 @@ import React, { useCallback, useEffect, useState } from "react"
 import { useMobile } from "../../hooks/use-mobile"
 import { useFormStore } from "../../stores/useFormStore"
 
-// Helper to strip HTML for plain text
-const stripHtml = (html: string): string => {
-  const doc = new DOMParser().parseFromString(html, "text/html")
-  return doc.body.textContent || ""
-}
-
-// Transform custom tags to markdown format
 const transformCustomTags = (content: string): string => {
   if (!content) return ""
 
   let processedContent = content
 
-  // Replace custom tags with markdown section markers
   const tagMappings: { [key: string]: string } = {
     "form-journey": "# Form Journey",
     strategy: "## Strategy",
@@ -28,7 +20,6 @@ const transformCustomTags = (content: string): string => {
     "result-generation": "## Result Generation",
   }
 
-  // Replace opening tags with markdown headers
   Object.entries(tagMappings).forEach(([tag, header]) => {
     processedContent = processedContent.replace(
       new RegExp(`<${tag}>`, "gi"),
@@ -36,19 +27,15 @@ const transformCustomTags = (content: string): string => {
     )
   })
 
-  // Remove closing tags
   processedContent = processedContent.replace(/<\/[^>]+>/g, "\n")
 
-  // Ensure proper spacing for markdown elements
   processedContent = processedContent.replace(/\n(#{1,6} )/g, "\n\n$1")
 
-  // Clean up excessive newlines
   processedContent = processedContent.replace(/\n{3,}/g, "\n\n")
 
   return processedContent.trim()
 }
 
-// Default journey script template
 const DEFAULT_JOURNEY_TEMPLATE = `<form-journey>
 
 <strategy>
@@ -97,28 +84,19 @@ Before sensitive questions (email, phone, payment), provide genuine value based 
 
 </form-journey>`
 
-const FormJourneyStep = ({
-  userId,
-  selectedTab,
-}: {
-  userId: string
-  selectedTab: string
-}) => {
+const FormJourneyStep = ({ selectedTab }: { selectedTab: string }) => {
   const { form, updateSettingField } = useFormStore()
   const isMobile = useMobile()
   const shouldHideControls = isMobile && selectedTab === "content"
 
-  // Get initial content from form settings
   const getInitialContent = useCallback(() => {
     const journeyScript = form?.settings?.journeyScript
 
     if (!journeyScript) return ""
 
-    // Handle case where journeyScript might be a JSON string
     if (typeof journeyScript === "string") {
       let content = journeyScript
 
-      // Check if it's escaped, need to unescape
       if (content.includes("\\n")) {
         try {
           content = content.replace(/\\n/g, "\n").replace(/\\"/g, '"')
@@ -133,25 +111,22 @@ const FormJourneyStep = ({
     return ""
   }, [form?.settings?.journeyScript])
 
-  // State for the raw content (preserves tags)
   const [journeyScriptContent, setJourneyScriptContent] =
     useState<string>(getInitialContent())
-  // State for preview mode vs edit mode
+
   const [isPreviewMode, setIsPreviewMode] = useState<boolean>(true)
-  // State to track if content has been modified
+
   const [isModified, setIsModified] = useState<boolean>(false)
 
-  // Reset state when form ID changes
   useEffect(() => {
     setJourneyScriptContent(getInitialContent())
     setIsModified(false)
     setIsPreviewMode(true)
-  }, [form?.id]) // Only depend on form ID, not getInitialContent
+  }, [form?.id])
 
   useEffect(() => {
     const currentContent = form?.settings?.journeyScript
 
-    // Check if this is first content arrival (was empty, now has content)
     const wasEmpty = !journeyScriptContent
     const nowHasContent = !!currentContent
     const isFirstContentArrival = wasEmpty && nowHasContent
@@ -159,12 +134,10 @@ const FormJourneyStep = ({
     if (currentContent && typeof currentContent === "string") {
       let content = currentContent
 
-      // Handle escaped strings
       if (content.includes("\\n")) {
         content = content.replace(/\\n/g, "\n").replace(/\\"/g, '"')
       }
 
-      // Only update content when not modified or first arrival
       if (!isModified || isFirstContentArrival) {
         setJourneyScriptContent(content)
         setIsModified(false)
@@ -172,7 +145,6 @@ const FormJourneyStep = ({
     }
   }, [form?.settings?.journeyScript, isModified, journeyScriptContent])
 
-  // Handle content changes in edit mode
   const handleContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       setJourneyScriptContent(e.target.value)
@@ -183,7 +155,6 @@ const FormJourneyStep = ({
 
   const saveJourneyScript = useCallback(async () => {
     try {
-      // Save the raw content with tags preserved
       await updateSettingField("journeyScript", journeyScriptContent)
       setIsModified(false)
       setIsPreviewMode(true)
@@ -207,11 +178,10 @@ const FormJourneyStep = ({
     if (confirmLoad) {
       setJourneyScriptContent(DEFAULT_JOURNEY_TEMPLATE)
       setIsModified(true)
-      setIsPreviewMode(false) // Switch to edit mode to show the template
+      setIsPreviewMode(false)
     }
   }, [])
 
-  // Get preview content by transforming tags to markdown
   const getPreviewContent = useCallback(() => {
     const transformedContent = transformCustomTags(journeyScriptContent)
     try {

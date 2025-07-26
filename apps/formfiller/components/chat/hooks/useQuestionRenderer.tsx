@@ -14,7 +14,12 @@ export const useQuestionRenderer = (
       if (!node) return null;
       const hasQuestionLink = node.children.some(
         (child: Element | { type: string }) => {
-          if (child.type !== "element" || child.tagName !== "a") return false;
+          if (
+            child.type !== "element" ||
+            !("tagName" in child) ||
+            child.tagName !== "a"
+          )
+            return false;
           const linkNode = (child as Element).children?.[0];
           return linkNode?.type === "text" && linkNode.value === "question";
         },

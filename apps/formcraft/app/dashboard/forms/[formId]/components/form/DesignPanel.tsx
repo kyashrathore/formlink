@@ -3,11 +3,9 @@
 import { useEffect, useState } from "react"
 import ShadcnCSSPanel from "./ShadcnCSSPanel"
 
-// CSS validation function similar to tweakcn logic
 const validateShadcnCSS = (
   cssText: string
 ): { valid: boolean; error?: string } => {
-  // Basic validation like tweakcn
   if (!cssText.trim()) {
     return { valid: false, error: "Please enter CSS content" }
   }
@@ -20,7 +18,6 @@ const validateShadcnCSS = (
     }
   }
 
-  // Check for required blocks
   if (!cssText.includes(":root") && !cssText.includes(".dark")) {
     return {
       valid: false,
@@ -51,14 +48,9 @@ export default function DesignPanel({
   shadcnStatus = { loading: false },
   className = "",
 }: DesignPanelProps) {
-  // State for tracking applied themes
-  const [appliedTheme, setAppliedTheme] = useState<string | null>(null)
-
-  // State for saved theme loading
   const [savedTheme, setSavedTheme] = useState<string | null>(null)
   const [themeLoading, setThemeLoading] = useState(true)
 
-  // Load saved theme on mount
   useEffect(() => {
     const loadSavedTheme = async () => {
       if (!formId) return
@@ -89,9 +81,7 @@ export default function DesignPanel({
     loadSavedTheme()
   }, [formId])
 
-  // Handle saving theme (auto-applies and saves)
   const handleSaveTheme = async (cssText: string) => {
-    // Validate CSS first
     const validation = validateShadcnCSS(cssText)
     if (!validation.valid) {
       console.error("CSS validation failed:", validation.error)
@@ -99,16 +89,11 @@ export default function DesignPanel({
       return
     }
 
-    setAppliedTheme(cssText)
-
-    // Auto-apply the theme first
     if (onShadcnCSSApply) {
       onShadcnCSSApply(cssText)
     }
 
-    // Save the theme to the form
     try {
-      // First fetch current settings to merge properly
       const currentFormResponse = await fetch(`/api/forms/${formId}`)
       let currentSettings = {}
       if (currentFormResponse.ok) {
@@ -141,17 +126,13 @@ export default function DesignPanel({
           statusText: response.statusText,
           error: errorData,
         })
-      } else {
-        const responseData = await response.json()
       }
     } catch (error) {
       console.error("Error saving theme to form:", error)
     }
   }
 
-  // Handle saving as brand theme (auto-applies and saves as brand)
   const handleSaveAsBrandTheme = async (cssText: string) => {
-    // Validate CSS first
     const validation = validateShadcnCSS(cssText)
     if (!validation.valid) {
       console.error("CSS validation failed:", validation.error)
@@ -161,17 +142,14 @@ export default function DesignPanel({
 
     setAppliedTheme(cssText)
 
-    // Auto-apply the theme first
     if (onShadcnCSSApply) {
       onShadcnCSSApply(cssText)
     }
-
-    // In real implementation, this would call a brand theme API endpoint
   }
 
   return (
     <div className={` ${className}`}>
-      {/* Shadcn CSS Panel */}
+      {}
       <ShadcnCSSPanel
         onSaveTheme={handleSaveTheme}
         onSaveAsBrand={handleSaveAsBrandTheme}

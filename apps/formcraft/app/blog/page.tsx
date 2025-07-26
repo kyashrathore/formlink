@@ -2,7 +2,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { BlogPost, getPublishedBlogPosts } from "../../lib/notion"
 
-export const revalidate = 3600 // Revalidate every hour
+export const revalidate = 3600
 
 export default async function BlogPage() {
   let posts: BlogPost[] = []
@@ -11,7 +11,6 @@ export default async function BlogPage() {
   try {
     posts = await getPublishedBlogPosts()
   } catch (err) {
-    console.error("Failed to load blog posts:", err)
     error = err instanceof Error ? err.message : "Unknown error occurred"
     posts = []
   }

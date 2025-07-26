@@ -1,4 +1,32 @@
-export function formatEventData(eventName: string, data: any): string {
+type EventData =
+  | { message?: string }
+  | { input?: string; userId?: string; inputType?: string }
+  | {
+      current_step?: string
+      _last_completed_node?: string
+      formMetadata?: { title?: string }
+      tasksToPersist?: unknown[]
+      generatedQuestionSchemas?: unknown[]
+      journeyScript?: string
+      resultPageGenerationPrompt?: string
+    }
+  | {
+      message?: string
+      taskId?: string
+      output?: string | { title?: string } | Record<string, unknown>
+      error?: string | unknown
+    }
+  | {
+      details?: { event_source?: string } | unknown
+      questionIndex?: number
+      totalQuestions?: number
+      questionTitle?: string
+    }
+  | null
+  | undefined
+  | Record<string, unknown>
+
+export function formatEventData(eventName: string, data: EventData): string {
   if (data === null || data === undefined) {
     return "No data"
   }
@@ -12,7 +40,7 @@ export function formatEventData(eventName: string, data: any): string {
     case "agent_start":
       return `Input: "${data?.input}", User: ${data?.userId?.substring(0, 8)}, Type: ${data?.inputType}`
     case "agent_state_update": {
-      let summary = []
+      const summary = []
       if (data?.current_step) summary.push(`Step: ${data.current_step}`)
       else if (data?._last_completed_node)
         summary.push(`Last Node: ${data._last_completed_node}`)
@@ -32,12 +60,10 @@ export function formatEventData(eventName: string, data: any): string {
     case "task_started":
     case "task_failed":
     case "task_completed": {
-      // Base message from the event data itself
       let taskSummary =
         data?.message ||
         `Task ${data?.taskId?.substring(0, 8)}: ${eventName.replace("task_", "")}`
 
-      // Append specific details for completed tasks with output
       if (eventName === "task_completed" && data?.output) {
         if (typeof data.output === "string") {
           taskSummary += ` - Output: "${data.output.substring(0, 50)}${data.output.length > 50 ? "..." : ""}"`
@@ -47,7 +73,7 @@ export function formatEventData(eventName: string, data: any): string {
           taskSummary += ` - Output: (object)`
         }
       }
-      // Append error details for failed tasks
+
       if (eventName === "task_failed" && data?.error) {
         const errorMessage =
           typeof data.error === "string"
@@ -69,7 +95,6 @@ export function formatEventData(eventName: string, data: any): string {
     case "realtime_error":
       return `Warning/Error: ${data?.message || JSON.stringify(data)}`
     case "agent_warning":
-      // Special handling for specific event sources
       if (data?.details?.event_source === "metadata_generator_journey_script") {
         return data?.message || "Form journey script generated"
       }
@@ -82,7 +107,6 @@ export function formatEventData(eventName: string, data: any): string {
         `Generated schema for Q${data?.questionIndex + 1}/${data?.totalQuestions}: "${data?.questionTitle}"`
       )
     default:
-      // For unhandled event types, return a summarized JSON or a specific message
       if (typeof data === "object" && Object.keys(data).length > 0) {
         return `Event data: ${Object.keys(data).slice(0, 3).join(", ")}${Object.keys(data).length > 3 ? "..." : ""}`
       }

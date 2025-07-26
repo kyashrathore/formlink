@@ -8,29 +8,25 @@ import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
-  SidebarInset, // To manage content area alongside sidebar
+  SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
-  useSidebar, // To get sidebar state
+  useSidebar,
 } from "@formlink/ui"
-// For form titles in the sidebar
-
 import { format } from "date-fns"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { startTransition, useCallback, useEffect, useState } from "react" // Added useState, useEffect, startTransition, useCallback
-
+import { startTransition, useCallback, useEffect, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import FormlinkLogo from "../components/FormlinkLogo"
 import { AppInfo } from "../components/layout/app-info"
 import UserMenu from "../components/layout/user-menu"
 import { APP_NAME } from "../lib/config"
 import { DashboardChat } from "./components/DashboardChat"
-// Stream connection now managed by dashboard layout
 import { FormWithVersions } from "./types"
 
 function formatDate(dateString?: string | null) {
@@ -43,11 +39,21 @@ function formatDate(dateString?: string | null) {
   }
 }
 
+interface User {
+  id: string
+  email?: string | null
+  user_metadata?: {
+    full_name?: string
+    avatar_url?: string
+  }
+  [key: string]: unknown
+}
+
 export default function HomeWrapper({
   user,
   forms,
 }: {
-  user: any
+  user: User | null
   forms: FormWithVersions[]
 }) {
   return (
@@ -57,14 +63,13 @@ export default function HomeWrapper({
   )
 }
 
-// Inner component to use the useSidebar hook
 interface HomeProps {
   forms: FormWithVersions[]
-  user: any
+  user: User | null
 }
 
 function Home({ forms, user }: HomeProps) {
-  const router = useRouter() // Instantiate router here
+  const router = useRouter()
   const sidebar = useSidebar()
   const isSidebarExpanded = sidebar?.state === "expanded"
   const isLoggedIn = user !== null
@@ -80,7 +85,7 @@ function Home({ forms, user }: HomeProps) {
     initializeConnection: state.initializeConnection,
     questionTaskCount: state.questionTaskCount,
     setInitialPrompt: state.setInitialPrompt,
-  })) // Get resetStore, eventsLog, initializeConnection, questionTaskCount, and setInitialPrompt
+  }))
 
   const [formIdForAgentPanel, setFormIdForAgentPanel] = useState<string | null>(
     null
@@ -89,20 +94,14 @@ function Home({ forms, user }: HomeProps) {
   const [formCreationStartTime] = useState<number>(Date.now())
   const [isNavigating, setIsNavigating] = useState(false)
 
-  // Reset store on mount and when navigating back to dashboard
   useEffect(() => {
-    resetStore(false) // Pass false to clear formId as well
+    resetStore(false)
     const newFormId = uuidv4()
     setFormIdForAgentPanel(newFormId)
-    setNavigatedFormId(null) // Reset navigation tracking
-    // Initialize the connection in the store so the layout can pick up the formId
+    setNavigatedFormId(null)
+
     initializeConnection(newFormId)
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []) // Run only on mount
-
-  // Stream connection is now managed by the dashboard layout
-  // The layout will automatically connect to the stream for formIdForAgentPanel
+  }, [])
 
   useEffect(() => {
     if (formIdForAgentPanel && formIdForAgentPanel !== navigatedFormId) {
@@ -110,19 +109,16 @@ function Home({ forms, user }: HomeProps) {
         (event) => event.type === "task_completed"
       )
       if (taskCompletedEvent) {
-        // Track form generation completed
         const generationTime = Math.round(
           (Date.now() - formCreationStartTime) / 1000
         )
 
-        // Use questionTaskCount from the store which is set by agent_warning event
         const questionsCount = questionTaskCount || 0
 
         analytics.formGenerated(true, questionsCount, generationTime)
 
-        // Use React ViewTransition for smooth navigation
         router.push(`/dashboard/forms/${formIdForAgentPanel}`)
-        setNavigatedFormId(formIdForAgentPanel) // Mark this formId as handled for navigation
+        setNavigatedFormId(formIdForAgentPanel)
       }
     }
   }, [
@@ -139,13 +135,10 @@ function Home({ forms, user }: HomeProps) {
 
       setIsNavigating(true)
 
-      // Set initial message in store for forms page to pick up
       setInitialPrompt(message)
 
-      // Track form creation started
       analytics.formCreationStarted("ai_chat")
 
-      // Navigate to forms page
       startTransition(() => {
         router.push(`/dashboard/forms/${formIdForAgentPanel}`)
       })
@@ -213,7 +206,7 @@ function Home({ forms, user }: HomeProps) {
                           className="flex w-full items-center gap-2"
                         >
                           {" "}
-                          {/* Ensure no custom padding here, added w-full */}
+                          {}
                           {isSidebarExpanded && (
                             <div className="flex flex-col">
                               <span className="leading-tight font-medium">

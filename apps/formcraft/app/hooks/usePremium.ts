@@ -56,7 +56,6 @@ export function usePremium() {
           error: null,
         })
       } catch (error) {
-        console.error("Error fetching premium status:", error)
         setData((prev) => ({
           ...prev,
           loading: false,
@@ -89,7 +88,6 @@ export function usePremium() {
         error: null,
       }))
     } catch (error) {
-      console.error("Error refreshing premium status:", error)
       setData((prev) => ({
         ...prev,
         loading: false,
@@ -111,7 +109,6 @@ export function usePremium() {
         window.open(result.portalUrl, "_blank")
       }
     } catch (error) {
-      console.error("Error opening customer portal:", error)
       throw error
     }
   }
@@ -121,20 +118,17 @@ export function usePremium() {
   }
 
   return {
-    // Subscription data
     subscription: data.subscription,
     logs: data.logs,
     loading: data.loading,
     error: data.error,
 
-    // Convenience properties
     isPro: data.subscription?.isPro || false,
     isActive: data.subscription?.isActive || false,
     plan: data.subscription?.plan || "free",
     status: data.subscription?.status || "canceled",
     currentPeriodEnd: data.subscription?.currentPeriodEnd,
 
-    // Actions
     refreshStatus,
     openCustomerPortal,
     upgradeToProRedirect,

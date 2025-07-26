@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react"
-import FormModeControls, { FormMode } from "../FormModeControls"
+import FormModeControls from "../FormModeControls"
 
 describe("FormModeControls", () => {
   const mockOnFormModeChange = jest.fn()
@@ -35,9 +35,8 @@ describe("FormModeControls", () => {
       name: /switch to typeform mode/i,
     })
 
-    // Chat mode should be active (default variant)
     expect(chatButton).toHaveClass("bg-primary")
-    // Typeform mode should be inactive (outline variant)
+
     expect(typeformButton).not.toHaveClass("bg-primary")
   })
 

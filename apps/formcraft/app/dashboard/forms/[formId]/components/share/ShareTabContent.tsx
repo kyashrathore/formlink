@@ -9,7 +9,7 @@ import {
 } from "@formlink/ui"
 import { Copy } from "lucide-react"
 import { useTheme } from "next-themes"
-import React, { useState } from "react"
+import { useState } from "react"
 import { EmbedCodeParts, EmbedType, getEmbedCode } from "../../lib/embed/utils"
 import { useFormPageContext } from "../../stores/formPageContext"
 import CopiableLink from "./CopiableLink"
@@ -25,13 +25,9 @@ const EMBED_TYPES: { type: EmbedType; label: string }[] = [
 export default function ShareTabContent({
   formId,
   shortId,
-  shortIdLoading,
-  shortIdError,
 }: {
   formId: string
   shortId?: string
-  shortIdLoading?: boolean
-  shortIdError?: string | null
 }) {
   const { systemTheme, theme } = useTheme()
   const appliedTheme = theme === "system" ? systemTheme : theme

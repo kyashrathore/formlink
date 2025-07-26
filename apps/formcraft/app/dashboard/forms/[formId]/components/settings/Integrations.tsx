@@ -1,11 +1,11 @@
 "use client"
 
 import { Card } from "@formlink/ui"
-import React, { useState } from "react"
+import { useState } from "react"
 import { useFormStore } from "../../stores/useFormStore"
 import EditableUrlInput from "./EditableUrlInput"
 
-const Integrations = ({ userId }: { userId: string }) => {
+const Integrations = () => {
   const webhookUrl = useFormStore(
     (state) => state.form?.settings?.integrations?.webhookUrl || ""
   )

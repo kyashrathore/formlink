@@ -142,8 +142,6 @@ const formStore: StateCreator<
       }
     )
 
-    // Only include properties that are explicitly in the new form
-    // Don't merge with defaults to avoid persisting old data
     const effectiveSettings = form.settings || getDefaultSettings()
 
     const processedForm = {
@@ -153,7 +151,6 @@ const formStore: StateCreator<
     }
 
     set((state) => {
-      // Completely replace the form state
       state.form = processedForm
       state.initialFormSnapshot = JSON.parse(JSON.stringify(processedForm))
       state.isLoading = false
@@ -236,7 +233,7 @@ const formStore: StateCreator<
       ) as QuestionWithLists | undefined
       if (question && "options" in question) {
         if (!question.options) question.options = []
-        // TODO; fix as any
+
         question.options.push(newOption as any)
       }
     }),
@@ -340,7 +337,7 @@ const formStore: StateCreator<
       }
     }),
 
-  deleteQuestionCondition: (questionId: string, _conditionIndex: number) =>
+  deleteQuestionCondition: (questionId: string) =>
     set((state) => {
       const question = state.form?.questions.find(
         (q: Question) => q.id === questionId

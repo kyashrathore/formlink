@@ -7,15 +7,13 @@ import {
   ErrorEvent as AgentErrorEvent,
   AgentEvent,
 } from "@/app/lib/types/agent-events"
-// Renamed to avoid conflict
 import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import { useMobile } from "@/hooks/use-mobile"
 import { useChat, type Message as VercelChatMessage } from "@ai-sdk/react"
-import { useSidebar } from "@formlink/ui"
 import { motion } from "motion/react"
 import { usePathname } from "next/navigation"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { v4 as uuidv4 } from "uuid" // For generating event IDs
+import { v4 as uuidv4 } from "uuid"
 import { CollapsedPanel, ExpandedPanel, FailedState } from "./components"
 import { useAutoScroll, useFormattedEvents, usePanelState } from "./hooks"
 import type { AgentInteractionPanelProps, ChatMessage } from "./types"
@@ -34,49 +32,40 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
   const {
     agentState,
     eventsLog,
-    // TODO: Remove connectionStatus and agentStreamConnectionStatus we can use chatStatus
-    progress,
-    // setAgentStreamConnectionStatus, // No longer needed for useChat's direct lifecycle
     processEvent,
-    totalTaskCount, // Get the new totalTaskCount from the store
-    completedTaskCount, // Get the new completedTaskCount from the store
+    totalTaskCount,
+    completedTaskCount,
   } = useFormAgentStore()
   const shortId = useFormStore((state) => state.form?.short_id) || ""
 
-  const currentTask = completedTaskCount ?? 0 // Use completedTaskCount from the store
-  // const totalTasks = progress?.total ?? 0; // We will now use totalTaskCount from the store
+  const currentTask = completedTaskCount ?? 0
 
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [isPanelExpanded, setIsPanelExpanded] = useState(true)
   const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
 
-  // Store initial message locally to prevent timing issues
   const [storedInitialMessage] = useState<string | undefined>(
     () => initialMessage
   )
-  // const [initialMessages, setInitialMessages] = useState<VercelChatMessage[]>([]); // Removed
-
-  // useEffect for initialMessages removed
 
   const {
     messages: vercelChatMessages,
     append,
-    status: chatStatus, // Directly from useChat
+    status: chatStatus,
     data: chatData,
-    setMessages, // Get setMessages from useChat
+    setMessages,
   } = useChat({
-    id: formId, // Associate chat with formId
+    id: formId,
     api: "/api/chat",
     body: { formId, userId: userId || "anonymous", selectedModel },
-    // initialMessages prop removed
+
     onError: (error) => {
-      // Chat API error - keeping console.error for production debugging
       const lastEvent =
         eventsLog.length > 0 ? eventsLog[eventsLog.length - 1] : null
       const errorEvent: AgentErrorEvent = {
         id: uuidv4(),
         category: "error",
-        type: "agent_error", // Generic agent error type for chat issues
+        type: "agent_error",
         timestamp: new Date().toISOString(),
         formId: formId,
         userId: userId || "anonymous",
@@ -94,14 +83,13 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
   useEffect(() => {
     async function fetchChatHistoryAndSet() {
       if (!formId) {
-        setMessages([]) // Clear messages if no formId
+        setMessages([])
         return
       }
       try {
-        const response = await fetch(`/api/chat?formId=${formId}`) // Updated endpoint
+        const response = await fetch(`/api/chat?formId=${formId}`)
         if (!response.ok) {
           if (response.status === 404) {
-            // Not an error, just no history
             setMessages([])
             return
           }
@@ -110,34 +98,40 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
           )
         }
         const historyMessages = await response.json()
-        // Chat history loaded successfully
 
         if (Array.isArray(historyMessages)) {
           const validRoles = ["user", "assistant", "system"]
           const formattedMessages: VercelChatMessage[] = historyMessages
-            .filter((msg: any) => validRoles.includes(msg.role))
-            .map((msg: any) => ({
+            .filter((msg) =>
+              validRoles.includes((msg as { role?: string }).role || "")
+            )
+            .map((msg) => ({
               id: msg.id?.toString() || uuidv4(),
-              role: msg.role as "user" | "assistant" | "system",
+              role: (msg as { role?: string }).role as
+                | "user"
+                | "assistant"
+                | "system",
               content:
-                typeof msg.content === "string"
-                  ? msg.content
-                  : JSON.stringify(msg.content || ""),
-              createdAt: msg.created_at ? new Date(msg.created_at) : new Date(),
+                typeof (msg as { content?: unknown }).content === "string"
+                  ? (msg as { content?: string }).content || ""
+                  : JSON.stringify(
+                      (msg as { content?: unknown }).content || ""
+                    ),
+              createdAt: (msg as { created_at?: string }).created_at
+                ? new Date((msg as { created_at?: string }).created_at!)
+                : new Date(),
             }))
           setMessages(formattedMessages)
         } else {
-          setMessages([]) // If response is not an array (e.g. error object from API)
+          setMessages([])
         }
-      } catch (error) {
-        // Error fetching chat history - handled silently
-        setMessages([]) // Set to empty on error
+      } catch {
+        setMessages([])
       }
     }
     fetchChatHistoryAndSet()
-  }, [formId, userId, setMessages]) // Add setMessages to dependency array
+  }, [formId, userId, setMessages])
 
-  // Send initial message if provided
   useEffect(() => {
     let isMounted = true
 
@@ -146,7 +140,6 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
       vercelChatMessages.length === 0 &&
       !hasUserInteracted
     ) {
-      // Small delay just to ensure UI is ready
       const timer = setTimeout(() => {
         if (isMounted) {
           append({
@@ -155,7 +148,7 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
           })
           setHasUserInteracted(true)
         }
-      }, 200) // Minimal delay for UI readiness
+      }, 200)
 
       return () => {
         isMounted = false
@@ -172,11 +165,10 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
 
   const { formattedEventsForLogView, logsToShowInEventView } =
     useFormattedEvents(eventsLog)
-  // Pass chatStatus to usePanelState if it needs to react to chat loading state
+
   const { showChatInput, displaySummaryMessage } = usePanelState(
     agentState,
     formattedEventsForLogView
-    // chatStatus // Potentially pass chatStatus here if usePanelState needs it
   )
 
   const logsContainerRef = useAutoScroll(
@@ -184,12 +176,12 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
     isPanelExpanded
   )
   const chatContainerRef = React.useRef<HTMLDivElement>(null)
-  const lastProcessedEventIndexRef = useRef(0) // Added for tracking processed events
+  const lastProcessedEventIndexRef = useRef(0)
 
   useEffect(() => {
     if (chatData && chatData.length > lastProcessedEventIndexRef.current) {
       const newEvents = chatData.slice(lastProcessedEventIndexRef.current)
-      newEvents.forEach((dataItem: any) => {
+      newEvents.forEach((dataItem) => {
         if (
           dataItem &&
           typeof dataItem === "object" &&
@@ -198,7 +190,6 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
         ) {
           processEvent(dataItem as AgentEvent)
 
-          // Track agent events
           if (
             dataItem.type === "task_completed" ||
             dataItem.type === "agent_error"
@@ -221,18 +212,21 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
   }, [chatData, processEvent])
 
   const chatMessages: ChatMessage[] = useMemo(() => {
-    // Check message structure for parts/toolInvocations
-
     return vercelChatMessages.map(
-      (msg: any): ChatMessage => ({
+      (msg): ChatMessage => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
         timestamp: msg.createdAt?.toISOString() || new Date().toISOString(),
-        // Pass through parts if available (AI SDK 4.3.16)
-        ...(msg.parts ? { parts: msg.parts } : {}),
-        // Pass through toolInvocations for backward compatibility
-        ...(msg.toolInvocations
-          ? { toolInvocations: msg.toolInvocations }
+
+        ...((msg as { parts?: unknown }).parts
+          ? { parts: (msg as { parts?: unknown }).parts }
+          : {}),
+
+        ...((msg as { toolInvocations?: unknown }).toolInvocations
+          ? {
+              toolInvocations: (msg as { toolInvocations?: unknown })
+                .toolInvocations,
+            }
           : {}),
       })
     )
@@ -242,16 +236,14 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
     async (message: string, model: string) => {
       setSelectedModel(model)
 
-      // Track form creation started if this is the first message on dashboard
       if (isDashboard && chatMessages.length === 0) {
         analytics.formCreationStarted("ai_chat")
         analytics.aiAgentStarted("text", message.length)
       }
 
-      // `useChat` handles its own loading state via `isLoading` or `status`
       await append({ role: "user", content: message })
     },
-    [append, isDashboard, chatMessages.length] // Removed setAgentStreamConnectionStatus
+    [append, isDashboard, chatMessages.length]
   )
 
   const handleRetryClick = useCallback(() => {
@@ -260,7 +252,6 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
     if (messageToRetry) {
       handleSendMessageForChatComponent(messageToRetry, selectedModel)
     } else {
-      // Retry clicked, but no previous input found to retry with
     }
   }, [
     chatMessages,
@@ -269,9 +260,13 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
     handleSendMessageForChatComponent,
   ])
 
-  const handleInputChange = useCallback((value: string) => {
-    setHasUserInteracted(true)
-  }, [])
+  const handleInputChange = useCallback(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (_value: string) => {
+      setHasUserInteracted(true)
+    },
+    []
+  )
 
   const isStreaming = chatStatus === "streaming"
   return (
@@ -311,19 +306,19 @@ const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
                 onCollapse={() => setIsPanelExpanded(false)}
                 displaySummaryMessage={displaySummaryMessage}
                 currentTask={currentTask}
-                totalTasks={totalTaskCount ?? 0} // Use totalTaskCount from store, default to 0
+                totalTasks={totalTaskCount ?? 0}
                 isStreaming={isStreaming}
               />
             )}
           </div>
         ) : null}
-        {agentState?.status === "FAILED" && !isStreaming ? ( // Show retry only if agent failed and chat is not loading
+        {agentState?.status === "FAILED" && !isStreaming ? (
           <FailedState onRetry={handleRetryClick} />
         ) : showChatInput ? (
           <div className={cn("flex items-center justify-center")}>
             <Chat
               onSubmit={handleSendMessageForChatComponent}
-              isLoading={isStreaming} // Use direct loading state from useChat
+              isLoading={isStreaming}
               showSuggestions={isStreaming ? false : showSuggestions}
               onInputChange={handleInputChange}
             />

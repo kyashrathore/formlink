@@ -10,7 +10,7 @@ export interface AgentInteractionPanelProps {
 export interface FormattedLogEvent {
   name: string
   timestamp: string
-  data: any
+  data: unknown
   displayTime: string
   formattedContent: string
 }
@@ -19,8 +19,8 @@ export interface ChatMessage {
   role: "user" | "assistant"
   content: string
   timestamp: string
-  parts?: any[] // AI SDK message parts for rendering
-  toolInvocations?: any[] // For backward compatibility
+  parts?: unknown[]
+  toolInvocations?: unknown[]
 }
 
 export interface AgentState {

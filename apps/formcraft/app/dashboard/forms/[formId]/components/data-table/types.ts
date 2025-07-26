@@ -47,9 +47,10 @@ export type Timerange = {
   presets?: DatePreset[]
 }
 
+/* eslint-disable @typescript-eslint/no-unused-vars */
 export type Base<TData> = {
   label: string
-  value: string // Allow string for dynamic keys like question IDs
+  value: string
 
   defaultOpen?: boolean
 

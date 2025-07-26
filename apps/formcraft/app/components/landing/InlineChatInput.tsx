@@ -34,7 +34,6 @@ export function InlineChatInput({
     onChange?.(newValue)
   }
 
-  // Auto-resize textarea
   useEffect(() => {
     const textarea = textareaRef.current
     if (textarea) {
@@ -44,14 +43,12 @@ export function InlineChatInput({
     }
   }, [inputValue])
 
-  // Auto-focus on mount and when disabled state changes
   useEffect(() => {
     if (!disabled) {
-      // Use a small delay to ensure the component is fully mounted
       const timer = setTimeout(() => {
         if (textareaRef.current && !disabled) {
           textareaRef.current.focus()
-          // Also set cursor position to end of text if there's existing value
+
           if (inputValue) {
             textareaRef.current.setSelectionRange(
               inputValue.length,
@@ -63,12 +60,11 @@ export function InlineChatInput({
 
       return () => clearTimeout(timer)
     }
-  }, [disabled, inputValue]) // Re-run when disabled changes
+  }, [disabled, inputValue])
 
   const handleSubmit = () => {
     if (inputValue.trim() && !disabled) {
       onSubmit(inputValue.trim())
-      // Don't clear the input here - let the parent component handle it after navigation
     }
   }
 
@@ -87,7 +83,7 @@ export function InlineChatInput({
         className
       )}
     >
-      {/* Gradient background for emphasis */}
+      {}
       <div className="from-primary/5 via-primary/10 to-primary/5 absolute inset-0 -z-10 rounded-2xl bg-gradient-to-r blur-xl" />
       <div
         className={cn(

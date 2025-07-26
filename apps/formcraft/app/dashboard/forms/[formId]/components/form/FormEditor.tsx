@@ -2,17 +2,16 @@
 
 import { Form } from "@formlink/schema"
 import { Alert, AlertDescription, AlertTitle } from "@formlink/ui"
-import React from "react"
+import { User } from "@supabase/supabase-js"
 import { useFormStore } from "../../stores/useFormStore"
 import AdditionalFieldsSection from "./AdditionalFieldsSection"
 import FormDetailsStep from "./FormDetailsStep"
 import FormJourneyStep from "./FormJourneyStep"
-import Integrations from "./Integrations"
 import QuestionsStep from "./QuestionsStep"
 import RedirectOnSubmission from "./RedirectOnSubmission"
 
 type FormEditorProps = {
-  user: any
+  user: User | null
   selectedTab: string
 }
 

@@ -77,7 +77,7 @@ Please fix the JSON data based on these errors and your instructions.`
 
     return repairedData
   } catch (repairError) {
-    console.error("[AI Repair] Failed to repair JSON:", repairError)
+    console.error("Error repairing JSON:", repairError)
     return null
   }
 }

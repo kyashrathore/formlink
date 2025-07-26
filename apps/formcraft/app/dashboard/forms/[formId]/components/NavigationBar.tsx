@@ -3,6 +3,7 @@
 import { toast } from "@formlink/ui"
 import { useMutation } from "@tanstack/react-query"
 import { Check, Loader2, X } from "lucide-react"
+import type { ReactNode } from "react"
 import { useState } from "react"
 import { usePanelState } from "../hooks/usePanelState"
 import { selectIsDirty, useFormStore } from "../stores/useFormStore"
@@ -29,13 +30,13 @@ export default function NavigationBar({
   const updateSnapshot = useFormStore((state) => state.updateSnapshot)
 
   const updateFormMutation = useMutation({
-    mutationFn: async (updates: any) => {
+    mutationFn: async (updates: unknown) => {
       const res = await fetch(`/api/forms/${formId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(updates),
       })
-      const data = (await res.json()) as any
+      const data = (await res.json()) as { error?: string }
       if (!res.ok) {
         throw new Error(data.error || "Failed to update form")
       }
@@ -48,7 +49,6 @@ export default function NavigationBar({
       setTimeout(() => setSaveState("normal"), 2000)
     },
     onError: (error: Error) => {
-      console.error("Failed to update form:", error.message)
       setSaveState("error")
       setTimeout(() => setSaveState("normal"), 2000)
       toast({
@@ -65,7 +65,7 @@ export default function NavigationBar({
         method: "POST",
         headers: { "Content-Type": "application/json" },
       })
-      const data = (await res.json()) as any
+      const data = (await res.json()) as { error?: string }
       if (!res.ok) {
         throw new Error(data.error || "Failed to publish form")
       }
@@ -108,7 +108,7 @@ export default function NavigationBar({
 
   const getButtonContent = (
     state: ButtonState,
-    normalContent: React.ReactNode,
+    normalContent: ReactNode,
     loadingText: string
   ) => {
     switch (state) {
@@ -153,7 +153,6 @@ export default function NavigationBar({
 
   return (
     <div className="bg-card border-border flex items-center justify-between rounded-t-lg border-b px-4 py-2">
-      {/* Left side - Navigation */}
       <div className="flex space-x-1">
         <button
           onClick={() => setActiveMainTab("form")}
@@ -200,7 +199,6 @@ export default function NavigationBar({
         </button>
       </div>
 
-      {/* Right side - Completion Actions */}
       <div className="flex space-x-2">
         <button
           onClick={handleSave}

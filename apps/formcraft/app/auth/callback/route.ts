@@ -1,10 +1,8 @@
-import { analytics } from "@/app/lib/analytics"
 import { MODEL_DEFAULT } from "@/app/lib/config"
 import { getenv } from "@/lib/env"
 import { createGuestServerClient, createServerClient } from "@formlink/db"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
-import posthog from "posthog-js"
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
@@ -36,11 +34,8 @@ export async function GET(request: Request) {
             )
 
           if (upsertError) {
-            console.error("Error upserting user:", upsertError)
           }
-        } catch (err) {
-          console.error("Error in user upsert:", err)
-        }
+        } catch {}
       }
 
       const forwardedHost = request.headers.get("x-forwarded-host")
@@ -53,7 +48,6 @@ export async function GET(request: Request) {
         return NextResponse.redirect(`${origin}${next}`)
       }
     } else {
-      console.error("Auth error:", error)
       return NextResponse.redirect(
         `${origin}/auth/error?message=${encodeURIComponent(error.message)}`
       )

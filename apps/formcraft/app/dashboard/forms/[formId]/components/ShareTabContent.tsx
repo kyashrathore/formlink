@@ -13,17 +13,15 @@ interface ShareTabContentWrapperProps {
 export default function ShareTabContentWrapper({
   formId,
   shortId,
-  shortIdLoading,
-  shortIdError,
 }: ShareTabContentWrapperProps) {
   return (
     <div className="bg-background flex h-full">
-      {/* Left Panel - Share Controls */}
+      {}
       <div className="border-border bg-background w-[500px] max-w-[600px] min-w-[500px] border-r">
         <ShareTabContent formId={formId} shortId={shortId} />
       </div>
 
-      {/* Right Panel - Embed Preview */}
+      {}
       <div className="bg-background flex-1">
         {shortId || formId ? (
           <RealEmbedPreview shortId={shortId || formId} />

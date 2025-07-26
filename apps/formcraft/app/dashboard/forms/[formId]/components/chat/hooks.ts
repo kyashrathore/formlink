@@ -8,7 +8,12 @@ import {
 } from "./utils"
 
 export const useFormattedEvents = (
-  eventsLog: any[]
+  eventsLog: Array<{
+    name?: string
+    timestamp: string
+    type: string
+    data: unknown
+  }>
 ): {
   firstAgentInitTimestamp: number | null
   formattedEventsForLogView: FormattedLogEvent[]
@@ -46,7 +51,10 @@ export const usePanelState = (
   )
 }
 
-export const useAutoScroll = (dependency: any[], isPanelExpanded: boolean) => {
+export const useAutoScroll = (
+  dependency: unknown[],
+  isPanelExpanded: boolean
+) => {
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {

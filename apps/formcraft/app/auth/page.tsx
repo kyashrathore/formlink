@@ -7,7 +7,6 @@ import { Button } from "@formlink/ui"
 import Link from "next/link"
 import posthog from "posthog-js"
 import { useState } from "react"
-import { HeaderGoBack } from "../components/header-go-back"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -20,7 +19,6 @@ export default function LoginPage() {
       setIsLoading(true)
       setError(null)
 
-      // Track login attempt
       posthog.capture("login_attempted", {
         method: "google",
         referrer: document.referrer,
@@ -31,14 +29,16 @@ export default function LoginPage() {
       if (data?.url) {
         window.location.href = data.url
       }
-    } catch (err: any) {
-      console.error("Error signing in with Google:", err)
-      setError(err.message || "An unexpected error occurred. Please try again.")
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "An unexpected error occurred. Please try again."
+      setError(errorMessage)
 
-      // Track login error
       posthog.capture("login_failed", {
         method: "google",
-        error: err.message,
+        error: errorMessage,
       })
     } finally {
       setIsLoading(false)

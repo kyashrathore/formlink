@@ -2,7 +2,6 @@
 
 import { useFormShortId } from "../hooks/useFormShortId"
 import { usePanelState } from "../hooks/usePanelState"
-import { useFormStore } from "../stores/useFormStore"
 import FormTabContent from "./FormTabContent"
 import ResponsesTabContent from "./ResponsesTabContent"
 import SettingsTabContent from "./SettingsTabContent"
@@ -29,7 +28,6 @@ export default function TabContentManager({
   onShadcnApplied,
 }: TabContentManagerProps) {
   const { activeMainTab } = usePanelState()
-  const formFromStore = useFormStore((state) => state.form)
   const {
     shortId,
     loading: shortIdLoading,

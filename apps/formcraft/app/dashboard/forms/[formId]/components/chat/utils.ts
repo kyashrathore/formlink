@@ -7,7 +7,7 @@ import type {
 } from "./types"
 
 export const findFirstAgentInitTimestamp = (
-  eventsLog: any[]
+  eventsLog: Array<{ name: string; timestamp: string }>
 ): number | null => {
   const agentInitEvent = eventsLog.find(
     (log) => log.name === "agent_init" || log.name === "agent_start"
@@ -38,7 +38,7 @@ export const formatTimeDisplay = (
 }
 
 export const formatEventsForLogView = (
-  eventsLog: any[],
+  eventsLog: Array<{ timestamp: string; type: string; data: unknown }>,
   firstAgentInitTimestamp: number | null
 ): FormattedLogEvent[] => {
   return eventsLog.map((log) => {

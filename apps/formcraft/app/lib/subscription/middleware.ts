@@ -29,11 +29,11 @@ export function createPremiumRequiredResponse(
   })
 }
 
-// Higher-order function for API route protection
 export function withPremiumFeature(feature: PremiumFeature) {
-  return function (handler: Function) {
+  return function (
+    handler: (request: Request, context: any) => Promise<Response>
+  ) {
     return async function (request: Request, context: any) {
-      // Extract user from request context (assumes auth middleware has run)
       const userId = context?.user?.id
 
       if (!userId) {
@@ -55,11 +55,3 @@ export function withPremiumFeature(feature: PremiumFeature) {
     }
   }
 }
-
-// Usage example in API routes:
-// export const POST = withPremiumFeature(PREMIUM_FEATURES.ADVANCED_ANALYTICS)(
-//   async function(request: Request) {
-//     // Handle premium feature logic
-//     return handleAdvancedAnalytics(request);
-//   }
-// );

@@ -4,7 +4,7 @@ import {
   CREATE_FORM_SYSTEM_PROMPT,
 } from "@/app/lib/prompts"
 import { getenv } from "@/lib/env"
-import { createServerClient, Database, Json } from "@formlink/db"
+import { createServerClient } from "@formlink/db"
 import { Form, FormSchema } from "@formlink/schema"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
@@ -31,7 +31,7 @@ async function getFormSchemaById(
   formId: string,
   versionIdColumn: "current_published_version_id" | "current_draft_version_id",
   versionStatus: "published" | "draft",
-  supabase: any
+  supabase: ReturnType<typeof createServerClient>
 ): Promise<Form | null> {
   const { data: formData, error: formError } = await supabase
     .from("forms")
@@ -41,7 +41,6 @@ async function getFormSchemaById(
 
   if (formError || !formData) {
     if (formError && formError.code !== "PGRST116") {
-      // Supabase error fetching form
     }
     return null
   }
@@ -49,7 +48,6 @@ async function getFormSchemaById(
   const versionId = formData[versionIdColumn]
 
   if (!versionId) {
-    // Form has no version set
     return null
   }
 
@@ -62,13 +60,12 @@ async function getFormSchemaById(
 
   if (versionError || !versionData) {
     if (versionError && versionError.code !== "PGRST116") {
-      // Supabase error fetching version
     }
     return null
   }
 
   try {
-    const v: any = versionData
+    const v = versionData
     const formSchemaResult: Form = {
       id: formId,
       version_id: v.version_id,
@@ -80,22 +77,20 @@ async function getFormSchemaById(
       current_draft_version_id: formData.current_draft_version_id,
     }
     return formSchemaResult
-  } catch (castError) {
-    // Error constructing form schema object
+  } catch {
     return null
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // Require authentication
     const { requireAuth, authErrorResponse } = await import(
       "../../../lib/middleware/auth"
     )
     let authResult
     try {
       authResult = await requireAuth(req)
-    } catch (error: any) {
+    } catch (error) {
       return authErrorResponse(error)
     }
 
@@ -110,11 +105,9 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Use authenticated user's ID
     const userId = authResult.user.id
     const isGuest = authResult.isGuest
 
-    // Check guest limits
     if (isGuest) {
       const { verifyGuestUserLimits } = await import(
         "../../../lib/middleware/authorization"
@@ -131,8 +124,6 @@ export async function POST(req: NextRequest) {
     const cookieStore = await cookies()
     const supabase = await createServerClient(cookieStore)
 
-    // Executing form creation API
-
     const promptContent = `Create a form about: ${userPrompt}. Generate proper questions, options, and validations.`
     let maxRepairTries = 3
 
@@ -141,10 +132,10 @@ export async function POST(req: NextRequest) {
       error,
     }: {
       text: string
-      error: any
+      error: unknown
     }): Promise<string> => {
       maxRepairTries--
-      // Trying to repair errored json
+
       const { object: repairedSchema }: { object: Form } =
         await generateObject<Form>({
           model: MODEL,
@@ -175,7 +166,6 @@ export async function POST(req: NextRequest) {
       .single()
 
     if (formInsertError || !formInsertData) {
-      // Supabase insert error (forms)
       throw new Error(
         formInsertError?.message || "Failed to create form entry."
       )
@@ -191,14 +181,13 @@ export async function POST(req: NextRequest) {
       const readableValidations = question.validations
         ? Object.entries(question.validations)
             .map(
-              ([key, value]) =>
-                (value as { originalText?: string }).originalText
+              ([, value]) => (value as { originalText?: string }).originalText
             )
             .filter(Boolean)
         : []
       const readableConditionalLogic = Array.isArray(question.conditionalLogic)
         ? question.conditionalLogic
-            .map((cl: any) => cl.originalText)
+            .map((cl) => (cl as { originalText?: string }).originalText)
             .filter(Boolean)
         : []
 
@@ -216,16 +205,15 @@ export async function POST(req: NextRequest) {
           version_id: newVersionId,
           form_id: form_id,
           title: title,
-          description: description as Json,
-          questions: questionsWithReadableLogic as Json,
-          settings: settings as Json,
+          description: description,
+          questions: questionsWithReadableLogic,
+          settings: settings,
           status: "draft",
         })
         .select("version_id")
         .single()
 
     if (versionInsertError || !versionInsertData) {
-      // Supabase insert error (form_versions)
       await supabase.from("forms").delete().eq("id", form_id)
       throw new Error(
         versionInsertError?.message || "Failed to create form version entry."
@@ -234,16 +222,12 @@ export async function POST(req: NextRequest) {
 
     const form_version_id = versionInsertData.version_id
 
-    // Created form_versions entry
-
     const { error: formUpdateError } = await supabase
       .from("forms")
       .update({ current_draft_version_id: form_version_id })
       .eq("id", form_id)
 
     if (formUpdateError) {
-      // Supabase update error (forms - linking draft)
-
       await supabase
         .from("form_versions")
         .delete()
@@ -264,16 +248,17 @@ export async function POST(req: NextRequest) {
       },
       { status: 200 }
     )
-  } catch (error: any) {
-    // Error in form creation API
-    return NextResponse.json(
-      { error: error.message || "Internal server error", originalError: error },
-      { status: 500 }
-    )
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Internal server error"
+    return NextResponse.json({ error: errorMessage }, { status: 500 })
   }
 }
 
-export async function PATCH(request: Request, { params }: any) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ formId: string }> }
+) {
   const formId = (await params).formId
 
   if (!formId) {
@@ -281,7 +266,7 @@ export async function PATCH(request: Request, { params }: any) {
   }
 
   try {
-    const updates: Record<string, any> = await request.json()
+    const updates: Record<string, unknown> = await request.json()
 
     if (!updates || typeof updates !== "object") {
       return NextResponse.json(
@@ -301,6 +286,14 @@ export async function PATCH(request: Request, { params }: any) {
       ...updatableFields
     } = updates
 
+    void id
+    void version_id
+    void form_id
+    void status
+    void short_id
+    void current_draft_version_id
+    void current_published_version_id
+
     if (Object.keys(updatableFields).length === 0) {
       return NextResponse.json(
         { error: "No updatable fields provided" },
@@ -319,7 +312,7 @@ export async function PATCH(request: Request, { params }: any) {
 
     if (formError || !formData) {
       const msg = formError?.message || "Form not found"
-      // Supabase error fetching form
+
       return NextResponse.json({ error: msg }, { status: 404 })
     }
 
@@ -375,14 +368,11 @@ export async function PATCH(request: Request, { params }: any) {
       .single()
 
     if (versionError) {
-      // Supabase error updating version
-      console.error("[API] Database update error:", versionError)
       return NextResponse.json({ error: versionError.message }, { status: 500 })
     }
 
     return NextResponse.json(versionData)
-  } catch (error) {
-    // API Error updating version for form
+  } catch {
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
@@ -391,12 +381,30 @@ export async function PATCH(request: Request, { params }: any) {
 }
 
 function validateMinorUpdate(
-  currentVersion: any,
-  updatesToApply: any
+  currentVersion: {
+    questions?: unknown[]
+    title?: string
+    description?: string
+    settings?: unknown
+  },
+  updatesToApply: {
+    questions?: unknown[]
+    title?: string
+    description?: string
+    settings?: unknown
+  }
 ): string | null {
   if (updatesToApply.questions && currentVersion.questions) {
-    const currentQuestions = currentVersion.questions as any[]
-    const updatedQuestions = updatesToApply.questions as any[]
+    const currentQuestions = currentVersion.questions as Array<{
+      id: string
+      questionType: string
+      title: string
+    }>
+    const updatedQuestions = updatesToApply.questions as Array<{
+      id: string
+      questionType: string
+      title: string
+    }>
 
     if (currentQuestions.length !== updatedQuestions.length) {
       return "Cannot add or remove questions on a published form."
@@ -417,7 +425,10 @@ function validateMinorUpdate(
   return null
 }
 
-export async function GET(request: Request, { params }: any) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ formId: string }> }
+) {
   const formId = (await params).formId
 
   if (!formId) {
@@ -454,8 +465,6 @@ export async function GET(request: Request, { params }: any) {
 
     return NextResponse.json(formSchema)
   } catch (error) {
-    // API Error fetching form schema
-    console.error("[API] Error fetching form schema:", error)
     return NextResponse.json(
       {
         error: "Internal Server Error",

@@ -3,39 +3,33 @@
 import {
   closestCenter,
   DndContext,
-  DragEndEvent,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from "@dnd-kit/core"
 import {
   SortableContext,
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
-import { Question } from "@formlink/schema" // Import Question type
+import type { Question } from "@formlink/schema"
 import { Button, Skeleton, toast } from "@formlink/ui"
 import { Plus } from "lucide-react"
-import React, { useMemo, useState } from "react" // Added useMemo
+import { useMemo, useState } from "react"
 import { useMobile } from "../../hooks/use-mobile"
-import { useFormAgentStore } from "../../stores/formAgentStore" // Import agent store
-
+import { useFormAgentStore } from "../../stores/formAgentStore"
 import { useFormStore } from "../../stores/useFormStore"
 import PromptDialog from "../PromptDialog"
 import SortableQuestionItem from "./FormEditor/SortableQuestionItem"
-
-// Assuming Skeleton component is available
 
 interface QuestionsStepProps {
   userId: string
   selectedTab: string
 }
 
-const QuestionsStep: React.FC<QuestionsStepProps> = ({
-  userId,
-  selectedTab,
-}) => {
+const QuestionsStep = ({ userId, selectedTab }: QuestionsStepProps) => {
   const {
     form: persistedForm,
     reorderQuestions,
@@ -44,13 +38,13 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
   } = useFormStore()
   const {
     agentState,
-    // progress, // No longer needed directly for questionTaskCount
-    questionTaskCount: storeQuestionTaskCount, // Get questionTaskCount from the store
+
+    questionTaskCount: storeQuestionTaskCount,
   } = useFormAgentStore()
 
   const isMobile = useMobile()
   const shouldHideControls = isMobile && selectedTab === "content"
-  const questionTaskCount = storeQuestionTaskCount ?? 0 // Use value from store
+  const questionTaskCount = storeQuestionTaskCount ?? 0
 
   const isAgentActive =
     agentState?.status === "PROCESSING" || agentState?.status === "INITIALIZING"
@@ -59,14 +53,11 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
     id: string
     order: number
     isSkeleton: true
-    // Add minimal fields to satisfy SortableQuestionItem if it expects parts of Question,
-    // or ensure SortableQuestionItem handles this type. For now, assume it's distinct.
-    // For keying and basic structure, id and order are primary.
   }
 
   type ActualQuestionItem = Question & {
-    order: number // Ensure actual questions also have an order property for sorting and mapping
-    isSkeleton?: false // Optional, to clearly distinguish from SkeletonPlaceholder
+    order: number
+    isSkeleton?: false
   }
 
   type RenderableItem = ActualQuestionItem | SkeletonPlaceholder
@@ -75,12 +66,12 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
     const persistedQuestions: Question[] = persistedForm?.questions || []
     const items: RenderableItem[] = []
 
-    // Create a map of persisted questions by their order for quick lookup
     const persistedQuestionMap = new Map<number, ActualQuestionItem>()
     persistedQuestions.forEach((q, index) => {
-      // Ensure 'order' is a number; use index as a fallback if not present or invalid
       const order =
-        typeof (q as any).order === "number" ? (q as any).order : index
+        typeof (q as unknown as { order?: number }).order === "number"
+          ? (q as unknown as { order: number }).order
+          : index
       persistedQuestionMap.set(order, { ...q, order, isSkeleton: false })
     })
 
@@ -92,10 +83,8 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
 
       if (existingQuestion) {
         items.push(existingQuestion)
-        persistedQuestionMap.delete(order) // Remove from map as it's been slotted
+        persistedQuestionMap.delete(order)
       } else if (i < questionTaskCount) {
-        // Only add skeleton if it's within the agent's expected task count
-        // and no persisted question already filled this slot.
         items.push({
           id: `skeleton-${order}`,
           order: order,
@@ -104,19 +93,11 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
       }
     }
 
-    // Add any remaining persisted questions that didn't fit into the primary slots
-    // (e.g. if their order was > questionTaskCount but still valid, or if questionTaskCount was 0)
     persistedQuestionMap.forEach((unslottedQuestion) => {
       items.push(unslottedQuestion)
     })
 
-    // Sort all items by order
     items.sort((a, b) => a.order - b.order)
-
-    // Deduplication: if a real question and a skeleton share an ID (e.g. skeleton-0 and a real q with id 'skeleton-0'), prefer real.
-    // This scenario is less likely with the current ID generation for skeletons.
-    // A more common scenario is a skeleton for order X, and a real question for order X. The sort handles order.
-    // The primary concern is ensuring each `order` slot is correctly filled.
 
     return items
   }, [questionTaskCount, persistedForm?.questions])
@@ -125,9 +106,7 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
     !!persistedForm?.current_published_version_id &&
     !persistedForm?.current_draft_version_id
 
-  // const questions = form?.questions || [] // Replaced by questionsToRender
   const [isPromptDialogOpen, setIsPromptDialogOpen] = useState(false)
-  // const { reorderQuestions, addQuestion, form: storeForm } = useFormStore() // Moved up
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -138,13 +117,8 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
-    // Drag and drop might be complex with mixed data sources or primarily for persisted questions.
-    // For now, let's assume reordering applies to persistedForm.questions.
-    // If agent is active, drag-and-drop might be disabled or need careful handling.
-    // Retaining isAgentActive check here for drag and drop, as it might be a specific UI consideration
-    // independent of question rendering.
+
     if (!persistedForm || !persistedForm.questions) {
-      // If persistedForm or its questions are not available, cannot reorder.
       return
     }
 
@@ -162,7 +136,7 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
     }
   }
 
-  const questionIds = React.useMemo(
+  const questionIds = useMemo(
     () => questionsToRender.map((q: RenderableItem) => q.id),
     [questionsToRender]
   )
@@ -188,7 +162,11 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
         }),
       })
 
-      const result = (await response.json()) as any
+      const result = (await response.json()) as {
+        error?: boolean
+        message?: string
+        data?: Question
+      }
 
       if (!response.ok) {
         toast({
@@ -219,12 +197,11 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
           status: "warning",
         })
       }
-    } catch (error: any) {
-      console.error("Error calling AI API for question creation:", error)
+    } catch (error) {
       toast({
         title: "Request Failed",
         description:
-          error.message ||
+          (error instanceof Error ? error.message : String(error)) ||
           "Could not connect to AI service for question creation.",
         status: "warning",
       })
@@ -283,11 +260,11 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
                     </div>
                   )
                 }
-                // qItem is an ActualQuestionItem
+
                 return (
                   <SortableQuestionItem
                     key={qItem.id}
-                    question={qItem as ActualQuestionItem} // It's already an ActualQuestionItem here
+                    question={qItem as ActualQuestionItem}
                     userId={userId}
                     isPublishedMode={isPublishedMode}
                     selectedTab={selectedTab}

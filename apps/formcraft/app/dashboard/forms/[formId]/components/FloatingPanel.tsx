@@ -16,7 +16,6 @@ export default function FloatingPanel({ children }: FloatingPanelProps) {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // Handle dragging
   const handleMouseDown = (e: React.MouseEvent) => {
     const rect = panelRef.current?.getBoundingClientRect()
     if (!rect) return
@@ -28,7 +27,6 @@ export default function FloatingPanel({ children }: FloatingPanelProps) {
       y: e.clientY - rect.top,
     })
 
-    // Prevent text selection while dragging
     document.body.style.userSelect = "none"
     document.body.style.pointerEvents = "none"
   }
@@ -55,7 +53,7 @@ export default function FloatingPanel({ children }: FloatingPanelProps) {
 
     const handleMouseUp = () => {
       setIsDragging(false)
-      // Restore normal pointer events and text selection
+
       document.body.style.userSelect = ""
       document.body.style.pointerEvents = ""
     }
@@ -69,7 +67,6 @@ export default function FloatingPanel({ children }: FloatingPanelProps) {
     }
   }, [isDragging, dragOffset, setFloatingPosition])
 
-  // Handle window resize to keep panel in bounds
   useEffect(() => {
     const handleResize = () => {
       if (!isFloating || !panelRef.current) return
@@ -101,12 +98,12 @@ export default function FloatingPanel({ children }: FloatingPanelProps) {
           : "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
       }}
     >
-      {/* Content - No browser window header, let children handle their own header */}
+      {}
       <div className="flex h-full flex-col">
         {children({ onHeaderMouseDown: handleMouseDown })}
       </div>
 
-      {/* Resize handle */}
+      {}
       <div className="absolute right-0 bottom-0 h-4 w-4 cursor-nw-resize">
         <div className="bg-muted-foreground absolute right-1 bottom-1 h-2 w-2 rounded-full"></div>
       </div>

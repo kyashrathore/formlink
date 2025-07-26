@@ -92,7 +92,9 @@ export default function NotionBlockRenderer({
     case "image":
       const imageUrl = block.image?.file?.url || block.image?.external?.url
       const captionText = block.image?.caption
-        ? block.image.caption.map((text: any) => text.plain_text).join("")
+        ? block.image.caption
+            .map((text) => (text as { plain_text?: string }).plain_text || "")
+            .join("")
         : ""
       const captionElement = block.image?.caption
         ? renderRichText(block.image.caption)
@@ -130,7 +132,6 @@ export default function NotionBlockRenderer({
       )
 
     default:
-      // For unsupported block types, try to render any rich_text content
       const richText = block[type]?.rich_text
       if (richText && Array.isArray(richText)) {
         return <div className="mb-4">{renderRichText(richText)}</div>
@@ -140,7 +141,19 @@ export default function NotionBlockRenderer({
   }
 }
 
-function renderRichText(richTextArray: any[]): React.ReactNode {
+function renderRichText(
+  richTextArray: Array<{
+    plain_text?: string
+    annotations?: {
+      bold?: boolean
+      italic?: boolean
+      strikethrough?: boolean
+      underline?: boolean
+      code?: boolean
+    }
+    href?: string
+  }>
+): React.ReactNode {
   if (!richTextArray || !Array.isArray(richTextArray)) {
     return null
   }
@@ -150,7 +163,6 @@ function renderRichText(richTextArray: any[]): React.ReactNode {
 
     let element: React.ReactNode = plain_text
 
-    // Apply text formatting
     if (annotations?.bold) {
       element = (
         <strong key={index} className="text-foreground font-bold">
@@ -175,7 +187,6 @@ function renderRichText(richTextArray: any[]): React.ReactNode {
       )
     }
 
-    // Apply link
     if (href) {
       element = (
         <a

@@ -2,12 +2,7 @@ import { repairJSON } from "@/app/lib/ai/repair"
 import logger from "@/app/lib/logger"
 import { getEnvVars, getRequiredEnvVar } from "@/app/lib/utils/env"
 import { createServerClient, Database, TablesInsert } from "@formlink/db"
-import {
-  Form,
-  QuestionSchema,
-  repairQuestionInputTypes,
-  SettingsSchema,
-} from "@formlink/schema"
+import { QuestionSchema, repairQuestionInputTypes } from "@formlink/schema"
 import { BaseMessage } from "@langchain/core/messages"
 import { RunnableConfig } from "@langchain/core/runnables"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
@@ -16,7 +11,7 @@ import { z } from "zod"
 import { MODEL_DEFAULT } from "../../config"
 import { FINAL_MARKDOWN_PROMPT } from "../../prompts"
 import { AgentEvent, createAgentEvent } from "../../types/agent-events"
-import { AgentState } from "../state"
+import { AgentMessage, AgentState } from "../state"
 import { buildFormFromState } from "../utils/form-builder"
 
 const NODE_NAME = "finalizeFormNode"
@@ -28,14 +23,14 @@ const FinalMarkdownResponseSchema = z.object({
 interface FormContent {
   title: string
   description: string
-  questions: any[]
-  settings: any
+  questions: unknown[]
+  settings: Record<string, unknown>
 }
 
 interface ValidationResult {
   success: boolean
-  data?: any
-  error?: any
+  data?: unknown
+  error?: string
 }
 
 interface FinalizationResult {
@@ -45,9 +40,9 @@ interface FinalizationResult {
   errorDetails?: {
     node: string
     message: string
-    originalError?: any
+    originalError?: unknown
   }
-  messages: BaseMessage[]
+  messages: AgentMessage[]
 }
 
 async function createSupabaseClient() {
@@ -68,9 +63,7 @@ function createFormContent(state: AgentState): FormContent {
 }
 
 async function validateQuestions(
-  questions: any[],
-  supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
-  state: AgentState
+  questions: unknown[]
 ): Promise<ValidationResult> {
   const potentiallyRepairedQuestions = repairQuestionInputTypes(questions)
   const initialValidation = z
@@ -124,18 +117,13 @@ async function validateQuestions(
 
 async function generateResultPageContent(
   state: AgentState,
-  validatedQuestions: any[]
+  validatedQuestions: z.infer<typeof QuestionSchema>[]
 ): Promise<{ success: boolean; content?: string; error?: string }> {
   try {
-    // If we have a journey script, it already contains result generation instructions
-    // The finalizer will save the entire journey script which includes result generation
-    // For backward compatibility, only generate result page content if no journey script exists
     if (state.journeyScript) {
-      // Journey script contains result generation, no need to generate separately
       return { success: true, content: "" }
     }
 
-    // Fall back to original generation method if no journey script
     const allEnv = getEnvVars()
     const apiKey = getRequiredEnvVar("OPENROUTER_API_KEY", allEnv)
     const openRouterProvider = createOpenRouter({ apiKey })
@@ -168,11 +156,12 @@ async function generateResultPageContent(
     }
 
     return { success: true, content: result.object.markdownContent }
-  } catch (error: any) {
+  } catch (error) {
     logger.error({ error }, "Final markdown generation failed")
     return {
       success: false,
-      error: error?.message || "Unknown error during markdown generation",
+      error:
+        (error as Error)?.message || "Unknown error during markdown generation",
     }
   }
 }
@@ -181,9 +170,9 @@ async function createFormVersion(
   supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
   state: AgentState,
   formContent: FormContent,
-  validatedQuestions: any[],
+  validatedQuestions: z.infer<typeof QuestionSchema>[],
   resultPageContent: string
-): Promise<{ success: boolean; versionId?: string; error?: any }> {
+): Promise<{ success: boolean; versionId?: string; error?: unknown }> {
   logger.info(
     {
       hasJourneyScript: !!state.journeyScript,
@@ -200,7 +189,8 @@ async function createFormVersion(
         ? formContent.title
         : "Untitled Form (No Questions)",
     description: formContent.description,
-    questions: validatedQuestions as any,
+    questions:
+      validatedQuestions as Database["public"]["Tables"]["form_versions"]["Insert"]["questions"],
     settings: state.journeyScript
       ? {
           journeyScript: state.journeyScript,
@@ -230,10 +220,10 @@ async function updateFormWithNewVersion(
   supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
   state: AgentState,
   newVersionId: string,
-  validatedQuestions: any[],
-  validatedSettings: any,
+  validatedQuestions: z.infer<typeof QuestionSchema>[],
+  validatedSettings: Record<string, unknown>,
   messages: BaseMessage[]
-): Promise<{ success: boolean; error?: any }> {
+): Promise<{ success: boolean; error?: unknown }> {
   const agentMessagesForDb = messages.map((msg) => ({
     content: msg.content,
     type: msg._getType(),
@@ -249,13 +239,14 @@ async function updateFormWithNewVersion(
     updated_at: new Date().toISOString(),
   }
 
-  const { _agentEvents, ...stateToSave } = finalAgentState
+  const { ...stateToSave } = finalAgentState
 
   const { error: formUpdateError } = await supabase
     .from("forms")
     .update({
       current_draft_version_id: newVersionId,
-      agent_state: stateToSave as any,
+      agent_state:
+        stateToSave as unknown as Database["public"]["Tables"]["forms"]["Update"]["agent_state"],
       updated_at: new Date().toISOString(),
     })
     .eq("id", state.formId)
@@ -357,7 +348,7 @@ function createFinalizationEvents(
 async function processFormFinalization(
   state: AgentState
 ): Promise<FinalizationResult> {
-  const messages: BaseMessage[] = [...(state.agentMessages ?? [])]
+  const messages: AgentMessage[] = [...(state.agentMessages ?? [])]
 
   let supabase: Awaited<ReturnType<typeof createSupabaseClient>>
   try {
@@ -380,12 +371,7 @@ async function processFormFinalization(
 
   const formContent = createFormContent(state)
 
-  // Validate questions
-  const questionValidation = await validateQuestions(
-    formContent.questions,
-    supabase,
-    state
-  )
+  const questionValidation = await validateQuestions(formContent.questions)
   if (!questionValidation.success) {
     const errorMessage =
       questionValidation.error || "Questions validation failed"
@@ -403,7 +389,6 @@ async function processFormFinalization(
 
   const validatedQuestions = questionValidation.data
 
-  // Generate result page content
   const resultPageGeneration = await generateResultPageContent(
     state,
     validatedQuestions
@@ -424,7 +409,6 @@ async function processFormFinalization(
     }
   }
 
-  // Create form version
   const versionCreation = await createFormVersion(
     supabase,
     state,
@@ -449,7 +433,6 @@ async function processFormFinalization(
 
   const newVersionId = versionCreation.versionId!
 
-  // Update form with new version
   const formUpdate = await updateFormWithNewVersion(
     supabase,
     state,
@@ -460,7 +443,6 @@ async function processFormFinalization(
   )
 
   if (!formUpdate.success) {
-    // This is a partial failure - version was created but form wasn't updated
     logger.warn(
       { error: formUpdate.error },
       "Form update failed but version was created"
@@ -496,7 +478,6 @@ export async function finalizeFormNode(
     `[${NODE_NAME}] Full config object received`
   )
 
-  // Check if we should skip finalization due to prior errors
   if (shouldSkipFinalization(state)) {
     logger.warn(
       {
@@ -542,7 +523,7 @@ export async function finalizeFormNode(
       )
     )
 
-    const { _agentEvents: __, ...stateForSnapshot } = state
+    const { ...stateForSnapshot } = state
     _agentEvents.push(
       createAgentEvent(
         "state_snapshot",
@@ -567,7 +548,6 @@ export async function finalizeFormNode(
     }
   }
 
-  // Start finalization process
   _agentEvents.push(
     createAgentEvent(
       "task_started",
@@ -595,7 +575,6 @@ export async function finalizeFormNode(
   _agentEvents.push(...finalizationEvents)
   currentEventSequence += finalizationEvents.length
 
-  // Create final state snapshot
   const finalState = {
     ...state,
     agentMessages: result.messages,
@@ -605,7 +584,7 @@ export async function finalizeFormNode(
     eventSequence: currentEventSequence,
   }
 
-  const { _agentEvents: __, ...stateForSnapshot } = finalState
+  const { ...stateForSnapshot } = finalState
   _agentEvents.push(
     createAgentEvent(
       "state_snapshot",

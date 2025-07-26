@@ -22,7 +22,7 @@ export function Footer() {
             </p>
             <div className="flex space-x-4 pt-2">
               <Link
-                href="https://twitter.com/formlinkai"
+                href="https://twitter.com/formlink"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <svg

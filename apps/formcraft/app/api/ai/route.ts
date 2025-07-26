@@ -68,7 +68,12 @@ function getDerivedDataType(
     case "ranking":
       return "array_string"
     default:
-      if ((question as any).display?.inputType === "number") return "number"
+      if (
+        "display" in question &&
+        (question as Question & { display?: { inputType?: string } }).display
+          ?.inputType === "number"
+      )
+        return "number"
       return "unknown"
   }
 }
@@ -81,7 +86,10 @@ function transformQuestionsForAI(
     id: q.id,
     title: q.title,
     questionType: q.questionType,
-    options: (q as any).options,
+    options:
+      "options" in q
+        ? (q as Question & { options?: Option[] }).options
+        : undefined,
     _derived_dataType_: getDerivedDataType(q),
   }))
 }
@@ -122,15 +130,13 @@ type AIResponse = {
 
 export async function POST(req: Request) {
   try {
-    // Require authentication
     const { requireAuth, authErrorResponse } = await import(
       "../../lib/middleware/auth"
     )
-    let authResult
     try {
-      authResult = await requireAuth(req)
-    } catch (error: any) {
-      return authErrorResponse(error)
+      await requireAuth(req)
+    } catch (error) {
+      return authErrorResponse(error as any)
     }
 
     const {
@@ -151,12 +157,8 @@ export async function POST(req: Request) {
       )
     }
 
-    // Use authenticated user's ID
-    const userId = authResult.user.id
-    const isAuthenticated = !authResult.isGuest
-
     let systemPrompt = ""
-    let responseSchema: any = {}
+    let responseSchema: z.ZodSchema = z.object({})
 
     const transformedQuestions = transformQuestionsForAI(questions)
 
@@ -294,7 +296,7 @@ questions: ${transformedQuestions}
         { status: 200 }
       )
     } else if (operationType === "validation") {
-      const finalSchema: Partial<QuestionValidations>[] = [] as any
+      const finalSchema: Partial<QuestionValidations>[] = []
       let allValidationsSuccessful = true
 
       const schemaList =
@@ -302,10 +304,6 @@ questions: ${transformedQuestions}
           ? JSON.parse(aiResponseData.schema)
           : aiResponseData.schema
       if (!Array.isArray(schemaList)) {
-        // console.error(
-        //   "Expected schema to be an array for validation type, but received:",
-        // typeof schemaList
-        // )
         allValidationsSuccessful = false
       } else {
         for (const singleSchema of schemaList) {
@@ -319,20 +317,9 @@ questions: ${transformedQuestions}
               )
             } else {
               allValidationsSuccessful = false
-              // console.error(
-              //   "Validation schema parse failed for item:",
-              //   schemaValidationResult.error.format()
-              // )
-              // console.error(
-              //   "Raw AI schema data type for item:",
-              //   typeof singleSchema
-              // )
-              // console.error("Raw AI schema data for item:", singleSchema)
             }
-          } catch (e) {
+          } catch {
             allValidationsSuccessful = false
-            // console.error("Failed to parse schema string for item:", e)
-            // console.error("Raw AI schema data for item:", singleSchema)
           }
         }
       }
@@ -379,18 +366,18 @@ questions: ${transformedQuestions}
       { error: true, message: "Operation processing failed" },
       { status: 500 }
     )
-  } catch (err: any) {
-    // console.error("Error in /api/ai:", err)
+  } catch (err) {
+    const error = err as Error & { code?: string }
 
-    if (err.code === "DAILY_LIMIT_REACHED") {
+    if (error.code === "DAILY_LIMIT_REACHED") {
       return NextResponse.json<AIResponse>(
-        { error: true, message: err.message ?? "" },
+        { error: true, message: error.message ?? "" },
         { status: 403 }
       )
     }
 
     return NextResponse.json<AIResponse>(
-      { error: true, message: err.message ?? "Internal server error" },
+      { error: true, message: error.message ?? "Internal server error" },
       { status: 500 }
     )
   }

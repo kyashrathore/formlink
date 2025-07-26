@@ -1,4 +1,3 @@
-import { RunnableConfig } from "@langchain/core/runnables"
 import { END, START, StateGraph, StateGraphArgs } from "@langchain/langgraph"
 import logger from "../logger"
 import { AgentEvent } from "../types/agent-events"
@@ -21,7 +20,6 @@ type NodeName = (typeof NODE_NAMES)[keyof typeof NODE_NAMES]
 async function selectBatchForParallelProcessingNode(
   state: AgentState
 ): Promise<Partial<AgentState>> {
-  // Only select tasks that are truly pending (not completed, failed, or in_progress)
   const pendingTasks = (state.tasksToPersist ?? []).filter(
     (task) => task.status === "pending"
   )
@@ -39,7 +37,6 @@ async function selectBatchForParallelProcessingNode(
   )
 
   if (pendingTasks.length > 0) {
-    // Take only a small batch to avoid overwhelming the system
     const batchSize = Math.min(pendingTasks.length, 3)
     const batchToProcess = pendingTasks.slice(0, batchSize).map((task) => ({
       ...task,
@@ -169,7 +166,6 @@ function createTasksReducer() {
             (t) => t.id === updatedTask.id
           )
           if (existingTaskIndex !== -1) {
-            // Completely replace the task with the updated version
             newTaskList[existingTaskIndex] = updatedTask
           } else {
             newTaskList.push(updatedTask)
@@ -210,7 +206,7 @@ const channelsConfig: {
   formId: createStringChannelReducer(""),
   userId: createStringChannelReducer(""),
   selectedModel: createOptionalChannelReducer<string>(),
-  originalInput: createOptionalChannelReducer<any>(null),
+  originalInput: createOptionalChannelReducer<unknown>(null),
   inputType: {
     value: (
       current: "prompt" | "url" | "html" | undefined,
@@ -226,11 +222,11 @@ const channelsConfig: {
   tasksToPersist: createTasksReducer(),
   currentTaskBeingProcessed: createOptionalChannelReducer<AgentTask>(),
   current_processing_batch: createChannelReducer<AgentTask[]>([], "replace"),
-  generatedQuestionSchemas: createArrayChannelReducer<any>(),
+  generatedQuestionSchemas: createArrayChannelReducer<unknown>(),
   settings: {
     value: (
-      current: Record<string, any> | undefined,
-      next: Record<string, any> | undefined
+      current: Record<string, unknown> | undefined,
+      next: Record<string, unknown> | undefined
     ) => {
       return next ?? current ?? {}
     },
@@ -241,9 +237,9 @@ const channelsConfig: {
   errorDetails: createOptionalChannelReducer<{
     node: string
     message: string
-    originalError?: any
+    originalError?: unknown
   }>(),
-  agentMessages: createArrayChannelReducer<any>(),
+  agentMessages: createArrayChannelReducer<unknown>(),
   iteration: {
     value: (current: number | undefined, next: number | undefined) => {
       return next ?? current ?? 0
@@ -269,8 +265,7 @@ const channelsConfig: {
 }
 
 async function processTaskBatch(
-  state: AgentState,
-  config?: RunnableConfig
+  state: AgentState
 ): Promise<Partial<AgentState>> {
   if (
     !state.current_processing_batch ||
@@ -285,7 +280,7 @@ async function processTaskBatch(
     task_to_process: task,
     agentMessages: [],
     _agentEvents: [],
-    // Give each parallel task a unique sequence offset to prevent event conflicts
+
     eventSequence: state.eventSequence + index * 100,
   }))
 
@@ -318,35 +313,30 @@ async function processTaskBatch(
 
 function createWorkflow() {
   const graphArgs: StateGraphArgs<AgentState> = {
-    channels: channelsConfig as any,
+    channels: channelsConfig,
   }
 
   const workflow = new StateGraph<AgentState>(graphArgs)
-    .addNode(
-      NODE_NAMES.NORMALIZE_INPUT,
-      async (state: AgentState, config?: RunnableConfig) =>
-        normalizeInputNode(state)
+    .addNode(NODE_NAMES.NORMALIZE_INPUT, async (state: AgentState) =>
+      normalizeInputNode(state)
     )
     .addNode(
       NODE_NAMES.GENERATE_METADATA_AND_TASKS,
-      async (state: AgentState, config?: RunnableConfig) =>
-        generateMetadataAndTasksNode(state)
+      async (state: AgentState) => generateMetadataAndTasksNode(state)
     )
     .addNode(
       NODE_NAMES.SELECT_BATCH_FOR_PARALLEL_PROCESSING,
       selectBatchForParallelProcessingNode
     )
     .addNode(NODE_NAMES.PROCESS_SINGLE_TASK, processTaskBatch)
-    .addNode(
-      NODE_NAMES.FINALIZE_FORM,
-      async (state: AgentState, config?: RunnableConfig) =>
-        finalizeFormNode(state)
+    .addNode(NODE_NAMES.FINALIZE_FORM, async (state: AgentState) =>
+      finalizeFormNode(state)
     )
 
   return workflow
 }
 
-function addWorkflowEdges(workflow: any): void {
+function addWorkflowEdges(workflow: StateGraph<AgentState>): void {
   workflow.addEdge(START, NODE_NAMES.NORMALIZE_INPUT)
   workflow.addEdge(
     NODE_NAMES.NORMALIZE_INPUT,
