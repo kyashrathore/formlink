@@ -2,13 +2,13 @@ name: Quality Checks
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
-  NODE_VERSION: '20'
-  PNPM_VERSION: '10.10.0'
+  NODE_VERSION: "20"
+  PNPM_VERSION: "10.10.0"
 
 jobs:
   quality-checks:
@@ -20,13 +20,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full git history for proper analysis
+          fetch-depth: 0 # Full git history for proper analysis
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -60,7 +59,6 @@ jobs:
 
       - name: Run tests
         run: pnpm test
-
 
   security-audit:
     name: Security Audit
@@ -105,7 +103,7 @@ jobs:
         run: |
           echo "Checking for critically outdated dependencies..."
           # This can be enhanced with tools like npm-check-updates
-          
+
       - name: Validate package-lock integrity
         run: |
           if [ -f "pnpm-lock.yaml" ]; then
@@ -114,7 +112,6 @@ jobs:
             echo "❌ pnpm-lock.yaml missing"
             exit 1
           fi
-
 
   notify-on-failure:
     name: Notify on Failure
