@@ -84,6 +84,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.29.0",
     "@formlink/eslint-config": "workspace:*",
     "@formlink/typescript-config": "workspace:*",
     "@storybook/react": "^8.6.12",
