@@ -1,21 +1,28 @@
+import { ChatService } from "@/app/lib/chat/services/chat-service"
+import { validateChatRequest } from "@/app/lib/chat/utils/validation"
+import logger from "@/app/lib/logger"
+import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
+import {
+  verifyGuestUserLimits,
+  verifyUserOwnsForm,
+} from "@/app/lib/middleware/authorization"
 import { createServerClient } from "@formlink/db"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
-import { ChatService } from "../../lib/chat/services/chat-service"
-import { validateChatRequest } from "../../lib/chat/utils/validation"
-import logger from "../../lib/logger"
 import { handleChatRequest } from "./handlers"
 
 export async function POST(req: NextRequest) {
   try {
-    const { requireAuth, authErrorResponse } = await import(
-      "../../lib/middleware/auth"
-    )
     let authResult
     try {
       authResult = await requireAuth(req)
     } catch (error) {
-      return authErrorResponse(error as any)
+      return authErrorResponse({
+        name: "AuthError",
+        message:
+          error instanceof Error ? error.message : "Authentication failed",
+        statusCode: 401,
+      })
     }
 
     const body = await req.json()
@@ -29,9 +36,6 @@ export async function POST(req: NextRequest) {
     const isGuest = authResult.isGuest
 
     if (isGuest && !initialFormId) {
-      const { verifyGuestUserLimits } = await import(
-        "../../lib/middleware/authorization"
-      )
       const { withinLimits, reason } = await verifyGuestUserLimits(userId)
       if (!withinLimits) {
         return NextResponse.json(
@@ -68,14 +72,15 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-  const { requireAuth, authErrorResponse } = await import(
-    "../../lib/middleware/auth"
-  )
   let authResult
   try {
     authResult = await requireAuth(req)
   } catch (error) {
-    return authErrorResponse(error as any)
+    return authErrorResponse({
+      name: "AuthError",
+      message: error instanceof Error ? error.message : "Authentication failed",
+      statusCode: 401,
+    })
   }
 
   const { searchParams } = new URL(req.url)
@@ -92,9 +97,6 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { verifyUserOwnsForm } = await import(
-      "../../lib/middleware/authorization"
-    )
     const ownership = await verifyUserOwnsForm(formId, authResult.user.id)
 
     if (!ownership.formExists) {

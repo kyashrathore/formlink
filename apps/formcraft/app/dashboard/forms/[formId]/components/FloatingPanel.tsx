@@ -98,12 +98,10 @@ export default function FloatingPanel({ children }: FloatingPanelProps) {
           : "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
       }}
     >
-      {}
       <div className="flex h-full flex-col">
         {children({ onHeaderMouseDown: handleMouseDown })}
       </div>
 
-      {}
       <div className="absolute right-0 bottom-0 h-4 w-4 cursor-nw-resize">
         <div className="bg-muted-foreground absolute right-1 bottom-1 h-2 w-2 rounded-full"></div>
       </div>

@@ -1,3 +1,4 @@
+import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import { put } from "@vercel/blob"
 import { NextResponse } from "next/server"
 
@@ -5,14 +6,15 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"]
 
 export async function POST(request: Request): Promise<NextResponse> {
-  const { requireAuth, authErrorResponse } = await import(
-    "../../lib/middleware/auth"
-  )
   let authResult
   try {
     authResult = await requireAuth(request)
   } catch (error) {
-    return authErrorResponse(error)
+    return authErrorResponse({
+      name: "AuthError",
+      message: error instanceof Error ? error.message : "Authentication failed",
+      statusCode: 401,
+    })
   }
 
   const { searchParams } = new URL(request.url)

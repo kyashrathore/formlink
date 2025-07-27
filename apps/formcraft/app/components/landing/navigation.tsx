@@ -1,11 +1,11 @@
 "use client"
 
+import { useAuth } from "@/app/hooks/useAuth"
+import { analytics } from "@/app/lib/analytics"
 import { Button, Sheet, SheetContent, SheetTrigger } from "@formlink/ui"
 import { Menu } from "lucide-react"
 import Link from "next/link"
 import * as React from "react"
-import { useAuth } from "../../hooks/useAuth"
-import { analytics } from "../../lib/analytics"
 import { ThemeSwitcher } from "../ThemeSwitcher"
 
 interface NavItem {

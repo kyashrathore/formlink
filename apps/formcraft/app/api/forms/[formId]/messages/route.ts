@@ -1,3 +1,5 @@
+import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
+import { verifyUserOwnsForm } from "@/app/lib/middleware/authorization"
 import { createServerClient } from "@formlink/db"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
@@ -11,14 +13,15 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ formId: string }> }
 ) {
-  const { requireAuth, authErrorResponse } = await import(
-    "../../../../lib/middleware/auth"
-  )
   let authResult
   try {
     authResult = await requireAuth(request)
   } catch (error) {
-    return authErrorResponse(error)
+    return authErrorResponse({
+      name: "AuthError",
+      message: error instanceof Error ? error.message : "Authentication failed",
+      statusCode: 401,
+    })
   }
 
   const cookieStore = await cookies()
@@ -38,14 +41,7 @@ export async function GET(
 
   const { formId } = paramsValidation.data
 
-  const { verifyUserOwnsForm } = await import(
-    "../../../../lib/middleware/authorization"
-  )
-  const ownership = await verifyUserOwnsForm(
-    formId,
-    authResult.user.id,
-    authResult.isGuest
-  )
+  const ownership = await verifyUserOwnsForm(formId, authResult.user.id)
 
   if (!ownership.formExists) {
     return NextResponse.json({ error: "Form not found" }, { status: 404 })

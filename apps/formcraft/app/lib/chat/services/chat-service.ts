@@ -1,5 +1,5 @@
-import { SupabaseClient } from "@supabase/supabase-js"
-import logger from "../../logger"
+import logger from "@/app/lib/logger"
+import { SupabaseClient } from "@formlink/db"
 
 interface ChatMessage {
   role: string

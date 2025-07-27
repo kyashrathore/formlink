@@ -1,10 +1,11 @@
-import { APP_DOMAIN, MODEL_DEFAULT } from "@/app/lib/config"
+import {
+  APP_DOMAIN,
+  AUTH_DAILY_MESSAGE_LIMIT,
+  MODEL_DEFAULT,
+  NON_AUTH_DAILY_MESSAGE_LIMIT,
+} from "@/app/lib/config"
 import { getenv } from "@/lib/env"
 import { SupabaseClient } from "@formlink/db"
-import {
-  AUTH_DAILY_MESSAGE_LIMIT,
-  NON_AUTH_DAILY_MESSAGE_LIMIT,
-} from "./config"
 import {
   API_ROUTE_CREATE_CHAT,
   API_ROUTE_CREATE_GUEST,

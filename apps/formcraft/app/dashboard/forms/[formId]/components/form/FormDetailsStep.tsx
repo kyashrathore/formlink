@@ -1,5 +1,6 @@
 "use client"
 
+import { useFormStore } from "@/app/dashboard/forms/[formId]/stores/useFormStore"
 import { Form } from "@formlink/schema"
 import {
   Card,
@@ -9,7 +10,6 @@ import {
 } from "@formlink/ui"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import React, { useState } from "react"
-import { useFormStore } from "../../stores/useFormStore"
 import InlineEditableField from "./InlineEditableField"
 
 interface FormStartStepProps {

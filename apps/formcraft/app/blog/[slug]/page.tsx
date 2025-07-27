@@ -1,16 +1,14 @@
 import { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { getAllPostSlugs, getBlogPostBySlug } from "../../../lib/notion"
+import {
+  getAllPostSlugs,
+  getBlogPostBySlug,
+  NotionBlock,
+} from "../../../lib/notion"
 import NotionBlockRenderer from "../components/NotionBlockRenderer"
 
 export const revalidate = 60
-
-interface NotionBlock {
-  id: string
-  type: string
-  [key: string]: unknown
-}
 
 interface ListItem {
   type: "block" | "list"
@@ -61,10 +59,10 @@ function JsonLd({
     description: post.summary,
     image: imageUrl,
     datePublished: isoDate,
-    author: post.authors.map((author: string) => ({
+    author: {
       "@type": "Person",
-      name: author,
-    })),
+      name: post.author,
+    },
     publisher: {
       "@type": "Organization",
       name: "Formcraft",

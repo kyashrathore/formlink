@@ -1,4 +1,4 @@
-import { SupabaseClient } from "@supabase/supabase-js"
+import { SupabaseClient } from "@formlink/db"
 import { ChatRequest } from "../types/chat"
 
 interface DataStream {

@@ -1,6 +1,6 @@
-import { SupabaseClient } from "@supabase/supabase-js"
+import logger from "@/app/lib/logger"
+import { SupabaseClient } from "@formlink/db"
 import { customAlphabet } from "nanoid"
-import logger from "../../logger"
 
 const nanoid = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-",

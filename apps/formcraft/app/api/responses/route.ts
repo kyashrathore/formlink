@@ -1,17 +1,21 @@
-import { createServerClient } from "@formlink/db"
+import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
+import { verifyUserCanAccessFormVersion } from "@/app/lib/middleware/authorization"
+import { createServerClient, Json } from "@formlink/db"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 
 export async function GET(request: NextRequest) {
   try {
-    const { requireAuth, authErrorResponse } = await import(
-      "../../lib/middleware/auth"
-    )
     let authResult
     try {
       authResult = await requireAuth(request)
     } catch (error) {
-      return authErrorResponse(error)
+      return authErrorResponse({
+        name: "AuthError",
+        message:
+          error instanceof Error ? error.message : "Authentication failed",
+        statusCode: 401,
+      })
     }
 
     const cookieStore = await cookies()
@@ -34,11 +38,8 @@ export async function GET(request: NextRequest) {
     }
 
     let validQuestionIds: string[] = []
-    const formVersionId = filters.form_version_id
+    const formVersionId = filters.form_version_id as string
     if (formVersionId) {
-      const { verifyUserCanAccessFormVersion } = await import(
-        "../../lib/middleware/authorization"
-      )
       const hasAccess = await verifyUserCanAccessFormVersion(
         formVersionId,
         authResult.user.id
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
         )
       }
 
-      let questionsArr: Array<{ id?: string }> = []
+      let questionsArr: Array<Json> = []
       if (Array.isArray(formVersion.questions)) {
         questionsArr = formVersion.questions
       } else if (typeof formVersion.questions === "string") {
@@ -75,8 +76,15 @@ export async function GET(request: NextRequest) {
         }
       }
       validQuestionIds = questionsArr
-        .filter((q) => q && typeof q.id === "string")
-        .map((q) => q.id)
+        .filter(
+          (q) =>
+            q &&
+            typeof q === "object" &&
+            q !== null &&
+            "id" in q &&
+            typeof q.id === "string"
+        )
+        .map((q) => (q as { id: string }).id)
     }
 
     const allowedSubmissionFilters = [
@@ -104,8 +112,8 @@ export async function GET(request: NextRequest) {
     const { data: rpcResponseArray, error } = await supabase.rpc(
       "get_filtered_submissions",
       {
-        submission_filters: submissionFilters,
-        answer_filters: answerFilters,
+        submission_filters: submissionFilters as any,
+        answer_filters: answerFilters as any,
         page,
         page_size,
       }

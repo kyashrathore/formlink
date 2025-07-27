@@ -1,8 +1,8 @@
 "use client"
 
+import { useFormStore } from "@/app/dashboard/forms/[formId]/stores/useFormStore"
 import { Card } from "@formlink/ui"
 import { useState } from "react"
-import { useFormStore } from "../../stores/useFormStore"
 import EditableUrlInput from "./EditableUrlInput"
 
 const Integrations = () => {

@@ -1,3 +1,4 @@
+import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import {
   ADD_QUESTION_PROMPT,
   CONDITIONS_PROMPT,
@@ -130,13 +131,15 @@ type AIResponse = {
 
 export async function POST(req: Request) {
   try {
-    const { requireAuth, authErrorResponse } = await import(
-      "../../lib/middleware/auth"
-    )
     try {
       await requireAuth(req)
     } catch (error) {
-      return authErrorResponse(error as any)
+      return authErrorResponse({
+        name: "AuthError",
+        message:
+          error instanceof Error ? error.message : "Authentication failed",
+        statusCode: 401,
+      })
     }
 
     const {

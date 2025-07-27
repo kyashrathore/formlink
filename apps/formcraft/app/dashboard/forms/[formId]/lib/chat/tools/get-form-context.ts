@@ -1,9 +1,9 @@
+import { ChatToolContext, GetFormContextResult } from "@/app/lib/chat/types"
 import { tool } from "ai"
 import logger from "../../logger"
 import { GetFormContextSchema } from "../../types/chat"
 import { TOOL_DESCRIPTIONS } from "../prompts"
 import { FormService } from "../services/form-service"
-import { ChatToolContext, GetFormContextResult } from "../types"
 
 export function getFormContextTool(context: ChatToolContext) {
   return tool({

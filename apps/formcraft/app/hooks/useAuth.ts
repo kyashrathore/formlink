@@ -1,7 +1,6 @@
 "use client"
 
-import { createBrowserClient } from "@formlink/db"
-import { User } from "@supabase/supabase-js"
+import { createBrowserClient, User } from "@formlink/db"
 import { useEffect, useState } from "react"
 
 export function useAuth() {

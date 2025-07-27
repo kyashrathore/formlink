@@ -1,9 +1,12 @@
 "use client"
 
+import {
+  getDefaultSettings,
+  useFormStore,
+} from "@/app/dashboard/forms/[formId]/stores/useFormStore"
 import { Button, Card, Input, Label } from "@formlink/ui"
 import { X } from "lucide-react"
 import { useState } from "react"
-import { getDefaultSettings, useFormStore } from "../../stores/useFormStore"
 
 interface StoredComputedField {
   field_id: string

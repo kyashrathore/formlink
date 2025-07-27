@@ -1,4 +1,4 @@
-import { getFormFillerPreviewBasePath } from "../app/lib/config"
+import { getFormFillerPreviewBasePath } from "@/app/lib/config"
 
 export function testEnvironmentConfiguration() {
   const previewBasePath = getFormFillerPreviewBasePath()

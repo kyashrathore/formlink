@@ -1,5 +1,6 @@
 "use client"
 
+import { Model, MODEL_DEFAULT, MODELS_OPTIONS } from "@/app/lib/config"
 import {
   Button,
   PromptInput,
@@ -16,7 +17,6 @@ import {
 import { ArrowUp } from "@phosphor-icons/react/ArrowUp"
 import { Stop } from "@phosphor-icons/react/Stop"
 import React, { useCallback } from "react"
-import { Model, MODEL_DEFAULT, MODELS_OPTIONS } from "../../lib/config"
 
 type ChatInputProps = {
   value: string

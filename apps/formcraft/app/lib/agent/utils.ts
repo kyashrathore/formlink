@@ -43,7 +43,7 @@ interface StreamResult {
 
 export async function handleStreamWithTimeout(
   streamResult: StreamResult,
-  timeoutMs: number = 5000
+  timeoutMs: number = 30000
 ): Promise<any> {
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => {
@@ -63,6 +63,13 @@ export async function handleStreamWithTimeout(
 
     return aiResponseData
   } catch (error) {
+    // Log the actual error details for debugging
+    console.error("[handleStreamWithTimeout] Error details:", {
+      message: (error as Error)?.message,
+      status: (error as any)?.status,
+      response: (error as any)?.response,
+      stack: (error as Error)?.stack?.slice(0, 200),
+    })
     const errorMessage = (error as Error)?.message || "Unknown stream error"
     const errorStatus =
       (error as Error & { status?: number; response?: { status?: number } })

@@ -1,4 +1,8 @@
 import { Client } from "@notionhq/client"
+import type {
+  BlockObjectResponse,
+  RichTextItemResponse,
+} from "@notionhq/client/build/src/api-endpoints"
 
 const notion = new Client({
   auth: process.env.NOTION_API_KEY,
@@ -22,19 +26,13 @@ export interface BlogPost {
   ogImageUrl?: string | null
 }
 
-export interface NotionBlock {
-  id: string
-  type: string
-  [key: string]: unknown
-}
+export type NotionBlock = BlockObjectResponse
 
 export interface BlogPostPageData extends BlogPost {
   content: NotionBlock[]
 }
 
-interface RichTextItem {
-  plain_text: string
-}
+type RichTextItem = RichTextItemResponse
 
 function extractRichText(richTextArray: RichTextItem[]): string {
   return richTextArray?.map((text) => text.plain_text).join("") || ""

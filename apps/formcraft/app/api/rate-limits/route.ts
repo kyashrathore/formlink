@@ -2,18 +2,20 @@ import {
   AUTH_DAILY_MESSAGE_LIMIT,
   NON_AUTH_DAILY_MESSAGE_LIMIT,
 } from "@/app/lib/config"
+import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import { createServerClient } from "@formlink/db"
 import { cookies } from "next/headers"
 
 export async function GET(req: Request) {
-  const { requireAuth, authErrorResponse } = await import(
-    "../../lib/middleware/auth"
-  )
   let authResult
   try {
     authResult = await requireAuth(req)
   } catch (error) {
-    return authErrorResponse(error)
+    return authErrorResponse({
+      name: "AuthError",
+      message: error instanceof Error ? error.message : "Authentication failed",
+      statusCode: 401,
+    })
   }
 
   const cookieStore = await cookies()

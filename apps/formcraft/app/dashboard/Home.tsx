@@ -1,6 +1,7 @@
 "use client"
 
 import { analytics } from "@/app/lib/analytics"
+import { APP_NAME } from "@/app/lib/config"
 import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import { Database } from "@formlink/db"
 import {
@@ -25,7 +26,6 @@ import { v4 as uuidv4 } from "uuid"
 import FormlinkLogo from "../components/FormlinkLogo"
 import { AppInfo } from "../components/layout/app-info"
 import UserMenu from "../components/layout/user-menu"
-import { APP_NAME } from "../lib/config"
 import { DashboardChat } from "./components/DashboardChat"
 import { FormWithVersions } from "./types"
 

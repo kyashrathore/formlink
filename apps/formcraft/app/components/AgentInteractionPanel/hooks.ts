@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef } from "react"
-import type { AgentState, FormattedLogEvent } from "./types"
 import {
   calculatePanelState,
   filterLogsForEventView,
   findFirstAgentInitTimestamp,
   formatEventsForLogView,
-} from "./utils"
+} from "@/app/dashboard/forms/[formId]/components/chat/utils"
+import { useEffect, useMemo, useRef } from "react"
+import type { AgentState, FormattedLogEvent } from "./types"
 
 export const useFormattedEvents = (
   eventsLog: unknown[]

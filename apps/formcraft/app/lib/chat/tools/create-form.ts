@@ -1,7 +1,7 @@
+import { createFormAgent } from "@/app/lib/agents/simple-agent"
+import logger from "@/app/lib/logger"
+import { CreateFormAgentSchema } from "@/app/lib/types/chat"
 import { tool } from "ai"
-import { createFormAgent } from "../../agents/simple-agent"
-import logger from "../../logger"
-import { CreateFormAgentSchema } from "../../types/chat"
 import { TOOL_DESCRIPTIONS } from "../prompts"
 import { ChatToolContext, FormCreationResult } from "../types"
 

@@ -1,5 +1,6 @@
 import { openrouter } from "@openrouter/ai-sdk-provider"
 import { generateText } from "ai"
+import React from "react"
 
 const systemPrompt = `
 You're an expert minimalist visual designer creating abstract SVG illustrations for Open Graph images using Satori.
@@ -151,7 +152,6 @@ export const generateSVGVisual = async ({
   })
 
   const componentCode = text.trim()
-  const React = (await import("react")).default
   const GeneratedVisual = evaluateComponent(componentCode, React)
 
   return GeneratedVisual

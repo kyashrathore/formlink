@@ -1,9 +1,9 @@
 "use client"
 
+import { getFormFillerPreviewBasePath } from "@/app/lib/config"
 import { Form } from "@formlink/schema"
 import { AlertCircle, Loader2, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { getFormFillerPreviewBasePath } from "../../lib/config"
 
 interface FormPreviewProps {
   form: Form

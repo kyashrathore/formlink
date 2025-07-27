@@ -1,10 +1,12 @@
 import { parseFormSchema } from "@/app/lib"
+import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
+import { verifyGuestUserLimits } from "@/app/lib/middleware/authorization"
 import {
   CREATE_FORM_REPAIR_SYSTEM_PROMPT,
   CREATE_FORM_SYSTEM_PROMPT,
 } from "@/app/lib/prompts"
 import { getenv } from "@/lib/env"
-import { createServerClient } from "@formlink/db"
+import { createServerClient, SupabaseClient } from "@formlink/db"
 import { Form, FormSchema } from "@formlink/schema"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
@@ -31,7 +33,7 @@ async function getFormSchemaById(
   formId: string,
   versionIdColumn: "current_published_version_id" | "current_draft_version_id",
   versionStatus: "published" | "draft",
-  supabase: ReturnType<typeof createServerClient>
+  supabase: SupabaseClient
 ): Promise<Form | null> {
   const { data: formData, error: formError } = await supabase
     .from("forms")
@@ -84,14 +86,16 @@ async function getFormSchemaById(
 
 export async function POST(req: NextRequest) {
   try {
-    const { requireAuth, authErrorResponse } = await import(
-      "../../../lib/middleware/auth"
-    )
     let authResult
     try {
       authResult = await requireAuth(req)
     } catch (error) {
-      return authErrorResponse(error)
+      return authErrorResponse({
+        name: "AuthError",
+        message:
+          error instanceof Error ? error.message : "Authentication failed",
+        statusCode: 401,
+      })
     }
 
     const { userPrompt } = (await req.json()) as {
@@ -109,9 +113,6 @@ export async function POST(req: NextRequest) {
     const isGuest = authResult.isGuest
 
     if (isGuest) {
-      const { verifyGuestUserLimits } = await import(
-        "../../../lib/middleware/authorization"
-      )
       const { withinLimits, reason } = await verifyGuestUserLimits(userId)
       if (!withinLimits) {
         return NextResponse.json(
@@ -198,18 +199,19 @@ export async function POST(req: NextRequest) {
       }
     })
 
+    const versionInsertPayload = {
+      form_id: form_id,
+      title: title as any,
+      description: description as any,
+      questions: questionsWithReadableLogic as any,
+      settings: settings as any,
+      status: "draft" as const,
+    }
+
     const { data: versionInsertData, error: versionInsertError } =
       await supabase
         .from("form_versions")
-        .insert({
-          version_id: newVersionId,
-          form_id: form_id,
-          title: title,
-          description: description,
-          questions: questionsWithReadableLogic,
-          settings: settings,
-          status: "draft",
-        })
+        .insert(versionInsertPayload)
         .select("version_id")
         .single()
 
@@ -351,8 +353,8 @@ export async function PATCH(
       }
 
       const validationError = validateMinorUpdate(
-        currentPublishedVersion,
-        updatableFields
+        currentPublishedVersion as any,
+        updatableFields as any
       )
       if (validationError) {
         return NextResponse.json({ error: validationError }, { status: 400 })
@@ -411,13 +413,13 @@ function validateMinorUpdate(
     }
 
     for (let i = 0; i < currentQuestions.length; i++) {
-      if (currentQuestions[i].id !== updatedQuestions[i].id) {
+      if (currentQuestions[i]?.id !== updatedQuestions[i]?.id) {
         return "Reordering questions is not allowed on a published form."
       }
       if (
-        currentQuestions[i].questionType !== updatedQuestions[i].questionType
+        currentQuestions[i]?.questionType !== updatedQuestions[i]?.questionType
       ) {
-        return `Changing the type of question '${currentQuestions[i].title}' is not allowed.`
+        return `Changing the type of question '${currentQuestions[i]?.title}' is not allowed.`
       }
     }
   }

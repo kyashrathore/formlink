@@ -1,4 +1,5 @@
 import Chat from "@/app/components/chat/chat"
+import { getLastUserMessage } from "@/app/dashboard/forms/[formId]/components/chat/utils"
 import { useFormStore } from "@/app/dashboard/forms/[formId]/stores/useFormStore"
 import { cn } from "@/app/lib"
 import { analytics } from "@/app/lib/analytics"
@@ -17,7 +18,6 @@ import { v4 as uuidv4 } from "uuid"
 import { CollapsedPanel, ExpandedPanel, FailedState } from "./components"
 import { useAutoScroll, useFormattedEvents, usePanelState } from "./hooks"
 import type { AgentInteractionPanelProps, ChatMessage } from "./types"
-import { getLastUserMessage } from "./utils"
 
 const AgentInteractionPanel: React.FC<AgentInteractionPanelProps> = ({
   formId,

@@ -3,6 +3,7 @@
 import FormlinkLogo from "@/app/components/FormlinkLogo"
 import UserMenu from "@/app/components/layout/user-menu"
 import { useAuth } from "@/app/hooks/useAuth"
+import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
@@ -15,7 +16,6 @@ import NavigationBar from "./components/NavigationBar"
 import TabContentManager from "./components/TabContentManager"
 import TwoColumnLayout from "./components/TwoColumnLayout"
 import { usePanelState } from "./hooks/usePanelState"
-import { useFormAgentStore } from "./stores/formAgentStore"
 import { getDefaultSettings, useFormStore } from "./stores/useFormStore"
 
 function TestUIPageContent() {

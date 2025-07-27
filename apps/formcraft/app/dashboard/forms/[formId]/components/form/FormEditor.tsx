@@ -1,9 +1,9 @@
 "use client"
 
+import { useFormStore } from "@/app/dashboard/forms/[formId]/stores/useFormStore"
+import { User } from "@formlink/db"
 import { Form } from "@formlink/schema"
 import { Alert, AlertDescription, AlertTitle } from "@formlink/ui"
-import { User } from "@supabase/supabase-js"
-import { useFormStore } from "../../stores/useFormStore"
 import AdditionalFieldsSection from "./AdditionalFieldsSection"
 import FormDetailsStep from "./FormDetailsStep"
 import FormJourneyStep from "./FormJourneyStep"

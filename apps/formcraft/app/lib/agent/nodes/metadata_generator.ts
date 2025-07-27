@@ -1,19 +1,19 @@
-import { openai } from "@ai-sdk/openai"
+import { getenv } from "@/lib/env"
 import { createServerClient } from "@formlink/db"
 import { QuestionTypeEnumSchema } from "@formlink/schema"
-import { streamObject } from "ai"
+import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { generateObject } from "ai"
 import { v4 as uuidv4 } from "uuid"
 import { z } from "zod"
-import { AgentMessage } from "../../../dashboard/forms/[formId]/lib/agent/state"
 import { ENHANCED_METADATA_PROMPT } from "../../prompts"
 import { AgentEvent, createAgentEvent } from "../../types/agent-events"
 import {
+  AgentMessage,
   AgentState,
   AgentTask,
   FormMetadata,
   GenerateSchemaTaskDef,
 } from "../state"
-import { handleStreamWithTimeout } from "../utils"
 
 const QuestionDetailSchema = z.object({
   question_specs: z.string().min(1, "Question text cannot be empty."),
@@ -95,43 +95,18 @@ export async function generateMetadataAndTasksNode(
       state.normalizedInputContent
     )
 
-    const streamResult = await streamObject({
-      model: openai("gpt-4o"),
+    const openRouterProvider = createOpenRouter({
+      apiKey: getenv("OPENROUTER_API_KEY") || "",
+    })
+
+    const result = await generateObject({
+      model: openRouterProvider("openai/gpt-4o-mini"),
       schema: MetadataResponseSchema,
       system: aiSystemPromptWithInput,
       prompt: state.normalizedInputContent,
     })
 
-    if (!streamResult || !streamResult.partialObjectStream) {
-      throw new Error("Failed to initialize AI stream for metadata generation.")
-    }
-    const tempQuestionDetails: Array<{
-      question_specs: string
-      type: z.infer<typeof QuestionTypeEnumSchema>
-    }> = []
-    for await (const partialObject of streamResult.partialObjectStream) {
-      if (partialObject.questionDetails) {
-        for (
-          let i = tempQuestionDetails.length;
-          i < partialObject.questionDetails.length;
-          i++
-        ) {
-          const detail = partialObject.questionDetails[i]
-          if (
-            detail &&
-            typeof detail.question_specs === "string" &&
-            detail.type
-          ) {
-            tempQuestionDetails.push({
-              question_specs: detail.question_specs,
-              type: detail.type,
-            })
-          }
-        }
-      }
-    }
-
-    const aiResponseData = await handleStreamWithTimeout(streamResult, 60000)
+    const aiResponseData = result.object
 
     if (
       !aiResponseData ||
@@ -140,11 +115,6 @@ export async function generateMetadataAndTasksNode(
     ) {
       throw new Error("Failed to obtain complete form metadata from AI stream.")
     }
-
-    if (aiResponseData.journeyScript) {
-    } else {
-    }
-
     formMetadata = {
       title: aiResponseData.title,
       description: aiResponseData.description,

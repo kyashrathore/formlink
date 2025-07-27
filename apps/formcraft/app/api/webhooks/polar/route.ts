@@ -1,5 +1,7 @@
 import { createHmac } from "crypto"
 import { SubscriptionManager } from "@/app/lib/subscription"
+import { createServerClient } from "@formlink/db"
+import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 
 const MAX_RETRIES = 3
@@ -110,8 +112,6 @@ export async function POST(request: NextRequest) {
     if (user_id) {
       userId = user_id
     } else {
-      const { createServerClient } = await import("@formlink/db")
-      const { cookies } = await import("next/headers")
       const cookieStore = await cookies()
       const supabase = await createServerClient(cookieStore, "service")
 

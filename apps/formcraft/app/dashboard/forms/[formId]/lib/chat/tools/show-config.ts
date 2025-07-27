@@ -1,7 +1,7 @@
+import { ChatToolContext, ShowConfigResult } from "@/app/lib/chat/types"
 import { tool } from "ai"
 import { ShowConfigButtonSchema } from "../../types/chat"
 import { TOOL_DESCRIPTIONS } from "../prompts"
-import { ChatToolContext, ShowConfigResult } from "../types"
 
 export function showConfigButtonTool(context: ChatToolContext) {
   return tool({

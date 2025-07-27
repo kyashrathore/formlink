@@ -40,13 +40,6 @@ export interface PanelState {
   displaySummaryMessage: string
 }
 
-export interface HistoryMessage {
-  id?: string | number
-  role: string
-  content: string | unknown
-  created_at?: string
-}
-
 export interface ChatDataItem {
   category?: string
   type?: string

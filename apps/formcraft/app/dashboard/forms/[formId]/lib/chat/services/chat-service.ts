@@ -1,4 +1,4 @@
-import { SupabaseClient } from "@supabase/supabase-js"
+import { SupabaseClient } from "@formlink/db"
 import logger from "../../logger"
 
 interface DataStream {

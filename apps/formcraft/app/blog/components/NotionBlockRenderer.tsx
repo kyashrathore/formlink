@@ -1,3 +1,4 @@
+import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints"
 import { NotionBlock } from "../../../lib/notion"
 
 interface NotionBlockRendererProps {
@@ -74,9 +75,9 @@ export default function NotionBlockRenderer({
           <div className="flex items-start gap-3">
             {block.callout?.icon && (
               <span className="text-lg">
-                {typeof block.callout.icon === "string"
-                  ? block.callout.icon
-                  : block.callout.icon?.emoji || "💡"}
+                {block.callout.icon.type === "emoji"
+                  ? block.callout.icon.emoji
+                  : "💡"}
               </span>
             )}
             <div className="text-foreground flex-1">
@@ -90,7 +91,12 @@ export default function NotionBlockRenderer({
       return <hr className="border-border my-8" />
 
     case "image":
-      const imageUrl = block.image?.file?.url || block.image?.external?.url
+      const imageUrl =
+        block.image?.type === "file"
+          ? block.image.file?.url
+          : block.image?.type === "external"
+            ? block.image.external?.url
+            : null
       const captionText = block.image?.caption
         ? block.image.caption
             .map((text) => (text as { plain_text?: string }).plain_text || "")
@@ -132,27 +138,19 @@ export default function NotionBlockRenderer({
       )
 
     default:
-      const richText = block[type]?.rich_text
-      if (richText && Array.isArray(richText)) {
-        return <div className="mb-4">{renderRichText(richText)}</div>
-      }
+      // Handle unsupported or unknown block types
+      return (
+        <div className="text-muted-foreground mb-4 italic">
+          Unsupported block type: {type}
+        </div>
+      )
 
       return null
   }
 }
 
 function renderRichText(
-  richTextArray: Array<{
-    plain_text?: string
-    annotations?: {
-      bold?: boolean
-      italic?: boolean
-      strikethrough?: boolean
-      underline?: boolean
-      code?: boolean
-    }
-    href?: string
-  }>
+  richTextArray: Array<RichTextItemResponse>
 ): React.ReactNode {
   if (!richTextArray || !Array.isArray(richTextArray)) {
     return null

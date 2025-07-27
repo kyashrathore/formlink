@@ -1,16 +1,16 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
-import { SupabaseClient } from "@supabase/supabase-js"
-import { createDataStreamResponse, Message, streamText } from "ai"
-import { customAlphabet } from "nanoid"
-import { getenv } from "../../../../lib/env"
 import {
   buildContextualSystemPrompt,
   SYSTEM_PROMPT,
-} from "../../../lib/chat/prompts"
-import { ChatService } from "../../../lib/chat/services/chat-service"
-import { FormService } from "../../../lib/chat/services/form-service"
-import { createChatTools } from "../../../lib/chat/tools"
-import logger from "../../../lib/logger"
+} from "@/app/lib/chat/prompts"
+import { ChatService } from "@/app/lib/chat/services/chat-service"
+import { FormService } from "@/app/lib/chat/services/form-service"
+import { createChatTools } from "@/app/lib/chat/tools"
+import logger from "@/app/lib/logger"
+import { getenv } from "@/lib/env"
+import { SupabaseClient } from "@formlink/db"
+import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { createDataStreamResponse, Message, streamText } from "ai"
+import { customAlphabet } from "nanoid"
 
 const nanoid = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-",

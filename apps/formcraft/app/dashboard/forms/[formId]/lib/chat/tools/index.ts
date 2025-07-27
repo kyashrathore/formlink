@@ -1,4 +1,4 @@
-import { ChatToolContext } from "../types"
+import { ChatToolContext } from "@/app/lib/chat/types"
 import { createFormTool } from "./create-form"
 import { getFormContextTool } from "./get-form-context"
 import { queryDocsTool } from "./query-docs"

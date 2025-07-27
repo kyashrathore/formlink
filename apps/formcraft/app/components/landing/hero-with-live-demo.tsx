@@ -1,5 +1,6 @@
 "use client"
 
+import { useAuth } from "@/app/hooks/useAuth"
 import { MODEL_DEFAULT } from "@/app/lib/config"
 import { getTurnstileSiteKey, isLocalhost } from "@/app/lib/utils/env"
 import { useFormAgentStore } from "@/app/stores/formAgentStore"
@@ -8,7 +9,6 @@ import { useRouter } from "next/navigation"
 import Script from "next/script"
 import { useEffect, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
-import { useAuth } from "../../hooks/useAuth"
 import { InlineChatInput } from "./InlineChatInput"
 import { PromptSuggestions } from "./PromptSuggestions"
 

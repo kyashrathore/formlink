@@ -1,4 +1,7 @@
-import { getFormFillerFBasePath } from "@/app/lib/config"
+import {
+  getEmbedScriptsBasePath,
+  getFormFillerFBasePath,
+} from "@/app/lib/config"
 
 export type EmbedType = "popup" | "slider" | "modal" | "fullPage" | "inline"
 
@@ -8,9 +11,10 @@ export type EmbedCodeParts = {
 }
 
 export function getEmbedCode(type: EmbedType, formId: string): EmbedCodeParts {
-  const basePath = getFormFillerFBasePath()
-  const embedScriptUrl = `${basePath}/embed/v1.js`
-  const popupScriptUrl = `${basePath}/embed/popup/v1.js`
+  const basePath = getFormFillerFBasePath() // for form URLs
+  const scriptsBasePath = getEmbedScriptsBasePath() // for embed scripts
+  const embedScriptUrl = `${scriptsBasePath}/embed/v1.js`
+  const popupScriptUrl = `${scriptsBasePath}/embed/popup/v1.js`
   const url = `${basePath}/${formId}`
 
   switch (type) {

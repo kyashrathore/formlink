@@ -1,23 +1,19 @@
+import { MODEL_DEFAULT } from "@/app/lib/config"
+import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import { useChat, type Message as VercelChatMessage } from "@ai-sdk/react"
 import { Button, PromptSuggestion } from "@formlink/ui"
+import { Message } from "ai"
 import { AlertTriangle } from "lucide-react"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
-import { MODEL_DEFAULT } from "../../lib/config"
 import {
   ErrorEvent as AgentErrorEvent,
   AgentEvent,
 } from "../../lib/types/agent-events"
-import { useFormAgentStore } from "../../stores/formAgentStore"
 import Chat from "./chat-components/chat"
 import { useAutoScroll, useFormattedEvents } from "./hooks"
 import { MessageWithParts } from "./MessageWithParts"
-import type {
-  AgentInteractionPanelProps,
-  ChatDataItem,
-  ChatMessage,
-  HistoryMessage,
-} from "./types"
+import type { AgentInteractionPanelProps, ChatMessage } from "./types"
 import { getDisplaySummaryMessage, getLastUserMessage } from "./utils"
 
 const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
@@ -37,7 +33,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
 
   const initialFormPrompts = [
     "Quick contact form (Name, Email)?",
-    "Survey: 'Coffee vs Tea' poll ☕🍵",
+    "Survey: 'Coffee vs Tea' poll",
     "Fun quiz: 3 quick questions!",
     "Event sign-up form (easy RSVP)",
     "Need a job form? (CV upload ready)",
@@ -104,9 +100,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
 
         if (Array.isArray(historyMessages)) {
           const validRoles = ["user", "assistant", "system"]
-          const formattedMessages: VercelChatMessage[] = (
-            historyMessages as HistoryMessage[]
-          )
+          const formattedMessages: VercelChatMessage[] = historyMessages
             .filter((msg) => validRoles.includes(msg.role))
             .map((msg) => ({
               id: msg.id?.toString() || uuidv4(),
@@ -115,7 +109,8 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
                 typeof msg.content === "string"
                   ? msg.content
                   : JSON.stringify(msg.content || ""),
-              createdAt: msg.created_at ? new Date(msg.created_at) : new Date(),
+              createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
+              ...(msg.parts && { parts: msg.parts }),
             }))
           setMessages(formattedMessages)
         } else {
@@ -184,23 +179,43 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
 
   const chatContainerRef = useAutoScroll([chatMessages, isStreaming], true)
 
+  // Type guard for AgentEvent
+  const isAgentEvent = (obj: unknown): obj is AgentEvent => {
+    return (
+      obj !== null &&
+      typeof obj === "object" &&
+      "id" in obj &&
+      "type" in obj &&
+      "category" in obj &&
+      "timestamp" in obj &&
+      "formId" in obj &&
+      "userId" in obj &&
+      "sequence" in obj
+    )
+  }
+
+  // Type guard for custom agent event wrapper
+  const isCustomAgentEventWrapper = (
+    obj: unknown
+  ): obj is { type: "custom_agent_event"; payload: AgentEvent } => {
+    return (
+      obj !== null &&
+      typeof obj === "object" &&
+      "type" in obj &&
+      obj.type === "custom_agent_event" &&
+      "payload" in obj &&
+      isAgentEvent((obj as any).payload)
+    )
+  }
+
   useEffect(() => {
     if (chatData && chatData.length > lastProcessedEventIndexRef.current) {
       const newEvents = chatData.slice(lastProcessedEventIndexRef.current)
-      newEvents.forEach((dataItem: ChatDataItem) => {
-        if (
-          dataItem &&
-          typeof dataItem === "object" &&
-          "category" in dataItem &&
-          "type" in dataItem
-        ) {
-          processEvent(dataItem as AgentEvent)
-        } else if (
-          dataItem &&
-          dataItem.type === "custom_agent_event" &&
-          dataItem.payload
-        ) {
-          processEvent(dataItem.payload as AgentEvent)
+      newEvents.forEach((dataItem) => {
+        if (isAgentEvent(dataItem)) {
+          processEvent(dataItem)
+        } else if (isCustomAgentEventWrapper(dataItem)) {
+          processEvent(dataItem.payload)
         }
       })
       lastProcessedEventIndexRef.current = chatData.length
@@ -257,7 +272,7 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
             role={message.role}
             content={message.content}
             timestamp={message.timestamp}
-            parts={(message as any).parts}
+            parts={"parts" in message ? (message as any).parts : undefined}
             isLastMessage={index === chatMessages.length - 1}
             displaySummaryMessage={displaySummaryMessage}
             isStreaming={isStreaming}

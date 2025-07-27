@@ -1,5 +1,5 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Database } from "@/types/database.types";
+import { Database } from "../types/database.types";
 import { createServerClient } from "@supabase/ssr";
 
 // Helper function to determine if we should use local Supabase

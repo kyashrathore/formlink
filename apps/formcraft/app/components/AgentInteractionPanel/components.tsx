@@ -1,8 +1,8 @@
+import { MessageWithParts } from "@/app/dashboard/forms/[formId]/components/chat/MessageWithParts"
 import { Button, ChatContainer, ScrollButton } from "@formlink/ui"
 import { Activity, AlertTriangle, ChevronDown, Eye } from "lucide-react"
 import Link from "next/link"
 import React, { forwardRef, useRef, useState } from "react"
-import { MessageWithParts } from "./MessageWithParts"
 import type { ChatMessage, FormattedLogEvent } from "./types"
 
 interface TaskProgressProps {

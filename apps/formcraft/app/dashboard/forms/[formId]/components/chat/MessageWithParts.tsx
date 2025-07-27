@@ -1,31 +1,15 @@
 import { cn } from "@/app/lib"
+import type {
+  StepStartUIPart,
+  TextUIPart,
+  ToolInvocationUIPart,
+} from "@ai-sdk/ui-utils"
 import { Message, MessageContent } from "@formlink/ui"
 import { CheckCircle, Loader2, XCircle } from "lucide-react"
 import React from "react"
 import { formatChatMessageTime } from "./utils"
 
-interface TextPart {
-  type: "text"
-  text: string
-}
-
-interface ToolInvocationPart {
-  type: "tool-invocation"
-  toolInvocation: {
-    state: "partial-call" | "call" | "result" | "error"
-    toolCallId: string
-    toolName: string
-    args?: unknown
-    result?: unknown
-    error?: unknown
-  }
-}
-
-interface StepStartPart {
-  type: "step-start"
-}
-
-type MessagePart = TextPart | ToolInvocationPart | StepStartPart
+type MessagePart = TextUIPart | ToolInvocationUIPart | StepStartUIPart
 
 interface MessageWithPartsProps {
   role: "user" | "assistant"
@@ -104,7 +88,7 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
           case "tool-invocation":
             const { state, toolName } = part.toolInvocation
 
-            if (!isLastMessage && state !== "result" && state !== "error") {
+            if (!isLastMessage && state !== "result") {
               return null
             }
 
@@ -114,13 +98,15 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
                   return {
                     icon: CheckCircle,
                     text: `✓ Completed ${toolName}`,
-                    className: "bg-green-50 text-green-700 border-green-200",
+                    className:
+                      "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
                   }
                 case "error":
                   return {
                     icon: XCircle,
                     text: `✗ Failed ${toolName}`,
-                    className: "bg-red-50 text-red-700 border-red-200",
+                    className:
+                      "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
                   }
                 case "partial-call":
                   return {
@@ -154,7 +140,7 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
                     className={cn("h-4 w-4", isSpinning && "animate-spin")}
                   />
                   <span className="text-sm font-medium">
-                    🔧 {statusDisplay.text}
+                    {statusDisplay.text}
                   </span>
                 </div>
                 {displaySummaryMessage && (
