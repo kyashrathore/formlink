@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { Form, Question } from "@formlink/schema";
-import type { UIForm } from "@formlink/ui";
+import { Form } from "@formlink/schema";
+import { UIQuestion, UIForm } from "@formlink/ui";
 import type { QuestionResponse } from "@/lib/types";
 import { AnimatePresence } from "motion/react";
 import { TypeFormDropdownProvider, FormModeProvider } from "@formlink/ui";
@@ -17,13 +17,14 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import { useTypeFormKeyboard } from "./hooks/useTypeFormKeyboard";
 import { useTypeFormScroll } from "./hooks/useTypeFormScroll";
 import { useTypeFormSwipe } from "./hooks/useTypeFormSwipe";
+import { mapUIToQuestion } from "@/lib/mappers/schema-to-ui";
 
 interface TypeFormViewProps {
   formSchema: Form;
   uiFormSchema: UIForm;
   formId?: string;
   // Props down: business state
-  questions: Question[];
+  questions: UIQuestion[];
   questionResponses: Record<string, QuestionResponse>;
   isCompleted: boolean;
   // Callbacks up: business actions
@@ -33,13 +34,13 @@ interface TypeFormViewProps {
   onAnswerChange: (
     questionId: string,
     value: QuestionResponse,
-    questionType: Question["questionType"],
+    questionType: UIQuestion["questionType"],
   ) => void;
   onFileUpload: (questionId: string, file: File) => Promise<string | null>;
   onNavigateNext: (currentIndex: number) => number | null;
   onMarkCompleted: () => void;
-  shouldShowQuestion: (question: Question) => boolean;
-  getCurrentQuestion: (activeIndex: number) => Question | null;
+  shouldShowQuestion: (question: UIQuestion) => boolean;
+  getCurrentQuestion: (activeIndex: number) => UIQuestion | null;
   getProgress: (activeIndex: number) => number;
 }
 
@@ -63,13 +64,14 @@ export default function TypeFormView({
   const isMobileView = useIsMobile();
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [direction, setDirection] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Local UI state (previously from useFormUIStore)
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(-1); // -1 for intro screen
   const [showConfetti, setShowConfetti] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const currentQuestion: Question | null =
+  const currentQuestion: UIQuestion | null =
     getCurrentQuestion(activeQuestionIndex);
 
   useEffect(() => {
@@ -113,7 +115,7 @@ export default function TypeFormView({
   const handleSelectAndNavigate = (
     questionId: string,
     value: QuestionResponse,
-    questionType: Question["questionType"],
+    questionType: UIQuestion["questionType"],
   ) => {
     // Call the business logic callback
     onAnswerChange(questionId, value, questionType);
@@ -137,7 +139,7 @@ export default function TypeFormView({
       setDirection(-1); // Going backwards
       // Find previous valid question
       for (let i = activeQuestionIndex - 1; i >= 0; i--) {
-        if (shouldShowQuestion(questions[i] as Question)) {
+        if (shouldShowQuestion(questions[i] as UIQuestion)) {
           setActiveQuestionIndex(i);
           break;
         }
@@ -147,12 +149,13 @@ export default function TypeFormView({
 
   // Setup keyboard navigation
   useTypeFormKeyboard({
-    currentQuestion,
+    currentQuestion: currentQuestion ? mapUIToQuestion(currentQuestion) : null,
     onAnswer: handleSelectAndNavigate,
     onNext: handleNextWithDirection,
     onPrevious: handlePrevious,
     showHelp: () => setShowKeyboardHelp(true),
-    getCurrentResponse: (questionId: string) => questionResponses[questionId],
+    getCurrentResponse: (questionId: string) =>
+      questionResponses[questionId] ?? null,
   });
 
   // Setup scroll navigation (desktop)
@@ -214,7 +217,7 @@ export default function TypeFormView({
           direction={direction}
         >
           <TypeFormQuestion
-            question={currentQuestion}
+            question={mapUIToQuestion(currentQuestion)}
             response={questionResponses[currentQuestion.id] ?? null}
             onAnswer={handleSelectAndNavigate}
             onFileUpload={handleFileUploadWrapper}
@@ -258,8 +261,11 @@ export default function TypeFormView({
               canGoNext={
                 currentQuestion
                   ? currentQuestion.questionType === "text"
-                    ? (questionResponses[currentQuestion.id] || "").trim() !==
-                      ""
+                    ? typeof questionResponses[currentQuestion.id] ===
+                        "string" &&
+                      (
+                        questionResponses[currentQuestion.id] as string
+                      ).trim() !== ""
                     : questionResponses[currentQuestion.id] != null
                   : false
               }
