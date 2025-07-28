@@ -140,7 +140,7 @@ export default function DesignPanel({
       return
     }
 
-    setAppliedTheme(cssText)
+    setSavedTheme(cssText)
 
     if (onShadcnCSSApply) {
       onShadcnCSSApply(cssText)

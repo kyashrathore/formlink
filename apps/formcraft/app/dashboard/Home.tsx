@@ -84,7 +84,6 @@ function Home({ forms, user }: HomeProps) {
     // Create a new form ID when component mounts
     const newFormId = uuidv4()
     setFormIdForAgentPanel(newFormId)
-    setNavigatedFormId(null)
   }, [])
 
   const handleStartFormCreation = useCallback(

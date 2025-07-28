@@ -33,7 +33,7 @@ export function DataTableFilterControls() {
     submissionFilters.includes(value)
   )
 
-  if (table?.options?.meta?.totalCount === 0) {
+  if (!submissionFilterFields?.length) {
     return (
       <div className="text-muted-foreground p-4 text-center text-sm">
         No filters available.

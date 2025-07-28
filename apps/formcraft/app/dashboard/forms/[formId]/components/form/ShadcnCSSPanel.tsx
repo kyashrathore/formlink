@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, CardContent, CodeEditor, Label } from "@formlink/ui"
+import { Button, CardContent, Label, Textarea } from "@formlink/ui"
 import { useCallback, useEffect, useState } from "react"
 
 interface ShadcnCSSPanelProps {
@@ -60,20 +60,12 @@ export default function ShadcnCSSPanel({
           </Label>
 
           <div className="relative">
-            <CodeEditor
+            <Textarea
               value={cssText}
-              onChange={(value: string | undefined) => setCSSText(value || "")}
-              language="css"
-              height="320px"
-              options={{
-                minimap: { enabled: false },
-                fontSize: 13,
-                scrollBeyondLastLine: false,
-                wrappingStrategy: "advanced",
-                overviewRulerLanes: 0,
-                readOnly: applicationStatus.loading,
-              }}
-              wrapperClassName="h-[320px]"
+              onChange={(e) => setCSSText(e.target.value)}
+              placeholder="Enter CSS variables..."
+              className="h-[320px] font-mono text-sm"
+              disabled={applicationStatus.loading}
             />
           </div>
         </div>

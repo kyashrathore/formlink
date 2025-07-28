@@ -1,15 +1,15 @@
 "use client";
 
-import React from "react";
-import { Form, Question } from "@formlink/schema";
-import { UIQuestion, UIQuestionType } from "@formlink/ui";
-import type { QueryDataForForm, QuestionResponse } from "@/lib/types";
 import FormAIComponent from "@/app/[formId]/FormAIComponent";
 import TypeFormView from "@/components/typeform/TypeFormView";
 import { FormModeProvider, useFormMode } from "@/contexts/FormModeContext";
+import { useThemeLoader } from "@/hooks/useThemeLoader";
 import { mapFormToUI } from "@/lib/mappers/schema-to-ui";
 import { useAppFormStore } from "@/lib/stores/useAppFormStore";
-import { useThemeLoader } from "@/hooks/useThemeLoader";
+import type { QueryDataForForm, QuestionResponse } from "@/lib/types";
+import { Form, Question } from "@formlink/schema";
+import { UIQuestion, UIQuestionType } from "@formlink/ui";
+import React from "react";
 
 interface FormPageContentProps {
   formSchema: Form;
@@ -53,7 +53,6 @@ function FormPageContent({
 
   // Business logic from app store
   const {
-    questions,
     questionResponses,
     isCompleted,
     initialize,
@@ -148,7 +147,9 @@ function FormPageContent({
       onFileUpload={handleFileUpload}
       onNavigateNext={getNextValidQuestionIndex}
       onMarkCompleted={markAsCompleted}
-      shouldShowQuestion={(question: UIQuestion) => shouldShowQuestion(question as unknown as Question)}
+      shouldShowQuestion={(question: UIQuestion) =>
+        shouldShowQuestion(question as unknown as Question)
+      }
       getCurrentQuestion={getCurrentQuestion}
       getProgress={getProgress}
     />

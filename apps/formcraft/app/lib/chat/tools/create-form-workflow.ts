@@ -250,7 +250,7 @@ export async function createFormWorkflow(
           inputType: "prompt" as const,
           selectedModel,
           tasksToPersist: [],
-          generatedQuestionSchemas: successfulQuestions,
+          generatedQuestionSchemas: successfulQuestions as any,
           agentMessages: [],
           iteration: 1,
           eventSequence,

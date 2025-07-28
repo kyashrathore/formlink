@@ -1,23 +1,28 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
-import { Form } from "@formlink/schema";
-import { UIQuestion, UIForm } from "@formlink/ui";
-import type { QuestionResponse } from "@/lib/types";
-import { AnimatePresence } from "motion/react";
-import { TypeFormDropdownProvider, FormModeProvider } from "@formlink/ui";
-import TypeFormLayout from "./TypeFormLayout";
-import TypeFormQuestion from "./TypeFormQuestion";
-import TypeFormProgress from "./TypeFormProgress";
-import TypeFormTransition from "./TypeFormTransition";
-import TypeFormNavigation from "./TypeFormNavigation";
-import KeyboardShortcutModal from "./KeyboardShortcutModal";
-import { IntroScreen, CompletionScreen } from "@formlink/ui";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { mapUIToQuestion } from "@/lib/mappers/schema-to-ui";
+import type { QuestionResponse } from "@/lib/types";
+import { Form } from "@formlink/schema";
+import {
+  CompletionScreen,
+  FormModeProvider,
+  IntroScreen,
+  TypeFormDropdownProvider,
+  UIForm,
+  UIQuestion,
+} from "@formlink/ui";
+import { AnimatePresence } from "motion/react";
+import { useCallback, useEffect, useState } from "react";
 import { useTypeFormKeyboard } from "./hooks/useTypeFormKeyboard";
 import { useTypeFormScroll } from "./hooks/useTypeFormScroll";
 import { useTypeFormSwipe } from "./hooks/useTypeFormSwipe";
-import { mapUIToQuestion } from "@/lib/mappers/schema-to-ui";
+import KeyboardShortcutModal from "./KeyboardShortcutModal";
+import TypeFormLayout from "./TypeFormLayout";
+import TypeFormNavigation from "./TypeFormNavigation";
+import TypeFormProgress from "./TypeFormProgress";
+import TypeFormQuestion from "./TypeFormQuestion";
+import TypeFormTransition from "./TypeFormTransition";
 
 interface TypeFormViewProps {
   formSchema: Form;
@@ -64,7 +69,7 @@ export default function TypeFormView({
   const isMobileView = useIsMobile();
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [direction, setDirection] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
 
   // Local UI state (previously from useFormUIStore)
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(-1); // -1 for intro screen

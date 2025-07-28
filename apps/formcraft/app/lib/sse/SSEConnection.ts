@@ -233,7 +233,7 @@ export class SSEConnection {
 }
 
 export function useSSEConnection(options: SSEConnectionOptions) {
-  const connectionRef = React.useRef<SSEConnection>()
+  const connectionRef = React.useRef<SSEConnection>(null as any)
   const [connectionState, setConnectionState] = React.useState({
     isConnected: false,
     retryCount: 0,

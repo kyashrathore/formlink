@@ -25,7 +25,7 @@ export default function SettingsTabContent({}: SettingsTabContentProps) {
   return (
     <div className="h-full overflow-y-auto">
       <div className="space-y-6 p-6">
-        <Integrations userId="user" />
+        <Integrations />
         <AdditionalFieldsSection />
         <RedirectOnSubmission />
       </div>

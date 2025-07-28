@@ -1,6 +1,6 @@
+import { updateFormAgent } from "@/app/lib/agents/simple-agent"
 import { ChatToolContext, FormUpdateResult } from "@/app/lib/chat/types"
 import { tool } from "ai"
-import { updateFormAgent } from "../../agents/simple-agent"
 import logger from "../../logger"
 import { UpdateFormSchema } from "../../types/chat"
 import { TOOL_DESCRIPTIONS } from "../prompts"

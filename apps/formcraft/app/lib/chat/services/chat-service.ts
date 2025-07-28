@@ -106,7 +106,7 @@ export class ChatService {
       role: row.role,
       content: row.content,
       createdAt: row.created_at ? new Date(row.created_at) : new Date(),
-      ...(row.parts && { parts: row.parts }),
+      ...(row.parts ? { parts: row.parts } : {}),
     }))
   }
 

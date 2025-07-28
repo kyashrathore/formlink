@@ -23,14 +23,14 @@ export function useFormGenerationSSE({
   enabled = true,
 }: UseFormGenerationSSEOptions) {
   const store = useFormGenerationStore()
-  const eventHandlerRef = useRef<FormGenerationEventHandler>()
-  const connectionRef = useRef<SSEConnection>()
-  const isUsingNewStore = isFeatureEnabled("USE_NEW_FORM_GENERATION_STORE")
+  const eventHandlerRef = useRef<FormGenerationEventHandler>(null as any)
+  const connectionRef = useRef<SSEConnection>(null as any)
+  const isUsingNewStore = true // Default to true
 
   // Initialize event handler
   useEffect(() => {
     if (isUsingNewStore) {
-      eventHandlerRef.current = new FormGenerationEventHandler(store)
+      eventHandlerRef.current = new FormGenerationEventHandler()
     }
   }, [store, isUsingNewStore])
 

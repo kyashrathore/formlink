@@ -9,5 +9,11 @@ export function validateChatRequest(
     throw new Error("Missing or invalid 'messages' field")
   }
 
-  return { messages, formId, options }
+  return {
+    messages,
+    formId: formId as string | undefined,
+    options: options as
+      | { model?: string; temperature?: number; maxTokens?: number }
+      | undefined,
+  }
 }

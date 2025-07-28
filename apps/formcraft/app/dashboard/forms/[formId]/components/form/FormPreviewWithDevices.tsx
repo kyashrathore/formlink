@@ -72,7 +72,6 @@ export default function FormPreviewWithDevices({
             form={form}
             className="h-full w-full"
             formMode={formMode}
-            onFormModeChange={setFormMode}
             shadcnCSSData={shadcnCSSData}
             onShadcnApplied={onShadcnApplied}
           />

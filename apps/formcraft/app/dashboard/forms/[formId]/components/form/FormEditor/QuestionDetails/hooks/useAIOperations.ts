@@ -63,7 +63,11 @@ export const useAIOperations = ({
             status: "warning",
           })
         } else if (result.data) {
-          addQuestionValidation(question.id, value, result.data)
+          addQuestionValidation(
+            question.id,
+            value,
+            (result.data as ValidationSchema[]) || []
+          )
           setVisibleInput(null)
         } else {
           toast({
@@ -116,11 +120,11 @@ export const useAIOperations = ({
               result.message || "Invalid conditional logic statement.",
             status: "warning",
           })
-        } else if (result.data && result.data.jsonataExpression) {
+        } else if (result.data && (result.data as any).jsonataExpression) {
           addQuestionCondition(
             question.id,
             value,
-            result.data.jsonataExpression
+            (result.data as any).jsonataExpression
           )
           setVisibleInput(null)
           toast({

@@ -47,7 +47,7 @@ export default async function Home() {
   return (
     <div className="bg-background @container/mainview relative flex h-full w-full">
       <main className="@container relative h-dvh w-0 flex-shrink flex-grow">
-        <HomePageWrapper user={user} forms={formsWithVersions} />
+        <HomePageWrapper user={user as any} forms={formsWithVersions} />
       </main>
     </div>
   )

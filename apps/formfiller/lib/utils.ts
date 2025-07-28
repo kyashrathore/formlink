@@ -1,7 +1,7 @@
+import { Question } from "@formlink/schema";
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { Question } from "@formlink/schema";
-import type { QuestionResponse, FileData } from "./types";
+import type { FileData } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -10,14 +10,15 @@ export function cn(...inputs: ClassValue[]) {
 export function findNextQuestion(
   currentQuestion: Question,
   allQuestions: Question[],
-  responses: Record<string, QuestionResponse>,
 ): Question | undefined {
-  const currentIndex = allQuestions.findIndex((q) => q.id === currentQuestion.id);
+  const currentIndex = allQuestions.findIndex(
+    (q) => q.id === currentQuestion.id,
+  );
   if (currentIndex === -1) return undefined;
 
   for (let i = currentIndex + 1; i < allQuestions.length; i++) {
     const nextQuestion = allQuestions[i];
-    if (nextQuestion && shouldShowQuestion(nextQuestion, responses)) {
+    if (nextQuestion && shouldShowQuestion(nextQuestion)) {
       return nextQuestion;
     }
   }
@@ -25,10 +26,7 @@ export function findNextQuestion(
   return undefined;
 }
 
-export function shouldShowQuestion(
-  question: Question,
-  responses: Record<string, QuestionResponse>,
-): boolean {
+export function shouldShowQuestion(question: Question): boolean {
   if (!question.conditionalLogic) {
     return true;
   }

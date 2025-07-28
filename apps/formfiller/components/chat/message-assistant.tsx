@@ -1,4 +1,3 @@
-import type { MessagePart } from "@/lib/types";
 import { Message as MessageType } from "@ai-sdk/react";
 import { Message, MessageContent } from "@formlink/ui";
 import { cn } from "@formlink/ui/lib/utils";
@@ -24,20 +23,20 @@ export function MessageAssistant({
     messageId,
     isLast,
     "assistant",
-    handleFileUpload
+    handleFileUpload,
   );
 
   return (
     <Message
       className={cn(
         "group flex w-full max-w-3xl items-start gap-4 px-3 py-0.5 sm:px-4 md:px-6",
-        hasScrollAnchor && "min-h-scroll-anchor"
+        hasScrollAnchor && "min-h-scroll-anchor",
       )}
     >
       <motion.div
         className={cn(
           "flex max-w-[90%] sm:max-w-[85%] md:max-w-[70%] flex-col gap-2",
-          isLast && "pb-8"
+          isLast && "pb-8",
         )}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}

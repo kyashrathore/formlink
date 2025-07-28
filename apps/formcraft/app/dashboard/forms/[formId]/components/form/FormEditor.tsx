@@ -63,27 +63,35 @@ const FormEditor: React.FC<FormEditorProps> = ({ user, selectedTab }) => {
   // This ensures we display the existing form data, not the idle generation state.
   const metadataData = isFormGenerating
     ? {
-        status: hasFormMetadata ? "success" : "loading",
+        status: hasFormMetadata ? ("success" as const) : ("loading" as const),
         data: hasFormMetadata ? formMetadata : null, // Don't provide data when loading to show shimmer
+        error: null,
+        lastUpdated: hasFormMetadata ? new Date() : null,
       }
     : {
-        status: "success",
+        status: "success" as const,
         data: {
           title: form?.title || "",
           description: form?.description || "",
         },
+        error: null,
+        lastUpdated: new Date(),
       }
 
   const journeyData = isFormGenerating
     ? {
-        status: hasFormJourney ? "success" : "loading",
+        status: hasFormJourney ? ("success" as const) : ("loading" as const),
         data: hasFormJourney
           ? currentForm?.settings?.journeyScript || ""
           : null, // Don't provide data when loading to show shimmer
+        error: null,
+        lastUpdated: hasFormJourney ? new Date() : null,
       }
     : {
-        status: "success",
+        status: "success" as const,
         data: form?.settings?.journeyScript || "",
+        error: null,
+        lastUpdated: new Date(),
       }
 
   // Create properly typed AsyncCollection for questions
@@ -155,10 +163,10 @@ const FormEditor: React.FC<FormEditorProps> = ({ user, selectedTab }) => {
       {/* Questions Section */}
       {showQuestions && (
         <AsyncCollectionSection
-          data={questionsData}
+          data={questionsData as any}
           shimmer={() =>
-            questionsData.total > 0 ? (
-              <QuestionsShimmer count={questionsData.total} />
+            (questionsData.total ?? 0) > 0 ? (
+              <QuestionsShimmer count={questionsData.total ?? 0} />
             ) : (
               <QuestionsLoadingIndicator />
             )

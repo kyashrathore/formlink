@@ -48,7 +48,10 @@ export function getFormContextTool(context: ChatToolContext) {
         return {
           success: true,
           formId: targetFormId,
-          context: contextData,
+          context: {
+            ...contextData,
+            settings: contextData.settings as Record<string, unknown>,
+          },
         }
       } catch (error) {
         const errorMessage =

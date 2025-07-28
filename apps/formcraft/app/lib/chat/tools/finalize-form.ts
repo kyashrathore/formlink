@@ -136,11 +136,11 @@ async function createFormVersion(
     description: formContent.description,
     questions:
       validatedQuestions as Database["public"]["Tables"]["form_versions"]["Insert"]["questions"],
-    settings: formContent.journeyScript
+    settings: (formContent.journeyScript
       ? {
           journeyScript: formContent.journeyScript,
         }
-      : formContent.settings,
+      : formContent.settings) as any,
     status: "draft",
     user_id: userId,
   }

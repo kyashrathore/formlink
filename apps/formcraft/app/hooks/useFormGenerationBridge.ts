@@ -41,13 +41,13 @@ export interface FormGenerationState {
  */
 export function useFormGenerationBridge() {
   const store = useFormGenerationStore()
-  const { bridgeEvent } = useFormGenerationEventBridge()
+  const { bridgeEvent } = useFormGenerationEventBridge(store)
 
   // Event handler
-  const eventHandlerRef = useRef<FormGenerationEventHandler>()
+  const eventHandlerRef = useRef<FormGenerationEventHandler>(null as any)
 
   useEffect(() => {
-    eventHandlerRef.current = new FormGenerationEventHandler(store)
+    eventHandlerRef.current = new FormGenerationEventHandler()
   }, [store])
 
   // Handle events

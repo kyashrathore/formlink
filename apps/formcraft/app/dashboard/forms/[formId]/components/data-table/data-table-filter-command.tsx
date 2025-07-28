@@ -17,6 +17,7 @@ import {
 import type { Table } from "@tanstack/react-table"
 import { formatDistanceToNow } from "date-fns"
 import { Loader, Search, X } from "lucide-react"
+import type { ParserBuilder } from "nuqs"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Kbd } from "../custom/kbd"
 import {
@@ -37,7 +38,7 @@ interface DataTableFilterCommandProps<TData = unknown> {
     table: Table<TData>,
     columnId: string
   ) => Map<string, number>
-  searchParamsParser: Record<string, unknown>
+  searchParamsParser: Record<string, ParserBuilder<unknown>>
 }
 
 export function DataTableFilterCommand<TData>({

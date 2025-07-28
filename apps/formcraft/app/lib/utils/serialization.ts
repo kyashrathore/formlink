@@ -19,13 +19,13 @@ export function sanitizeAgentEventForSerialization<
 
   // Handle the known circular reference in agentState
   if (
-    'data' in safeEvent &&
+    "data" in safeEvent &&
     safeEvent.data &&
     typeof safeEvent.data === "object" &&
-    'agentState' in safeEvent.data &&
+    "agentState" in safeEvent.data &&
     safeEvent.data.agentState
   ) {
-    (safeEvent as any).data = {
+    ;(safeEvent as any).data = {
       ...safeEvent.data,
       agentState: {
         ...safeEvent.data.agentState,

@@ -40,7 +40,7 @@ export function FormGenerationExample({ formId }: FormGenerationExampleProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold">Form Generation Status</h3>
-            <Badge variant={isConnected ? "success" : "secondary"}>
+            <Badge variant={isConnected ? "default" : "secondary"}>
               {isConnected ? "Connected" : "Disconnected"}
             </Badge>
           </div>
@@ -126,7 +126,7 @@ export function FormGenerationExample({ formId }: FormGenerationExampleProps) {
 
       {/* Questions Section */}
       <AsyncCollectionSection
-        data={questions}
+        data={questions as any}
         shimmer={() =>
           questions.total ? (
             <QuestionsShimmer count={questions.total} />
@@ -134,22 +134,22 @@ export function FormGenerationExample({ formId }: FormGenerationExampleProps) {
             <LoadingQuestions />
           )
         }
-        content={({ items, total, generatedCount }) => (
+        content={({ data }) => (
           <Card className="p-6">
             <div className="mb-4 flex items-start justify-between">
               <div>
                 <h3 className="text-lg font-semibold">Questions</h3>
                 <p className="text-muted-foreground text-sm">
-                  {generatedCount} of {total || "?"} generated
+                  {data.generatedCount} of {data.total || "?"} generated
                 </p>
               </div>
-              {generatedCount === total && (
+              {data.generatedCount === data.total && (
                 <CheckCircle className="h-5 w-5 text-green-500" />
               )}
             </div>
 
             <div className="space-y-3">
-              {items.map((question, index) => (
+              {data.items.map((question: any, index) => (
                 <div key={question.id} className="rounded-lg border p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">

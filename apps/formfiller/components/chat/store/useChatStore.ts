@@ -1,12 +1,12 @@
-import { create } from "zustand";
-import { persist } from "zustand/middleware";
 import { Message as MessageType } from "@ai-sdk/react";
-import { v4 as uuidv4 } from "uuid";
 import { Form, Question } from "@formlink/schema";
 import jsonata from "jsonata";
-import { findNextQuestion } from "../../../lib/utils";
+import { v4 as uuidv4 } from "uuid";
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import { apiConfig, apiServices } from "../../../lib/api-config";
 import type { QuestionResponse } from "../../../lib/types";
+import { findNextQuestion } from "../../../lib/utils";
 
 // --- Pure Helper Functions (top-level, no store dependency) ---
 
@@ -353,11 +353,7 @@ export const useChatStore = create<ChatState>()(
         );
 
         // Find next question (currentQuestion is now guaranteed to be Question)
-        const nextQ = findNextQuestion(
-          currentQuestion,
-          formSchema.questions,
-          newInputs,
-        );
+        const nextQ = findNextQuestion(currentQuestion, formSchema.questions);
         if (nextQ) {
           set({
             currentQuestionId: nextQ.id,

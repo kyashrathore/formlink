@@ -1,6 +1,5 @@
-import { Form, Question, AddressData } from "@formlink/schema";
+import { AddressData, Form, Question } from "@formlink/schema";
 import { UIQuestion } from "@formlink/ui";
-import type { Element } from "hast";
 
 /**
  * Type definitions for FormFiller app
@@ -36,7 +35,6 @@ export interface ExtendedFormModeContext {
   isChatMode?: boolean;
   isTypeFormMode?: boolean;
 }
-
 
 // Validation types
 export interface ValidationResult {
