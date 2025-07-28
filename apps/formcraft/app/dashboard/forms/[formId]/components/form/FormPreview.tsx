@@ -87,7 +87,7 @@ export default function FormPreview({
 
   const stableFormId = useMemo(() => {
     return form.short_id || form.id
-  }, [form.short_id ? form.short_id : form.id])
+  }, [form.short_id, form.id])
 
   const stablePreviewUrl = useMemo(() => {
     const previewBasePath = getFormFillerPreviewBasePath()
@@ -195,7 +195,12 @@ export default function FormPreview({
       const expectedOrigin = new URL(getPreviewUrl()).origin
 
       if (event.origin !== expectedOrigin) {
-        console.warn("Received message from untrusted origin:", event.origin)
+        console.warn(
+          "FormCraft: Received message from untrusted origin:",
+          event.origin,
+          "expected:",
+          expectedOrigin
+        )
         return
       }
 

@@ -19,7 +19,12 @@ type FormWithVersionIds = {
   current_draft_version_id?: string | null
 } & Form
 
-interface FormState {
+type QuestionWithLists = Question & {
+  readableValidations?: string[]
+  readableConditionalLogic?: string[]
+}
+
+interface FormEditorState {
   form: FormWithVersionIds | null
   initialFormSnapshot: FormWithVersionIds | null
   isLoading: boolean
@@ -27,30 +32,21 @@ interface FormState {
   selectedQuestionId: string | null
 }
 
-type QuestionWithLists = Question & {
-  readableValidations?: string[]
-  readableConditionalLogic?: string[]
-}
-
-interface FormActions {
+interface FormEditorActions {
   resetForm: () => void
   setForm: (form: FormWithVersionIds) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   setSelectedQuestionId: (id: string | null) => void
-
   updateSnapshot: () => void
-
   updateSettingField: <K extends keyof Settings>(
     field: K,
     value: Settings[K]
   ) => void
-
   updateFormField: <K extends EditableFormField>(
     field: K,
     value: FormWithVersionIds[K]
   ) => void
-
   updateQuestionField: (
     questionId: string,
     field: EditableQuestionField,
@@ -58,7 +54,6 @@ interface FormActions {
   ) => void
   addQuestionOption: (questionId: string, newOption: Option) => void
   deleteQuestionOption: (questionId: string, optionIndex: number) => void
-
   addQuestionValidation: (
     questionId: string,
     newValidation: string,
@@ -71,7 +66,6 @@ interface FormActions {
     questionId: string,
     validationIndex: number
   ) => void
-
   addQuestionCondition: (
     questionId: string,
     newCondition: string,
@@ -98,15 +92,15 @@ export const getDefaultSettings = (): Settings => ({
   },
 })
 
-const formStore: StateCreator<
-  FormState & FormActions,
+const formEditorStore: StateCreator<
+  FormEditorState & FormEditorActions,
   [["zustand/immer", never]],
   [],
-  FormState & FormActions
+  FormEditorState & FormEditorActions
 > = (set, get) => ({
   form: null,
   initialFormSnapshot: null,
-  isLoading: false,
+  isLoading: true,
   error: null,
   selectedQuestionId: null,
 
@@ -121,9 +115,11 @@ const formStore: StateCreator<
   },
 
   setForm: (form: FormWithVersionIds) => {
-    const firstQuestionId = form.questions?.[0]?.id ?? null
+    // Filter out null questions that might exist during generation
+    const validQuestions = form.questions.filter((q: Question) => q !== null)
+    const firstQuestionId = validQuestions?.[0]?.id ?? null
 
-    const questionsWithLists: QuestionWithLists[] = form.questions.map(
+    const questionsWithLists: QuestionWithLists[] = validQuestions.map(
       (q: Question) => {
         const baseQuestion = q as QuestionWithLists
 
@@ -158,15 +154,18 @@ const formStore: StateCreator<
       state.selectedQuestionId = firstQuestionId
     })
   },
+
   setLoading: (loading: boolean) =>
     set((state) => {
       state.isLoading = loading
     }),
+
   setError: (error: string | null) =>
     set((state) => {
       state.error = error
       state.isLoading = false
     }),
+
   setSelectedQuestionId: (id: string | null) =>
     set((state) => {
       state.selectedQuestionId = id
@@ -237,6 +236,7 @@ const formStore: StateCreator<
         question.options.push(newOption as any)
       }
     }),
+
   deleteQuestionOption: (questionId: string, optionIndex: number) =>
     set((state) => {
       const question = state.form?.questions.find(
@@ -483,9 +483,13 @@ const formStore: StateCreator<
     }),
 })
 
-export const useFormStore = create<FormState & FormActions>()(immer(formStore))
+export const useFormEditorStore = create<FormEditorState & FormEditorActions>()(
+  immer(formEditorStore)
+)
 
-export const selectIsDirty = (state: FormState & FormActions): boolean => {
+export const selectIsDirty = (
+  state: FormEditorState & FormEditorActions
+): boolean => {
   if (!state.form || !state.initialFormSnapshot) {
     return false
   }

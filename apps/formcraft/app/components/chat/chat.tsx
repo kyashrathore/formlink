@@ -53,17 +53,9 @@ export default function Chat({
       onValueChange={handleInputChange}
       onSend={submit}
       isSubmitting={currentIsSubmitting}
-      files={[]}
-      onFileUpload={() => {}}
-      onFileRemove={() => {}}
-      onSuggestion={() => {}}
       hasSuggestions={showSuggestions ?? false}
       onSelectModel={handleSelectModel}
       selectedModel={selectedModel}
-      isUserAuthenticated={false}
-      onSelectSystemPrompt={() => {}}
-      systemPrompt=""
-      stop={() => {}}
       status="ready"
     />
   )

@@ -1,6 +1,6 @@
 import { Form } from "@formlink/schema"
 import { nanoid } from "nanoid"
-import { AgentState } from "../agent/state"
+import { AgentState } from "../../../../../lib/types/agent-events"
 
 export interface BaseAgentEvent {
   id: string
@@ -93,6 +93,7 @@ export interface QuestionSchemaGeneratedEvent extends BaseAgentEvent {
     questionTitle: string
     questionIndex: number
     totalQuestions: number
+    question: any // The actual generated question object
     message: string
   }
 }

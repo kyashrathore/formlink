@@ -8,7 +8,8 @@ import { mapQuestionToUI } from "@/lib/mappers/schema-to-ui";
 import { Button } from "@formlink/ui";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib";
-import type { QuestionResponse } from "@/lib/types";
+import { fileDataToFile } from "@/lib/utils";
+import type { QuestionResponse, FileData } from "@/lib/types";
 
 interface TypeFormQuestionProps {
   question: Question;
@@ -73,6 +74,8 @@ export default function TypeFormQuestion({
     }
   })();
 
+  const responseAsFile = response instanceof File ? response : response && typeof response === "object" && "url" in response ? fileDataToFile(response as FileData) : null;
+
   return (
     <div className="flex-1 flex items-center justify-center">
       <div className="w-full max-w-4xl space-y-8">
@@ -100,7 +103,7 @@ export default function TypeFormQuestion({
           <div className="w-full">
             <InputContainer
               currentQuestion={mapQuestionToUI(question)}
-              currentResponse={response}
+              currentResponse={responseAsFile}
               handleSelect={(qId: string, value: QuestionResponse) => {
                 onAnswer(qId, value, question.questionType);
               }}

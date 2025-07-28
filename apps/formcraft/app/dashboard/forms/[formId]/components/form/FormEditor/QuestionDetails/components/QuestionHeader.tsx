@@ -50,7 +50,7 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
             <GripVertical className="size-4" />
           </div>
           <span className="mr-2">ID: {question.id}</span>
-          <span className="mr-2">Type: {question.questionType}</span>
+          <span className="mr-2">Type: {question.type}</span>
         </div>
         {!shouldHideControls && (
           <div className="opacity-0 transition-opacity duration-200 ease-in-out group-hover:opacity-100">
@@ -90,7 +90,7 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
               onConfirm={(value) => onFieldUpdate("title", value)}
               placeholder="Enter question title"
               hideLabel
-              className={`text-lg font-medium ${shouldHideControls ? "w-full" : ""}`}
+              className={`text-3xl font-medium ${shouldHideControls ? "w-full" : ""}`}
             />
           </div>
           <div className="flex">
@@ -103,6 +103,7 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
               hideLabel
               className={`text-muted-foreground text-sm ${shouldHideControls ? "w-full" : ""}`}
               useTextArea
+              isCompact
             />
           </div>
         </div>

@@ -1,3 +1,4 @@
+import { AgentEvent } from "../../lib/types/agent-events"
 import { formatEventData } from "../../lib/utils/formatEventData"
 import type {
   AgentState,
@@ -7,10 +8,10 @@ import type {
 } from "./types"
 
 export const findFirstAgentInitTimestamp = (
-  eventsLog: Array<{ name: string; timestamp: string }>
+  eventsLog: AgentEvent[]
 ): number | null => {
   const agentInitEvent = eventsLog.find(
-    (log) => log.name === "agent_init" || log.name === "agent_start"
+    (log) => log.type === "agent_initialized"
   )
   return agentInitEvent ? new Date(agentInitEvent.timestamp).getTime() : null
 }
@@ -38,7 +39,7 @@ export const formatTimeDisplay = (
 }
 
 export const formatEventsForLogView = (
-  eventsLog: Array<{ timestamp: string; type: string; data: unknown }>,
+  eventsLog: AgentEvent[],
   firstAgentInitTimestamp: number | null
 ): FormattedLogEvent[] => {
   return eventsLog.map((log) => {
@@ -50,8 +51,9 @@ export const formatEventsForLogView = (
     const eventName = log.type
 
     return {
-      ...log,
       name: eventName,
+      timestamp: log.timestamp,
+      data: log.data,
       displayTime: timeDisplay,
       formattedContent: `[${eventName}] ${formatEventData(eventName, log.data)} (+${timeDisplay})`,
     }

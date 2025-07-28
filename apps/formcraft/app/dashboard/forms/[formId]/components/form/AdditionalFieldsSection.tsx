@@ -2,8 +2,8 @@
 
 import {
   getDefaultSettings,
-  useFormStore,
-} from "@/app/dashboard/forms/[formId]/stores/useFormStore"
+  useFormEditorStore,
+} from "@/app/dashboard/forms/[formId]/stores/useFormEditorStore"
 import { Button, Card, Input, Label } from "@formlink/ui"
 import { X } from "lucide-react"
 import { useState } from "react"
@@ -17,8 +17,10 @@ interface StoredComputedField {
 const AddContextSectionStep = () => {
   const [currentQueryParam, setCurrentQueryParam] = useState("")
 
-  const form = useFormStore((state) => state.form)
-  const updateSettingField = useFormStore((state) => state.updateSettingField)
+  const form = useFormEditorStore((state) => state.form)
+  const updateSettingField = useFormEditorStore(
+    (state) => state.updateSettingField
+  )
 
   const queryParams = form?.settings?.additionalFields?.queryParamater ?? []
 

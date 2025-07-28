@@ -57,7 +57,7 @@ const formGenerationStore: StateCreator<
   [["zustand/immer", never]],
   [],
   FormGenerationState & FormGenerationActions
-> = (set, get) => ({
+> = (set) => ({
   formId: null,
   currentForm: null,
   agentState: null,

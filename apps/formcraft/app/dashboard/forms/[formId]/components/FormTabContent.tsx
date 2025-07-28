@@ -1,11 +1,12 @@
 "use client"
 
 import { Button } from "@formlink/ui"
-import { Edit3, Eye, FileText } from "lucide-react"
+import { Edit3, Eye, FileText, Loader2 } from "lucide-react"
 import { useState } from "react"
 import { usePanelState } from "../hooks/usePanelState"
 import { cn } from "../lib"
-import { useFormStore } from "../stores/useFormStore"
+import { useFormEditorStore } from "../stores/useFormEditorStore"
+import { useFormGenerationStore } from "../stores/useFormGenerationStore"
 import { DeviceMode } from "./form/DevicePreviewFrame"
 import FormEditor from "./form/FormEditor"
 import FormModeControls, { FormMode } from "./form/FormModeControls"
@@ -14,6 +15,10 @@ import PreviewControls from "./form/PreviewControls"
 
 const mockUser = {
   id: "test-user-id",
+  app_metadata: {},
+  user_metadata: {},
+  aud: "",
+  created_at: "",
 }
 
 interface FormTabContentProps {
@@ -35,12 +40,23 @@ export default function FormTabContent({
   shadcnCSSData,
   onShadcnApplied,
 }: FormTabContentProps) {
-  const { form } = useFormStore()
+  const { form: initialForm, isLoading } = useFormEditorStore()
+  const { currentForm } = useFormGenerationStore()
+  const form = currentForm || initialForm
   const { editMode, toggleEditMode } = usePanelState()
   const [formMode, setFormMode] = useState<FormMode>("chat")
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop")
 
   const isPreviewMode = !editMode
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
+        <span className="text-muted-foreground">Loading form...</span>
+      </div>
+    )
+  }
 
   if (!form) {
     return (
@@ -74,14 +90,12 @@ export default function FormTabContent({
 
   return (
     <div className="bg-background flex h-full flex-col overflow-auto">
-      {}
       <div
         className={cn(
           "border-border bg-background flex items-center justify-between border-b px-4",
           isPreviewMode ? "py-0" : "py-1"
         )}
       >
-        {}
         <div className="flex items-center">
           {hasFormContent && isPreviewMode && (
             <FormModeControls
@@ -91,9 +105,7 @@ export default function FormTabContent({
           )}
         </div>
 
-        {}
         <div className="flex items-center space-x-3">
-          {}
           {hasFormContent && isPreviewMode && (
             <>
               <PreviewControls
@@ -104,7 +116,6 @@ export default function FormTabContent({
             </>
           )}
 
-          {}
           {hasFormContent && (
             <Button
               variant="outline"
@@ -129,12 +140,10 @@ export default function FormTabContent({
       </div>
 
       <div className="relative flex-1">
-        {}
         <div
           className={`absolute inset-0 z-10 ${isPreviewMode ? "block" : "hidden"}`}
         >
           <div className="h-full p-4">
-            {}
             {hasFormContent && (
               <FormPreviewWithDevices
                 form={form}
@@ -151,7 +160,6 @@ export default function FormTabContent({
           </div>
         </div>
 
-        {}
         <div
           className={`absolute inset-0 ${!isPreviewMode ? "block" : "hidden"}`}
         >

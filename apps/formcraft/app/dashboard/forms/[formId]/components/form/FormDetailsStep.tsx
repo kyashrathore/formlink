@@ -1,6 +1,5 @@
 "use client"
 
-import { useFormStore } from "@/app/dashboard/forms/[formId]/stores/useFormStore"
 import { Form } from "@formlink/schema"
 import {
   Card,
@@ -13,20 +12,20 @@ import React, { useState } from "react"
 import InlineEditableField from "./InlineEditableField"
 
 interface FormStartStepProps {
-  handleUpdateFormDetails: <
-    K extends keyof Pick<Form, "title" | "description">,
-  >(
+  title: string
+  description: string
+  onUpdate: <K extends keyof Pick<Form, "title" | "description">>(
     field: K,
     value: Form[K]
   ) => void
 }
 
 const FormDetailsStep: React.FC<FormStartStepProps> = ({
-  handleUpdateFormDetails,
+  title,
+  description,
+  onUpdate,
 }) => {
-  const { form } = useFormStore()
-
-  const [isFormDetailsOpen, setIsFormDetailsOpen] = useState(false)
+  const [isFormDetailsOpen, setIsFormDetailsOpen] = useState(true)
 
   return (
     <div
@@ -53,8 +52,8 @@ const FormDetailsStep: React.FC<FormStartStepProps> = ({
               <InlineEditableField
                 id={`form-title`}
                 label="Form Title"
-                defaultValue={form?.title}
-                onConfirm={(value) => handleUpdateFormDetails("title", value)}
+                defaultValue={title}
+                onConfirm={(value) => onUpdate("title", value)}
                 placeholder="Enter Form Title"
                 hideLabel
                 className="text-2xl font-medium tracking-tight"
@@ -63,10 +62,8 @@ const FormDetailsStep: React.FC<FormStartStepProps> = ({
                 <InlineEditableField
                   id={`form-intro`}
                   label="Form description"
-                  defaultValue={form?.description}
-                  onConfirm={(value) =>
-                    handleUpdateFormDetails("description", value)
-                  }
+                  defaultValue={description}
+                  onConfirm={(value) => onUpdate("description", value)}
                   placeholder="Add description for the form..."
                   hideLabel
                   className="text-muted-foreground text-base"

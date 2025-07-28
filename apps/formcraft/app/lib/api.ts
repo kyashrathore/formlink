@@ -12,6 +12,73 @@ import {
   API_ROUTE_UPDATE_CHAT_MODEL,
 } from "./routes"
 
+// API Response Types
+interface CreateChatResponse {
+  chatId: string
+  error?: string
+}
+
+interface CreateGuestResponse {
+  success: boolean
+  userId?: string
+  error?: string
+}
+
+interface UpdateChatModelResponse {
+  success: boolean
+  error?: string
+}
+
+interface RateLimitResponse {
+  dailyMessageCount: number
+  dailyMessageLimit: number
+  canSendMessage: boolean
+  error?: string
+}
+
+// Type guards for API responses
+function isCreateChatResponse(data: unknown): data is CreateChatResponse {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    (("chatId" in data && typeof (data as any).chatId === "string") ||
+      ("error" in data && typeof (data as any).error === "string"))
+  )
+}
+
+function isCreateGuestResponse(data: unknown): data is CreateGuestResponse {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "success" in data &&
+    typeof (data as any).success === "boolean"
+  )
+}
+
+function isUpdateChatModelResponse(
+  data: unknown
+): data is UpdateChatModelResponse {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "success" in data &&
+    typeof (data as any).success === "boolean"
+  )
+}
+
+function isRateLimitResponse(data: unknown): data is RateLimitResponse {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "dailyMessageCount" in data &&
+    "dailyMessageLimit" in data &&
+    "canSendMessage" in data &&
+    typeof (data as any).dailyMessageCount === "number" &&
+    typeof (data as any).dailyMessageLimit === "number" &&
+    typeof (data as any).canSendMessage === "boolean"
+  )
+}
+
 export async function createNewChat(
   userId: string,
   title?: string,
@@ -31,13 +98,21 @@ export async function createNewChat(
         systemPrompt,
       }),
     })
-    const responseData = (await res.json()) as any
+    const responseData = await res.json()
+
+    if (!isCreateChatResponse(responseData)) {
+      throw new Error("Invalid response format from create chat API")
+    }
 
     if (!res.ok) {
       throw new Error(
         responseData.error ||
           `Failed to create chat: ${res.status} ${res.statusText}`
       )
+    }
+
+    if (!responseData.chatId) {
+      throw new Error("No chatId returned from create chat API")
     }
 
     return responseData.chatId
@@ -56,7 +131,12 @@ export async function createGuestUser(guestId: string) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId: guestId }),
     })
-    const responseData = (await res.json()) as any
+    const responseData = await res.json()
+
+    if (!isCreateGuestResponse(responseData)) {
+      throw new Error("Invalid response format from create guest API")
+    }
+
     if (!res.ok) {
       throw new Error(
         responseData.error ||
@@ -200,7 +280,12 @@ export async function checkRateLimits(
         headers: { "Content-Type": "application/json" },
       }
     )
-    const responseData = (await res.json()) as any
+    const responseData = await res.json()
+
+    if (!isRateLimitResponse(responseData)) {
+      throw new Error("Invalid response format from rate limit API")
+    }
+
     if (!res.ok) {
       throw new Error(
         responseData.error ||
@@ -220,7 +305,11 @@ export async function updateChatModel(chatId: string, model: string) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId, model }),
     })
-    const responseData = (await res.json()) as any
+    const responseData = await res.json()
+
+    if (!isUpdateChatModelResponse(responseData)) {
+      throw new Error("Invalid response format from update chat model API")
+    }
 
     if (!res.ok) {
       throw new Error(

@@ -1,4 +1,5 @@
 import type { StorybookConfig } from "@storybook/nextjs";
+import path from "path";
 
 const config: StorybookConfig = {
   stories: [
@@ -18,7 +19,7 @@ const config: StorybookConfig = {
     options: {},
   },
   docs: {
-    autodocs: "tag",
+    defaultName: "Documentation",
   },
   webpackFinal: async (config) => {
     if (config.resolve) {
@@ -38,7 +39,5 @@ const config: StorybookConfig = {
     return config;
   },
 };
-
-import path from "path";
 
 export default config;

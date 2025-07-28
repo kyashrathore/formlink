@@ -1,40 +1,10 @@
 "use client"
 
 import { Button, Card, Label, toast } from "@formlink/ui"
-import { Edit, Eye, Wand2 } from "lucide-react"
-import { marked } from "marked"
+import { Wand2 } from "lucide-react"
 import React, { useCallback, useEffect, useState } from "react"
 import { useMobile } from "../../hooks/use-mobile"
-import { useFormStore } from "../../stores/useFormStore"
-
-const transformCustomTags = (content: string): string => {
-  if (!content) return ""
-
-  let processedContent = content
-
-  const tagMappings: { [key: string]: string } = {
-    "form-journey": "# Form Journey",
-    strategy: "## Strategy",
-    "value-exchange-strategy": "## Value Exchange Strategy",
-    "branching-logic": "## Branching Logic",
-    "result-generation": "## Result Generation",
-  }
-
-  Object.entries(tagMappings).forEach(([tag, header]) => {
-    processedContent = processedContent.replace(
-      new RegExp(`<${tag}>`, "gi"),
-      `${header}\n`
-    )
-  })
-
-  processedContent = processedContent.replace(/<\/[^>]+>/g, "\n")
-
-  processedContent = processedContent.replace(/\n(#{1,6} )/g, "\n\n$1")
-
-  processedContent = processedContent.replace(/\n{3,}/g, "\n\n")
-
-  return processedContent.trim()
-}
+import { useFormEditorStore } from "../../stores/useFormEditorStore"
 
 const DEFAULT_JOURNEY_TEMPLATE = `<form-journey>
 
@@ -84,14 +54,21 @@ Before sensitive questions (email, phone, payment), provide genuine value based 
 
 </form-journey>`
 
-const FormJourneyStep = ({ selectedTab }: { selectedTab: string }) => {
-  const { form, updateSettingField } = useFormStore()
+interface FormJourneyStepProps {
+  journeyScript: string
+  userId?: string
+  selectedTab: string
+}
+
+const FormJourneyStep: React.FC<FormJourneyStepProps> = ({
+  journeyScript,
+  selectedTab,
+}) => {
+  const { form, updateSettingField } = useFormEditorStore()
   const isMobile = useMobile()
   const shouldHideControls = isMobile && selectedTab === "content"
 
   const getInitialContent = useCallback(() => {
-    const journeyScript = form?.settings?.journeyScript
-
     if (!journeyScript) return ""
 
     if (typeof journeyScript === "string") {
@@ -109,33 +86,28 @@ const FormJourneyStep = ({ selectedTab }: { selectedTab: string }) => {
     }
 
     return ""
-  }, [form?.settings?.journeyScript])
+  }, [journeyScript])
 
   const [journeyScriptContent, setJourneyScriptContent] =
     useState<string>(getInitialContent())
-
-  const [isPreviewMode, setIsPreviewMode] = useState<boolean>(true)
 
   const [isModified, setIsModified] = useState<boolean>(false)
 
   useEffect(() => {
     setJourneyScriptContent(getInitialContent())
     setIsModified(false)
-    setIsPreviewMode(true)
   }, [form?.id])
 
   useEffect(() => {
-    const currentContent = form?.settings?.journeyScript
-
     const wasEmpty = !journeyScriptContent
-    const nowHasContent = !!currentContent
+    const nowHasContent = !!journeyScript
     const isFirstContentArrival = wasEmpty && nowHasContent
 
-    if (currentContent && typeof currentContent === "string") {
-      let content = currentContent
+    if (journeyScript && typeof journeyScript === "string") {
+      let content = journeyScript
 
-      if (content.includes("\\n")) {
-        content = content.replace(/\\n/g, "\n").replace(/\\"/g, '"')
+      if (content.includes("\n")) {
+        content = content.replace(/\n/g, "\n").replace(/\"/g, '"')
       }
 
       if (!isModified || isFirstContentArrival) {
@@ -143,7 +115,7 @@ const FormJourneyStep = ({ selectedTab }: { selectedTab: string }) => {
         setIsModified(false)
       }
     }
-  }, [form?.settings?.journeyScript, isModified, journeyScriptContent])
+  }, [journeyScript, isModified, journeyScriptContent])
 
   const handleContentChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -157,7 +129,6 @@ const FormJourneyStep = ({ selectedTab }: { selectedTab: string }) => {
     try {
       await updateSettingField("journeyScript", journeyScriptContent)
       setIsModified(false)
-      setIsPreviewMode(true)
       toast({
         title: "Form journey saved successfully",
         status: "success",
@@ -178,19 +149,8 @@ const FormJourneyStep = ({ selectedTab }: { selectedTab: string }) => {
     if (confirmLoad) {
       setJourneyScriptContent(DEFAULT_JOURNEY_TEMPLATE)
       setIsModified(true)
-      setIsPreviewMode(false)
     }
   }, [])
-
-  const getPreviewContent = useCallback(() => {
-    const transformedContent = transformCustomTags(journeyScriptContent)
-    try {
-      return marked.parse(transformedContent) as string
-    } catch (e) {
-      console.error("Error parsing markdown:", e)
-      return transformedContent
-    }
-  }, [journeyScriptContent])
 
   return (
     <div
@@ -213,40 +173,13 @@ const FormJourneyStep = ({ selectedTab }: { selectedTab: string }) => {
                 Load Template
               </Button>
             )}
-            {journeyScriptContent.trim() && (
-              <>
-                {isPreviewMode ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsPreviewMode(false)}
-                    className="flex items-center gap-2"
-                  >
-                    <Edit className="h-4 w-4" />
-                    Edit
-                  </Button>
-                ) : (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsPreviewMode(true)}
-                      className="flex items-center gap-2"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Preview
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={saveJourneyScript}
-                      disabled={!journeyScriptContent.trim()}
-                    >
-                      Save Journey
-                    </Button>
-                  </>
-                )}
-              </>
-            )}
+            <Button
+              size="sm"
+              onClick={saveJourneyScript}
+              disabled={!isModified}
+            >
+              Save Journey
+            </Button>
           </div>
         )}
       </div>
@@ -262,32 +195,22 @@ const FormJourneyStep = ({ selectedTab }: { selectedTab: string }) => {
               instructions.
             </p>
           </div>
-          {isPreviewMode ? (
-            <div className="space-y-2">
-              <Label>Journey Script</Label>
-              <div
-                className="prose dark:prose-invert min-h-[200px] max-w-none rounded-lg border p-4 text-sm"
-                dangerouslySetInnerHTML={{ __html: getPreviewContent() }}
-              />
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <Label>Edit Journey Script</Label>
-              <textarea
-                value={journeyScriptContent}
-                onChange={handleContentChange}
-                placeholder="Start designing your form journey..."
-                className="bg-background min-h-[400px] w-full rounded-md border px-3 py-2 font-mono text-sm"
-              />
-              <div className="flex items-center justify-between">
-                <div className="text-muted-foreground text-sm">
-                  {journeyScriptContent.length > 0 && (
-                    <span>{journeyScriptContent.split(" ").length} words</span>
-                  )}
-                </div>
+          <div className="space-y-2">
+            <Label>Edit Journey Script</Label>
+            <textarea
+              value={journeyScriptContent}
+              onChange={handleContentChange}
+              placeholder="Start designing your form journey..."
+              className="bg-background h-[400px] w-full resize-none rounded-md border px-3 py-2 font-mono text-sm"
+            />
+            <div className="flex items-center justify-between">
+              <div className="text-muted-foreground text-sm">
+                {journeyScriptContent.length > 0 && (
+                  <span>{journeyScriptContent.split(" ").length} words</span>
+                )}
               </div>
             </div>
-          )}
+          </div>
         </div>
       </Card>
     </div>

@@ -1,11 +1,11 @@
 import {
   selectIsDirty,
-  useFormStore,
-} from "@/app/dashboard/forms/[formId]/stores/useFormStore"
+  useFormEditorStore,
+} from "@/app/dashboard/forms/[formId]/stores/useFormEditorStore"
 import { useEffect } from "react"
 
 export function useWarnIfUnsavedChanges() {
-  const isDirty = useFormStore(selectIsDirty)
+  const isDirty = useFormEditorStore(selectIsDirty)
 
   useEffect(() => {
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {

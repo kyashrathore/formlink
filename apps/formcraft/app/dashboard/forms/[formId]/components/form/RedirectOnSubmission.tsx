@@ -2,16 +2,16 @@
 
 import EditableUrlInput from "@/app/components/EditableUrlInput"
 import { Card } from "@formlink/ui"
-import { useMobile } from "../../hooks/use-mobile"
-import { useFormStore } from "../../stores/useFormStore"
+import { useFormEditorStore } from "../../stores/useFormEditorStore"
 
-const RedirectOnSubmission = ({ selectedTab }: { selectedTab: string }) => {
-  const redirectUrl = useFormStore(
+const RedirectOnSubmission = () => {
+  const redirectUrl = useFormEditorStore(
     (state) => state.form?.settings?.redirectOnSubmissionUrl || ""
   )
-  const updateSettingField = useFormStore((state) => state.updateSettingField)
-  const isMobile = useMobile()
-  const shouldHideControls = isMobile && selectedTab === "content"
+  const updateSettingField = useFormEditorStore(
+    (state) => state.updateSettingField
+  )
+  const shouldHideControls = false
 
   const handleRedirectSave = (url: string) => {
     updateSettingField("redirectOnSubmissionUrl", url)

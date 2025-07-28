@@ -6,7 +6,8 @@
   "scripts": {
     "storybook": "PORT=5003 storybook dev",
     "build-storybook": "storybook build",
-    "test": "echo \"No tests specified for ui-docs (Storybook documentation app)\""
+    "test": "echo \"No tests specified for ui-docs (Storybook documentation app)\"",
+    "type-check": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

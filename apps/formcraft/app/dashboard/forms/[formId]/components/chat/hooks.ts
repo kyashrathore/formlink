@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react"
+import { AgentEvent } from "../../lib/types/agent-events"
 import type { AgentState, FormattedLogEvent } from "./types"
 import {
   calculatePanelState,
@@ -8,12 +9,7 @@ import {
 } from "./utils"
 
 export const useFormattedEvents = (
-  eventsLog: Array<{
-    name?: string
-    timestamp: string
-    type: string
-    data: unknown
-  }>
+  eventsLog: AgentEvent[]
 ): {
   firstAgentInitTimestamp: number | null
   formattedEventsForLogView: FormattedLogEvent[]

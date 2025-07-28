@@ -6,7 +6,7 @@ import { Check, Loader2, X } from "lucide-react"
 import type { ReactNode } from "react"
 import { useState } from "react"
 import { usePanelState } from "../hooks/usePanelState"
-import { selectIsDirty, useFormStore } from "../stores/useFormStore"
+import { selectIsDirty, useFormEditorStore } from "../stores/useFormEditorStore"
 
 type ButtonState = "normal" | "loading" | "success" | "error"
 
@@ -25,9 +25,9 @@ export default function NavigationBar({
   const [saveState, setSaveState] = useState<ButtonState>("normal")
   const [publishState, setPublishState] = useState<ButtonState>("normal")
 
-  const formFromStore = useFormStore((state) => state.form)
-  const isDirty = useFormStore(selectIsDirty)
-  const updateSnapshot = useFormStore((state) => state.updateSnapshot)
+  const formFromStore = useFormEditorStore((state) => state.form)
+  const isDirty = useFormEditorStore(selectIsDirty)
+  const updateSnapshot = useFormEditorStore((state) => state.updateSnapshot)
 
   const updateFormMutation = useMutation({
     mutationFn: async (updates: unknown) => {

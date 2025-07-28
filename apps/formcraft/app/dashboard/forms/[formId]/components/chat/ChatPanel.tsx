@@ -1,28 +1,40 @@
+import { useFormGenerationEventBridge } from "@/app/hooks/useFormGenerationEventBridge"
 import { MODEL_DEFAULT } from "@/app/lib/config"
-import { useFormAgentStore } from "@/app/stores/formAgentStore"
+import { FormGenerationEventHandler } from "@/app/lib/handlers/FormGenerationEventHandler"
 import { useChat, type Message as VercelChatMessage } from "@ai-sdk/react"
 import { Button, PromptSuggestion } from "@formlink/ui"
-import { Message } from "ai"
 import { AlertTriangle } from "lucide-react"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
-import {
-  ErrorEvent as AgentErrorEvent,
-  AgentEvent,
-} from "../../lib/types/agent-events"
+import { AgentEvent } from "../../lib/types/agent-events"
+import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
 import Chat from "./chat-components/chat"
 import { useAutoScroll, useFormattedEvents } from "./hooks"
 import { MessageWithParts } from "./MessageWithParts"
-import type { AgentInteractionPanelProps, ChatMessage } from "./types"
+import type { ChatMessage, ChatPanelProps } from "./types"
 import { getDisplaySummaryMessage, getLastUserMessage } from "./utils"
 
-const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
+const ChatPanel: React.FC<ChatPanelProps> = ({
   formId,
   userId,
   initialMessage,
 }) => {
   const { agentState, eventsLog, processEvent, setInitialPrompt } =
-    useFormAgentStore()
+    useFormGenerationStore((state) => ({
+      agentState: state.agentState,
+      eventsLog: state.eventsLog,
+      processEvent: state.processEvent,
+      setInitialPrompt: state.setInitialPrompt,
+      errorDetails: state.errorDetails,
+    }))
+
+  // Memoize event handlers to prevent re-renders
+  const memoizedProcessEvent = useCallback(processEvent, [processEvent])
+  const { bridgeEvent } = useFormGenerationEventBridge(useFormGenerationStore)
+  const memoizedBridgeEvent = useCallback(bridgeEvent, [bridgeEvent])
+
+  // Always use new architecture - handler is initialized lazily when needed
+  const eventHandlerRef = useRef<FormGenerationEventHandler | null>(null)
 
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
@@ -55,27 +67,25 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
     id: formId,
     api: "/api/chat",
     body: { formId, userId: userId || "anonymous", selectedModel },
+    streamProtocol: "data",
+
     onError: (error) => {
       console.error("[ChatPanel] AI SDK Error:", error)
-      const lastEvent =
-        eventsLog.length > 0 ? eventsLog[eventsLog.length - 1] : null
-      const errorEvent: AgentErrorEvent = {
-        id: uuidv4(),
-        category: "error",
+      // Process error through the form generation store
+      processEvent({
+        id: `error-${Date.now()}`,
         type: "agent_error",
-        timestamp: new Date().toISOString(),
-        formId: formId,
-        userId: userId || "anonymous",
-        sequence: lastEvent ? lastEvent.sequence + 1 : 0,
+        category: "error",
         data: {
-          message:
-            "Chat Connection Error: " +
-            (error?.message || "Unknown streaming error"),
+          message: `Chat error: ${error.message}`,
           details: error,
           recoverable: true,
         },
-      }
-      processEvent(errorEvent)
+        formId,
+        userId: userId || "anonymous",
+        sequence: Date.now(),
+        timestamp: new Date().toISOString(),
+      })
     },
   })
 
@@ -157,10 +167,57 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
     hasUserInteracted,
     append,
     formId,
+    setInitialPrompt,
   ])
 
   const { formattedEventsForLogView } = useFormattedEvents(eventsLog)
   const lastProcessedEventIndexRef = useRef(0)
+
+  // Process streaming data events for state machine
+  useEffect(() => {
+    if (chatData && chatData.length > lastProcessedEventIndexRef.current) {
+      const newEvents = chatData.slice(lastProcessedEventIndexRef.current)
+
+      newEvents.forEach((dataItem) => {
+        // Process direct agent events
+        if (
+          dataItem &&
+          typeof dataItem === "object" &&
+          "category" in dataItem &&
+          "type" in dataItem
+        ) {
+          const event = dataItem as unknown as AgentEvent
+
+          // Process with new architecture
+          if (eventHandlerRef.current) {
+            eventHandlerRef.current.handleRawEvent(event)
+          }
+
+          // Process with our generation store and bridge event
+          memoizedProcessEvent(event)
+          memoizedBridgeEvent(event)
+        } else if (
+          dataItem &&
+          typeof dataItem === "object" &&
+          "type" in dataItem &&
+          dataItem.type === "custom_agent_event" &&
+          "payload" in dataItem
+        ) {
+          const event = (dataItem as any).payload as AgentEvent
+
+          // Process with new architecture if enabled
+          if (eventHandlerRef.current) {
+            eventHandlerRef.current.handleRawEvent(event)
+          }
+
+          // Process with our generation store and bridge event
+          memoizedProcessEvent(event)
+          memoizedBridgeEvent(event)
+        }
+      })
+      lastProcessedEventIndexRef.current = chatData.length
+    }
+  }, [chatData, memoizedProcessEvent, memoizedBridgeEvent])
 
   const chatMessages: ChatMessage[] = useMemo(() => {
     return vercelChatMessages.map(
@@ -179,49 +236,6 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
 
   const chatContainerRef = useAutoScroll([chatMessages, isStreaming], true)
 
-  // Type guard for AgentEvent
-  const isAgentEvent = (obj: unknown): obj is AgentEvent => {
-    return (
-      obj !== null &&
-      typeof obj === "object" &&
-      "id" in obj &&
-      "type" in obj &&
-      "category" in obj &&
-      "timestamp" in obj &&
-      "formId" in obj &&
-      "userId" in obj &&
-      "sequence" in obj
-    )
-  }
-
-  // Type guard for custom agent event wrapper
-  const isCustomAgentEventWrapper = (
-    obj: unknown
-  ): obj is { type: "custom_agent_event"; payload: AgentEvent } => {
-    return (
-      obj !== null &&
-      typeof obj === "object" &&
-      "type" in obj &&
-      obj.type === "custom_agent_event" &&
-      "payload" in obj &&
-      isAgentEvent((obj as any).payload)
-    )
-  }
-
-  useEffect(() => {
-    if (chatData && chatData.length > lastProcessedEventIndexRef.current) {
-      const newEvents = chatData.slice(lastProcessedEventIndexRef.current)
-      newEvents.forEach((dataItem) => {
-        if (isAgentEvent(dataItem)) {
-          processEvent(dataItem)
-        } else if (isCustomAgentEventWrapper(dataItem)) {
-          processEvent(dataItem.payload)
-        }
-      })
-      lastProcessedEventIndexRef.current = chatData.length
-    }
-  }, [chatData, processEvent])
-
   const handleSendMessageForChatComponent = useCallback(
     async (message: string, model: string) => {
       setSelectedModel(model)
@@ -232,15 +246,15 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
 
   const handleRetryClick = useCallback(() => {
     const lastUserMsg = getLastUserMessage(chatMessages)
-    const messageToRetry = lastUserMsg?.content || agentState?.originalInput
+    const messageToRetry = lastUserMsg?.content || storedInitialMessage || ""
     if (messageToRetry) {
       handleSendMessageForChatComponent(messageToRetry, selectedModel)
     }
   }, [
     chatMessages,
-    agentState?.originalInput,
     selectedModel,
     handleSendMessageForChatComponent,
+    storedInitialMessage,
   ])
 
   const handleInputChange = useCallback(() => {
@@ -256,12 +270,11 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
 
   const displaySummaryMessage = getDisplaySummaryMessage(
     formattedEventsForLogView,
-    agentState
+    null // agentState not available in new store
   )
 
   return (
     <div className="flex h-full flex-col">
-      {}
       <div
         ref={chatContainerRef}
         className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
@@ -275,7 +288,6 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
             parts={"parts" in message ? (message as any).parts : undefined}
             isLastMessage={index === chatMessages.length - 1}
             displaySummaryMessage={displaySummaryMessage}
-            isStreaming={isStreaming}
           />
         ))}
 
@@ -290,7 +302,6 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
               </div>
             </div>
 
-            {}
             <div className="mx-auto flex max-w-md flex-wrap justify-center gap-2">
               {initialFormPrompts.map((prompt, index) => (
                 <PromptSuggestion
@@ -305,7 +316,6 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
         )}
       </div>
 
-      {}
       {agentState?.status === "FAILED" && !isStreaming && (
         <div className="border-border flex-shrink-0 border-t p-4">
           <div className="border-destructive/20 bg-destructive/10 flex items-center justify-between rounded-lg border p-3">
@@ -325,7 +335,6 @@ const ChatPanel: React.FC<AgentInteractionPanelProps> = ({
         </div>
       )}
 
-      {}
       {agentState?.status !== "FAILED" && (
         <div className="border-border bg-background flex-shrink-0 border-t p-4">
           <Chat

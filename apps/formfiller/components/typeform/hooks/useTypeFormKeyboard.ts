@@ -64,6 +64,7 @@ export function useTypeFormKeyboard({
       const index = letter.charCodeAt(0) - "A".charCodeAt(0);
       if (index >= 0 && index < options.length) {
         const selectedOption = options[index];
+        if (!selectedOption) return;
 
         if (currentQuestion.questionType === "singleChoice") {
           onAnswer(

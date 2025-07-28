@@ -1,10 +1,10 @@
+import type { MessagePart } from "@/lib/types";
+import { Message as MessageType } from "@ai-sdk/react";
 import { Message, MessageContent } from "@formlink/ui";
 import { cn } from "@formlink/ui/lib/utils";
-import { Message as MessageType } from "@ai-sdk/react";
-import { MessageReasoning } from "./message-reasoning";
-import { useQuestionRenderer } from "./hooks/useQuestionRenderer";
-import type { MessagePart } from "@/lib/types";
 import { motion } from "motion/react";
+import { useQuestionRenderer } from "./hooks/useQuestionRenderer";
+import { MessageReasoning } from "./message-reasoning";
 
 type MessageAssistantProps = {
   message: MessageType;
@@ -24,20 +24,20 @@ export function MessageAssistant({
     messageId,
     isLast,
     "assistant",
-    handleFileUpload,
+    handleFileUpload
   );
 
   return (
     <Message
       className={cn(
         "group flex w-full max-w-3xl items-start gap-4 px-3 py-0.5 sm:px-4 md:px-6",
-        hasScrollAnchor && "min-h-scroll-anchor",
+        hasScrollAnchor && "min-h-scroll-anchor"
       )}
     >
       <motion.div
         className={cn(
           "flex max-w-[90%] sm:max-w-[85%] md:max-w-[70%] flex-col gap-2",
-          isLast && "pb-8",
+          isLast && "pb-8"
         )}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -62,7 +62,7 @@ export function MessageAssistant({
           </MessageContent>
         ) : (
           // Handle parts if content is not available
-          parts?.map((part: MessagePart, index: number) => {
+          parts?.map((part: any, index: number) => {
             const { type } = part;
             const key = `part-${index}`;
 

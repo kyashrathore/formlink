@@ -9,7 +9,7 @@ import {
 import type React from "react"
 import { useEffect } from "react"
 import { generateFilterFieldsFromForm } from "../../lib/responses/generateFilterFieldsFromForm"
-import { useFormStore } from "../../stores/useFormStore"
+import { useFormEditorStore } from "../../stores/useFormEditorStore"
 import { DataTableFilterCheckbox } from "./data-table-filter-checkbox"
 import { DataTableFilterInput } from "./data-table-filter-input"
 import { DataTableFilterRadio } from "./data-table-filter-radio"
@@ -21,7 +21,7 @@ import { useDataTableStore } from "./dataTableStore"
 const submissionFilters = ["status", "testmode"]
 export function DataTableFilterControls() {
   const { filterFields, setFilterFields, table } = useDataTableStore()
-  const { form } = useFormStore()
+  const { form } = useFormEditorStore()
 
   useEffect(() => {
     if (form?.questions?.length) {

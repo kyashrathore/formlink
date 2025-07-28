@@ -3,6 +3,7 @@ import { useChatStore } from "./store/useChatStore";
 import { InputContainer } from "@formlink/ui";
 import { Question, AddressData } from "@formlink/schema";
 import { mapQuestionToUI } from "@/lib/mappers/schema-to-ui";
+import { fileDataToFile } from "@/lib/utils";
 import type {
   QuestionResponse,
   FileData,
@@ -105,7 +106,7 @@ const formatResponse = (
 
     case "date": {
       // Format date nicely
-      if (response) {
+      if (response && (typeof response === "string" || typeof response === "number")) {
         try {
           const date = new Date(response);
           return date.toLocaleDateString();
@@ -274,10 +275,12 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
       return null;
     }
 
+    const responseAsFile = response instanceof File ? response : response && typeof response === "object" && "url" in response ? fileDataToFile(response as FileData) : null;
+
     return (
       <InputContainer
         currentQuestion={mapQuestionToUI(question)}
-        currentResponse={response}
+        currentResponse={responseAsFile}
         handleSelect={(qId: string, value: QuestionResponse) => {
           setCurrentInput(qId, value);
 

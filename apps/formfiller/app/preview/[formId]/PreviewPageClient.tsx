@@ -110,17 +110,8 @@ export default function PreviewPageClient({
           window.location.hostname === "localhost"
             ? "http://localhost:3000" // FormCraft dev server
             : "https://formlink.ai"; // Production FormCraft
-        console.log("FormFiller: Sending ready message to parent", {
-          parentOrigin,
-          readyMessage,
-        });
         window.parent.postMessage(readyMessage, parentOrigin);
         hasNotifiedReady.current = true;
-        console.log("FormFiller: Ready message sent");
-      } else {
-        console.log(
-          "FormFiller: No parent window found or parent is same as current window",
-        );
       }
     }
   }, [initialFormSchema.id]);

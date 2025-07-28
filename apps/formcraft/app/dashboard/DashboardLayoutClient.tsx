@@ -2,8 +2,8 @@
 
 import { useAuth } from "@/app/hooks/useAuth"
 import { usePostHogAuth } from "@/app/hooks/usePostHogAuth"
-import { useFormAgentStore } from "@/app/stores/formAgentStore"
-import { useParams, useSearchParams } from "next/navigation"
+import { useFormGenerationStore } from "@/app/stores/formGenerationStore"
+import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
 interface DashboardLayoutClientProps {
@@ -14,20 +14,13 @@ export default function DashboardLayoutClient({
   children,
 }: DashboardLayoutClientProps) {
   const params = useParams()
-  const searchParams = useSearchParams()
-  const [activeFormId, setActiveFormId] = useState<string | null>(null)
+  const [, setActiveFormId] = useState<string | null>(null)
 
   useAuth()
 
   usePostHogAuth()
 
-  const {
-    formId: currentStreamingFormId,
-    initialPrompt,
-    setInitialPrompt,
-  } = useFormAgentStore()
-
-  const urlPrompt = searchParams.get("q") || searchParams.get("prompt")
+  const { formId: currentStreamingFormId } = useFormGenerationStore()
 
   useEffect(() => {
     const currentFormId = Array.isArray(params.formId)
@@ -43,14 +36,8 @@ export default function DashboardLayoutClient({
     }
   }, [params.formId, currentStreamingFormId])
 
-  useEffect(() => {
-    if (initialPrompt && activeFormId && urlPrompt) {
-      const timer = setTimeout(() => {
-        setInitialPrompt(null)
-      }, 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [initialPrompt, activeFormId, setInitialPrompt, urlPrompt])
+  // Note: initialPrompt functionality removed as it's not in the new store
+  // This effect is no longer needed
 
   return <>{children}</>
 }

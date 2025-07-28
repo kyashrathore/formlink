@@ -3,7 +3,6 @@
 import { useAuth } from "@/app/hooks/useAuth"
 import { MODEL_DEFAULT } from "@/app/lib/config"
 import { getTurnstileSiteKey, isLocalhost } from "@/app/lib/utils/env"
-import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import { createBrowserClient } from "@formlink/db"
 import { useRouter } from "next/navigation"
 import Script from "next/script"
@@ -31,8 +30,6 @@ export function HeroWithLiveDemo() {
   const turnstileRef = useRef<HTMLDivElement>(null)
   const supabase = createBrowserClient()
   const [inputValue, setInputValue] = useState("")
-
-  const { setInitialPrompt } = useFormAgentStore()
 
   useEffect(() => {}, [user, loading, isSigningIn])
 
@@ -114,8 +111,6 @@ export function HeroWithLiveDemo() {
 
   const handleStartCreating = async (prompt: string) => {
     if (isSigningIn || !prompt.trim()) return
-
-    setInitialPrompt(prompt)
 
     if (user) {
       if (!formIdRef.current) {

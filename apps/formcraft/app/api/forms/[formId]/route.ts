@@ -13,7 +13,6 @@ import { generateObject } from "ai"
 import { customAlphabet } from "nanoid"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
-import { v4 as uuidv4 } from "uuid"
 
 const nanoid = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-",
@@ -172,8 +171,6 @@ export async function POST(req: NextRequest) {
       )
     }
     const form_id = formInsertData.id
-
-    const newVersionId = uuidv4()
 
     const parsedSchema = parseFormSchema(initialSchema)
     const { title, questions, description, settings } = parsedSchema

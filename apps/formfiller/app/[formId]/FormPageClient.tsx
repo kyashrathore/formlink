@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Form, Question } from "@formlink/schema";
+import { UIQuestion, UIQuestionType } from "@formlink/ui";
 import type { QueryDataForForm, QuestionResponse } from "@/lib/types";
 import FormAIComponent from "@/app/[formId]/FormAIComponent";
 import TypeFormView from "@/components/typeform/TypeFormView";
@@ -48,6 +49,7 @@ function FormPageContent({
 
   // Convert schema to UI format for components
   const uiFormSchema = mapFormToUI(formSchema);
+  const uiQuestions = uiFormSchema.questions;
 
   // Business logic from app store
   const {
@@ -74,7 +76,7 @@ function FormPageContent({
   const handleAnswerChange = (
     questionId: string,
     value: QuestionResponse,
-    questionType: Question["questionType"],
+    questionType: UIQuestionType,
   ) => {
     // Route to appropriate business logic based on question type
     switch (questionType) {
@@ -135,7 +137,7 @@ function FormPageContent({
       uiFormSchema={uiFormSchema}
       formId={formSchema.id}
       // Props down: business state
-      questions={questions}
+      questions={uiQuestions}
       questionResponses={questionResponses}
       isCompleted={isCompleted}
       // Callbacks up: business actions
@@ -146,7 +148,7 @@ function FormPageContent({
       onFileUpload={handleFileUpload}
       onNavigateNext={getNextValidQuestionIndex}
       onMarkCompleted={markAsCompleted}
-      shouldShowQuestion={shouldShowQuestion}
+      shouldShowQuestion={(question: UIQuestion) => shouldShowQuestion(question as unknown as Question)}
       getCurrentQuestion={getCurrentQuestion}
       getProgress={getProgress}
     />

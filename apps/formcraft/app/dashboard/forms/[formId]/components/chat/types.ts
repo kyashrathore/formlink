@@ -1,4 +1,4 @@
-export interface AgentInteractionPanelProps {
+export interface ChatPanelProps {
   formId: string
   isCenteringBypassFixed?: boolean
   userId?: string
@@ -10,7 +10,7 @@ export interface AgentInteractionPanelProps {
 export interface FormattedLogEvent {
   name: string
   timestamp: string
-  data: unknown
+  data: Record<string, unknown>
   displayTime: string
   formattedContent: string
 }
@@ -31,7 +31,7 @@ export interface AgentState {
     | "FAILED"
     | "PARTIAL"
     | "COMPLETED_IMPLICITLY"
-  originalInput?: string
+  originalInput?: string | Record<string, unknown>
 }
 
 export interface PanelState {

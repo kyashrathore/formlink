@@ -1,15 +1,17 @@
 "use client"
 
-import { useFormStore } from "@/app/dashboard/forms/[formId]/stores/useFormStore"
+import { useFormEditorStore } from "@/app/dashboard/forms/[formId]/stores/useFormEditorStore"
 import { Card } from "@formlink/ui"
 import { useState } from "react"
 import EditableUrlInput from "./EditableUrlInput"
 
 const Integrations = () => {
-  const webhookUrl = useFormStore(
+  const webhookUrl = useFormEditorStore(
     (state) => state.form?.settings?.integrations?.webhookUrl || ""
   )
-  const updateSettingField = useFormStore((state) => state.updateSettingField)
+  const updateSettingField = useFormEditorStore(
+    (state) => state.updateSettingField
+  )
   const [isPayloadExpanded, setIsPayloadExpanded] = useState(false)
 
   const examplePayload = `{

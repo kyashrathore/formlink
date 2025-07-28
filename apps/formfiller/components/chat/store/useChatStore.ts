@@ -459,10 +459,10 @@ export const useChatStore = create<ChatState>()(
 
         try {
           const result = await apiServices.uploadFile(formData);
-          const { publicUrl, fileName, fileSize } = result;
+          const { url, fileName, fileSize } = result;
 
           const fileDetails = {
-            url: publicUrl,
+            url: url,
             name: fileName,
             size: fileSize,
           };

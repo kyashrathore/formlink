@@ -1,7 +1,7 @@
-(() => {
+;(() => {
   // PHASE 1: Singleton Iframe Initialization and Preloading
 
-  let globalIframeElements = null;
+  let globalIframeElements = null
 
   const commonStyles = `
       .formlink-iframe-container {
@@ -143,7 +143,7 @@
       .formlink-iframe-container.slider.slider-left.loading iframe {
         transform: translateX(-100%);
       }
-    `;
+    `
   const chatbotStyles = `
       .formlink-iframe-container.chatbot {
         background-color: transparent; 
@@ -214,33 +214,33 @@
         left: calc(50% + 10px); 
         transform: translate(-50%, 50%);
       }
-    `;
+    `
 
   function injectGlobalStyles() {
-    if (document.getElementById("formlink-dynamic-styles")) return;
-    const styleElement = document.createElement("style");
-    styleElement.id = "formlink-dynamic-styles";
-    styleElement.textContent = commonStyles + chatbotStyles;
-    document.head.appendChild(styleElement);
+    if (document.getElementById("formlink-dynamic-styles")) return
+    const styleElement = document.createElement("style")
+    styleElement.id = "formlink-dynamic-styles"
+    styleElement.textContent = commonStyles + chatbotStyles
+    document.head.appendChild(styleElement)
   }
 
   // Helper: Lock/unlock body scroll with scrollbar compensation
   function lockBodyScroll() {
     if (!document.body.classList.contains("formlink-scroll-locked")) {
       const scrollBarWidth =
-        window.innerWidth - document.documentElement.clientWidth;
+        window.innerWidth - document.documentElement.clientWidth
       if (scrollBarWidth > 0) {
-        document.body.style.paddingRight = scrollBarWidth + "px";
+        document.body.style.paddingRight = scrollBarWidth + "px"
       }
-      document.body.style.overflow = "hidden";
-      document.body.classList.add("formlink-scroll-locked");
+      document.body.style.overflow = "hidden"
+      document.body.classList.add("formlink-scroll-locked")
     }
   }
   function unlockBodyScroll() {
     if (document.body.classList.contains("formlink-scroll-locked")) {
-      document.body.style.overflow = "";
-      document.body.style.paddingRight = "";
-      document.body.classList.remove("formlink-scroll-locked");
+      document.body.style.overflow = ""
+      document.body.style.paddingRight = ""
+      document.body.classList.remove("formlink-scroll-locked")
     }
   }
 
@@ -254,126 +254,123 @@
           el.tabIndex !== -1 &&
           !el.disabled &&
           (el.offsetWidth > 0 || el.offsetHeight > 0)
-      );
+      )
     }
     function handleKeydown(e) {
-      if (e.key !== "Tab") return;
-      const focusableEls = getFocusableEls();
-      if (focusableEls.length === 0) return;
-      const first = focusableEls[0];
-      const last = focusableEls[focusableEls.length - 1];
-      const active = document.activeElement;
+      if (e.key !== "Tab") return
+      const focusableEls = getFocusableEls()
+      if (focusableEls.length === 0) return
+      const first = focusableEls[0]
+      const last = focusableEls[focusableEls.length - 1]
+      const active = document.activeElement
       if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
+        e.preventDefault()
+        first.focus()
       } else if (e.shiftKey && active === first) {
-        e.preventDefault();
-        last.focus();
+        e.preventDefault()
+        last.focus()
       }
     }
-    container.__formlinkFocusHandler = handleKeydown;
-    container.addEventListener("keydown", handleKeydown);
-    if (firstFocusEl) firstFocusEl.focus();
+    container.__formlinkFocusHandler = handleKeydown
+    container.addEventListener("keydown", handleKeydown)
+    if (firstFocusEl) firstFocusEl.focus()
   }
   function untrapFocus(container) {
     if (container.__formlinkFocusHandler) {
-      container.removeEventListener(
-        "keydown",
-        container.__formlinkFocusHandler
-      );
-      delete container.__formlinkFocusHandler;
+      container.removeEventListener("keydown", container.__formlinkFocusHandler)
+      delete container.__formlinkFocusHandler
     }
   }
 
   // PHASE 1: Singleton Iframe Management
   function getOrCreateFormlinkContainer(initialConfig) {
-    if (globalIframeElements) return globalIframeElements;
+    if (globalIframeElements) return globalIframeElements
 
     // Create elements
-    const iframeContainer = document.createElement("div");
-    iframeContainer.className = "formlink-iframe-container";
+    const iframeContainer = document.createElement("div")
+    iframeContainer.className = "formlink-iframe-container"
     // Initial hidden state
-    iframeContainer.style.top = "-9999px";
-    iframeContainer.style.left = "-9999px";
-    iframeContainer.style.opacity = "0";
-    iframeContainer.style.visibility = "hidden";
-    iframeContainer.style.display = "flex";
+    iframeContainer.style.top = "-9999px"
+    iframeContainer.style.left = "-9999px"
+    iframeContainer.style.opacity = "0"
+    iframeContainer.style.visibility = "hidden"
+    iframeContainer.style.display = "flex"
 
-    const iframe = document.createElement("iframe");
-    iframe.title = (initialConfig && initialConfig.title) || "Embedded Content";
+    const iframe = document.createElement("iframe")
+    iframe.title = (initialConfig && initialConfig.title) || "Embedded Content"
 
-    const loader = document.createElement("div");
-    loader.className = "formlink-loader";
-    iframeContainer.appendChild(loader);
+    const loader = document.createElement("div")
+    loader.className = "formlink-loader"
+    iframeContainer.appendChild(loader)
 
-    const closeButton = document.createElement("button");
+    const closeButton = document.createElement("button")
     closeButton.innerHTML =
-      '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>';
-    closeButton.className = "formlink-close-button";
-    closeButton.setAttribute("aria-label", "Close Form");
+      '<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>'
+    closeButton.className = "formlink-close-button"
+    closeButton.setAttribute("aria-label", "Close Form")
 
-    iframeContainer.appendChild(iframe);
-    iframeContainer.appendChild(closeButton);
+    iframeContainer.appendChild(iframe)
+    iframeContainer.appendChild(closeButton)
 
     // Set type/side classes if provided
-    const type = (initialConfig && initialConfig.type) || "modal";
-    const side = (initialConfig && initialConfig.side) || "right";
-    iframeContainer.classList.add(type);
-    if (type === "slider") iframeContainer.classList.add(`slider-${side}`);
-    if (type === "chatbot") iframeContainer.classList.add(`chatbot-${side}`);
+    const type = (initialConfig && initialConfig.type) || "modal"
+    const side = (initialConfig && initialConfig.side) || "right"
+    iframeContainer.classList.add(type)
+    if (type === "slider") iframeContainer.classList.add(`slider-${side}`)
+    if (type === "chatbot") iframeContainer.classList.add(`chatbot-${side}`)
 
     // State
-    let currentHref = null;
-    let openerButton = null;
+    let currentHref = null
+    let openerButton = null
 
     // Escape key handler
     function handleEscape(e) {
       if (e.key === "Escape" && iframeContainer.classList.contains("show")) {
-        hideIframe();
+        hideIframe()
       }
     }
 
     function hideIframe() {
-      iframeContainer.classList.remove("show");
-      unlockBodyScroll();
-      untrapFocus(iframeContainer);
-      window.removeEventListener("keydown", handleEscape, true);
-      if (openerButton) openerButton.focus();
+      iframeContainer.classList.remove("show")
+      unlockBodyScroll()
+      untrapFocus(iframeContainer)
+      window.removeEventListener("keydown", handleEscape, true)
+      if (openerButton) openerButton.focus()
       // Hide out of flow
-      iframeContainer.style.top = "-9999px";
-      iframeContainer.style.left = "-9999px";
-      iframeContainer.style.opacity = "0";
-      iframeContainer.style.visibility = "hidden";
+      iframeContainer.style.top = "-9999px"
+      iframeContainer.style.left = "-9999px"
+      iframeContainer.style.opacity = "0"
+      iframeContainer.style.visibility = "hidden"
     }
 
     closeButton.addEventListener("click", (e) => {
-      e.stopPropagation();
-      hideIframe();
-    });
+      e.stopPropagation()
+      hideIframe()
+    })
     iframeContainer.addEventListener("click", (e) => {
       if (
         e.target === iframeContainer &&
         !iframeContainer.classList.contains("chatbot")
       ) {
-        hideIframe();
+        hideIframe()
       }
-    });
+    })
 
     iframe.addEventListener("load", () => {
-      iframeContainer.classList.remove("loading");
-    });
+      iframeContainer.classList.remove("loading")
+    })
     iframe.addEventListener("error", () => {
-      console.error("Formlink: Failed to load iframe content:", currentHref);
-      iframeContainer.classList.remove("loading");
-    });
+      console.error("Formlink: Failed to load iframe content:", currentHref)
+      iframeContainer.classList.remove("loading")
+    })
 
-    document.body.appendChild(iframeContainer);
+    document.body.appendChild(iframeContainer)
 
     // Preload if initialConfig.href is provided
     if (initialConfig && initialConfig.href) {
-      iframe.src = initialConfig.href;
-      currentHref = initialConfig.href;
-      iframeContainer.classList.add("loading");
+      iframe.src = initialConfig.href
+      currentHref = initialConfig.href
+      iframeContainer.classList.add("loading")
     }
 
     globalIframeElements = {
@@ -382,58 +379,58 @@
       closeButton,
       loader,
       get currentHref() {
-        return currentHref;
+        return currentHref
       },
       set currentHref(href) {
-        currentHref = href;
+        currentHref = href
       },
       get openerButton() {
-        return openerButton;
+        return openerButton
       },
       set openerButton(btn) {
-        openerButton = btn;
+        openerButton = btn
       },
       handleEscape,
       hideIframe,
-    };
-    return globalIframeElements;
+    }
+    return globalIframeElements
   }
 
   // PHASE 2: Trigger Logic for Reusability
   function initializeDivTrigger(divElement) {
-    if (divElement.dataset.formlinkInitialized === "true") return;
-    divElement.dataset.formlinkInitialized = "true";
+    if (divElement.dataset.formlinkInitialized === "true") return
+    divElement.dataset.formlinkInitialized = "true"
 
     const config = {
       href: divElement.dataset.href,
       type: divElement.dataset.type || "modal",
       side: divElement.dataset.side || "right",
       title: divElement.dataset.title || "Form",
-    };
+    }
 
     if (!config.href) {
       console.error(
         "Formlink trigger div requires a data-href attribute.",
         divElement
-      );
-      return;
+      )
+      return
     }
 
-    const button = divElement.querySelector("button");
+    const button = divElement.querySelector("button")
     if (!button) {
       console.warn(
         "Formlink trigger div is missing an inner button element.",
         divElement
-      );
-      return;
+      )
+      return
     }
 
     // Ensure global iframe exists (preload if first)
-    getOrCreateFormlinkContainer(config);
+    getOrCreateFormlinkContainer(config)
 
     const handleClick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault()
+      e.stopPropagation()
 
       const {
         iframeContainer,
@@ -442,16 +439,16 @@
         loader,
         handleEscape,
         hideIframe,
-      } = globalIframeElements;
+      } = globalIframeElements
 
       // Set opener for focus restore
-      globalIframeElements.openerButton = button;
+      globalIframeElements.openerButton = button
 
       // Content update logic
       if (config.href !== globalIframeElements.currentHref) {
-        iframe.src = config.href;
-        globalIframeElements.currentHref = config.href;
-        iframeContainer.classList.add("loading");
+        iframe.src = config.href
+        globalIframeElements.currentHref = config.href
+        iframeContainer.classList.add("loading")
       }
 
       // Remove all type/side classes
@@ -463,72 +460,72 @@
         "chatbot",
         "chatbot-right",
         "chatbot-left"
-      );
+      )
       // Add new type/side classes
-      iframeContainer.classList.add(config.type);
+      iframeContainer.classList.add(config.type)
       if (config.type === "slider")
-        iframeContainer.classList.add(`slider-${config.side}`);
+        iframeContainer.classList.add(`slider-${config.side}`)
       if (config.type === "chatbot")
-        iframeContainer.classList.add(`chatbot-${config.side}`);
+        iframeContainer.classList.add(`chatbot-${config.side}`)
 
       // Show and style
-      iframeContainer.style.top = "0";
-      iframeContainer.style.left = "0";
-      iframeContainer.style.opacity = "";
-      iframeContainer.style.visibility = "";
-      iframeContainer.style.display = "flex";
+      iframeContainer.style.top = "0"
+      iframeContainer.style.left = "0"
+      iframeContainer.style.opacity = ""
+      iframeContainer.style.visibility = ""
+      iframeContainer.style.display = "flex"
 
       requestAnimationFrame(() => {
-        iframeContainer.classList.add("show");
-      });
+        iframeContainer.classList.add("show")
+      })
 
       // Lock scroll and trap focus
-      lockBodyScroll();
-      trapFocus(iframeContainer, closeButton);
+      lockBodyScroll()
+      trapFocus(iframeContainer, closeButton)
 
       // Add escape key listener
-      window.removeEventListener("keydown", handleEscape, true);
-      window.addEventListener("keydown", handleEscape, true);
-    };
+      window.removeEventListener("keydown", handleEscape, true)
+      window.addEventListener("keydown", handleEscape, true)
+    }
 
-    button.addEventListener("click", handleClick);
+    button.addEventListener("click", handleClick)
   }
 
   // PHASE 1/2: Preloading and Initialization
   function runInitialization() {
-    injectGlobalStyles();
+    injectGlobalStyles()
 
     const triggerDivs = document.querySelectorAll(
       "div#formlink-launch-button[data-href]"
-    );
+    )
 
     // Preload with first valid trigger
-    let firstConfig = null;
+    let firstConfig = null
     for (const div of triggerDivs) {
-      const href = div.dataset.href;
+      const href = div.dataset.href
       if (href) {
         firstConfig = {
           href,
           type: div.dataset.type || "modal",
           side: div.dataset.side || "right",
           title: div.dataset.title || "Form",
-        };
-        break;
+        }
+        break
       }
     }
     if (firstConfig) {
-      getOrCreateFormlinkContainer(firstConfig);
+      getOrCreateFormlinkContainer(firstConfig)
     }
 
     // Initialize all triggers
     triggerDivs.forEach((div) => {
-      initializeDivTrigger(div);
-    });
+      initializeDivTrigger(div)
+    })
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", runInitialization);
+    document.addEventListener("DOMContentLoaded", runInitialization)
   } else {
-    runInitialization();
+    runInitialization()
   }
-})();
+})()

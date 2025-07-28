@@ -1,10 +1,10 @@
 "use client"
 
-import { useFormStore } from "../stores/useFormStore"
+import { useFormEditorStore } from "../stores/useFormEditorStore"
 import Responses from "./responses/Responses"
 
 export default function ResponsesTabContent() {
-  const formFromStore = useFormStore((state) => state.form)
+  const formFromStore = useFormEditorStore((state) => state.form)
 
   if (!formFromStore) {
     return (

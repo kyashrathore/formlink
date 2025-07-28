@@ -1,4 +1,5 @@
 import { Form, Question, AddressData } from "@formlink/schema";
+import { UIQuestion } from "@formlink/ui";
 import type { Element } from "hast";
 
 /**
@@ -36,13 +37,6 @@ export interface ExtendedFormModeContext {
   isTypeFormMode?: boolean;
 }
 
-// Markdown component props types
-export interface MarkdownComponentProps {
-  node?: Element; // HAST element node from unified ecosystem
-  children?: React.ReactNode;
-  href?: string;
-  [key: string]: unknown;
-}
 
 // Validation types
 export interface ValidationResult {
@@ -121,17 +115,17 @@ export interface ExtendedValidations {
 }
 
 // Question with options type
-export interface QuestionWithOptions extends Question {
+export type QuestionWithOptions = Question & {
   options?: Array<{
     value: string;
     label: string;
   }>;
-}
+};
 
 // Question with placeholder type
-export interface QuestionWithPlaceholder extends Question {
+export type QuestionWithPlaceholder = Question & {
   placeholder?: string;
-}
+};
 
 // Webhook data type
 export interface WebhookData {
@@ -306,7 +300,7 @@ export interface AppFormActions {
   handleFileUpload: (questionId: string, file: File) => Promise<string | null>;
 
   // Utilities
-  getCurrentQuestion: (activeIndex: number) => Question | null;
+  getCurrentQuestion: (activeIndex: number) => UIQuestion | null;
   getProgress: (activeIndex: number) => number;
   reset: () => void;
 }

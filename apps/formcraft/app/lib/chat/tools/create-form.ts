@@ -1,6 +1,7 @@
 import { createFormAgent } from "@/app/lib/agents/simple-agent"
 import logger from "@/app/lib/logger"
 import { CreateFormAgentSchema } from "@/app/lib/types/chat"
+import { sanitizeAgentEventForSerialization } from "@/app/lib/utils/serialization"
 import { tool } from "ai"
 import { TOOL_DESCRIPTIONS } from "../prompts"
 import { ChatToolContext, FormCreationResult } from "../types"
@@ -94,9 +95,12 @@ async function processFormCreation(
       sequence: agentEvent.sequence,
     })
 
+    // Remove circular references before serialization
+    const safeAgentEvent = sanitizeAgentEventForSerialization(agentEvent)
+
     dataStream.writeData({
       type: "custom_agent_event",
-      payload: agentEvent,
+      payload: safeAgentEvent,
     })
 
     if (
@@ -135,7 +139,7 @@ async function processFormCreation(
     }
   }
 
-  logger.info("[TOOL] LangGraph agent execution completed", {
+  logger.info("[TOOL] Simplified workflow agent execution completed", {
     formId,
     success,
     questionCount,

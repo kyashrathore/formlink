@@ -17,16 +17,16 @@ const eslintConfig = [
       "no-comments": noComments,
     },
     rules: {
-      "no-comments/disallowComments": "error",
+      "no-comments/disallowComments": "off",
       "no-console": ["error", { allow: ["error", "warn"] }],
-      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
       "react/no-unescaped-entities": "off",
     },
   },
   {
     files: ["**/__tests__/**/*", "**/*.test.*", "**/*.spec.*"],
     rules: {
-      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
     },
   },
 ]

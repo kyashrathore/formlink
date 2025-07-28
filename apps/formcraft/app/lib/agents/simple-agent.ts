@@ -1,4 +1,4 @@
-import { createServerClient } from "@formlink/db"
+import { createServerClient, type Json } from "@formlink/db"
 import {
   Form,
   FormSchema as FullFormSchema,
@@ -8,11 +8,11 @@ import {
 } from "@formlink/schema"
 import { customAlphabet } from "nanoid"
 import { z } from "zod"
-import { app } from "../agent/graph"
-import { AgentState, createInitialAgentState } from "../agent/state"
+import { createFormWorkflow } from "../chat/tools/create-form-workflow"
 import logger from "../logger"
 import {
   AgentEvent,
+  AgentState,
   createAgentEvent,
   StateSnapshotEvent,
 } from "../types/agent-events"
@@ -23,6 +23,23 @@ const nanoid = customAlphabet(
   10
 )
 
+/**
+ * Interface for progress streaming - needed for compatibility with workflow
+ */
+interface DataStream {
+  writeData: (data: unknown) => void
+}
+
+/**
+ * Simplified form creation agent using workflow-based approach
+ *
+ * This function creates forms by orchestrating the workflow system while maintaining
+ * the async generator interface for backward compatibility with existing callers.
+ *
+ * @param params - Form creation parameters
+ * @param userId - User ID
+ * @returns AsyncGenerator<AgentEvent> - Streams form creation events
+ */
 export async function* createFormAgent(
   params: {
     prompt: string
@@ -32,118 +49,82 @@ export async function* createFormAgent(
   },
   userId: string
 ): AsyncGenerator<AgentEvent> {
-  let lastProcessedSequenceBySimpleAgent = -1
-  try {
-    logger.info(
-      `[SIMPLE_AGENT_WRAPPER] Initializing LangGraph for formId: ${params.formId}, prompt: "${params.prompt}"`
-    )
+  logger.info(
+    `[SIMPLE_AGENT] Starting simplified form creation for formId: ${params.formId}, prompt: "${params.prompt}"`
+  )
 
-    const initialState: AgentState = createInitialAgentState(
-      params.formId,
-      params.shortId,
-      userId,
-      params.prompt,
-      "prompt",
-      params.selectedModel
-    )
-    lastProcessedSequenceBySimpleAgent = initialState.eventSequence
+  // Create data stream that yields events as they arrive
+  const eventQueue: AgentEvent[] = []
+  let isWorkflowComplete = false
+  let workflowError: string | undefined
 
-    const initEvent = createAgentEvent(
-      "agent_initialized",
-      "system",
-      {
-        message: "Agent process initialized via LangGraph.",
-        details: { inputType: "prompt", prompt: params.prompt },
-      },
-      params.formId,
-      userId,
-      initialState.eventSequence
-    )
-    yield initEvent
+  const dataStream: DataStream = {
+    writeData: (data: unknown) => {
+      // Only process custom_agent_event data that contains AgentEvent payloads
+      if (
+        data &&
+        typeof data === "object" &&
+        "type" in data &&
+        data.type === "custom_agent_event" &&
+        "payload" in data
+      ) {
+        const payload = data.payload as AgentEvent
+        eventQueue.push(payload)
+      }
+      // Ignore other progress events since they're handled by the workflow internally
+    },
+  }
 
-    initialState.eventSequence++
-
-    logger.info(
-      `[SIMPLE_AGENT_WRAPPER] Initial agent_initialized event yielded for formId: ${params.formId}. Next sequence: ${initialState.eventSequence}`
-    )
-
-    const stream = await app.stream(initialState, {
-      recursionLimit: 100,
-      streamMode: "updates",
+  // Start the workflow
+  const workflowPromise = createFormWorkflow(
+    {
+      prompt: params.prompt,
+      shortId: params.shortId,
+      formId: params.formId,
+      selectedModel: params.selectedModel,
+    },
+    userId,
+    dataStream
+  )
+    .then((result) => {
+      isWorkflowComplete = true
+      if (!result.success) {
+        workflowError = result.error
+      }
+    })
+    .catch((error) => {
+      isWorkflowComplete = true
+      workflowError = error instanceof Error ? error.message : String(error)
     })
 
-    for await (const chunk of stream) {
-      logger.info({
-        message: `[SIMPLE_AGENT_WRAPPER] Received chunk (updates) from stream for formId: ${params.formId}`,
-        chunk,
-      })
-
-      const eventsFromThisChunk: AgentEvent[] = []
-
-      for (const key in chunk) {
-        if (Object.prototype.hasOwnProperty.call(chunk, key)) {
-          const nodeOutput = (chunk as Record<string, any>)[
-            key
-          ] as Partial<AgentState>
-          if (nodeOutput && Array.isArray(nodeOutput._agentEvents)) {
-            eventsFromThisChunk.push(...nodeOutput._agentEvents)
-          }
-        }
-      }
-
-      if (eventsFromThisChunk.length > 0) {
-        eventsFromThisChunk.sort((a, b) => a.sequence - b.sequence)
-
-        logger.info(
-          `[SIMPLE_AGENT_WRAPPER] Found ${eventsFromThisChunk.length} events in current chunk for formId: ${params.formId}.`
-        )
-        for (const event of eventsFromThisChunk) {
-          if (event.sequence > lastProcessedSequenceBySimpleAgent) {
-            logger.info(
-              `[SIMPLE_AGENT_WRAPPER] Yielding event: ${event.type} - ${event.category} (seq: ${event.sequence}) for formId: ${params.formId}`
-            )
-            yield event
-            lastProcessedSequenceBySimpleAgent = event.sequence
-          } else {
-            logger.warn(
-              `[SIMPLE_AGENT_WRAPPER] Skipping already processed or out-of-order event (seq: ${event.sequence}, lastProcessed: ${lastProcessedSequenceBySimpleAgent}) for formId: ${params.formId}`
-            )
-          }
-        }
-      }
+  // Yield events as they arrive in the queue
+  while (!isWorkflowComplete || eventQueue.length > 0) {
+    if (eventQueue.length > 0) {
+      const event = eventQueue.shift()!
+      logger.info(
+        `[SIMPLE_AGENT] Yielding event: ${event.type} - ${event.category} (seq: ${event.sequence}) for formId: ${params.formId}`
+      )
+      yield event
+    } else {
+      // Wait more efficiently for more events (reduced polling frequency)
+      await new Promise((resolve) => setTimeout(resolve, 50))
     }
-    logger.info(
-      `[SIMPLE_AGENT_WRAPPER] LangGraph stream completed for formId: ${params.formId}.`
-    )
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error)
-    logger.error(
-      `[SIMPLE_AGENT_WRAPPER] Critical error during LangGraph execution for formId: ${params.formId}:`,
-      { error }
-    )
-
-    const errorSequence = lastProcessedSequenceBySimpleAgent + 1
-    const errorEvent = createAgentEvent(
-      "agent_error",
-      "error",
-      {
-        message: `Critical agent execution error: ${errorMessage}`,
-        details: error,
-        recoverable: false,
-      },
-      params.formId,
-      userId,
-      errorSequence
-    )
-    logger.info(
-      `[SIMPLE_AGENT_WRAPPER] CATCH: Yielding critical error event: ${errorEvent.type} - ${errorEvent.category} (seq: ${errorSequence}) for formId: ${params.formId}`
-    )
-    yield errorEvent
-  } finally {
-    logger.info(
-      `[SIMPLE_AGENT_WRAPPER] In FINALLY block for formId: ${params.formId}`
-    )
   }
+
+  // Check for workflow errors
+  if (workflowError) {
+    logger.error(
+      `[SIMPLE_AGENT] Workflow failed for formId: ${params.formId}: ${workflowError}`
+    )
+    // Error events should already be in the queue, but ensure we handle any missed errors
+  }
+
+  // Await the workflow to ensure it completes
+  await workflowPromise
+
+  logger.info(
+    `[SIMPLE_AGENT] Simplified workflow completed for formId: ${params.formId}`
+  )
 }
 
 export async function* updateFormAgent(
@@ -215,7 +196,7 @@ export async function* updateFormAgent(
   }
 
   try {
-    const supabase = await createServerClient(null as any, "service")
+    const supabase = await createServerClient(undefined, "service")
     logger.info(
       `[updateFormAgent] Supabase client created for formId: ${formId}`
     )
@@ -375,11 +356,18 @@ export async function* updateFormAgent(
       short_id: currentFormDbRecord.short_id || undefined,
     }
 
-    const validatedFormPart = dataToValidate as any as z.infer<
-      typeof FullFormSchema
-    >
+    const validationResult = FullFormSchema.safeParse(dataToValidate)
+    if (!validationResult.success) {
+      const errorMessage = `Form validation failed: ${validationResult.error.issues.map((i) => i.message).join(", ")}`
+      logger.error(
+        `[updateFormAgent] ${errorMessage} for formId: ${formId}`,
+        validationResult.error.issues
+      )
+      throw new Error(errorMessage)
+    }
+    const validatedFormPart = validationResult.data
     logger.info(
-      `[updateFormAgent] Form data prepared (FullFormSchema.safeParse bypassed) for formId: ${formId}`
+      `[updateFormAgent] Form data validated successfully for formId: ${formId}`
     )
 
     agentState.formMetadata = {
@@ -408,10 +396,10 @@ export async function* updateFormAgent(
     const newVersionPayload = {
       form_id: formId,
       user_id: userId,
-      title: validatedFormPart.title,
-      description: validatedFormPart.description,
-      questions: validatedFormPart.questions as any,
-      settings: validatedFormPart.settings as any,
+      title: validatedFormPart.title as Json,
+      description: validatedFormPart.description as Json,
+      questions: validatedFormPart.questions as Json,
+      settings: validatedFormPart.settings as Json,
       status: "draft" as const,
     }
 

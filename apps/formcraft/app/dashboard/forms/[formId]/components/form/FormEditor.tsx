@@ -1,59 +1,194 @@
 "use client"
 
-import { useFormStore } from "@/app/dashboard/forms/[formId]/stores/useFormStore"
+import {
+  AsyncCollectionSection,
+  AsyncSection,
+} from "@/app/components/AsyncSection"
+import { useFormEditorStore } from "@/app/dashboard/forms/[formId]/stores/useFormEditorStore"
+import { useFormGenerationStore } from "@/app/dashboard/forms/[formId]/stores/useFormGenerationStore"
+import { AsyncCollection } from "@/app/lib/types/async-data"
 import { User } from "@formlink/db"
-import { Form } from "@formlink/schema"
-import { Alert, AlertDescription, AlertTitle } from "@formlink/ui"
-import AdditionalFieldsSection from "./AdditionalFieldsSection"
+import { Form, Question } from "@formlink/schema"
+import { Loader2 } from "lucide-react"
+import React from "react"
 import FormDetailsStep from "./FormDetailsStep"
 import FormJourneyStep from "./FormJourneyStep"
 import QuestionsStep from "./QuestionsStep"
-import RedirectOnSubmission from "./RedirectOnSubmission"
+import {
+  JourneyShimmer,
+  MetadataShimmer,
+  QuestionsShimmer,
+} from "./shimmers/FormShimmers"
 
 type FormEditorProps = {
   user: User | null
   selectedTab: string
 }
 
-const FormEditor = ({ user, selectedTab }: FormEditorProps) => {
-  const { updateFormField, form } = useFormStore()
+const FormEditor: React.FC<FormEditorProps> = ({ user, selectedTab }) => {
+  const { updateFormField, form } = useFormEditorStore()
 
-  const handleUpdateFormDetails = <
-    K extends keyof Pick<Form, "title" | "description">,
-  >(
-    field: K,
-    value: Form[K]
-  ) => {
-    if (form && form[field] !== value) {
-      const valueToSave =
-        typeof value === "string" &&
-        value.trim() === "" &&
-        field === "description"
-          ? undefined
-          : value
-      updateFormField(field, valueToSave || "")
-    }
-  }
+  // Selectors for AI generation state
+  const {
+    formMetadata,
+    currentForm,
+    generatedQuestions,
+    isFormGenerating,
+    hasFormMetadata,
+    hasFormJourney,
+    showQuestionsSection,
+    questionProgress,
+  } = useFormGenerationStore()
+
+  // Handle form field updates
+  const handleUpdateFormDetails = React.useCallback(
+    <K extends keyof Pick<Form, "title" | "description">>(
+      field: K,
+      value: Form[K]
+    ) => {
+      if (form && form[field] !== value) {
+        const valueToSave =
+          typeof value === "string" &&
+          value.trim() === "" &&
+          field === "description"
+            ? undefined
+            : value
+        updateFormField(field, valueToSave || "")
+      }
+    },
+    [form, updateFormField]
+  )
+
+  // When not generating, create data structures for Async sections from the loaded form.
+  // This ensures we display the existing form data, not the idle generation state.
+  const metadataData = isFormGenerating
+    ? {
+        status: hasFormMetadata ? "success" : "loading",
+        data: hasFormMetadata ? formMetadata : null, // Don't provide data when loading to show shimmer
+      }
+    : {
+        status: "success",
+        data: {
+          title: form?.title || "",
+          description: form?.description || "",
+        },
+      }
+
+  const journeyData = isFormGenerating
+    ? {
+        status: hasFormJourney ? "success" : "loading",
+        data: hasFormJourney
+          ? currentForm?.settings?.journeyScript || ""
+          : null, // Don't provide data when loading to show shimmer
+      }
+    : {
+        status: "success",
+        data: form?.settings?.journeyScript || "",
+      }
+
+  // Create properly typed AsyncCollection for questions
+  const questionsData: AsyncCollection<Question> = isFormGenerating
+    ? {
+        status: questionProgress?.total > 0 ? "loading" : "loading",
+        items: generatedQuestions || [],
+        total: questionProgress?.total || 0,
+        generatedCount:
+          generatedQuestions?.filter((q) => q !== null).length || 0,
+        progressStatus: questionProgress?.total > 0 ? "success" : "loading",
+        error: null,
+      }
+    : {
+        status: "success" as const,
+        items: form?.questions || [],
+        total: form?.questions?.length || 0,
+        generatedCount: form?.questions?.length || 0,
+        progressStatus: "success" as const,
+        error: null,
+      }
+
+  // Determine section visibility based on generation status or existing form data.
+  const showMetadata = isFormGenerating || !!form?.title
+  const showJourney = isFormGenerating || !!form?.settings?.journeyScript
+  const showQuestions =
+    isFormGenerating ||
+    (form?.questions?.length ?? 0) > 0 ||
+    showQuestionsSection
+
   return (
-    <div className="flex flex-col items-center">
-      {form?.current_published_version_id &&
-        !form?.current_draft_version_id && (
-          <Alert className="mb-4">
-            <AlertTitle>Form is published.</AlertTitle>
-            <AlertDescription>
-              Adding, removing, or reordering questions, and changing question
-              types are not permitted on a published version.
-            </AlertDescription>
-          </Alert>
-        )}
-      <FormDetailsStep handleUpdateFormDetails={handleUpdateFormDetails} />
-      <FormJourneyStep userId={user?.id} selectedTab={selectedTab} />
-      <QuestionsStep userId={user?.id} selectedTab={selectedTab} />
-      <AdditionalFieldsSection userId={user?.id} />
-      <RedirectOnSubmission userId={user?.id} selectedTab={selectedTab} />
-      <div className="min-h-screen" />
+    <div className="flex flex-col items-center space-y-8">
+      {/* Metadata Section */}
+      {showMetadata && (
+        <AsyncSection
+          data={metadataData}
+          shimmer={MetadataShimmer}
+          content={({ data }) => (
+            <FormDetailsStep
+              title={data?.title || ""}
+              description={data?.description || ""}
+              onUpdate={handleUpdateFormDetails}
+            />
+          )}
+          onRetry={undefined} // No retry action available for display-only sections
+          ariaLabel="Form Details"
+          className="w-full"
+        />
+      )}
+
+      {/* Journey Section */}
+      {showJourney && (
+        <AsyncSection
+          data={journeyData}
+          shimmer={JourneyShimmer}
+          content={({ data }) => (
+            <FormJourneyStep
+              journeyScript={data || ""}
+              userId={user?.id}
+              selectedTab={selectedTab}
+            />
+          )}
+          onRetry={undefined} // No retry action available for display-only sections
+          ariaLabel="Form Journey"
+          className="w-full"
+        />
+      )}
+
+      {/* Questions Section */}
+      {showQuestions && (
+        <AsyncCollectionSection
+          data={questionsData}
+          shimmer={() =>
+            questionsData.total > 0 ? (
+              <QuestionsShimmer count={questionsData.total} />
+            ) : (
+              <QuestionsLoadingIndicator />
+            )
+          }
+          content={({ data }) => (
+            <QuestionsStep
+              questions={data.items as Question[]}
+              totalCount={data.total}
+              generatedCount={data.generatedCount || 0}
+              userId={user?.id || undefined}
+              selectedTab={selectedTab}
+            />
+          )}
+          onRetry={undefined} // No retry action available for display-only sections
+          ariaLabel="Questions"
+          className="w-full"
+        />
+      )}
     </div>
   )
 }
+
+/**
+ * Loading indicator for questions when we don't know the count yet
+ */
+const QuestionsLoadingIndicator: React.FC = () => (
+  <div className="flex items-center justify-center p-8">
+    <Loader2 className="mr-2 animate-spin" />
+    <span className="text-muted-foreground">Preparing questions...</span>
+  </div>
+)
 
 export default FormEditor

@@ -1,7 +1,6 @@
-import React from "react";
+import React, { ComponentProps } from "react";
 import { Element } from "hast";
 import { QuestionWrapper } from "../QuestionWrapper";
-import type { MarkdownComponentProps } from "@/lib/types";
 
 export const useQuestionRenderer = (
   messageId: string,
@@ -10,7 +9,7 @@ export const useQuestionRenderer = (
   handleFileUpload?: (questionId: string, file: File) => Promise<void>,
 ) => {
   const components = {
-    p: ({ node, children, ...props }: MarkdownComponentProps) => {
+    p: ({ node, children, ...props }: ComponentProps<"p"> & { node?: Element }) => {
       if (!node) return null;
       const hasQuestionLink = node.children.some(
         (child: Element | { type: string }) => {
@@ -31,7 +30,7 @@ export const useQuestionRenderer = (
       }
       return <p {...props}>{children}</p>;
     },
-    a: ({ node, ...props }: MarkdownComponentProps) => {
+    a: ({ node, ...props }: ComponentProps<"a"> & { node?: Element }) => {
       const linkText =
         node?.children?.[0]?.type === "text" ? node.children[0].value : "";
 

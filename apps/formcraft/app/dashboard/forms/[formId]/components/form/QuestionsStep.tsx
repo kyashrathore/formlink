@@ -1,6 +1,5 @@
 "use client"
 
-import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import {
   closestCenter,
   DndContext,
@@ -16,91 +15,51 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import type { Question } from "@formlink/schema"
-import { Button, Skeleton, toast } from "@formlink/ui"
+import { Button, toast } from "@formlink/ui"
 import { Plus } from "lucide-react"
 import { useMemo, useState } from "react"
 import { useMobile } from "../../hooks/use-mobile"
-import { useFormStore } from "../../stores/useFormStore"
+import { useFormEditorStore } from "../../stores/useFormEditorStore"
+import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
 import PromptDialog from "../PromptDialog"
 import SortableQuestionItem from "./FormEditor/SortableQuestionItem"
+import { QuestionSkeleton } from "./shimmers/FormShimmers"
 
 interface QuestionsStepProps {
-  userId: string
+  questions: Question[]
+  totalCount: number | null
+  generatedCount: number
+  userId?: string
   selectedTab: string
 }
 
-const QuestionsStep = ({ userId, selectedTab }: QuestionsStepProps) => {
+const QuestionsStep: React.FC<QuestionsStepProps> = ({
+  questions,
+  totalCount,
+  userId,
+  selectedTab,
+}) => {
   const {
     form: persistedForm,
     reorderQuestions,
     addQuestion,
-    form: storeForm,
-  } = useFormStore()
-  const {
-    agentState,
+  } = useFormEditorStore()
 
-    questionTaskCount: storeQuestionTaskCount,
-  } = useFormAgentStore()
+  const { agentState } = useFormGenerationStore()
 
   const isMobile = useMobile()
   const shouldHideControls = isMobile && selectedTab === "content"
-  const questionTaskCount = storeQuestionTaskCount ?? 0
 
   const isAgentActive =
     agentState?.status === "PROCESSING" || agentState?.status === "INITIALIZING"
 
-  type SkeletonPlaceholder = {
-    id: string
-    order: number
-    isSkeleton: true
-  }
-
-  type ActualQuestionItem = Question & {
-    order: number
-    isSkeleton?: false
-  }
-
-  type RenderableItem = ActualQuestionItem | SkeletonPlaceholder
-
-  const questionsToRender = useMemo((): RenderableItem[] => {
-    const persistedQuestions: Question[] = persistedForm?.questions || []
-    const items: RenderableItem[] = []
-
-    const persistedQuestionMap = new Map<number, ActualQuestionItem>()
-    persistedQuestions.forEach((q, index) => {
-      const order =
-        typeof (q as unknown as { order?: number }).order === "number"
-          ? (q as unknown as { order: number }).order
-          : index
-      persistedQuestionMap.set(order, { ...q, order, isSkeleton: false })
-    })
-
-    const expectedSlots = Math.max(questionTaskCount, persistedQuestions.length)
-
-    for (let i = 0; i < expectedSlots; i++) {
-      const order = i
-      const existingQuestion = persistedQuestionMap.get(order)
-
-      if (existingQuestion) {
-        items.push(existingQuestion)
-        persistedQuestionMap.delete(order)
-      } else if (i < questionTaskCount) {
-        items.push({
-          id: `skeleton-${order}`,
-          order: order,
-          isSkeleton: true,
-        })
-      }
+  const displayQuestions = useMemo(() => {
+    const newDisplayQuestions: (Question | null)[] = [...(questions || [])]
+    while (totalCount && newDisplayQuestions.length < totalCount) {
+      newDisplayQuestions.push(null)
     }
-
-    persistedQuestionMap.forEach((unslottedQuestion) => {
-      items.push(unslottedQuestion)
-    })
-
-    items.sort((a, b) => a.order - b.order)
-
-    return items
-  }, [questionTaskCount, persistedForm?.questions])
+    return newDisplayQuestions
+  }, [questions, totalCount])
 
   const isPublishedMode =
     !!persistedForm?.current_published_version_id &&
@@ -137,12 +96,12 @@ const QuestionsStep = ({ userId, selectedTab }: QuestionsStepProps) => {
   }
 
   const questionIds = useMemo(
-    () => questionsToRender.map((q: RenderableItem) => q.id),
-    [questionsToRender]
+    () => displayQuestions.map((q) => q?.id).filter(Boolean) as string[],
+    [displayQuestions]
   )
 
   const handleAddQuestionSubmit = async (prompt: string) => {
-    const currentForm = persistedForm || storeForm
+    const currentForm = persistedForm
     if (!currentForm) return
 
     const isAuthenticated = true
@@ -225,8 +184,8 @@ const QuestionsStep = ({ userId, selectedTab }: QuestionsStepProps) => {
         >
           <div className="mt-8 mb-4 flex items-center justify-between">
             <div className="text-lg font-semibold">Questions</div>
-            {!isPublishedMode && !shouldHideControls && (
-              <div>
+            <div className="flex items-center space-x-4">
+              {!isPublishedMode && !shouldHideControls && (
                 <PromptDialog
                   trigger={
                     <Button
@@ -243,37 +202,38 @@ const QuestionsStep = ({ userId, selectedTab }: QuestionsStepProps) => {
                   isOpen={isPromptDialogOpen}
                   onOpenChange={setIsPromptDialogOpen}
                 />
-              </div>
-            )}
+              )}
+            </div>
           </div>
           <div className="flex flex-col gap-4">
-            {questionsToRender.length > 0 ? (
-              questionsToRender.map((qItem: RenderableItem) => {
-                if ((qItem as SkeletonPlaceholder).isSkeleton) {
-                  return (
-                    <div
-                      key={qItem.id}
-                      className="bg-muted/30 rounded-lg border p-4"
-                    >
-                      <Skeleton className="mb-3 h-8 w-3/4" />
-                      <Skeleton className="h-6 w-1/2" />
-                    </div>
-                  )
-                }
+            {/* Render generated/existing questions */}
+            {displayQuestions.map((question, index) => {
+              if (!question) {
+                return <QuestionSkeleton key={`skeleton-${index}`} />
+              }
 
-                return (
+              return (
+                <div
+                  key={question.id}
+                  className="animate-in slide-in-from-top-2 duration-300"
+                  style={{
+                    animationDelay: `${index * 150}ms`,
+                  }}
+                >
                   <SortableQuestionItem
-                    key={qItem.id}
-                    question={qItem as ActualQuestionItem}
-                    userId={userId}
+                    question={question}
+                    userId={userId || ""}
                     isPublishedMode={isPublishedMode}
                     selectedTab={selectedTab}
                   />
-                )
-              })
-            ) : (
+                </div>
+              )
+            })}
+
+            {/* Show empty state */}
+            {displayQuestions.length === 0 && (
               <p className="text-muted-foreground p-4 text-center text-sm">
-                {questionTaskCount > 0 && isAgentActive
+                {isAgentActive
                   ? "Agent is generating questions..."
                   : "No questions yet."}
               </p>

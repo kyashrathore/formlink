@@ -26,7 +26,6 @@ import FormlinkLogo from "../components/FormlinkLogo"
 import { AppInfo } from "../components/layout/app-info"
 import UserMenu from "../components/layout/user-menu"
 import { DashboardChat } from "./components/DashboardChat"
-import { useFormGenerationStore } from "./forms/[formId]/stores/useFormGenerationStore"
 import { FormWithVersions } from "./types"
 
 function formatDate(dateString?: string | null) {
@@ -74,13 +73,11 @@ function Home({ forms, user }: HomeProps) {
   const isSidebarExpanded = sidebar?.state === "expanded"
   const isLoggedIn = user !== null
   // Simplified - just track if we should navigate to forms page
-  const [shouldNavigateToForm, setShouldNavigateToForm] = useState(false)
 
   const [formIdForAgentPanel, setFormIdForAgentPanel] = useState<string | null>(
     null
   )
-  const [navigatedFormId, setNavigatedFormId] = useState<string | null>(null)
-  const [formCreationStartTime] = useState<number>(Date.now())
+
   const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
@@ -97,11 +94,14 @@ function Home({ forms, user }: HomeProps) {
       setIsNavigating(true)
       analytics.formCreationStarted("ai_chat")
 
-      // Store the initial prompt in the form generation store
-      useFormGenerationStore.getState().setInitialPrompt(message)
+      // Store the initial prompt in localStorage temporarily
+      localStorage.setItem(
+        `formlink_initial_prompt_${formIdForAgentPanel}`,
+        message
+      )
 
       startTransition(() => {
-        router.push(`/dashboard/forms/${formIdForAgentPanel}`)
+        router.push(`/dashboard/forms/${formIdForAgentPanel}`, {})
       })
     },
     [formIdForAgentPanel, router]

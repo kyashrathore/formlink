@@ -1,6 +1,6 @@
 import { EditableQuestionField, Question } from "@formlink/schema"
 import { useCallback } from "react"
-import { useFormStore } from "../../../../../stores/useFormStore"
+import { useFormEditorStore } from "../../../../../stores/useFormEditorStore"
 
 export const useQuestionHandlers = (question: Question | null) => {
   const {
@@ -14,7 +14,7 @@ export const useQuestionHandlers = (question: Question | null) => {
     deleteQuestionCondition,
     deleteQuestion,
     addQuestion,
-  } = useFormStore()
+  } = useFormEditorStore()
 
   const handleFieldUpdate = useCallback(
     (field: EditableQuestionField, value: string) => {
