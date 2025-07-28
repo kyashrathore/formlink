@@ -1,5 +1,5 @@
 import { FeedbackBubble } from "@/app/components/FeedbackBubble"
-import { getFormFillerFBasePath } from "@/app/lib/config"
+import { getEmbedScriptsBasePath } from "@/app/lib/config"
 import {
   PostHogPageview,
   PostHogProviderWrapper,
@@ -40,7 +40,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  const formlinkFBasepath = getFormFillerFBasePath()
+  const embedScriptsBasePath = getEmbedScriptsBasePath()
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -63,7 +63,7 @@ export default function RootLayout({
             </ReactQueryClientProvider>
           </ThemeProvider>
         </PostHogProviderWrapper>
-        <Script src={`${formlinkFBasepath}/embed/v1.js`} defer />
+        <Script src={`${embedScriptsBasePath}/embed/v1.js`} defer />
       </body>
     </html>
   )

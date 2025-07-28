@@ -126,7 +126,7 @@ export const PROVIDERS_OPTIONS = [
 
 export const MODEL_DEFAULT = "google/gemini-2.5-pro-preview"
 
-export const APP_NAME = "FormFiller"
+export const APP_NAME = "FormLink.ai"
 export const APP_DOMAIN = "https://formlink.ai"
 
 export function getFormFillerFBasePath() {
@@ -150,9 +150,11 @@ export function getFormFillerPreviewBasePath() {
     return `${customBaseUrl}/preview`
   }
 
-  const isDev = getenv("NODE_ENV") === "development"
+  const isDev =
+    getenv("NODE_ENV") === "development" ||
+    (typeof window !== "undefined" && window.location.hostname === "localhost")
   if (isDev) {
-    return "http://localhost:3001/"
+    return "http://localhost:3001/preview"
   }
   return "https://formlink.ai/f"
 }

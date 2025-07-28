@@ -3,7 +3,6 @@
 import FormlinkLogo from "@/app/components/FormlinkLogo"
 import UserMenu from "@/app/components/layout/user-menu"
 import { useAuth } from "@/app/hooks/useAuth"
-import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
@@ -16,7 +15,11 @@ import NavigationBar from "./components/NavigationBar"
 import TabContentManager from "./components/TabContentManager"
 import TwoColumnLayout from "./components/TwoColumnLayout"
 import { usePanelState } from "./hooks/usePanelState"
-import { getDefaultSettings, useFormStore } from "./stores/useFormStore"
+import {
+  getDefaultSettings,
+  useFormEditorStore,
+} from "./stores/useFormEditorStore"
+import { useFormGenerationStore } from "./stores/useFormGenerationStore"
 
 function TestUIPageContent() {
   const {
@@ -110,12 +113,13 @@ function TestUIPageContent() {
   }, [formId, formIdFromUrl, router])
 
   useEffect(() => {
-    useFormAgentStore.getState().initializeConnection(formId)
+    useFormGenerationStore.getState().initializeConnection(formId)
   }, [formId])
 
   useEffect(() => {
-    const currentStoreForm = useFormStore.getState().form
+    const currentStoreForm = useFormEditorStore.getState().form
 
+    // Set placeholder form if none exists or form ID doesn't match
     if (!currentStoreForm || currentStoreForm.id !== formId) {
       const placeholderForm = {
         id: formId,
@@ -129,15 +133,18 @@ function TestUIPageContent() {
         short_id: undefined,
       }
 
-      useFormStore.getState().setForm(placeholderForm)
+      useFormEditorStore.getState().setForm(placeholderForm)
     }
 
+    // Reset form store if form ID has changed
     if (currentStoreForm && currentStoreForm.id !== formId) {
-      useFormStore.getState().resetForm()
+      useFormEditorStore.getState().resetForm()
     }
 
     async function loadExistingFormData() {
-      if (!formId) return
+      if (!formId) {
+        return
+      }
 
       try {
         const response = await fetch(`/api/forms/${formId}`)
@@ -146,9 +153,10 @@ function TestUIPageContent() {
           const existingForm = await response.json()
 
           if (!currentStoreForm || currentStoreForm.id !== existingForm.id) {
-            useFormStore.getState().setForm(existingForm)
+            useFormEditorStore.getState().setForm(existingForm)
           }
         } else if (response.status === 404) {
+          // Form not found - placeholder is already set, do nothing
         } else {
           console.error(
             "[TestUIPage] Error loading form data:",
@@ -168,16 +176,17 @@ function TestUIPageContent() {
       }
     }
 
+    // Use setTimeout to defer execution and avoid potential race conditions
     setTimeout(() => loadExistingFormData(), 0)
   }, [formId])
 
-  const formAgent_currentForm = useFormAgentStore((state) =>
+  const formAgent_currentForm = useFormGenerationStore((state) =>
     state.currentForm?.id === formId ? state.currentForm : null
   )
 
   useEffect(() => {
     if (formAgent_currentForm) {
-      const currentFormInStore = useFormStore.getState().form
+      const currentFormInStore = useFormEditorStore.getState().form
 
       const newFormForStore = {
         id: formAgent_currentForm.id,
@@ -202,7 +211,7 @@ function TestUIPageContent() {
           newFormForStore.questions?.length
 
       if (hasChanges) {
-        useFormStore.getState().setForm(newFormForStore as any)
+        useFormEditorStore.getState().setForm(newFormForStore as any)
       }
     }
   }, [formAgent_currentForm, formId])

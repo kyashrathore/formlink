@@ -24,17 +24,13 @@ type ChatInputProps = {
   onSend: () => void
   isSubmitting?: boolean
   hasMessages?: boolean
-  _files: File[]
-  _onFileUpload: (files: File[]) => void
-  _onFileRemove: (file: File) => void
-  onSuggestion: (suggestion: string) => void
+  onSuggestion?: (suggestion: string) => void
   hasSuggestions?: boolean
   onSelectModel: (model: string) => void
   selectedModel: string
-  _isUserAuthenticated: boolean
-  onSelectSystemPrompt: (systemPrompt: string) => void
+  onSelectSystemPrompt?: (systemPrompt: string) => void
   systemPrompt?: string
-  stop: () => void
+  stop?: () => void
   status?: "submitted" | "streaming" | "ready" | "error"
 }
 
@@ -43,16 +39,8 @@ export function ChatInput({
   onValueChange,
   onSend,
   isSubmitting,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _files,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _onFileUpload,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _onFileRemove,
   selectedModel,
   onSelectModel,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _isUserAuthenticated,
   stop,
   status,
   hasSuggestions,
@@ -75,7 +63,7 @@ export function ChatInput({
     }
 
     if (isSubmitting && status === "streaming") {
-      stop()
+      stop?.()
       return
     }
 

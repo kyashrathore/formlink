@@ -197,7 +197,7 @@ interface SortableItemProps extends SlotProps {
   asChild?: boolean
 }
 
-const SortableItem = React.forwardRef<HTMLDivElement, SortableItemProps>(
+const SortableItem = React.forwardRef<HTMLElement, SortableItemProps>(
   ({ value, asTrigger, asChild, className, ...props }, ref) => {
     const {
       attributes,
@@ -239,6 +239,7 @@ const SortableItem = React.forwardRef<HTMLDivElement, SortableItemProps>(
                   setNodeRef(node)
                   if (typeof ref === "function") ref(node)
                   else if (ref)
+                    // Cast needed because ref could be typed as HTMLDivElement but node is HTMLElement | null
                     (
                       ref as React.MutableRefObject<HTMLElement | null>
                     ).current = node

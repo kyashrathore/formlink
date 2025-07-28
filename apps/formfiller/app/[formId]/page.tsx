@@ -4,19 +4,40 @@ import FormPageClient from "@/app/[formId]/FormPageClient";
 import { createServerClient } from "@formlink/db";
 import { notFound } from "next/navigation";
 
-async function getFormSchemaById(shortId: string): Promise<Form | null> {
+async function getFormSchemaById(
+  formIdOrShortId: string,
+): Promise<Form | null> {
   const supabase = await createServerClient(null, "service");
 
-  const { data: formData, error: formError } = await supabase
+  // Try to find by short_id first, then by full id
+  let formData, formError;
+
+  // First try short_id
+  const shortIdResult = await supabase
     .from("forms")
     .select("id, current_published_version_id, current_draft_version_id")
-    .eq("short_id", shortId)
+    .eq("short_id", formIdOrShortId)
     .single();
+
+  if (shortIdResult.data) {
+    formData = shortIdResult.data;
+    formError = shortIdResult.error;
+  } else {
+    // If not found by short_id, try by full id
+    const fullIdResult = await supabase
+      .from("forms")
+      .select("id, current_published_version_id, current_draft_version_id")
+      .eq("id", formIdOrShortId)
+      .single();
+
+    formData = fullIdResult.data;
+    formError = fullIdResult.error;
+  }
 
   if (formError || !formData) {
     if (formError && formError.code !== "PGRST116") {
       console.error(
-        `Supabase error fetching form ${shortId}:`,
+        `Supabase error fetching form ${formIdOrShortId}:`,
         formError.message,
       );
     }
@@ -45,7 +66,7 @@ async function getFormSchemaById(shortId: string): Promise<Form | null> {
   if (versionError || !versionData) {
     if (versionError && versionError.code !== "PGRST116") {
       console.error(
-        `Supabase error fetching ${versionStatus} version ${versionId} for form ${shortId}:`,
+        `Supabase error fetching ${versionStatus} version ${versionId} for form ${formIdOrShortId}:`,
         versionError.message,
       );
     }
@@ -55,7 +76,7 @@ async function getFormSchemaById(shortId: string): Promise<Form | null> {
   try {
     const formSchemaResult = {
       id: formData.id,
-      shortId: shortId,
+      shortId: formIdOrShortId,
       version_id: versionData.version_id,
       title: versionData.title,
       description: versionData.description,

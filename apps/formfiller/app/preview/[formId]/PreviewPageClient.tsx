@@ -105,8 +105,22 @@ export default function PreviewPageClient({
 
       // Send to parent window
       if (window.parent && window.parent !== window) {
-        window.parent.postMessage(readyMessage, "*");
+        // Send to parent with specific origin for security
+        const parentOrigin =
+          window.location.hostname === "localhost"
+            ? "http://localhost:3000" // FormCraft dev server
+            : "https://formlink.ai"; // Production FormCraft
+        console.log("FormFiller: Sending ready message to parent", {
+          parentOrigin,
+          readyMessage,
+        });
+        window.parent.postMessage(readyMessage, parentOrigin);
         hasNotifiedReady.current = true;
+        console.log("FormFiller: Ready message sent");
+      } else {
+        console.log(
+          "FormFiller: No parent window found or parent is same as current window",
+        );
       }
     }
   }, [initialFormSchema.id]);
@@ -136,7 +150,11 @@ export default function PreviewPageClient({
             timestamp: Date.now(),
           },
         };
-        window.parent.postMessage(message, "*");
+        const parentOrigin =
+          window.location.hostname === "localhost"
+            ? "http://localhost:3000" // FormCraft dev server
+            : "https://formlink.ai"; // Production FormCraft
+        window.parent.postMessage(message, parentOrigin);
       }
     },
     [],

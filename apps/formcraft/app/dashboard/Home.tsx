@@ -2,7 +2,6 @@
 
 import { analytics } from "@/app/lib/analytics"
 import { APP_NAME } from "@/app/lib/config"
-import { useFormAgentStore } from "@/app/stores/formAgentStore"
 import { Database } from "@formlink/db"
 import {
   CardTitle,
@@ -27,6 +26,7 @@ import FormlinkLogo from "../components/FormlinkLogo"
 import { AppInfo } from "../components/layout/app-info"
 import UserMenu from "../components/layout/user-menu"
 import { DashboardChat } from "./components/DashboardChat"
+import { useFormGenerationStore } from "./forms/[formId]/stores/useFormGenerationStore"
 import { FormWithVersions } from "./types"
 
 function formatDate(dateString?: string | null) {
@@ -73,19 +73,8 @@ function Home({ forms, user }: HomeProps) {
   const sidebar = useSidebar()
   const isSidebarExpanded = sidebar?.state === "expanded"
   const isLoggedIn = user !== null
-  const {
-    resetStore,
-    eventsLog,
-    initializeConnection,
-    questionTaskCount,
-    setInitialPrompt,
-  } = useFormAgentStore((state) => ({
-    resetStore: state.resetStore,
-    eventsLog: state.eventsLog,
-    initializeConnection: state.initializeConnection,
-    questionTaskCount: state.questionTaskCount,
-    setInitialPrompt: state.setInitialPrompt,
-  }))
+  // Simplified - just track if we should navigate to forms page
+  const [shouldNavigateToForm, setShouldNavigateToForm] = useState(false)
 
   const [formIdForAgentPanel, setFormIdForAgentPanel] = useState<string | null>(
     null
@@ -95,62 +84,36 @@ function Home({ forms, user }: HomeProps) {
   const [isNavigating, setIsNavigating] = useState(false)
 
   useEffect(() => {
-    resetStore(false)
+    // Create a new form ID when component mounts
     const newFormId = uuidv4()
     setFormIdForAgentPanel(newFormId)
     setNavigatedFormId(null)
-
-    initializeConnection(newFormId)
   }, [])
-
-  useEffect(() => {
-    if (formIdForAgentPanel && formIdForAgentPanel !== navigatedFormId) {
-      const taskCompletedEvent = eventsLog.find(
-        (event) => event.type === "task_completed"
-      )
-      if (taskCompletedEvent) {
-        const generationTime = Math.round(
-          (Date.now() - formCreationStartTime) / 1000
-        )
-
-        const questionsCount = questionTaskCount || 0
-
-        analytics.formGenerated(true, questionsCount, generationTime)
-
-        router.push(`/dashboard/forms/${formIdForAgentPanel}`)
-        setNavigatedFormId(formIdForAgentPanel)
-      }
-    }
-  }, [
-    eventsLog,
-    formIdForAgentPanel,
-    router,
-    navigatedFormId,
-    formCreationStartTime,
-  ])
 
   const handleStartFormCreation = useCallback(
     (message: string) => {
       if (!formIdForAgentPanel) return
 
       setIsNavigating(true)
-
-      setInitialPrompt(message)
-
       analytics.formCreationStarted("ai_chat")
+
+      // Store the initial prompt in the form generation store
+      useFormGenerationStore.getState().setInitialPrompt(message)
 
       startTransition(() => {
         router.push(`/dashboard/forms/${formIdForAgentPanel}`)
       })
     },
-    [formIdForAgentPanel, setInitialPrompt, router]
+    [formIdForAgentPanel, router]
   )
 
-  const userData = {
-    ...user,
-    profile_image: user.user_metadata.avatar_url,
-    display_name: user.user_metadata.name,
-  } as Database["public"]["Tables"]["users"]["Row"]
+  const userData = user
+    ? ({
+        ...user,
+        profile_image: user.user_metadata?.avatar_url,
+        display_name: user.user_metadata?.full_name,
+      } as Database["public"]["Tables"]["users"]["Row"])
+    : null
 
   return (
     <motion.div
@@ -245,7 +208,7 @@ function Home({ forms, user }: HomeProps) {
               </div>
             ) : (
               <div className="flex items-center gap-4 p-2">
-                <UserMenu user={userData} />
+                {userData && <UserMenu user={userData} />}
               </div>
             )}
           </Sidebar>

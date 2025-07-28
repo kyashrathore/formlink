@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import path from "path";
 
 const nextConfig: NextConfig = {
-  assetPrefix: "/f",
+  assetPrefix: process.env.NODE_ENV === "production" ? "/f" : "",
   eslint: {
     ignoreDuringBuilds: true,
   },
