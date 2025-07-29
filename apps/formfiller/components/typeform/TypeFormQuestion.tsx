@@ -17,7 +17,7 @@ interface TypeFormQuestionProps {
   onAnswer: (
     questionId: string,
     value: QuestionResponse,
-    questionType: Question["questionType"],
+    questionType: string,
   ) => void;
   onFileUpload?: (questionId: string, file: File) => Promise<void>;
   uploadedFile?: File | null;
@@ -40,7 +40,7 @@ export default function TypeFormQuestion({
   const hasResponse = (() => {
     if (response === null || response === undefined) return false;
 
-    switch (question.questionType) {
+    switch ((question.type as any).name) {
       case "text":
         return response !== "";
       case "multipleChoice":
@@ -74,7 +74,12 @@ export default function TypeFormQuestion({
     }
   })();
 
-  const responseAsFile = response instanceof File ? response : response && typeof response === "object" && "url" in response ? fileDataToFile(response as FileData) : null;
+  const responseAsFile =
+    response instanceof File
+      ? response
+      : response && typeof response === "object" && "url" in response
+        ? fileDataToFile(response as FileData)
+        : null;
 
   return (
     <div className="flex-1 flex items-center justify-center">
@@ -105,7 +110,7 @@ export default function TypeFormQuestion({
               currentQuestion={mapQuestionToUI(question)}
               currentResponse={responseAsFile}
               handleSelect={(qId: string, value: QuestionResponse) => {
-                onAnswer(qId, value, question.questionType);
+                onAnswer(qId, value, (question.type as any).name);
               }}
               handleFileUpload={onFileUpload}
               uploadedFile={uploadedFile}

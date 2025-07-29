@@ -43,11 +43,12 @@ function mapOptionsToUI(options: Option[]): UIOption[] {
 // ============================================================================
 
 export function mapQuestionToUI(question: Question): UIQuestion {
+  const questionType = (question.type as any).name;
   const baseQuestion = {
     id: question.id,
     title: question.title,
     description: question.description,
-    questionType: question.questionType as UIQuestionType,
+    questionType: questionType as UIQuestionType,
     required: (question.validations?.required?.value as boolean) || false,
     validations: question.validations || {},
     display: {
@@ -57,48 +58,53 @@ export function mapQuestionToUI(question: Question): UIQuestion {
 
   // Handle choice questions with options
   if (
-    question.questionType === "multipleChoice" ||
-    question.questionType === "singleChoice" ||
-    question.questionType === "ranking"
+    questionType === "multipleChoice" ||
+    questionType === "singleChoice" ||
+    questionType === "ranking"
   ) {
-    const choiceQuestion = question as typeof question & { options: Option[] };
+    const typeWithOptions = question.type as any;
     return {
       ...baseQuestion,
-      options: choiceQuestion.options
-        ? mapOptionsToUI(choiceQuestion.options)
+      options: typeWithOptions?.options
+        ? mapOptionsToUI(typeWithOptions.options)
         : undefined,
     };
   }
 
   // Handle rating questions
-  if (question.questionType === "rating") {
-    const ratingQuestion = question as typeof question & {
-      ratingConfig: { max: number; min?: number };
-    };
+  if (questionType === "rating") {
+    const ratingType = question.type as any;
     return {
       ...baseQuestion,
-      ratingConfig: ratingQuestion.ratingConfig,
+      ratingConfig: ratingType.config,
     };
   }
 
   // Handle linear scale questions
-  if (question.questionType === "linearScale") {
-    const scaleQuestion = question as typeof question & {
-      linearScaleConfig: {
-        start: number;
-        end: number;
-        startLabel?: string;
-        endLabel?: string;
-      };
-    };
+  if (questionType === "linearScale") {
+    const scaleType = question.type as any;
     return {
       ...baseQuestion,
       linearScaleConfig: {
-        min: scaleQuestion.linearScaleConfig.start,
-        max: scaleQuestion.linearScaleConfig.end,
-        startLabel: scaleQuestion.linearScaleConfig.startLabel,
-        endLabel: scaleQuestion.linearScaleConfig.endLabel,
+        min: scaleType.config.start,
+        max: scaleType.config.end,
+        startLabel: scaleType.config.startLabel,
+        endLabel: scaleType.config.endLabel,
       },
+    };
+  }
+
+  // Handle likert scale questions
+  if (questionType === "likertScale") {
+    const likertType = question.type as any;
+    return {
+      ...baseQuestion,
+      options: likertType.options
+        ? likertType.options.map((opt: string, index: number) => ({
+            label: opt,
+            value: String(index),
+          }))
+        : undefined,
     };
   }
 
@@ -114,29 +120,57 @@ function mapQuestionsToUI(questions: Question[]): UIQuestion[] {
 // Reverse Mapping - UI to Schema
 // ============================================================================
 
-// Helper function to map questionType to inputType
-function getInputTypeForQuestionType(
+// Helper function to map UI question type to new schema type
+function mapUIQuestionTypeToSchemaType(
   questionType: UIQuestion["questionType"],
-): string {
-  const mapping: Record<UIQuestion["questionType"], string> = {
-    text: "text",
-    email: "email",
-    url: "url",
-    tel: "tel",
-    password: "password",
-    textarea: "textarea",
-    number: "number",
-    multipleChoice: "checkbox",
-    singleChoice: "radio",
-    ranking: "rankOrder",
-    rating: "star",
-    linearScale: "linearScale",
-    likertScale: "likertScale",
-    date: "date",
-    address: "addressBlock",
-    fileUpload: "file",
-  };
-  return mapping[questionType] || "text";
+): any {
+  switch (questionType) {
+    case "text":
+      return { name: "text" as const, format: "text" as const };
+    case "email":
+      return { name: "text" as const, format: "email" as const };
+    case "url":
+      return { name: "text" as const, format: "url" as const };
+    case "tel":
+      return { name: "text" as const, format: "tel" as const };
+    case "password":
+      return { name: "text" as const, format: "password" as const };
+    case "textarea":
+      return { name: "text" as const, format: "textarea" as const };
+    case "number":
+      return { name: "text" as const, format: "number" as const };
+    case "multipleChoice":
+      return {
+        name: "multipleChoice" as const,
+        display: "checkbox" as const,
+        options: [],
+      };
+    case "singleChoice":
+      return {
+        name: "singleChoice" as const,
+        display: "radio" as const,
+        options: [],
+      };
+    case "ranking":
+      return { name: "ranking" as const, options: [] };
+    case "rating":
+      return { name: "rating" as const, config: { min: 1, max: 5, step: 1 } };
+    case "linearScale":
+      return {
+        name: "linearScale" as const,
+        config: { start: 1, end: 10, step: 1 },
+      };
+    case "likertScale":
+      return { name: "likertScale" as const, options: [] };
+    case "date":
+      return { name: "date" as const, format: "date" as const };
+    case "address":
+      return { name: "address" as const };
+    case "fileUpload":
+      return { name: "fileUpload" as const };
+    default:
+      return { name: "text" as const, format: "text" as const };
+  }
 }
 
 export function mapUIToQuestion(uiQuestion: UIQuestion): Question {
@@ -174,124 +208,74 @@ export function mapUIToQuestion(uiQuestion: UIQuestion): Question {
     };
   }
 
+  // Get the schema type based on UI question type
+  let schemaType = mapUIQuestionTypeToSchemaType(uiQuestion.questionType);
+
+  // Override with specific options if available
+  if (
+    uiQuestion.options &&
+    (schemaType.name === "multipleChoice" ||
+      schemaType.name === "singleChoice" ||
+      schemaType.name === "ranking")
+  ) {
+    schemaType = {
+      ...schemaType,
+      options: uiQuestion.options.map((opt) => ({
+        label: opt.label,
+        value: opt.value,
+      })),
+    };
+  }
+
+  // Override with specific rating config if available
+  if (uiQuestion.ratingConfig && schemaType.name === "rating") {
+    schemaType = {
+      ...schemaType,
+      config: {
+        max: uiQuestion.ratingConfig.max || 5,
+        min: (uiQuestion.ratingConfig as any).min || 1,
+        step: 1,
+      },
+    };
+  }
+
+  // Override with specific linear scale config if available
+  if (uiQuestion.linearScaleConfig && schemaType.name === "linearScale") {
+    schemaType = {
+      ...schemaType,
+      config: {
+        start:
+          uiQuestion.linearScaleConfig.min ??
+          uiQuestion.linearScaleConfig.start ??
+          1,
+        end:
+          uiQuestion.linearScaleConfig.max ??
+          uiQuestion.linearScaleConfig.end ??
+          10,
+        step: 1,
+        startLabel: uiQuestion.linearScaleConfig.startLabel,
+        endLabel: uiQuestion.linearScaleConfig.endLabel,
+      },
+    };
+  }
+
+  // Override with likert scale options if available
+  if (uiQuestion.options && schemaType.name === "likertScale") {
+    schemaType = {
+      ...schemaType,
+      options: uiQuestion.options.map((opt) => opt.value),
+    };
+  }
+
   // Common base properties for all question types
-  const baseProps = {
-    type: "question" as const,
+  return {
     id: uiQuestion.id,
     questionNo: 1, // Default value - this should be set by the parent form
     title: uiQuestion.title,
     description: uiQuestion.description,
+    type: schemaType,
     validations: convertedValidations,
-    display: {
-      inputType: getInputTypeForQuestionType(uiQuestion.questionType) as any,
-      showTitle: true,
-      showDescription: !!uiQuestion.description,
-    },
     submissionBehavior: "manualAnswer" as const,
-  };
-
-  // Handle choice questions with options
-  if (
-    uiQuestion.questionType === "multipleChoice" ||
-    uiQuestion.questionType === "singleChoice"
-  ) {
-    return {
-      ...baseProps,
-      questionType: uiQuestion.questionType,
-      options:
-        uiQuestion.options?.map((opt) => ({
-          label: opt.label,
-          value: opt.value,
-        })) || [],
-    } as Question;
-  }
-
-  // Handle ranking questions
-  if (uiQuestion.questionType === "ranking") {
-    return {
-      ...baseProps,
-      questionType: "ranking",
-      options:
-        uiQuestion.options?.map((opt) => ({
-          label: opt.label,
-          value: opt.value,
-        })) || [],
-    } as Question;
-  }
-
-  // Handle rating questions
-  if (uiQuestion.questionType === "rating") {
-    return {
-      ...baseProps,
-      questionType: "rating",
-      ratingConfig: {
-        max: uiQuestion.ratingConfig?.max || 5,
-        min: 1, // Default minimum value
-        step: 1, // Default step value
-        minLabel: undefined,
-        maxLabel: undefined,
-      },
-    } as Question;
-  }
-
-  // Handle linear scale questions
-  if (uiQuestion.questionType === "linearScale") {
-    return {
-      ...baseProps,
-      questionType: "linearScale",
-      linearScaleConfig: {
-        start:
-          uiQuestion.linearScaleConfig?.min ??
-          uiQuestion.linearScaleConfig?.start ??
-          1,
-        end:
-          uiQuestion.linearScaleConfig?.max ??
-          uiQuestion.linearScaleConfig?.end ??
-          10,
-        startLabel: uiQuestion.linearScaleConfig?.startLabel,
-        endLabel: uiQuestion.linearScaleConfig?.endLabel,
-      },
-    } as Question;
-  }
-
-  // Handle likert scale questions
-  if (uiQuestion.questionType === "likertScale") {
-    return {
-      ...baseProps,
-      questionType: "likertScale",
-      options: uiQuestion.options?.map((opt) => opt.value) || [],
-    } as Question;
-  }
-
-  // Handle basic questions (text, date, address, fileUpload)
-  // Map UI question types to schema question types
-  let schemaQuestionType: "text" | "date" | "address" | "fileUpload";
-  switch (uiQuestion.questionType) {
-    case "text":
-    case "email":
-    case "url":
-    case "tel":
-    case "password":
-    case "textarea":
-    case "number":
-      schemaQuestionType = "text";
-      break;
-    case "date":
-      schemaQuestionType = "date";
-      break;
-    case "address":
-      schemaQuestionType = "address";
-      break;
-    case "fileUpload":
-      schemaQuestionType = "fileUpload";
-      break;
-    default:
-      schemaQuestionType = "text";
-  }
-
-  return {
-    ...baseProps,
-    questionType: schemaQuestionType,
   } as Question;
 }
 

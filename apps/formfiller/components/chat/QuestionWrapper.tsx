@@ -25,13 +25,18 @@ const formatResponse = (
 ): string => {
   if (!response) return "";
 
-  switch (question.questionType) {
+  switch ((question.type as any).name) {
     case "singleChoice":
     case "multipleChoice": {
       // Handle both single value and array of values
       const values = Array.isArray(response) ? response : [response];
       const labels = values.map((value) => {
-        const option = question.options?.find((opt) => opt.value === value);
+        const typeWithOptions = question.type as {
+          options?: { value: string; label: string }[];
+        };
+        const option = typeWithOptions.options?.find(
+          (opt) => opt.value === value,
+        );
         return option?.label || value;
       });
       return labels.join(", ");
@@ -59,7 +64,8 @@ const formatResponse = (
 
     case "rating": {
       // Show rating with scale
-      const config = question.ratingConfig;
+      const ratingType = question.type as { config?: { max: number } };
+      const config = ratingType.config;
       if (config) {
         return `${response} out of ${config.max}`;
       }
@@ -68,7 +74,15 @@ const formatResponse = (
 
     case "linearScale": {
       // Show linear scale value with labels if available
-      const config = question.linearScaleConfig;
+      const scaleType = question.type as {
+        config?: {
+          start: number;
+          end: number;
+          startLabel?: string;
+          endLabel?: string;
+        };
+      };
+      const config = scaleType.config;
       if (config) {
         let result = String(response);
         if (response === config.start && config.startLabel) {
@@ -106,7 +120,10 @@ const formatResponse = (
 
     case "date": {
       // Format date nicely
-      if (response && (typeof response === "string" || typeof response === "number")) {
+      if (
+        response &&
+        (typeof response === "string" || typeof response === "number")
+      ) {
         try {
           const date = new Date(response);
           return date.toLocaleDateString();
@@ -120,9 +137,14 @@ const formatResponse = (
     case "ranking": {
       // Show ranked items in order
       if (Array.isArray(response)) {
+        const typeWithOptions = question.type as {
+          options?: { value: string; label: string }[];
+        };
         return response
           .map((value, index) => {
-            const option = question.options?.find((opt) => opt.value === value);
+            const option = typeWithOptions.options?.find(
+              (opt) => opt.value === value,
+            );
             const label = option?.label || value;
             return `${index + 1}. ${label}`;
           })
@@ -193,16 +215,16 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
   if (!question) return null;
 
   // For multi-select: need special handling because values can be selected before submission
-  const isMultiSelect = question.questionType === "multipleChoice";
+  const isMultiSelect = (question.type as any).name === "multipleChoice";
 
   // For address: need special handling because partial data doesn't mean submission
-  const isAddress = question.questionType === "address";
+  const isAddress = (question.type as any).name === "address";
 
   // For ranking: need special handling because ranking in progress doesn't mean submission
-  const isRanking = question.questionType === "ranking";
+  const isRanking = (question.type as any).name === "ranking";
 
   // For file upload: need special handling because file selection doesn't mean submission
-  const isFileUpload = question.questionType === "fileUpload";
+  const isFileUpload = (question.type as any).name === "fileUpload";
 
   // A multi-select is considered "submitted" when:
   // 1. It has a response AND
@@ -262,8 +284,8 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
     // Only skip plain text questions without specific input requirements
     // Allow structured inputs like email, tel, url, etc. and questions with validations
     if (
-      question.questionType === "text" &&
-      question.display.inputType === "text" &&
+      (question.type as any).name === "text" &&
+      (question.type as any).format === "text" &&
       !question.validations?.pattern &&
       !question.validations?.minLength &&
       !question.validations?.maxLength &&
@@ -275,7 +297,12 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
       return null;
     }
 
-    const responseAsFile = response instanceof File ? response : response && typeof response === "object" && "url" in response ? fileDataToFile(response as FileData) : null;
+    const responseAsFile =
+      response instanceof File
+        ? response
+        : response && typeof response === "object" && "url" in response
+          ? fileDataToFile(response as FileData)
+          : null;
 
     return (
       <InputContainer
@@ -287,10 +314,10 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
           // For single select and other types, trigger submission immediately
           // Multi-select, address, ranking, and file upload will trigger via onNext when Continue is clicked
           if (
-            question.questionType !== "multipleChoice" &&
-            question.questionType !== "address" &&
-            question.questionType !== "ranking" &&
-            question.questionType !== "fileUpload" &&
+            (question.type as any).name !== "multipleChoice" &&
+            (question.type as any).name !== "address" &&
+            (question.type as any).name !== "ranking" &&
+            (question.type as any).name !== "fileUpload" &&
             value
           ) {
             setTriggerUserMessageForSelection(

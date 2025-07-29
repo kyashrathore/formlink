@@ -309,7 +309,7 @@ export interface UseTypeFormKeyboardProps {
   onAnswer: (
     questionId: string,
     value: QuestionResponse,
-    questionType: Question["questionType"],
+    questionType: string,
   ) => void;
   onNext: () => void;
   onPrevious?: () => void;

@@ -120,10 +120,14 @@ export default function TypeFormView({
   const handleSelectAndNavigate = (
     questionId: string,
     value: QuestionResponse,
-    questionType: UIQuestion["questionType"],
+    questionType: string,
   ) => {
     // Call the business logic callback
-    onAnswerChange(questionId, value, questionType);
+    onAnswerChange(
+      questionId,
+      value,
+      questionType as UIQuestion["questionType"],
+    );
 
     // Auto-advance for single-selection question types
     const autoAdvanceTypes = [
