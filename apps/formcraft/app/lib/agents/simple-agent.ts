@@ -179,12 +179,16 @@ export async function* updateFormAgent(
       ? String(dbVersionData.description)
       : undefined
 
+    // Apply repair to questions before sending to frontend
+    const rawQuestions = dbVersionData?.questions || []
+    const repairedQuestions = repairQuestionInputTypes(rawQuestions)
+
     return {
       id: formId,
       version_id: tempVersionId || dbVersionData?.version_id || nanoid(),
       title: baseTitle,
       description: baseDescription,
-      questions: dbVersionData?.questions || [],
+      questions: repairedQuestions,
       settings: dbVersionData?.settings || {},
 
       current_draft_version_id:

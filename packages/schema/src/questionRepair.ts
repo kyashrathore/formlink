@@ -9,7 +9,7 @@ interface RepairableQuestion {
     inputType: InputType | string; // Allow string initially for robustness
     // other display properties
   };
-  options?: Option[];
+  options?: Option[] | string[]; // Allow both Option objects and string arrays
   submissionBehavior?: SubmissionBehavior | string; // Allow string for robustness before full parsing
   // other question properties
 }
@@ -48,6 +48,7 @@ export function repairQuestionInputTypes(questions: any[]): any[] {
     date: ["date", "dateRange"],
     rating: ["star"],
     linearScale: ["linearScale"],
+    likertScale: ["likertScale"],
     address: ["addressBlock"],
     ranking: ["rankOrder"],
     fileUpload: ["file"],
@@ -61,6 +62,7 @@ export function repairQuestionInputTypes(questions: any[]): any[] {
     dateRange: "autoAnswer",
     star: "autoAnswer",
     linearScale: "autoAnswer",
+    likertScale: "autoAnswer",
     file: "autoAnswer",
 
     checkbox: "manualAnswer",
@@ -185,6 +187,28 @@ export function repairQuestionInputTypes(questions: any[]): any[] {
       const newSubmissionBehavior = "manualAnswer";
       if (modifiedQuestion.submissionBehavior !== newSubmissionBehavior) {
         modifiedQuestion.submissionBehavior = newSubmissionBehavior;
+        hasBeenModified = true;
+      }
+    }
+
+    // 5. Repair options format for likertScale questions
+    if (qType === "likertScale" && Array.isArray(modifiedQuestion.options)) {
+      const options = modifiedQuestion.options;
+      // Check if options are Option objects instead of strings
+      if (
+        options.length > 0 &&
+        typeof options[0] === "object" &&
+        options[0] &&
+        "label" in options[0]
+      ) {
+        // Convert Option objects to string array using label
+        const stringOptions = options.map((opt) => {
+          if (typeof opt === "object" && opt && "label" in opt) {
+            return String(opt.label || opt.value || opt);
+          }
+          return String(opt);
+        });
+        modifiedQuestion.options = stringOptions;
         hasBeenModified = true;
       }
     }

@@ -28,6 +28,7 @@ interface PanelState {
   setPreviewMode: (mode: "chat" | "conversation") => void
   toggleEditMode: () => void
   setEditMode: (editMode: boolean) => void
+  resetToDefaults: () => void
 }
 
 export const usePanelState = create<PanelState>()(
@@ -138,16 +139,21 @@ export const usePanelState = create<PanelState>()(
       toggleEditMode: () => set({ editMode: !get().editMode }),
 
       setEditMode: (editMode) => set({ editMode }),
+
+      resetToDefaults: () =>
+        set({
+          activeMainTab: "form",
+          activeChatTab: "chat",
+          editMode: true,
+          previewMode: "chat",
+          // Keep layout preferences, only reset tab states
+        }),
     }),
     {
       name: "panel-state",
       partialize: (state) => ({
         leftPanelWidth: state.leftPanelWidth,
         panelState: state.panelState,
-        activeMainTab: state.activeMainTab,
-        activeChatTab: state.activeChatTab,
-        previewMode: state.previewMode,
-        editMode: state.editMode,
         isFloating: state.isFloating,
         floatingPosition: state.floatingPosition,
       }),

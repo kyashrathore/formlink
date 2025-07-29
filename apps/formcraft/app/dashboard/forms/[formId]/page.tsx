@@ -4,7 +4,7 @@ import FormlinkLogo from "@/app/components/FormlinkLogo"
 import UserMenu from "@/app/components/layout/user-menu"
 import { useAuth } from "@/app/hooks/useAuth"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import ChatDesignPanel from "./components/ChatDesignPanel"
@@ -53,6 +53,7 @@ function TestUIPageContent() {
 
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
 
   const formIdFromUrl = params.formId as string
   const [formId, setFormId] = useState(() => formIdFromUrl || uuidv4())
@@ -115,6 +116,19 @@ function TestUIPageContent() {
   useEffect(() => {
     useFormGenerationStore.getState().initializeConnection(formId)
   }, [formId])
+
+  // Read initial prompt from URL query parameter and set it in the store
+  useEffect(() => {
+    const initialPromptFromUrl = searchParams.get("initialPrompt")
+    if (initialPromptFromUrl) {
+      const decodedPrompt = decodeURIComponent(initialPromptFromUrl)
+      useFormGenerationStore.getState().setInitialPrompt(decodedPrompt)
+
+      // Clean up the URL by removing the query parameter
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, "", newUrl)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     const currentStoreForm = useFormEditorStore.getState().form
@@ -215,6 +229,13 @@ function TestUIPageContent() {
       }
     }
   }, [formAgent_currentForm, formId])
+
+  // Reset tab states when form page unmounts to ensure clean state for next form
+  useEffect(() => {
+    return () => {
+      usePanelState.getState().resetToDefaults()
+    }
+  }, [])
 
   if (loading) {
     return (
