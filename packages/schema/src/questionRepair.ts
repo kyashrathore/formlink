@@ -9,7 +9,7 @@ interface RepairableQuestion {
     inputType: InputType | string; // Allow string initially for robustness
     // other display properties
   };
-  options?: Option[];
+  options?: Option[] | string[]; // Allow both Option objects and string arrays
   submissionBehavior?: SubmissionBehavior | string; // Allow string for robustness before full parsing
   // other question properties
 }
