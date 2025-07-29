@@ -2,7 +2,7 @@ import {
   Question,
   QuestionSchema,
 } from "@/app/lib/validation/form-generation-schemas"
-import { QuestionType } from "@formlink/schema"
+import { QuestionType, repairQuestionInputTypes } from "@formlink/schema"
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
 import { z } from "zod"
@@ -268,6 +268,9 @@ export async function generateQuestion(
     // Map the AI-generated question to the form's Question schema
     const formQuestion = mapAIQuestionToFormQuestion(questionWithOrder, order)
 
+    // Apply repair before sending to frontend
+    const repairedQuestion = repairQuestionInputTypes([formQuestion])[0]
+
     // Emit individual question completion event
     dataStream.writeData({
       type: "custom_agent_event",
@@ -278,7 +281,7 @@ export async function generateQuestion(
           questionTitle: questionTitle,
           questionIndex: order,
           totalQuestions: totalQuestions,
-          question: formQuestion, // Use the mapped question here
+          question: repairedQuestion, // Use the repaired question here
           message: `Generated question: "${questionTitle}"`,
         },
         formId,

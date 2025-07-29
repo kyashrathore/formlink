@@ -93,14 +93,10 @@ function Home({ forms, user }: HomeProps) {
       setIsNavigating(true)
       analytics.formCreationStarted("ai_chat")
 
-      // Store the initial prompt in localStorage temporarily
-      localStorage.setItem(
-        `formlink_initial_prompt_${formIdForAgentPanel}`,
-        message
-      )
-
       startTransition(() => {
-        router.push(`/dashboard/forms/${formIdForAgentPanel}`, {})
+        router.push(
+          `/dashboard/forms/${formIdForAgentPanel}?initialPrompt=${encodeURIComponent(message)}`
+        )
       })
     },
     [formIdForAgentPanel, router]

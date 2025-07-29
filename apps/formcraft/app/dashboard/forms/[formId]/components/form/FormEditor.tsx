@@ -38,6 +38,7 @@ const FormEditor: React.FC<FormEditorProps> = ({ user, selectedTab }) => {
     hasFormJourney,
     showQuestionsSection,
     questionProgress,
+    initialPrompt,
   } = useFormGenerationStore()
 
   // Handle form field updates
@@ -61,66 +62,72 @@ const FormEditor: React.FC<FormEditorProps> = ({ user, selectedTab }) => {
 
   // When not generating, create data structures for Async sections from the loaded form.
   // This ensures we display the existing form data, not the idle generation state.
-  const metadataData = isFormGenerating
-    ? {
-        status: hasFormMetadata ? ("success" as const) : ("loading" as const),
-        data: hasFormMetadata ? formMetadata : null, // Don't provide data when loading to show shimmer
-        error: null,
-        lastUpdated: hasFormMetadata ? new Date() : null,
-      }
-    : {
-        status: "success" as const,
-        data: {
-          title: form?.title || "",
-          description: form?.description || "",
-        },
-        error: null,
-        lastUpdated: new Date(),
-      }
+  const metadataData =
+    isFormGenerating || (initialPrompt && !form?.title)
+      ? {
+          status: hasFormMetadata ? ("success" as const) : ("loading" as const),
+          data: hasFormMetadata ? formMetadata : null, // Don't provide data when loading to show shimmer
+          error: null,
+          lastUpdated: hasFormMetadata ? new Date() : null,
+        }
+      : {
+          status: "success" as const,
+          data: {
+            title: form?.title || "",
+            description: form?.description || "",
+          },
+          error: null,
+          lastUpdated: new Date(),
+        }
 
-  const journeyData = isFormGenerating
-    ? {
-        status: hasFormJourney ? ("success" as const) : ("loading" as const),
-        data: hasFormJourney
-          ? currentForm?.settings?.journeyScript || ""
-          : null, // Don't provide data when loading to show shimmer
-        error: null,
-        lastUpdated: hasFormJourney ? new Date() : null,
-      }
-    : {
-        status: "success" as const,
-        data: form?.settings?.journeyScript || "",
-        error: null,
-        lastUpdated: new Date(),
-      }
+  const journeyData =
+    isFormGenerating || (initialPrompt && !form?.settings?.journeyScript)
+      ? {
+          status: hasFormJourney ? ("success" as const) : ("loading" as const),
+          data: hasFormJourney
+            ? currentForm?.settings?.journeyScript || ""
+            : null, // Don't provide data when loading to show shimmer
+          error: null,
+          lastUpdated: hasFormJourney ? new Date() : null,
+        }
+      : {
+          status: "success" as const,
+          data: form?.settings?.journeyScript || "",
+          error: null,
+          lastUpdated: new Date(),
+        }
 
   // Create properly typed AsyncCollection for questions
-  const questionsData: AsyncCollection<Question> = isFormGenerating
-    ? {
-        status: questionProgress?.total > 0 ? "loading" : "loading",
-        items: generatedQuestions || [],
-        total: questionProgress?.total || 0,
-        generatedCount:
-          generatedQuestions?.filter((q) => q !== null).length || 0,
-        progressStatus: questionProgress?.total > 0 ? "success" : "loading",
-        error: null,
-      }
-    : {
-        status: "success" as const,
-        items: form?.questions || [],
-        total: form?.questions?.length || 0,
-        generatedCount: form?.questions?.length || 0,
-        progressStatus: "success" as const,
-        error: null,
-      }
+  const questionsData: AsyncCollection<Question> =
+    isFormGenerating || (initialPrompt && (form?.questions?.length ?? 0) === 0)
+      ? {
+          status: questionProgress?.total > 0 ? "loading" : "loading",
+          items: generatedQuestions || [],
+          total: questionProgress?.total || 0,
+          generatedCount:
+            generatedQuestions?.filter((q) => q !== null).length || 0,
+          progressStatus: questionProgress?.total > 0 ? "success" : "loading",
+          error: null,
+        }
+      : {
+          status: "success" as const,
+          items: form?.questions || [],
+          total: form?.questions?.length || 0,
+          generatedCount: form?.questions?.length || 0,
+          progressStatus: "success" as const,
+          error: null,
+        }
 
   // Determine section visibility based on generation status or existing form data.
-  const showMetadata = isFormGenerating || !!form?.title
-  const showJourney = isFormGenerating || !!form?.settings?.journeyScript
+  // If there's an initial prompt, show all sections to start loading immediately
+  const showMetadata = isFormGenerating || !!form?.title || !!initialPrompt
+  const showJourney =
+    isFormGenerating || !!form?.settings?.journeyScript || !!initialPrompt
   const showQuestions =
     isFormGenerating ||
     (form?.questions?.length ?? 0) > 0 ||
-    showQuestionsSection
+    showQuestionsSection ||
+    !!initialPrompt
 
   return (
     <div className="flex flex-col items-center space-y-8">

@@ -7,7 +7,7 @@
  */
 
 import logger from "@/app/lib/logger"
-import { Form } from "@formlink/schema"
+import { Form, repairQuestionInputTypes } from "@formlink/schema"
 import { QUESTION_SCHEMA_PROMPT } from "../../prompts"
 import { AgentEvent, createAgentEvent } from "../../types/agent-events"
 import {
@@ -54,12 +54,15 @@ function buildFormForEvent(
   formContent: FormContent,
   versionId?: string
 ): Form {
+  // Apply repair to questions before sending to frontend
+  const repairedQuestions = repairQuestionInputTypes(formContent.questions)
+
   return {
     id: formId,
     version_id: versionId || "temp-" + Date.now(),
     title: formContent.title,
     description: formContent.description,
-    questions: formContent.questions as any,
+    questions: repairedQuestions as any,
     settings: formContent.settings,
     current_draft_version_id: versionId,
     current_published_version_id: undefined,
