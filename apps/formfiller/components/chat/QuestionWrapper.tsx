@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from "react";
 import { useChatStore } from "./store/useChatStore";
 import { InputContainer } from "@formlink/ui";
 import { Question, AddressData } from "@formlink/schema";
-import { mapQuestionToUI } from "@/lib/mappers/schema-to-ui";
 import { fileDataToFile } from "@/lib/utils";
 import type {
   QuestionResponse,
@@ -306,7 +305,7 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
 
     return (
       <InputContainer
-        currentQuestion={mapQuestionToUI(question)}
+        currentQuestion={question}
         currentResponse={responseAsFile}
         handleSelect={(qId: string, value: QuestionResponse) => {
           setCurrentInput(qId, value);

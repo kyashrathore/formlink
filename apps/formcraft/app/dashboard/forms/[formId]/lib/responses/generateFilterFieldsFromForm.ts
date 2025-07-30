@@ -14,7 +14,7 @@ export function generateFilterFieldsFromForm(form: Form): FilterFieldType[] {
           commandDisabled: false,
         }
 
-        switch (question.questionType) {
+        switch (question.type.name) {
           case "text":
           case "address":
           case "fileUpload":

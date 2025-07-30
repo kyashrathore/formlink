@@ -13,7 +13,7 @@ export const RatingSection: React.FC<RatingSectionProps> = ({
   onFieldUpdate,
 }) => {
   if (
-    question.questionType !== "rating" ||
+    question.type.name !== "rating" ||
     question.readableRatingConfig === undefined
   ) {
     return null

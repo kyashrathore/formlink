@@ -15,7 +15,7 @@ interface AgentState {
 
 interface FormQuestion {
   id: string
-  questionType: string
+  type: { name: string }
   title: string
   options?: Array<{ label?: string; value?: string }>
   ratingConfig?: { min: number; max: number }
@@ -219,7 +219,7 @@ export class FormService {
     ).map((q, index) => ({
       questionNumber: index + 1,
       id: q.id,
-      type: q.questionType,
+      type: q.type.name,
       title: q.title,
       options: q.options
         ? q.options.map((opt) => opt.label || opt.value || "")

@@ -1,11 +1,14 @@
-import React, { useEffect, useRef } from "react";
-import { motion } from "framer-motion";
 import { ArrowDown, Type } from "lucide-react";
+import { motion } from "motion/react";
+import React, { useEffect, useRef } from "react";
 import { cn } from "../../../lib/utils";
 // ChatInputContainer deleted - this component may need refactoring
 import type { BaseTextInputProps } from "../../primitives/BaseTextInput";
 
 interface ChatTextInputImprovedProps extends BaseTextInputProps {
+  label?: string;
+  description?: string;
+  className?: string;
   showHint?: boolean;
   hintDelay?: number;
 }
@@ -20,7 +23,7 @@ export const ChatTextInputImproved: React.FC<ChatTextInputImprovedProps> = ({
   ...props
 }) => {
   const [showArrowHint, setShowArrowHint] = React.useState(false);
-  const hintTimerRef = useRef<NodeJS.Timeout>();
+  const hintTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (showHint && !props.value) {
@@ -39,7 +42,7 @@ export const ChatTextInputImproved: React.FC<ChatTextInputImprovedProps> = ({
   }, [showHint, props.value, hintDelay]);
 
   return (
-    <ChatInputContainer className={cn("relative", className)}>
+    <div className={cn("relative", className)}>
       <div className="space-y-6">
         {/* Question Display */}
         <div className="space-y-2">
@@ -101,6 +104,6 @@ export const ChatTextInputImproved: React.FC<ChatTextInputImprovedProps> = ({
           </motion.div>
         )}
       </div>
-    </ChatInputContainer>
+    </div>
   );
 };

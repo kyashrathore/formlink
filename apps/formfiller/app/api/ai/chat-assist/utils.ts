@@ -5,7 +5,6 @@ import type {
   AIContext,
   QuestionResponse,
   ExtendedValidations,
-  QuestionWithOptions,
   WebhookData,
   FileData,
 } from "@/lib/types";
@@ -167,19 +166,16 @@ export class FormValidator {
     // Handle different input types
     if (typeof input === "object" && input !== null) {
       // Special handling for complex types
-      if (
-        question.questionType === "address" ||
-        question.display?.inputType === "addressBlock"
-      ) {
+      if (question.type.name === "address") {
         return this.validateAddress(input, question);
       }
-      if (question.questionType === "multipleChoice" && Array.isArray(input)) {
+      if (question.type.name === "multipleChoice" && Array.isArray(input)) {
         return this.validateMultipleChoice(input, question);
       }
-      if (question.questionType === "fileUpload") {
+      if (question.type.name === "fileUpload") {
         return this.validateFileUpload(input, question);
       }
-      if (question.questionType === "ranking" && Array.isArray(input)) {
+      if (question.type.name === "ranking" && Array.isArray(input)) {
         return this.validateRanking(input, question);
       }
     }
@@ -210,7 +206,7 @@ export class FormValidator {
     }
 
     // Type-specific validation
-    const validatorKey = question.display?.inputType || question.questionType;
+    const validatorKey = question.type.name === "text" ? (question.type as any).format || "text" : question.type.name;
     const validator = this.validators[validatorKey];
 
     if (validator) {
@@ -289,9 +285,9 @@ export class FormValidator {
     }
 
     // Validate all selections are valid options
-    // Type assertion since we know multiple choice questions have options
-    const mcQuestion = question as QuestionWithOptions;
-    const validOptions = mcQuestion.options?.map((opt) => opt.value) || [];
+    // Access options from the new type structure
+    const choiceType = question.type as { name: "multipleChoice"; options: Array<{ value: string; label: string }> };
+    const validOptions = choiceType.options?.map((opt) => opt.value) || [];
     const invalidSelections = input.filter(
       (val) => !validOptions.includes(val),
     );
@@ -330,10 +326,9 @@ export class FormValidator {
     }
 
     // Check if all options are ranked
-    // Type assertion since we know ranking questions have options
-    const rankingQuestion = question as QuestionWithOptions;
-    const expectedOptions =
-      rankingQuestion.options?.map((opt) => opt.value) || [];
+    // Access options from the new type structure
+    const rankingType = question.type as { name: "ranking"; options: Array<{ value: string; label: string }> };
+    const expectedOptions = rankingType.options?.map((opt) => opt.value) || [];
     if (input.length !== expectedOptions.length) {
       return { isValid: false, error: "Please rank all options" };
     }

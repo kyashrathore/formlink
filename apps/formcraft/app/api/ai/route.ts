@@ -36,7 +36,7 @@ export const maxDuration = 20
 type AIPromptQuestion = {
   id: string
   title: string
-  questionType: Question["questionType"]
+  questionType: string
   options?: Option[]
   _derived_dataType_:
     | "string"
@@ -52,13 +52,14 @@ type AIPromptQuestion = {
 function getDerivedDataType(
   question: Question
 ): AIPromptQuestion["_derived_dataType_"] {
-  switch (question.questionType) {
+  switch (question.type.name) {
     case "text":
     case "singleChoice":
     case "date":
       return "string"
     case "rating":
     case "linearScale":
+    case "likertScale":
       return "number"
     case "multipleChoice":
       return "array_string"
@@ -69,12 +70,6 @@ function getDerivedDataType(
     case "ranking":
       return "array_string"
     default:
-      if (
-        "display" in question &&
-        (question as Question & { display?: { inputType?: string } }).display
-          ?.inputType === "number"
-      )
-        return "number"
       return "unknown"
   }
 }
@@ -86,11 +81,8 @@ function transformQuestionsForAI(
   return questions.map((q) => ({
     id: q.id,
     title: q.title,
-    questionType: q.questionType,
-    options:
-      "options" in q
-        ? (q as Question & { options?: Option[] }).options
-        : undefined,
+    questionType: q.type.name,
+    options: (q.type as { options?: Option[] }).options,
     _derived_dataType_: getDerivedDataType(q),
   }))
 }

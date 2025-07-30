@@ -86,10 +86,13 @@ export type UIQuestionType =
   | "fileUpload"
   | "ranking";
 
+// DEPRECATED: UIQuestion interface - replaced by direct usage of Question from @formlink/schema
+// Kept for legacy compatibility but should not be used in new code
 export interface UIQuestion {
   id: string;
   title: string;
   description?: string;
+  /** @deprecated Use Question from @formlink/schema instead */
   questionType: UIQuestionType;
   options?: UIOption[];
   validations?: UIValidations;

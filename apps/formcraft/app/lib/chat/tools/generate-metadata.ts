@@ -1,5 +1,16 @@
 import { getenv } from "@/lib/env"
-import { QuestionTypeEnumSchema } from "@formlink/schema"
+const QuestionTypeEnumSchema = z.enum([
+  "text",
+  "singleChoice",
+  "multipleChoice",
+  "rating",
+  "date",
+  "ranking",
+  "fileUpload",
+  "address",
+  "linearScale",
+  "likertScale",
+]);
 import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
 import { z } from "zod"

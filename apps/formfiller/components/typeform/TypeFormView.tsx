@@ -1,16 +1,13 @@
 "use client";
 
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { mapUIToQuestion } from "@/lib/mappers/schema-to-ui";
 import type { QuestionResponse } from "@/lib/types";
-import { Form } from "@formlink/schema";
+import { Form, Question } from "@formlink/schema";
 import {
   CompletionScreen,
   FormModeProvider,
   IntroScreen,
   TypeFormDropdownProvider,
-  UIForm,
-  UIQuestion,
 } from "@formlink/ui";
 import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
@@ -26,10 +23,8 @@ import TypeFormTransition from "./TypeFormTransition";
 
 interface TypeFormViewProps {
   formSchema: Form;
-  uiFormSchema: UIForm;
   formId?: string;
   // Props down: business state
-  questions: UIQuestion[];
   questionResponses: Record<string, QuestionResponse>;
   isCompleted: boolean;
   // Callbacks up: business actions
@@ -39,20 +34,19 @@ interface TypeFormViewProps {
   onAnswerChange: (
     questionId: string,
     value: QuestionResponse,
-    questionType: UIQuestion["questionType"],
+    questionType: string,
   ) => void;
   onFileUpload: (questionId: string, file: File) => Promise<string | null>;
   onNavigateNext: (currentIndex: number) => number | null;
   onMarkCompleted: () => void;
-  shouldShowQuestion: (question: UIQuestion) => boolean;
-  getCurrentQuestion: (activeIndex: number) => UIQuestion | null;
+  shouldShowQuestion: (question: Question) => boolean;
+  getCurrentQuestion: (activeIndex: number) => Question | null;
   getProgress: (activeIndex: number) => number;
 }
 
 export default function TypeFormView({
   formSchema,
   formId,
-  questions,
   questionResponses,
   isCompleted,
   onInitialize,
@@ -76,7 +70,7 @@ export default function TypeFormView({
   const [showConfetti, setShowConfetti] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
-  const currentQuestion: UIQuestion | null =
+  const currentQuestion: Question | null =
     getCurrentQuestion(activeQuestionIndex);
 
   useEffect(() => {
@@ -95,9 +89,9 @@ export default function TypeFormView({
       // No more questions, mark as completed
       onMarkCompleted();
       setShowConfetti(true);
-      setActiveQuestionIndex(questions.length);
+      setActiveQuestionIndex(formSchema.questions.length);
     }
-  }, [activeQuestionIndex, onNavigateNext, onMarkCompleted, questions.length]);
+  }, [activeQuestionIndex, onNavigateNext, onMarkCompleted, formSchema.questions.length]);
 
   const handleNavigateToNextValidQuestion = useCallback(() => {
     handleNextWithDirection();
@@ -126,7 +120,7 @@ export default function TypeFormView({
     onAnswerChange(
       questionId,
       value,
-      questionType as UIQuestion["questionType"],
+      questionType,
     );
 
     // Auto-advance for single-selection question types
@@ -148,7 +142,8 @@ export default function TypeFormView({
       setDirection(-1); // Going backwards
       // Find previous valid question
       for (let i = activeQuestionIndex - 1; i >= 0; i--) {
-        if (shouldShowQuestion(questions[i] as UIQuestion)) {
+        const question = formSchema.questions[i];
+        if (question && shouldShowQuestion(question)) {
           setActiveQuestionIndex(i);
           break;
         }
@@ -158,7 +153,7 @@ export default function TypeFormView({
 
   // Setup keyboard navigation
   useTypeFormKeyboard({
-    currentQuestion: currentQuestion ? mapUIToQuestion(currentQuestion) : null,
+    currentQuestion: currentQuestion,
     onAnswer: handleSelectAndNavigate,
     onNext: handleNextWithDirection,
     onPrevious: handlePrevious,
@@ -226,7 +221,7 @@ export default function TypeFormView({
           direction={direction}
         >
           <TypeFormQuestion
-            question={mapUIToQuestion(currentQuestion)}
+            question={currentQuestion}
             response={questionResponses[currentQuestion.id] ?? null}
             onAnswer={handleSelectAndNavigate}
             onFileUpload={handleFileUploadWrapper}
@@ -255,7 +250,7 @@ export default function TypeFormView({
           <TypeFormProgress
             progress={progress}
             current={activeQuestionIndex + 1}
-            total={questions.length}
+            total={formSchema.questions.length}
           />
         )}
         <TypeFormLayout>
@@ -269,7 +264,7 @@ export default function TypeFormView({
               canGoPrevious={activeQuestionIndex > 0}
               canGoNext={
                 currentQuestion
-                  ? currentQuestion.questionType === "text"
+                  ? currentQuestion.type.name === "text"
                     ? typeof questionResponses[currentQuestion.id] ===
                         "string" &&
                       (

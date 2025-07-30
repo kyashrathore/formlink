@@ -1,7 +1,7 @@
 import { repairJSON } from "@/app/lib/ai/repair"
 import logger from "@/app/lib/logger"
 import { createServerClient, Database, TablesInsert } from "@formlink/db"
-import { QuestionSchema, repairQuestionInputTypes } from "@formlink/schema"
+import { QuestionSchema } from "@formlink/schema"
 import { z } from "zod"
 
 /**
@@ -57,7 +57,7 @@ interface ValidationResult {
 async function validateQuestions(
   questions: unknown[]
 ): Promise<ValidationResult> {
-  const potentiallyRepairedQuestions = repairQuestionInputTypes(questions)
+  const potentiallyRepairedQuestions = questions
   const initialValidation = z
     .array(QuestionSchema)
     .safeParse(potentiallyRepairedQuestions)

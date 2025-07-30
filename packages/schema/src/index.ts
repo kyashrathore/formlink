@@ -1,4 +1,16 @@
 import { z } from "zod";
+import {
+  TextQuestionSchema,
+  ChoiceQuestionSchema,
+  RatingQuestionSchema,
+  DateQuestionSchema,
+  RankingQuestionSchema,
+  FileUploadQuestionSchema,
+  AddressQuestionSchema,
+  LinearScaleQuestionSchema,
+  LikertScaleQuestionSchema,
+  SimpleQuestionSchema,
+} from "./question-types";
 
 export const OptionSchema = z.object({
   value: z.string(),
@@ -80,61 +92,17 @@ export const LinearScaleConfigSchema = z
     path: ["end"],
   });
 
-// The new, unified type object. This is a discriminated union.
+// The new, unified type object composed from individual schemas
 const QuestionTypeSchema = z.discriminatedUnion("name", [
-  // Text-based questions
-  z.object({
-    name: z.literal("text"),
-    format: z.enum([
-      "text",
-      "textarea",
-      "email",
-      "url",
-      "tel",
-      "number",
-      "password",
-      "country",
-    ]),
-  }),
-  // Choice-based questions
-  z.object({
-    name: z.enum(["singleChoice", "multipleChoice"]),
-    display: z.enum(["radio", "checkbox", "dropdown", "multiSelectDropdown"]),
-    options: z.array(OptionSchema),
-  }),
-  // Rating question
-  z.object({
-    name: z.literal("rating"),
-    config: RatingConfigSchema,
-  }),
-  // Date question
-  z.object({
-    name: z.literal("date"),
-    format: z.enum(["date", "dateRange"]),
-  }),
-  // Ranking question
-  z.object({
-    name: z.literal("ranking"),
-    options: z.array(OptionSchema),
-  }),
-  // File Upload question
-  z.object({
-    name: z.literal("fileUpload"),
-  }),
-  // Address question
-  z.object({
-    name: z.literal("address"),
-  }),
-  // Linear Scale question
-  z.object({
-    name: z.literal("linearScale"),
-    config: LinearScaleConfigSchema,
-  }),
-  // Likert Scale question
-  z.object({
-    name: z.literal("likertScale"),
-    options: z.array(z.string()),
-  }),
+  TextQuestionSchema,
+  ChoiceQuestionSchema,
+  RatingQuestionSchema,
+  DateQuestionSchema,
+  RankingQuestionSchema,
+  FileUploadQuestionSchema,
+  AddressQuestionSchema,
+  LinearScaleQuestionSchema,
+  LikertScaleQuestionSchema,
 ]);
 
 export const AddressSchema = z.object({
@@ -280,3 +248,20 @@ export type EditableQuestionField =
   | "readableRatingConfig";
 
 export type EditableFormField = keyof Pick<Form, "title" | "description">;
+
+// Export individual question schemas for use in chat tools and partial updates
+export {
+  TextQuestionSchema,
+  ChoiceQuestionSchema,
+  RatingQuestionSchema,
+  DateQuestionSchema,
+  RankingQuestionSchema,
+  FileUploadQuestionSchema,
+  AddressQuestionSchema,
+  LinearScaleQuestionSchema,
+  LikertScaleQuestionSchema,
+  SimpleQuestionSchema,
+} from "./question-types";
+
+// Export type guards for safe discriminated union handling
+export * from "./type-guards";

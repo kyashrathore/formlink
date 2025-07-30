@@ -4,7 +4,6 @@ import {
   FormSchema as FullFormSchema,
   Question,
   QuestionSchema,
-  repairQuestionInputTypes,
 } from "@formlink/schema"
 import { customAlphabet } from "nanoid"
 import { z } from "zod"
@@ -181,7 +180,7 @@ export async function* updateFormAgent(
 
     // Apply repair to questions before sending to frontend
     const rawQuestions = dbVersionData?.questions || []
-    const repairedQuestions = repairQuestionInputTypes(rawQuestions)
+    const repairedQuestions = rawQuestions
 
     return {
       id: formId,
@@ -327,7 +326,7 @@ export async function* updateFormAgent(
         }
       }
     }
-    updatedFormData.questions = repairQuestionInputTypes(newQuestionsArray)
+    updatedFormData.questions = newQuestionsArray
     logger.info(
       `[updateFormAgent] Applied updates and repaired questions for formId: ${formId}`
     )

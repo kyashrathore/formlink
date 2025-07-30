@@ -5,7 +5,6 @@ import {
   QuestionSchema,
   RankingQuestionSchema,
   RatingQuestionSchema,
-  repairQuestionInputTypes,
   SettingsSchema,
   SimpleQuestionSchema,
 } from "@formlink/schema"
@@ -68,15 +67,7 @@ export const CreateFormAgentSchema = z.object({
 
 const AddQuestionActionSchema = z.object({
   action: z.literal("add"),
-  questionData: z
-    .preprocess((val) => {
-      if (!val || typeof val !== "object") return val
-
-      const repaired = repairQuestionInputTypes([val])
-      const repairedQuestion = repaired[0]
-
-      return repairedQuestion
-    }, QuestionSchema)
+  questionData: QuestionSchema
     .describe(
       "Complete data for the new question, conforming to QuestionSchema. The AI should generate all necessary fields."
     ),

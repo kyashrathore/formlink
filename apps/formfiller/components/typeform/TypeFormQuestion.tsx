@@ -1,10 +1,9 @@
 "use client";
 
 import React from "react";
-import { Question } from "@formlink/schema";
+import { Question, getQuestionTypeName } from "@formlink/schema";
 import { motion } from "motion/react";
 import { InputContainer } from "@formlink/ui";
-import { mapQuestionToUI } from "@/lib/mappers/schema-to-ui";
 import { Button } from "@formlink/ui";
 import { ArrowRight } from "lucide-react";
 import { cn } from "@/lib";
@@ -107,10 +106,10 @@ export default function TypeFormQuestion({
         <div className={questionNumber ? "ml-[3rem]" : ""}>
           <div className="w-full">
             <InputContainer
-              currentQuestion={mapQuestionToUI(question)}
+              currentQuestion={question}
               currentResponse={responseAsFile}
               handleSelect={(qId: string, value: QuestionResponse) => {
-                onAnswer(qId, value, (question.type as any).name);
+                onAnswer(qId, value, getQuestionTypeName(question));
               }}
               handleFileUpload={onFileUpload}
               uploadedFile={uploadedFile}
