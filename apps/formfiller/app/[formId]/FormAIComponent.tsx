@@ -5,7 +5,6 @@ import { useChatStore } from "@/components/chat/store/useChatStore";
 import type { Message } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react";
 import { Form, Question } from "@formlink/schema";
-import type { UIForm } from "@formlink/ui";
 import {
   Alert,
   AlertDescription,
@@ -31,7 +30,6 @@ import type {
 type FormAIComponentProps = {
   formId: string;
   formSchema: Form;
-  uiFormSchema: UIForm;
   isTestSubmission: boolean;
   queryDataForForm?: QueryDataForForm;
 };
@@ -382,7 +380,6 @@ export default function FormAIComponent({
   useEffect(() => {
     if (
       formDisplayState === "chatting_ai_ready" &&
-      chatHistoryMessages.length === 0 &&
       append &&
       !hasInitiatedRef.current
     ) {

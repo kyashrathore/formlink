@@ -1,8 +1,20 @@
 import {
   Form,
   Question as QuestionSchema,
-  QuestionType,
 } from "@formlink/schema"
+
+// Define QuestionType locally since it's not exported from schema
+type QuestionType = 
+  | "text"
+  | "singleChoice" 
+  | "multipleChoice"
+  | "rating"
+  | "date"
+  | "ranking"
+  | "fileUpload"
+  | "address"
+  | "linearScale"
+  | "likertScale"
 import { nanoid } from "nanoid"
 
 export interface AgentMessage {

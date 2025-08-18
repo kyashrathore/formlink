@@ -2,6 +2,7 @@ import React from "react";
 import { motion } from "motion/react";
 import { BaseSelect, type BaseSelectProps } from "../../primitives/BaseSelect";
 import { getTypeFormAnimations } from "../shared/animations";
+import { useIsMobile } from "../../../hooks/ui/use-mobile";
 
 export interface TypeFormSelectProps extends BaseSelectProps {
   onSubmit?: () => void;
@@ -10,7 +11,8 @@ export interface TypeFormSelectProps extends BaseSelectProps {
 }
 
 export function TypeFormSelect(props: TypeFormSelectProps) {
-  const { onSubmit, autoAdvance = true, ...baseProps } = props;
+  const { onSubmit, autoAdvance = true, showKeyboardHints = true, ...baseProps } = props;
+  const isMobile = useIsMobile();
 
   // Don't pass onSubmit to BaseSelect if we want to control auto-advance
   const safeBaseProps = {
@@ -52,7 +54,7 @@ export function TypeFormSelect(props: TypeFormSelectProps) {
             tabIndex={option.props.tabIndex}
             {...getTypeFormAnimations(index)}
             className={`
-              flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200
+              flex items-center ${!isMobile && showKeyboardHints ? 'gap-3' : 'gap-0'} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200
               ${
                 option.isSelected
                   ? "bg-primary/10 border-2 border-primary"
@@ -62,19 +64,21 @@ export function TypeFormSelect(props: TypeFormSelectProps) {
             `}
             onClick={() => !option.disabled && handleOptionClick(option.value)}
           >
-            {/* Letter indicator */}
-            <div
-              className={`
-              flex items-center justify-center w-8 h-8 rounded text-sm font-semibold
-              ${
-                option.isSelected
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-background text-primary border border-primary"
-              }
-            `}
-            >
-              {shortcutKey}
-            </div>
+            {/* Letter indicator - hidden on mobile */}
+            {!isMobile && showKeyboardHints && (
+              <div
+                className={`
+                flex items-center justify-center w-8 h-8 rounded text-sm font-semibold
+                ${
+                  option.isSelected
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-background text-primary border border-primary"
+                }
+              `}
+              >
+                {shortcutKey}
+              </div>
+            )}
 
             {/* Option label */}
             <span

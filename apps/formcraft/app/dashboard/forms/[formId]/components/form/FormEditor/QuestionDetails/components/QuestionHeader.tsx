@@ -50,7 +50,7 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
             <GripVertical className="size-4" />
           </div>
           <span className="mr-2">ID: {question.id}</span>
-          <span className="mr-2">Type: {question.type}</span>
+          <span className="mr-2">Type: {question.type.name}</span>
         </div>
         {!shouldHideControls && (
           <div className="opacity-0 transition-opacity duration-200 ease-in-out group-hover:opacity-100">

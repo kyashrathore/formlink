@@ -1,4 +1,16 @@
 import { z } from "zod";
+import {
+  TextQuestionSchema,
+  ChoiceQuestionSchema,
+  RatingQuestionSchema,
+  DateQuestionSchema,
+  RankingQuestionSchema,
+  FileUploadQuestionSchema,
+  AddressQuestionSchema,
+  LinearScaleQuestionSchema,
+  LikertScaleQuestionSchema,
+  SimpleQuestionSchema,
+} from "./question-types";
 
 export const OptionSchema = z.object({
   value: z.string(),
@@ -6,44 +18,6 @@ export const OptionSchema = z.object({
   score: z.number().optional(),
 });
 export type Option = z.infer<typeof OptionSchema>;
-
-export const QuestionTypeEnumSchema = z.enum([
-  "multipleChoice",
-  "singleChoice",
-  "text",
-  "date",
-  "rating",
-  "address",
-  "ranking",
-  "fileUpload",
-  "linearScale",
-  "likertScale",
-]);
-export type QuestionType = z.infer<typeof QuestionTypeEnumSchema>;
-
-const InputTypeEnumSchema = z.enum([
-  "checkbox",
-  "radio",
-  "dropdown",
-  "multiSelectDropdown",
-  "text",
-  "textarea",
-  "email",
-  "url",
-  "tel",
-  "country",
-  "number",
-  "password",
-  "date",
-  "dateRange",
-  "star",
-  "linearScale",
-  "file",
-  "addressBlock",
-  "rankOrder",
-  "likertScale",
-]);
-export type InputType = z.infer<typeof InputTypeEnumSchema>;
 
 export const SubmissionBehaviorSchema = z.enum([
   "autoAnswer",
@@ -118,6 +92,19 @@ export const LinearScaleConfigSchema = z
     path: ["end"],
   });
 
+// The new, unified type object composed from individual schemas
+const QuestionTypeSchema = z.discriminatedUnion("name", [
+  TextQuestionSchema,
+  ChoiceQuestionSchema,
+  RatingQuestionSchema,
+  DateQuestionSchema,
+  RankingQuestionSchema,
+  FileUploadQuestionSchema,
+  AddressQuestionSchema,
+  LinearScaleQuestionSchema,
+  LikertScaleQuestionSchema,
+]);
+
 export const AddressSchema = z.object({
   street1: z.string().optional(),
   street2: z.string().optional(),
@@ -128,26 +115,31 @@ export const AddressSchema = z.object({
 });
 export type AddressData = z.infer<typeof AddressSchema>;
 
-const QuestionDisplaySchema = z.object({
-  inputType: InputTypeEnumSchema,
-  showTitle: z.boolean().optional().default(true),
-  showDescription: z.boolean().optional().default(true),
-});
-
 const JSONataConditionSchema = z.object({
   prompt: z.string(),
   jsonata: z.string(),
 });
 
-const BaseQuestionSchema = z.object({
-  type: z.literal("question").default("question"),
+// The new, simplified QuestionSchema
+export const QuestionSchema = z.object({
   id: z.string().min(1),
   questionNo: z.number(),
   title: z.string(),
   description: z.string().optional(),
 
+  // Base properties from our Classic Mode feature work
+  label: z.string().optional(),
+  page: z.number().int().optional(),
+  styling: z
+    .object({ colSpan: z.number().int().min(1).max(12).optional() })
+    .optional(),
+  mightBranchOffNext: z.boolean().optional(),
+
+  // The new, unified type property
+  type: QuestionTypeSchema,
+
+  // Other base properties that remain at the top level
   validations: QuestionValidationsSchema.optional().default({}),
-  display: QuestionDisplaySchema,
   conditionalLogic: JSONataConditionSchema.optional(),
   defaultValue: z
     .union([
@@ -171,50 +163,19 @@ const BaseQuestionSchema = z.object({
     .describe(
       "Human-readable descriptions of conditional logic rules (e.g., 'Show if Q1 equals Yes')",
     ),
-});
-
-export const ChoiceQuestionSchema = BaseQuestionSchema.extend({
-  questionType: z.enum(["multipleChoice", "singleChoice"]),
-  options: z
-    .array(OptionSchema)
-    .min(1, "Choice questions must have at least one option."),
-});
-
-export const RankingQuestionSchema = BaseQuestionSchema.extend({
-  questionType: z.literal("ranking"),
-  options: z
-    .array(OptionSchema)
-    .min(1, "Ranking questions must have at least one option."),
+  // Additional readable config fields for specific question types
   readableRankingConfig: z
     .string()
     .optional()
     .describe(
       "Human-readable description of ranking rules (e.g., 'Rank your top 3 choices')",
     ),
-});
-
-export const RatingQuestionSchema = BaseQuestionSchema.extend({
-  questionType: z.literal("rating"),
-  ratingConfig: RatingConfigSchema,
   readableRatingConfig: z
     .string()
     .optional()
     .describe(
       "Human-readable description of the rating scale (e.g., 'Rate from 1 (Low) to 5 (High)')",
     ),
-});
-
-export const LinearScaleQuestionSchema = BaseQuestionSchema.extend({
-  questionType: z.literal("linearScale"),
-  linearScaleConfig: LinearScaleConfigSchema,
-});
-
-export const LikertScaleQuestionSchema = BaseQuestionSchema.extend({
-  questionType: z.literal("likertScale"),
-  options: z
-    .array(z.string())
-    .min(2, "Likert scale questions must have at least two options.")
-    .max(7, "Likert scale questions should have at most seven options."),
   readableLikertConfig: z
     .string()
     .optional()
@@ -222,123 +183,6 @@ export const LikertScaleQuestionSchema = BaseQuestionSchema.extend({
       "Human-readable description of the Likert scale (e.g., 'Rate your agreement from Strongly Disagree to Strongly Agree')",
     ),
 });
-
-export const SimpleQuestionSchema = BaseQuestionSchema.extend({
-  questionType: z.enum(["text", "date", "address", "fileUpload"]),
-});
-
-export const QuestionSchema = z
-  .discriminatedUnion("questionType", [
-    ChoiceQuestionSchema,
-    RankingQuestionSchema,
-    RatingQuestionSchema,
-    LinearScaleQuestionSchema,
-    LikertScaleQuestionSchema,
-    SimpleQuestionSchema,
-  ])
-  .superRefine((data, ctx) => {
-    const { questionType, display, submissionBehavior, defaultValue } = data;
-
-    const allowedInputTypesMap: Partial<Record<QuestionType, InputType[]>> = {
-      multipleChoice: ["checkbox", "multiSelectDropdown"],
-      singleChoice: ["radio", "dropdown"],
-      text: [
-        "text",
-        "textarea",
-        "email",
-        "url",
-        "tel",
-        "number",
-        "password",
-        "country",
-      ],
-      date: ["date", "dateRange"],
-      rating: ["star"],
-      linearScale: ["linearScale"],
-      likertScale: ["likertScale"],
-      address: ["addressBlock"],
-      ranking: ["rankOrder"],
-      fileUpload: ["file"],
-    };
-
-    const allowed = allowedInputTypesMap[questionType];
-
-    if (allowed && !allowed.includes(display.inputType)) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["display", "inputType"],
-        message: `Input type '${display.inputType}' is not valid for question type '${questionType}'. Allowed: ${allowed.join(", ")}`,
-      });
-    }
-
-    if ("options" in data && data.options && data.options.length > 0) {
-      if (
-        data.options.length < 4 &&
-        (display.inputType === "dropdown" ||
-          display.inputType === "multiSelectDropdown")
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["display", "inputType"],
-          message: `Input type '${display.inputType}' is typically used for >=4 options. Consider 'radio' or 'checkbox'.`,
-        });
-      } else if (
-        data.options.length >= 4 &&
-        (display.inputType === "radio" || display.inputType === "checkbox")
-      ) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["display", "inputType"],
-          message: `Input type '${display.inputType}' is typically used for <4 options. Consider 'dropdown' or 'multiSelectDropdown'.`,
-        });
-      }
-    }
-
-    const expectedBehavior: Partial<Record<InputType, SubmissionBehavior>> = {
-      radio: "autoAnswer",
-      dropdown: "autoAnswer",
-      date: "autoAnswer",
-      dateRange: "autoAnswer",
-      star: "autoAnswer",
-      linearScale: "autoAnswer",
-      likertScale: "autoAnswer",
-      file: "autoAnswer",
-
-      checkbox: "manualAnswer",
-      multiSelectDropdown: "manualAnswer",
-      addressBlock: "manualAnswer",
-      rankOrder: "manualAnswer",
-
-      email: "manualUnclear",
-      url: "manualUnclear",
-      number: "manualUnclear",
-      tel: "manualUnclear",
-      textarea: "manualUnclear",
-      text: "manualUnclear",
-      password: "manualUnclear",
-      country: "manualUnclear",
-    };
-
-    const expected = expectedBehavior[display.inputType];
-    if (expected && submissionBehavior !== expected) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["submissionBehavior"],
-        message: `Submission behavior '${submissionBehavior}' is unexpected for input type '${display.inputType}'. Expected '${expected}'.`,
-      });
-    }
-
-    if (questionType === "address" && defaultValue) {
-      const parseResult = AddressSchema.safeParse(defaultValue);
-      if (!parseResult.success) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          path: ["defaultValue"],
-          message: "Default value for address must be a valid Address object.",
-        });
-      }
-    }
-  });
 
 export const SettingsSchema = z
   .object({
@@ -388,7 +232,7 @@ export type Question = z.infer<typeof QuestionSchema>;
 export type Form = z.infer<typeof FormSchema>;
 
 export type BaseEditableQuestionField = keyof Pick<
-  z.infer<typeof BaseQuestionSchema>,
+  Question,
   "title" | "description"
 >;
 
@@ -400,9 +244,24 @@ export type BaseEditableQuestionField = keyof Pick<
 export type EditableQuestionField =
   | "title"
   | "description"
-  | "questionType"
+  | "type"
   | "readableRatingConfig";
 
 export type EditableFormField = keyof Pick<Form, "title" | "description">;
 
-export * from "./questionRepair";
+// Export individual question schemas for use in chat tools and partial updates
+export {
+  TextQuestionSchema,
+  ChoiceQuestionSchema,
+  RatingQuestionSchema,
+  DateQuestionSchema,
+  RankingQuestionSchema,
+  FileUploadQuestionSchema,
+  AddressQuestionSchema,
+  LinearScaleQuestionSchema,
+  LikertScaleQuestionSchema,
+  SimpleQuestionSchema,
+} from "./question-types";
+
+// Export type guards for safe discriminated union handling
+export * from "./type-guards";

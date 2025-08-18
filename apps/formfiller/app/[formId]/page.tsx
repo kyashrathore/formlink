@@ -4,6 +4,108 @@ import FormPageClient from "@/app/[formId]/FormPageClient";
 import { createServerClient } from "@formlink/db";
 import { notFound } from "next/navigation";
 
+// Transform legacy string-based question types to new discriminated union format
+function transformLegacyQuestionType(legacyQuestion: any): any {
+  const { type, questionType, ...rest } = legacyQuestion;
+  
+  // Use questionType if it exists, otherwise fallback to type
+  const legacyTypeValue = questionType || type;
+  
+  // If type is already an object, return as-is
+  if (typeof legacyTypeValue === "object" && legacyTypeValue !== null) {
+    return { ...rest, type: legacyTypeValue };
+  }
+  
+  // Transform string-based types to discriminated union format
+  let newType: any;
+  
+  switch (legacyTypeValue) {
+    case "text":
+      // For text questions, check if there's a display.inputType to use as format
+      const inputType = legacyQuestion.display?.inputType;
+      const format = inputType && ["text", "email", "url", "tel", "number", "password", "country", "textarea"].includes(inputType) 
+        ? inputType 
+        : "text";
+      newType = { name: "text", format };
+      break;
+    case "email":
+    case "url":
+    case "tel":
+    case "number":
+    case "password":
+    case "country":
+      newType = { name: "text", format: legacyTypeValue };
+      break;
+    case "textarea":
+      newType = { name: "text", format: "textarea" };
+      break;
+    case "singleChoice":
+      const singleChoiceDisplay = legacyQuestion.display?.inputType === "dropdown" ? "dropdown" : "radio";
+      newType = { name: "singleChoice", display: singleChoiceDisplay, options: legacyQuestion.options || [] };
+      break;
+    case "multipleChoice":
+      const multipleChoiceDisplay = legacyQuestion.display?.inputType === "multiSelectDropdown" ? "multiSelectDropdown" : "checkbox";
+      newType = { name: "multipleChoice", display: multipleChoiceDisplay, options: legacyQuestion.options || [] };
+      break;
+    case "rating":
+      newType = { 
+        name: "rating", 
+        config: {
+          min: legacyQuestion.min || 1,
+          max: legacyQuestion.max || 5,
+          step: legacyQuestion.step || 1,
+          minLabel: legacyQuestion.minLabel,
+          maxLabel: legacyQuestion.maxLabel
+        }
+      };
+      break;
+    case "date":
+      newType = { name: "date", format: "date" };
+      break;
+    case "dateRange":
+      newType = { name: "date", format: "dateRange" };
+      break;
+    case "ranking":
+      newType = { name: "ranking", options: legacyQuestion.options || [] };
+      break;
+    case "fileUpload":
+      newType = { name: "fileUpload" };
+      break;
+    case "address":
+      newType = { name: "address" };
+      break;
+    case "linearScale":
+      newType = { 
+        name: "linearScale", 
+        config: {
+          start: legacyQuestion.start || 0,
+          end: legacyQuestion.end || 10,
+          step: legacyQuestion.step || 1,
+          startLabel: legacyQuestion.startLabel,
+          endLabel: legacyQuestion.endLabel
+        }
+      };
+      break;
+    case "likertScale":
+      newType = { 
+        name: "likertScale", 
+        options: legacyQuestion.options || []
+      };
+      break;
+    default:
+      // Fallback to text for unknown types
+      newType = { name: "text", format: "text" };
+      break;
+  }
+  
+  return {
+    ...rest,
+    type: newType,
+    // Ensure required fields exist
+    submissionBehavior: legacyQuestion.submissionBehavior || "manualAnswer"
+  };
+}
+
 async function getFormSchemaById(
   formIdOrShortId: string,
 ): Promise<Form | null> {
@@ -74,15 +176,20 @@ async function getFormSchemaById(
   }
 
   try {
+    const rawQuestions = Array.isArray(versionData.questions)
+      ? versionData.questions
+      : [];
+    
+    // Transform legacy questions to new schema format
+    const transformedQuestions = rawQuestions.map(transformLegacyQuestionType);
+    
     const formSchemaResult = {
       id: formData.id,
-      shortId: formIdOrShortId,
+      short_id: formIdOrShortId,
       version_id: versionData.version_id,
       title: versionData.title,
       description: versionData.description,
-      questions: Array.isArray(versionData.questions)
-        ? versionData.questions
-        : [],
+      questions: transformedQuestions,
       settings:
         typeof versionData.settings === "object" &&
         versionData.settings !== null
@@ -96,8 +203,9 @@ async function getFormSchemaById(
     if (!validationResult.success) {
       console.error(
         `Server Schema Validation Error for form ${formData.id} (version ${versionData.version_id}):`,
-        validationResult.error.errors,
+        JSON.stringify(validationResult.error.errors, null, 2),
       );
+      console.error("Form data being validated:", JSON.stringify(formSchemaResult, null, 2));
 
       return null;
     }

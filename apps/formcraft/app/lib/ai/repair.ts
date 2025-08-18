@@ -27,7 +27,7 @@ You are an AI assistant that repairs faulty JSON outputs based **strictly** on t
         - \`fileUploadConfig\`: \`{}\` (An empty object is often valid if all sub-fields are optional)
         - \`rankingConfig\`: \`{ "min": 1, "max": 1, "step": 1 }\` (Needs min/max/step per schema refinement)
         - \`validations\`: \`[]\` (An empty array)
-        - \`display\`: \`{ "inputType": "text" }\` (Provide a default, e.g., text, if specific type isn't clear from error context, or guess based on \`questionType\` if possible. Other display fields are often optional.)
+        - \`type\`: For questions, provide the new discriminated union structure like \`{ "name": "text", "format": "text" }\` for text questions, or \`{ "name": "singleChoice", "display": "radio", "options": [...] }\` for choice questions.
         - \`conditionalLogic\`: \`[{"prompt": "Placeholder: Show if something is true", "jsonata": "$true"}]\` (An array with a sample JSONata condition object)
         - \`defaultValue\`: \`null\` (Or a type-appropriate default if the error or context strongly suggests one, e.g., \`""\` for text, \`[]\` for multi-select, \`null\` for address).
         - \`submissionBehavior\`: \`"manualUnclear"\` (Use a default like this if the correct one isn't clear from the error, or map based on \`display.inputType\` if \`display\` is present).

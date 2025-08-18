@@ -416,11 +416,11 @@ export async function POST(req: Request) {
       if (currentQuestion) {
         // Only sanitize text-based inputs
         const needsSanitization =
-          currentQuestion.questionType === "text" ||
-          (currentQuestion.questionType === "text" &&
-            currentQuestion.display.inputType === "text") ||
+          currentQuestion.type.name === "text" ||
+          (currentQuestion.type.name === "text" &&
+            currentQuestion.type.format === "text") ||
           !["address", "multipleChoice", "fileUpload", "ranking"].includes(
-            currentQuestion.questionType,
+            currentQuestion.type.name,
           );
 
         if (needsSanitization && typeof userInput === "string") {

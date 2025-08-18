@@ -12,6 +12,7 @@ import { ArrowRight } from "lucide-react";
 import { getChatAnimations } from "../shared/animations";
 import { getTypeFormAnimations } from "../shared/animations";
 import { filterMultiSelectContainerProps } from "../../primitives/patches/accessibility-fixes";
+import { useIsMobile } from "../../../hooks/ui/use-mobile";
 
 export type FormMode = "chat" | "typeform";
 
@@ -31,6 +32,8 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
     className,
     ...baseProps
   } = props;
+  
+  const isMobile = useIsMobile();
 
   const base = BaseMultiSelect<string>({
     enableShortcuts: true,
@@ -125,7 +128,7 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
                 tabIndex={option.props.tabIndex}
                 {...getTypeFormAnimations(index)}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200",
+                  `flex items-center ${!isMobile && mode === "typeform" ? 'gap-3' : 'gap-0'} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200`,
                   option.isSelected
                     ? "bg-primary/10 border-2 border-primary"
                     : "bg-muted/30 border border-border/50 hover:bg-muted/60 hover:border-border",
@@ -135,17 +138,19 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
                   !option.disabled && base.toggleOption(option.value)
                 }
               >
-                {/* Letter indicator */}
-                <div
-                  className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded text-sm font-semibold",
-                    option.isSelected
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background text-primary border border-primary",
-                  )}
-                >
-                  {shortcutKey}
-                </div>
+                {/* Letter indicator - hidden on mobile and chat mode */}
+                {!isMobile && mode === "typeform" && (
+                  <div
+                    className={cn(
+                      "flex items-center justify-center w-8 h-8 rounded text-sm font-semibold",
+                      option.isSelected
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-primary border border-primary",
+                    )}
+                  >
+                    {shortcutKey}
+                  </div>
+                )}
 
                 {/* Option label */}
                 <span

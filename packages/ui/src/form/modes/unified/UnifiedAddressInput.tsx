@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "motion/react";
-import { UIAddressData } from "../../../types/generic";
+import { AddressData } from "@formlink/schema";
 import { BaseAddress } from "../../primitives";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
@@ -10,18 +10,18 @@ export type FormMode = "chat" | "typeform";
 
 export interface UnifiedAddressInputProps {
   mode: FormMode;
-  value?: UIAddressData | null;
-  onChange: (value: UIAddressData) => void;
+  value?: AddressData | null;
+  onChange: (value: AddressData) => void;
   onSubmit?: () => void;
   disabled?: boolean;
   required?: boolean;
-  requiredFields?: (keyof UIAddressData)[];
+  requiredFields?: (keyof AddressData)[];
   autoFocus?: boolean;
   className?: string;
 }
 
 // Grid layout configuration for fields
-const fieldGridConfig: Record<keyof UIAddressData, string> = {
+const fieldGridConfig: Record<keyof AddressData, string> = {
   street1: "col-span-2",
   street2: "col-span-2",
   city: "col-span-1",
@@ -66,7 +66,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
     addressPrimitive;
 
   // Field order for rendering
-  const fieldOrder: (keyof UIAddressData)[] = [
+  const fieldOrder: (keyof AddressData)[] = [
     "street1",
     "street2",
     "city",
@@ -77,7 +77,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
 
   const handleKeyDown = (
     e: React.KeyboardEvent,
-    field: keyof UIAddressData,
+    field: keyof AddressData,
   ) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();

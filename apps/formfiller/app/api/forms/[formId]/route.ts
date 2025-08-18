@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { FormSchema } from "@formlink/schema";
+import { FormSchema, Form } from "@formlink/schema";
 import { createServerClient } from "@formlink/db";
 
 async function getFormSchemaById(
   formId: string,
   versionIdColumn: "current_published_version_id" | "current_draft_version_id",
   versionStatus: "published" | "draft",
-): Promise<z.infer<typeof FormSchema> | null> {
+): Promise<Form | null> {
   const supabase = await createServerClient(null, "service");
 
   const { data: formData, error: formError } = await supabase
@@ -50,7 +49,7 @@ async function getFormSchemaById(
   }
 
   try {
-    const formSchemaResult: z.infer<typeof FormSchema> = {
+    const formSchemaResult: Form = {
       id: formId,
       version_id: versionData.version_id,
       title: versionData.title as string,
@@ -79,7 +78,7 @@ export async function GET(
   }
 
   try {
-    let formSchema: z.infer<typeof FormSchema> | null = null;
+    let formSchema: Form | null = null;
 
     // Try published first, then draft if not found
     formSchema = await getFormSchemaById(

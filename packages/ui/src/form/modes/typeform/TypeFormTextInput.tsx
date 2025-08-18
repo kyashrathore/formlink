@@ -97,15 +97,6 @@ export function TypeFormTextInput({
         </p>
       )}
 
-      {showEnterHint && !showError && (
-        <div className={cn(styles.hint)}>
-          Press{" "}
-          <kbd className="px-2 py-1 text-xs font-medium bg-muted/50 text-muted-foreground rounded border border-border">
-            Enter ↵
-          </kbd>{" "}
-          to continue
-        </div>
-      )}
     </motion.div>
   );
 }

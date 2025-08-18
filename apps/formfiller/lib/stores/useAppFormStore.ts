@@ -4,7 +4,6 @@ import { create } from "zustand";
 import { v4 as uuidv4 } from "uuid";
 import { apiServices } from "../api-config";
 import { Form, Question } from "@formlink/schema";
-import { mapQuestionToUI } from "../mappers/schema-to-ui";
 import { AppFormState, AppFormActions, QuestionResponse } from "../types";
 
 // Helper function to get all questions from the form schema
@@ -155,13 +154,11 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
       }
     },
 
-    getCurrentQuestion: (activeIndex: number) => {
+    getCurrentQuestion: (activeIndex: number): Question | null => {
       const { questions } = get();
-      const question =
-        activeIndex >= 0 && activeIndex < questions.length
-          ? questions[activeIndex]
-          : null;
-      return question ? mapQuestionToUI(question) : null;
+      return activeIndex >= 0 && activeIndex < questions.length
+        ? (questions[activeIndex] as Question)
+        : null;
     },
 
     getProgress: (activeIndex: number) => {
