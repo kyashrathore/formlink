@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
-import { UIQuestion, UIResponseValue } from "../types/generic";
+import { UIResponseValue } from "../types/generic";
 import { useFormMode } from "./context/FormModeContext";
 import { UnifiedFormInput } from "./modes/unified/UnifiedFormInput";
 import { FormInputType } from "./registry";
+import { Question, isTextQuestion, isChoiceQuestion, isRankingQuestion, isRatingQuestion, isLinearScaleQuestion, isFileUploadQuestion, getQuestionTypeName, getTextFormat, getOptions, getRatingConfig, getLinearScaleConfig } from "@formlink/schema";
 
 interface InputContainerProps {
-  currentQuestion: UIQuestion;
+  currentQuestion: Question;
   currentResponse: UIResponseValue;
   handleSelect: (questionId: string, value: UIResponseValue) => void;
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
@@ -22,18 +23,21 @@ interface InputContainerProps {
 
 // Map Question schema to UnifiedFormInput props
 function mapQuestionToUnifiedProps(
-  question: UIQuestion,
+  question: Question,
   currentResponse: UIResponseValue,
   handleSelect: (questionId: string, value: UIResponseValue) => void,
   onNext?: () => void,
 ) {
-  const questionType = question.questionType;
+  const questionType = getQuestionTypeName(question);
 
   // Map questionType to FormInputType
   let type: FormInputType;
   switch (questionType) {
     case "text": {
-      const inputType = question.display?.inputType || "text";
+      if (!isTextQuestion(question)) {
+        throw new Error(`Expected text question for ${question.id}`);
+      }
+      const inputType = getTextFormat(question);
       if (inputType === "tel") type = "tel";
       else if (inputType === "textarea") type = "textarea";
       else if (inputType === "star") type = "rating";
@@ -114,6 +118,14 @@ function mapQuestionToUnifiedProps(
     value = [];
   }
 
+  // Let rating, linear-scale, and likert-scale components handle null values naturally
+  // Components should handle null gracefully without immediate validation errors
+
+  // Date components expect empty string, not null (additional handling)
+  if (type === "date" && value === null) {
+    value = "";
+  }
+
   // Base props
   const baseProps = {
     type,
@@ -129,36 +141,57 @@ function mapQuestionToUnifiedProps(
     onSubmit: onNext as (() => void) | undefined,
     disabled: false,
     required: Boolean(
-      question.validations?.required?.value || question.required,
+      question.validations?.required,
     ),
-    placeholder: question.placeholder || question.display?.placeholder,
+    placeholder: (question as any).placeholder,
   };
 
   // Type-specific props
   if (type === "select" || type === "multipleChoice" || type === "ranking") {
-    (baseProps as Record<string, unknown>).options = question.options || [];
+    if (isChoiceQuestion(question) || isRankingQuestion(question)) {
+      (baseProps as Record<string, unknown>).options = getOptions(question);
+    } else {
+      (baseProps as Record<string, unknown>).options = [];
+    }
   }
 
   if (type === "rating") {
-    (baseProps as Record<string, unknown>).max =
-      question.ratingConfig?.max || 5;
+    if (isRatingQuestion(question)) {
+      const config = getRatingConfig(question);
+      (baseProps as Record<string, unknown>).max = config.max;
+    } else {
+      (baseProps as Record<string, unknown>).max = 5;
+    }
   }
 
   if (type === "linear-scale") {
-    const linearConfig = question.linearScaleConfig;
-    (baseProps as Record<string, unknown>).config = {
-      start: linearConfig?.min || linearConfig?.start || 1,
-      end: linearConfig?.max || linearConfig?.end || 5,
-      step: linearConfig?.step || 1,
-      startLabel: linearConfig?.startLabel,
-      endLabel: linearConfig?.endLabel,
-    };
+    if (isLinearScaleQuestion(question)) {
+      const linearConfig = getLinearScaleConfig(question);
+      (baseProps as Record<string, unknown>).config = {
+        start: linearConfig.start,
+        end: linearConfig.end,
+        step: linearConfig.step || 1,
+        startLabel: linearConfig.startLabel,
+        endLabel: linearConfig.endLabel,
+      };
+    } else {
+      (baseProps as Record<string, unknown>).config = {
+        start: 1,
+        end: 10,
+        step: 1,
+      };
+    }
   }
 
   if (type === "fileUpload") {
-    (baseProps as Record<string, unknown>).accept =
-      question.validations?.fileTypes;
-    (baseProps as Record<string, unknown>).maxSize = 5 * 1024 * 1024; // 5MB default
+    if (isFileUploadQuestion(question)) {
+      // File upload questions don't have config in current schema, using defaults
+      (baseProps as Record<string, unknown>).accept = undefined;
+      (baseProps as Record<string, unknown>).maxSize = 5 * 1024 * 1024; // 5MB default
+    } else {
+      (baseProps as Record<string, unknown>).accept = undefined;
+      (baseProps as Record<string, unknown>).maxSize = 5 * 1024 * 1024;
+    }
   }
 
   return baseProps;

@@ -396,12 +396,12 @@ function validateMinorUpdate(
   if (updatesToApply.questions && currentVersion.questions) {
     const currentQuestions = currentVersion.questions as Array<{
       id: string
-      questionType: string
+      type: { name: string }
       title: string
     }>
     const updatedQuestions = updatesToApply.questions as Array<{
       id: string
-      questionType: string
+      type: { name: string }
       title: string
     }>
 
@@ -414,7 +414,7 @@ function validateMinorUpdate(
         return "Reordering questions is not allowed on a published form."
       }
       if (
-        currentQuestions[i]?.questionType !== updatedQuestions[i]?.questionType
+        currentQuestions[i]?.type?.name !== updatedQuestions[i]?.type?.name
       ) {
         return `Changing the type of question '${currentQuestions[i]?.title}' is not allowed.`
       }

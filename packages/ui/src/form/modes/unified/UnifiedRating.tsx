@@ -1,11 +1,11 @@
 "use client";
 
-import React from "react";
+import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { BaseRating, type BaseRatingProps } from "../../primitives/BaseRating";
+import { useIsMobile } from "../../../hooks/ui/use-mobile";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
-import { ArrowRight } from "lucide-react";
+import { BaseRating, type BaseRatingProps } from "../../primitives/BaseRating";
 import { filterRatingContainerProps } from "../../primitives/patches/accessibility-fixes";
 import { getTypeFormAnimations } from "../shared/animations";
 
@@ -32,6 +32,7 @@ export function UnifiedRating({
   showKeyboardHints = true,
   ...baseProps
 }: UnifiedRatingProps) {
+  const isMobile = useIsMobile();
   const base = BaseRating({
     ...baseProps,
     max,
@@ -65,7 +66,7 @@ export function UnifiedRating({
           className={cn(
             "text-2xl font-semibold transition-all duration-200",
             isActive ? "text-primary" : "text-muted-foreground/50",
-            isHovered && !isActive && "text-primary/70",
+            isHovered && !isActive && "text-primary/70"
           )}
         >
           {index + 1}
@@ -94,13 +95,17 @@ export function UnifiedRating({
       );
     }
 
-    // Icon rendering (unified for both modes)
-    const iconSize = mode === "chat" ? "w-10 h-10" : "w-12 h-12";
+    // Icon rendering (unified for both modes) - responsive sizing
+    const iconSize = isMobile
+      ? "w-5 h-5"
+      : mode === "chat"
+        ? "w-10 h-10"
+        : "w-12 h-12";
 
     // UNIFIED BEHAVIOR: Same color logic for both modes
     const colorClasses = cn(
       isActive ? "text-primary" : "text-muted-foreground/50",
-      isHovered && !isActive && "text-primary/70",
+      isHovered && !isActive && "text-primary/70"
     );
 
     const svgProps = {
@@ -108,7 +113,7 @@ export function UnifiedRating({
       viewBox: "0 0 24 24",
       fill: isActive ? "currentColor" : "none",
       stroke: "currentColor",
-      strokeWidth: "2",
+      strokeWidth: isMobile ? "1" : "2",
     };
 
     switch (iconType) {
@@ -165,7 +170,7 @@ export function UnifiedRating({
         className={cn("w-full max-w-2xl", className)}
         {...base.containerProps}
       >
-        <div className="flex gap-4 justify-start">
+        <div className={cn("flex justify-start", isMobile ? "gap-2" : "gap-4")}>
           {base.items.map((item, index) => {
             // Extract only the necessary ARIA attributes without changing the role
             const { "aria-checked": ariaChecked, "aria-label": ariaLabel } =
@@ -185,7 +190,7 @@ export function UnifiedRating({
                 tabIndex={base.value === item.value ? 0 : -1}
               >
                 {renderRatingContent(index)}
-                {showKeyboardHints && (
+                {showKeyboardHints && !isMobile && (
                   <kbd className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
                     {item.value}
                   </kbd>
@@ -209,7 +214,12 @@ export function UnifiedRating({
       {...filterRatingContainerProps(base.containerProps)}
       className={cn("focus:outline-none", className)}
     >
-      <div className="flex items-center gap-3 justify-start">
+      <div
+        className={cn(
+          "flex items-center justify-start",
+          isMobile ? "gap-2" : "gap-3"
+        )}
+      >
         {Array.from({ length: max }, (_, index) => (
           <motion.button
             key={index}
@@ -224,7 +234,7 @@ export function UnifiedRating({
                 index + 1 <= base.hoveredValue &&
                 "hover",
               base.value === index + 1 && "selected",
-              "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+              "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             )}
             onClick={() => handleRatingSelect(index + 1)}
             onMouseEnter={() => base.setHoveredValue(index + 1)}

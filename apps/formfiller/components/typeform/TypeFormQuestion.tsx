@@ -1,15 +1,13 @@
 "use client";
 
-import React from "react";
-import { Question } from "@formlink/schema";
-import { motion } from "motion/react";
-import { InputContainer } from "@formlink/ui";
-import { mapQuestionToUI } from "@/lib/mappers/schema-to-ui";
-import { Button } from "@formlink/ui";
-import { ArrowRight } from "lucide-react";
+import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib";
+import type { FileData, QuestionResponse } from "@/lib/types";
 import { fileDataToFile } from "@/lib/utils";
-import type { QuestionResponse, FileData } from "@/lib/types";
+import { Question, getQuestionTypeName } from "@formlink/schema";
+import { Button, InputContainer } from "@formlink/ui";
+import { ArrowRight } from "lucide-react";
+import { motion } from "motion/react";
 
 interface TypeFormQuestionProps {
   question: Question;
@@ -17,7 +15,7 @@ interface TypeFormQuestionProps {
   onAnswer: (
     questionId: string,
     value: QuestionResponse,
-    questionType: Question["questionType"],
+    questionType: string
   ) => void;
   onFileUpload?: (questionId: string, file: File) => Promise<void>;
   uploadedFile?: File | null;
@@ -36,11 +34,12 @@ export default function TypeFormQuestion({
   onNext,
   questionNumber,
 }: TypeFormQuestionProps) {
+  const isMobile = useIsMobile();
   // Comprehensive response check for all question types
   const hasResponse = (() => {
     if (response === null || response === undefined) return false;
 
-    switch (question.questionType) {
+    switch ((question.type as any).name) {
       case "text":
         return response !== "";
       case "multipleChoice":
@@ -74,7 +73,12 @@ export default function TypeFormQuestion({
     }
   })();
 
-  const responseAsFile = response instanceof File ? response : response && typeof response === "object" && "url" in response ? fileDataToFile(response as FileData) : null;
+  const responseAsFile =
+    response instanceof File
+      ? response
+      : response && typeof response === "object" && "url" in response
+        ? fileDataToFile(response as FileData)
+        : null;
 
   return (
     <div className="flex-1 flex items-center justify-center">
@@ -83,12 +87,27 @@ export default function TypeFormQuestion({
         <div className="space-y-3">
           <div className="flex items-start">
             {questionNumber && (
-              <span className="text-xl font-medium text-primary mr-3 flex-shrink-0">
-                {questionNumber} →
-              </span>
+              <div className="text-lg md:text-2xl lg:text-3xl font-medium text-primary mr-1 md:mr-3 flex-shrink-0 flex items-baseline gap-1 md:gap-2">
+                {questionNumber}
+                {isMobile ? (
+                  <span className="text-sm font-light">•</span>
+                ) : (
+                  <svg
+                    viewBox="0 0 7 8"
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="shouldFlipIfRtl fill-current w-4 h-4 lg:w-5 lg:h-5 mt-0.5"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      clipRule="evenodd"
+                      d="M3.046 1.546a.5.5 0 0 1 .708 0l2.1 2.1a.5.5 0 0 1 0 .707l-2.1 2.1a.5.5 0 1 1-.708-.707L4.293 4.5H.5a.5.5 0 1 1 0-1h3.793L3.046 2.253a.5.5 0 0 1 0-.707Z"
+                    />
+                  </svg>
+                )}
+              </div>
             )}
             <div className="space-y-2 flex-1">
-              <h2 className="text-2xl md:text-3xl font-medium text-foreground">
+              <h2 className="text-lg md:text-2xl lg:text-3xl font-medium text-foreground">
                 {question.title}
               </h2>
               {question.description && (
@@ -99,13 +118,20 @@ export default function TypeFormQuestion({
         </div>
 
         {/* Input Component */}
-        <div className={questionNumber ? "ml-[3rem]" : ""}>
+        <div
+          className={questionNumber ? (isMobile ? "ml-4" : "ml-[3rem]") : ""}
+        >
           <div className="w-full">
             <InputContainer
-              currentQuestion={mapQuestionToUI(question)}
-              currentResponse={responseAsFile}
+              currentQuestion={question}
+              currentResponse={
+                // Convert FileData to File for UI compatibility
+                response && typeof response === 'object' && 'filename' in response
+                  ? fileDataToFile(response as FileData)
+                  : response as any
+              }
               handleSelect={(qId: string, value: QuestionResponse) => {
-                onAnswer(qId, value, question.questionType);
+                onAnswer(qId, value, getQuestionTypeName(question));
               }}
               handleFileUpload={onFileUpload}
               uploadedFile={uploadedFile}
@@ -116,15 +142,15 @@ export default function TypeFormQuestion({
           </div>
         </div>
 
-        {/* Continue button for all question types when they have a response */}
-        {hasResponse && (
+        {/* Continue button for all question types when they have a response - hidden on mobile */}
+        {hasResponse && !isMobile && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className={cn(
               "flex items-center mt-4",
-              questionNumber ? "ml-[3rem]" : "",
+              questionNumber ? "ml-[3rem]" : ""
             )}
           >
             <Button onClick={onNext} size="lg" className="group mr-4">

@@ -230,10 +230,10 @@ const formEditorStore: StateCreator<
       const question = state.form?.questions.find(
         (q: Question) => q.id === questionId
       ) as QuestionWithLists | undefined
-      if (question && "options" in question) {
-        if (!question.options) question.options = []
+      if (question && question.type && 'options' in question.type) {
+        if (!question.type.options) question.type.options = []
 
-        question.options.push(newOption as any)
+        question.type.options.push(newOption as any)
       }
     }),
 
@@ -244,12 +244,13 @@ const formEditorStore: StateCreator<
       ) as QuestionWithLists | undefined
       if (
         question &&
-        "options" in question &&
-        question.options &&
+        question.type &&
+        "options" in question.type &&
+        question.type.options &&
         optionIndex >= 0 &&
-        optionIndex < question.options.length
+        optionIndex < question.type.options.length
       ) {
-        question.options.splice(optionIndex, 1)
+        question.type.options.splice(optionIndex, 1)
       }
     }),
 
@@ -374,19 +375,16 @@ const formEditorStore: StateCreator<
           baseQuestion = lastQuestion
         } else {
           baseQuestion = {
-            type: "question",
             id: uuidv4(),
             questionNo: 1,
             title: "New Question",
             description: "This is a text input question.",
-            questionType: "text",
+            type: {
+              name: "text",
+              format: "text",
+            },
             validations: { required: { value: true } },
             readableValidations: ["This question is required."],
-            display: {
-              inputType: "text",
-              showTitle: true,
-              showDescription: true,
-            },
             readableConditionalLogic: [],
             submissionBehavior: "manualUnclear",
           } as QuestionWithLists
@@ -408,8 +406,8 @@ const formEditorStore: StateCreator<
           draft.readableValidations = []
         if (draft.readableConditionalLogic === undefined)
           draft.readableConditionalLogic = []
-        if ("options" in draft && draft.options === undefined)
-          draft.options = []
+        if (draft.type && "options" in draft.type && draft.type.options === undefined)
+          draft.type.options = []
         if (draft.conditionalLogic === undefined)
           draft.conditionalLogic = {
             jsonata: "",

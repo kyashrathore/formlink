@@ -4,11 +4,9 @@ import FormAIComponent from "@/app/[formId]/FormAIComponent";
 import TypeFormView from "@/components/typeform/TypeFormView";
 import { FormModeProvider, useFormMode } from "@/contexts/FormModeContext";
 import { useThemeLoader } from "@/hooks/useThemeLoader";
-import { mapFormToUI } from "@/lib/mappers/schema-to-ui";
 import { useAppFormStore } from "@/lib/stores/useAppFormStore";
 import type { QueryDataForForm, QuestionResponse } from "@/lib/types";
 import { Form, Question } from "@formlink/schema";
-import { UIQuestion, UIQuestionType } from "@formlink/ui";
 import React from "react";
 
 interface FormPageContentProps {
@@ -47,9 +45,8 @@ function FormPageContent({
     formSchema.id,
   ]);
 
-  // Convert schema to UI format for components
-  const uiFormSchema = mapFormToUI(formSchema);
-  const uiQuestions = uiFormSchema.questions;
+  // Use schema questions directly - no conversion needed
+  const questions = formSchema.questions;
 
   // Business logic from app store
   const {
@@ -75,7 +72,7 @@ function FormPageContent({
   const handleAnswerChange = (
     questionId: string,
     value: QuestionResponse,
-    questionType: UIQuestionType,
+    questionType: string,
   ) => {
     // Route to appropriate business logic based on question type
     switch (questionType) {
@@ -96,6 +93,17 @@ function FormPageContent({
         } else if (typeof value === "string") {
           setQuestionResponse(questionId, value);
         }
+        break;
+      case "rating":
+      case "linearScale":
+      case "likertScale":
+        if (typeof value === "number") {
+          setQuestionResponse(questionId, value);
+        }
+        break;
+      case "date":
+        // Handle both Date objects and strings
+        setQuestionResponse(questionId, value);
         break;
       default:
         if (typeof value === "string") {
@@ -122,7 +130,6 @@ function FormPageContent({
       <FormAIComponent
         formId={formSchema.id}
         formSchema={formSchema}
-        uiFormSchema={uiFormSchema}
         isTestSubmission={isTestSubmission}
         queryDataForForm={queryDataForForm}
       />
@@ -133,10 +140,8 @@ function FormPageContent({
   return (
     <TypeFormView
       formSchema={formSchema}
-      uiFormSchema={uiFormSchema}
       formId={formSchema.id}
       // Props down: business state
-      questions={uiQuestions}
       questionResponses={questionResponses}
       isCompleted={isCompleted}
       // Callbacks up: business actions
@@ -147,9 +152,7 @@ function FormPageContent({
       onFileUpload={handleFileUpload}
       onNavigateNext={getNextValidQuestionIndex}
       onMarkCompleted={markAsCompleted}
-      shouldShowQuestion={(question: UIQuestion) =>
-        shouldShowQuestion(question as unknown as Question)
-      }
+      shouldShowQuestion={shouldShowQuestion}
       getCurrentQuestion={getCurrentQuestion}
       getProgress={getProgress}
     />

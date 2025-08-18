@@ -2,7 +2,8 @@
 
 import { useTypeFormDropdown } from "@formlink/ui";
 import { useCallback, useEffect } from "react";
-import { UseTypeFormKeyboardProps } from "../../../lib/types";
+import { UseTypeFormKeyboardProps, safeGetRatingConfig, safeGetLinearScaleConfig, safeGetOptions } from "../../../lib/types";
+import { getQuestionTypeName } from "@formlink/schema";
 
 // UseTypeFormKeyboardProps is now imported from types.ts
 
@@ -20,22 +21,15 @@ export function useTypeFormKeyboard({
     (num: number) => {
       if (!currentQuestion) return;
 
-      if (currentQuestion.questionType === "rating") {
-        const ratingQuestion = currentQuestion as typeof currentQuestion & {
-          ratingConfig: { max: number; min?: number };
-        };
-        const config = ratingQuestion.ratingConfig;
-        const min = config.min || 1;
-        if (config && num >= min && num <= config.max) {
-          onAnswer(currentQuestion.id, num, currentQuestion.questionType);
+      if (currentQuestion.type.name === "rating") {
+        const config = safeGetRatingConfig(currentQuestion);
+        if (num >= config.min && num <= config.max) {
+          onAnswer(currentQuestion.id, num, getQuestionTypeName(currentQuestion));
         }
-      } else if (currentQuestion.questionType === "linearScale") {
-        const scaleQuestion = currentQuestion as typeof currentQuestion & {
-          linearScaleConfig: { start: number; end: number };
-        };
-        const config = scaleQuestion.linearScaleConfig;
-        if (config && num >= config.start && num <= config.end) {
-          onAnswer(currentQuestion.id, num, currentQuestion.questionType);
+      } else if (currentQuestion.type.name === "linearScale") {
+        const config = safeGetLinearScaleConfig(currentQuestion);
+        if (num >= config.start && num <= config.end) {
+          onAnswer(currentQuestion.id, num, getQuestionTypeName(currentQuestion));
         }
       }
     },
@@ -48,17 +42,14 @@ export function useTypeFormKeyboard({
 
       // Check if question has options (choice or ranking questions)
       if (
-        currentQuestion.questionType !== "singleChoice" &&
-        currentQuestion.questionType !== "multipleChoice" &&
-        currentQuestion.questionType !== "ranking"
+        currentQuestion.type.name !== "singleChoice" &&
+        currentQuestion.type.name !== "multipleChoice" &&
+        currentQuestion.type.name !== "ranking"
       ) {
         return;
       }
 
-      const choiceQuestion = currentQuestion as typeof currentQuestion & {
-        options: Array<{ value: string; label: string }>;
-      };
-      const options = choiceQuestion.options;
+      const options = safeGetOptions(currentQuestion);
       if (!options) return;
 
       const index = letter.charCodeAt(0) - "A".charCodeAt(0);
@@ -66,13 +57,13 @@ export function useTypeFormKeyboard({
         const selectedOption = options[index];
         if (!selectedOption) return;
 
-        if (currentQuestion.questionType === "singleChoice") {
+        if (currentQuestion.type.name === "singleChoice") {
           onAnswer(
             currentQuestion.id,
             selectedOption.value,
-            currentQuestion.questionType,
+            getQuestionTypeName(currentQuestion),
           );
-        } else if (currentQuestion.questionType === "multipleChoice") {
+        } else if (currentQuestion.type.name === "multipleChoice") {
           // For multiple choice, toggle the selection
           const currentResponse = getCurrentResponse
             ? getCurrentResponse(currentQuestion.id)
@@ -85,7 +76,7 @@ export function useTypeFormKeyboard({
             ? currentArray.filter((v) => v !== selectedOption.value)
             : [...currentArray, selectedOption.value];
 
-          onAnswer(currentQuestion.id, newValue, currentQuestion.questionType);
+          onAnswer(currentQuestion.id, newValue, getQuestionTypeName(currentQuestion));
         }
       }
     },
@@ -101,11 +92,6 @@ export function useTypeFormKeyboard({
         target.tagName === "TEXTAREA" ||
         target.contentEditable === "true"
       ) {
-        // Allow Enter key in inputs for submission, but not if dropdown is open
-        if (event.key === "Enter" && !event.shiftKey && !isDropdownOpen) {
-          event.preventDefault();
-          onNext();
-        }
         return;
       }
 
@@ -148,8 +134,8 @@ export function useTypeFormKeyboard({
         default:
           // Handle number keys for rating/scale questions
           if (
-            currentQuestion.questionType === "rating" ||
-            currentQuestion.questionType === "linearScale"
+            currentQuestion.type.name === "rating" ||
+            currentQuestion.type.name === "linearScale"
           ) {
             const num = parseInt(event.key);
             if (!isNaN(num) && num >= 0 && num <= 9) {
@@ -160,8 +146,8 @@ export function useTypeFormKeyboard({
 
           // Handle letter keys for choice questions
           if (
-            currentQuestion.questionType === "singleChoice" ||
-            currentQuestion.questionType === "multipleChoice"
+            currentQuestion.type.name === "singleChoice" ||
+            currentQuestion.type.name === "multipleChoice"
           ) {
             const letter = event.key.toUpperCase();
             if (letter.length === 1 && letter >= "A" && letter <= "Z") {

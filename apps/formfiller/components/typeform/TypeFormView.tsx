@@ -1,16 +1,13 @@
 "use client";
 
 import { useIsMobile } from "@/hooks/useIsMobile";
-import { mapUIToQuestion } from "@/lib/mappers/schema-to-ui";
 import type { QuestionResponse } from "@/lib/types";
-import { Form } from "@formlink/schema";
+import { Form, Question } from "@formlink/schema";
 import {
   CompletionScreen,
   FormModeProvider,
   IntroScreen,
   TypeFormDropdownProvider,
-  UIForm,
-  UIQuestion,
 } from "@formlink/ui";
 import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
@@ -26,10 +23,8 @@ import TypeFormTransition from "./TypeFormTransition";
 
 interface TypeFormViewProps {
   formSchema: Form;
-  uiFormSchema: UIForm;
   formId?: string;
   // Props down: business state
-  questions: UIQuestion[];
   questionResponses: Record<string, QuestionResponse>;
   isCompleted: boolean;
   // Callbacks up: business actions
@@ -39,20 +34,19 @@ interface TypeFormViewProps {
   onAnswerChange: (
     questionId: string,
     value: QuestionResponse,
-    questionType: UIQuestion["questionType"],
+    questionType: string,
   ) => void;
   onFileUpload: (questionId: string, file: File) => Promise<string | null>;
   onNavigateNext: (currentIndex: number) => number | null;
   onMarkCompleted: () => void;
-  shouldShowQuestion: (question: UIQuestion) => boolean;
-  getCurrentQuestion: (activeIndex: number) => UIQuestion | null;
+  shouldShowQuestion: (question: Question) => boolean;
+  getCurrentQuestion: (activeIndex: number) => Question | null;
   getProgress: (activeIndex: number) => number;
 }
 
 export default function TypeFormView({
   formSchema,
   formId,
-  questions,
   questionResponses,
   isCompleted,
   onInitialize,
@@ -75,8 +69,11 @@ export default function TypeFormView({
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(-1); // -1 for intro screen
   const [showConfetti, setShowConfetti] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  
+  // Navigation history for proper backward navigation with AI branching
+  const [navigationHistory, setNavigationHistory] = useState<number[]>([-1]);
 
-  const currentQuestion: UIQuestion | null =
+  const currentQuestion: Question | null =
     getCurrentQuestion(activeQuestionIndex);
 
   useEffect(() => {
@@ -85,19 +82,69 @@ export default function TypeFormView({
     }
   }, [formSchema, formId, onInitialize]); // Initialize on mount
 
+  // AI Branching logic
+  const handleAIBranching = useCallback(async (currentQuestion: Question) => {
+    try {
+      const response = await fetch('/api/ai/branching', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          journeyScript: formSchema.settings?.journeyScript || '',
+          answerHistory: questionResponses,
+          questions: formSchema.questions,
+          currentQuestionId: currentQuestion.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Branching API failed');
+      }
+
+      const { nextQuestionId } = await response.json();
+      
+      // Find the index of the next question
+      const nextIndex = formSchema.questions.findIndex(q => q.id === nextQuestionId);
+      
+      if (nextIndex !== -1) {
+        setActiveQuestionIndex(nextIndex);
+        // Add to navigation history for proper backward navigation
+        setNavigationHistory(prev => [...prev, nextIndex]);
+        return true; // Successfully branched
+      }
+    } catch (error) {
+      console.error('AI branching failed:', error);
+    }
+    
+    return false; // Branching failed, use default navigation
+  }, [formSchema, questionResponses]);
+
   // Track direction for next navigation
-  const handleNextWithDirection = useCallback(() => {
+  const handleNextWithDirection = useCallback(async () => {
     setDirection(1); // Going forwards
+    
+    const currentQuestion = getCurrentQuestion(activeQuestionIndex);
+    
+    // Check if current question should trigger AI branching
+    if (currentQuestion?.mightBranchOffNext && formSchema.settings?.journeyScript) {
+      const branchingSucceeded = await handleAIBranching(currentQuestion);
+      if (branchingSucceeded) {
+        return; // AI handled the navigation
+      }
+    }
+    
+    // Default navigation logic
     const nextIndex = onNavigateNext(activeQuestionIndex);
     if (nextIndex !== null) {
       setActiveQuestionIndex(nextIndex);
+      // Add to navigation history for proper backward navigation
+      setNavigationHistory(prev => [...prev, nextIndex]);
     } else {
       // No more questions, mark as completed
       onMarkCompleted();
       setShowConfetti(true);
-      setActiveQuestionIndex(questions.length);
+      setActiveQuestionIndex(formSchema.questions.length);
     }
-  }, [activeQuestionIndex, onNavigateNext, onMarkCompleted, questions.length]);
+  }, [activeQuestionIndex, getCurrentQuestion, handleAIBranching, formSchema, onNavigateNext, onMarkCompleted]);
 
   const handleNavigateToNextValidQuestion = useCallback(() => {
     handleNextWithDirection();
@@ -120,10 +167,14 @@ export default function TypeFormView({
   const handleSelectAndNavigate = (
     questionId: string,
     value: QuestionResponse,
-    questionType: UIQuestion["questionType"],
+    questionType: string,
   ) => {
     // Call the business logic callback
-    onAnswerChange(questionId, value, questionType);
+    onAnswerChange(
+      questionId,
+      value,
+      questionType,
+    );
 
     // Auto-advance for single-selection question types
     const autoAdvanceTypes = [
@@ -140,21 +191,25 @@ export default function TypeFormView({
   };
 
   const handlePrevious = () => {
-    if (activeQuestionIndex > 0) {
+    if (navigationHistory.length > 1) {
       setDirection(-1); // Going backwards
-      // Find previous valid question
-      for (let i = activeQuestionIndex - 1; i >= 0; i--) {
-        if (shouldShowQuestion(questions[i] as UIQuestion)) {
-          setActiveQuestionIndex(i);
-          break;
-        }
+      
+      // Get the previous question from navigation history
+      const newHistory = [...navigationHistory];
+      newHistory.pop(); // Remove current question
+      const previousIndex = newHistory[newHistory.length - 1];
+      
+      // Update state - only if previousIndex is valid
+      if (previousIndex !== undefined) {
+        setNavigationHistory(newHistory);
+        setActiveQuestionIndex(previousIndex);
       }
     }
   };
 
   // Setup keyboard navigation
   useTypeFormKeyboard({
-    currentQuestion: currentQuestion ? mapUIToQuestion(currentQuestion) : null,
+    currentQuestion: currentQuestion,
     onAnswer: handleSelectAndNavigate,
     onNext: handleNextWithDirection,
     onPrevious: handlePrevious,
@@ -186,6 +241,8 @@ export default function TypeFormView({
     await onRestart();
     setShowConfetti(false);
     setActiveQuestionIndex(-1);
+    // Reset navigation history
+    setNavigationHistory([-1]);
   };
 
   const handleFileUploadWrapper = async (questionId: string, file: File) => {
@@ -222,7 +279,7 @@ export default function TypeFormView({
           direction={direction}
         >
           <TypeFormQuestion
-            question={mapUIToQuestion(currentQuestion)}
+            question={currentQuestion}
             response={questionResponses[currentQuestion.id] ?? null}
             onAnswer={handleSelectAndNavigate}
             onFileUpload={handleFileUploadWrapper}
@@ -251,7 +308,7 @@ export default function TypeFormView({
           <TypeFormProgress
             progress={progress}
             current={activeQuestionIndex + 1}
-            total={questions.length}
+            total={formSchema.questions.length}
           />
         )}
         <TypeFormLayout>
@@ -265,7 +322,7 @@ export default function TypeFormView({
               canGoPrevious={activeQuestionIndex > 0}
               canGoNext={
                 currentQuestion
-                  ? currentQuestion.questionType === "text"
+                  ? currentQuestion.type.name === "text"
                     ? typeof questionResponses[currentQuestion.id] ===
                         "string" &&
                       (

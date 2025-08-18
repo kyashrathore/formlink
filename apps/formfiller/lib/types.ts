@@ -1,5 +1,4 @@
-import { AddressData, Form, Question } from "@formlink/schema";
-import { UIQuestion } from "@formlink/ui";
+import { AddressData, Form, Question, isRatingQuestion, isLinearScaleQuestion, isChoiceQuestion, isRankingQuestion, getRatingConfig, getLinearScaleConfig, getOptions } from "@formlink/schema";
 
 /**
  * Type definitions for FormFiller app
@@ -298,9 +297,35 @@ export interface AppFormActions {
   handleFileUpload: (questionId: string, file: File) => Promise<string | null>;
 
   // Utilities
-  getCurrentQuestion: (activeIndex: number) => UIQuestion | null;
+  getCurrentQuestion: (activeIndex: number) => Question | null;
   getProgress: (activeIndex: number) => number;
   reset: () => void;
+}
+
+/**
+ * Safe helper functions for question type access
+ */
+export function safeGetRatingConfig(question: Question): { max: number; min: number } {
+  if (isRatingQuestion(question)) {
+    const config = getRatingConfig(question);
+    return { max: config.max, min: config.min || 1 };
+  }
+  return { max: 5, min: 1 }; // fallback
+}
+
+export function safeGetLinearScaleConfig(question: Question): { start: number; end: number } {
+  if (isLinearScaleQuestion(question)) {
+    const config = getLinearScaleConfig(question);
+    return { start: config.start, end: config.end };
+  }
+  return { start: 1, end: 5 }; // fallback
+}
+
+export function safeGetOptions(question: Question): Array<{ value: string; label: string }> {
+  if (isChoiceQuestion(question) || isRankingQuestion(question)) {
+    return getOptions(question);
+  }
+  return []; // fallback
 }
 
 // Keyboard handler types
@@ -309,7 +334,7 @@ export interface UseTypeFormKeyboardProps {
   onAnswer: (
     questionId: string,
     value: QuestionResponse,
-    questionType: Question["questionType"],
+    questionType: string,
   ) => void;
   onNext: () => void;
   onPrevious?: () => void;

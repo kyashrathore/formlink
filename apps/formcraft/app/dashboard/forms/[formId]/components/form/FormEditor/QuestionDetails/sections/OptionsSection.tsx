@@ -25,13 +25,14 @@ export const OptionsSection: React.FC<OptionsSectionProps> = ({
   optionInputRef,
 }) => {
   const shouldShow =
-    (question.questionType === "singleChoice" ||
-      question.questionType === "multipleChoice") &&
-    question.options !== undefined
+    (question.type.name === "singleChoice" ||
+      question.type.name === "multipleChoice") &&
+    'options' in question.type && question.type.options !== undefined
 
   if (!shouldShow) return null
 
-  const hasOptions = question.options && question.options.length > 0
+  const options = 'options' in question.type ? question.type.options : []
+  const hasOptions = options && options.length > 0
 
   return (
     <div className="mb-8">
@@ -39,7 +40,7 @@ export const OptionsSection: React.FC<OptionsSectionProps> = ({
         <>
           <SectionHeader icon={SECTION_ICONS.options} title="Options" />
           <DeletableBadge
-            items={question.options}
+            items={options}
             onDelete={onDeleteOption}
             variant="outline"
             isOption={true}
