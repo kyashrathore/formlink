@@ -118,6 +118,14 @@ function mapQuestionToUnifiedProps(
     value = [];
   }
 
+  // Let rating, linear-scale, and likert-scale components handle null values naturally
+  // Components should handle null gracefully without immediate validation errors
+
+  // Date components expect empty string, not null (additional handling)
+  if (type === "date" && value === null) {
+    value = "";
+  }
+
   // Base props
   const baseProps = {
     type,
@@ -169,7 +177,7 @@ function mapQuestionToUnifiedProps(
     } else {
       (baseProps as Record<string, unknown>).config = {
         start: 1,
-        end: 5,
+        end: 10,
         step: 1,
       };
     }

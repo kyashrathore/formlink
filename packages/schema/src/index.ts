@@ -133,7 +133,7 @@ export const QuestionSchema = z.object({
   styling: z
     .object({ colSpan: z.number().int().min(1).max(12).optional() })
     .optional(),
-  isCheckpoint: z.boolean().optional(),
+  mightBranchOffNext: z.boolean().optional(),
 
   // The new, unified type property
   type: QuestionTypeSchema,

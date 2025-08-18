@@ -6,6 +6,7 @@ import {
   LinearScaleConfig,
 } from "../../primitives/BaseLinearScale";
 import { cn } from "../../../lib/utils";
+import { useIsMobile } from "../../../hooks/ui/use-mobile";
 
 export type FormMode = "chat" | "typeform";
 
@@ -30,9 +31,11 @@ export function UnifiedLinearScale({
   required = false,
   showKeyboardHints,
 }: UnifiedLinearScaleProps) {
-  // Set default showKeyboardHints based on mode
+  const isMobile = useIsMobile();
+  
+  // Set default showKeyboardHints based on mode - hide on mobile
   const shouldShowKeyboardHints =
-    showKeyboardHints ?? (mode === "typeform" ? true : false);
+    showKeyboardHints ?? (mode === "typeform" ? !isMobile : false);
 
   const {
     scaleValues,
@@ -101,7 +104,11 @@ export function UnifiedLinearScale({
   const innerContainerClass =
     mode === "chat" ? "flex flex-col gap-4" : "flex flex-col gap-6";
   const buttonsContainerClass =
-    mode === "chat" ? "flex gap-2 justify-center" : "flex gap-3 justify-start";
+    mode === "chat" 
+      ? "flex gap-2 justify-center" 
+      : isMobile 
+        ? "flex gap-1 justify-start flex-wrap" 
+        : "flex gap-3 justify-start";
   const buttonClass =
     mode === "chat"
       ? cn(
@@ -111,13 +118,21 @@ export function UnifiedLinearScale({
           "flex items-center justify-center text-base",
           "hover:border-primary/50 hover:bg-card/80",
         )
-      : cn(
-          "relative min-w-[64px] h-16 px-4 rounded-lg font-medium transition-all text-lg",
-          "border-2 border-border/50 bg-card/50",
-          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-          "flex items-center justify-center",
-          "hover:border-primary/50 hover:bg-card/80",
-        );
+      : isMobile
+        ? cn(
+            "relative min-w-[36px] h-12 px-2 rounded-lg font-medium transition-all text-base",
+            "border-2 border-border/50 bg-card/50",
+            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "flex items-center justify-center",
+            "hover:border-primary/50 hover:bg-card/80",
+          )
+        : cn(
+            "relative min-w-[64px] h-16 px-4 rounded-lg font-medium transition-all text-lg",
+            "border-2 border-border/50 bg-card/50",
+            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+            "flex items-center justify-center",
+            "hover:border-primary/50 hover:bg-card/80",
+          );
   const labelsClass =
     mode === "chat"
       ? "flex justify-between text-sm text-muted-foreground px-2"
@@ -171,7 +186,7 @@ export function UnifiedLinearScale({
       )}
 
       {/* Chat mode: Keyboard hints */}
-      {mode === "chat" && shouldShowKeyboardHints && !disabled && (
+      {mode === "chat" && shouldShowKeyboardHints && !disabled && !isMobile && (
         <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
           Use{" "}
           <kbd className="px-1.5 py-0.5 text-xs bg-muted text-muted-foreground rounded border border-border/50">

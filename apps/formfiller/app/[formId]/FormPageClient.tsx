@@ -94,6 +94,17 @@ function FormPageContent({
           setQuestionResponse(questionId, value);
         }
         break;
+      case "rating":
+      case "linearScale":
+      case "likertScale":
+        if (typeof value === "number") {
+          setQuestionResponse(questionId, value);
+        }
+        break;
+      case "date":
+        // Handle both Date objects and strings
+        setQuestionResponse(questionId, value);
+        break;
       default:
         if (typeof value === "string") {
           handleTextChange(questionId, value);

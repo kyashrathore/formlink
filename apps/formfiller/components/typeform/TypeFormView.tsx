@@ -69,6 +69,9 @@ export default function TypeFormView({
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(-1); // -1 for intro screen
   const [showConfetti, setShowConfetti] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  
+  // Navigation history for proper backward navigation with AI branching
+  const [navigationHistory, setNavigationHistory] = useState<number[]>([-1]);
 
   const currentQuestion: Question | null =
     getCurrentQuestion(activeQuestionIndex);
@@ -79,19 +82,69 @@ export default function TypeFormView({
     }
   }, [formSchema, formId, onInitialize]); // Initialize on mount
 
+  // AI Branching logic
+  const handleAIBranching = useCallback(async (currentQuestion: Question) => {
+    try {
+      const response = await fetch('/api/ai/branching', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          journeyScript: formSchema.settings?.journeyScript || '',
+          answerHistory: questionResponses,
+          questions: formSchema.questions,
+          currentQuestionId: currentQuestion.id,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Branching API failed');
+      }
+
+      const { nextQuestionId } = await response.json();
+      
+      // Find the index of the next question
+      const nextIndex = formSchema.questions.findIndex(q => q.id === nextQuestionId);
+      
+      if (nextIndex !== -1) {
+        setActiveQuestionIndex(nextIndex);
+        // Add to navigation history for proper backward navigation
+        setNavigationHistory(prev => [...prev, nextIndex]);
+        return true; // Successfully branched
+      }
+    } catch (error) {
+      console.error('AI branching failed:', error);
+    }
+    
+    return false; // Branching failed, use default navigation
+  }, [formSchema, questionResponses]);
+
   // Track direction for next navigation
-  const handleNextWithDirection = useCallback(() => {
+  const handleNextWithDirection = useCallback(async () => {
     setDirection(1); // Going forwards
+    
+    const currentQuestion = getCurrentQuestion(activeQuestionIndex);
+    
+    // Check if current question should trigger AI branching
+    if (currentQuestion?.mightBranchOffNext && formSchema.settings?.journeyScript) {
+      const branchingSucceeded = await handleAIBranching(currentQuestion);
+      if (branchingSucceeded) {
+        return; // AI handled the navigation
+      }
+    }
+    
+    // Default navigation logic
     const nextIndex = onNavigateNext(activeQuestionIndex);
     if (nextIndex !== null) {
       setActiveQuestionIndex(nextIndex);
+      // Add to navigation history for proper backward navigation
+      setNavigationHistory(prev => [...prev, nextIndex]);
     } else {
       // No more questions, mark as completed
       onMarkCompleted();
       setShowConfetti(true);
       setActiveQuestionIndex(formSchema.questions.length);
     }
-  }, [activeQuestionIndex, onNavigateNext, onMarkCompleted, formSchema.questions.length]);
+  }, [activeQuestionIndex, getCurrentQuestion, handleAIBranching, formSchema, onNavigateNext, onMarkCompleted]);
 
   const handleNavigateToNextValidQuestion = useCallback(() => {
     handleNextWithDirection();
@@ -138,15 +191,18 @@ export default function TypeFormView({
   };
 
   const handlePrevious = () => {
-    if (activeQuestionIndex > 0) {
+    if (navigationHistory.length > 1) {
       setDirection(-1); // Going backwards
-      // Find previous valid question
-      for (let i = activeQuestionIndex - 1; i >= 0; i--) {
-        const question = formSchema.questions[i];
-        if (question && shouldShowQuestion(question)) {
-          setActiveQuestionIndex(i);
-          break;
-        }
+      
+      // Get the previous question from navigation history
+      const newHistory = [...navigationHistory];
+      newHistory.pop(); // Remove current question
+      const previousIndex = newHistory[newHistory.length - 1];
+      
+      // Update state - only if previousIndex is valid
+      if (previousIndex !== undefined) {
+        setNavigationHistory(newHistory);
+        setActiveQuestionIndex(previousIndex);
       }
     }
   };
@@ -185,6 +241,8 @@ export default function TypeFormView({
     await onRestart();
     setShowConfetti(false);
     setActiveQuestionIndex(-1);
+    // Reset navigation history
+    setNavigationHistory([-1]);
   };
 
   const handleFileUploadWrapper = async (questionId: string, file: File) => {

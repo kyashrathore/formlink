@@ -92,11 +92,6 @@ export function useTypeFormKeyboard({
         target.tagName === "TEXTAREA" ||
         target.contentEditable === "true"
       ) {
-        // Allow Enter key in inputs for submission, but not if dropdown is open
-        if (event.key === "Enter" && !event.shiftKey && !isDropdownOpen) {
-          event.preventDefault();
-          onNext();
-        }
         return;
       }
 

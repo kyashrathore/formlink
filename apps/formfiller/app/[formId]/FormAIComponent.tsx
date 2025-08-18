@@ -380,7 +380,6 @@ export default function FormAIComponent({
   useEffect(() => {
     if (
       formDisplayState === "chatting_ai_ready" &&
-      chatHistoryMessages.length === 0 &&
       append &&
       !hasInitiatedRef.current
     ) {
