@@ -11,7 +11,12 @@ export interface TypeFormSelectProps extends BaseSelectProps {
 }
 
 export function TypeFormSelect(props: TypeFormSelectProps) {
-  const { onSubmit, autoAdvance = true, showKeyboardHints = true, ...baseProps } = props;
+  const {
+    onSubmit,
+    autoAdvance = true,
+    showKeyboardHints = true,
+    ...baseProps
+  } = props;
   const isMobile = useIsMobile();
 
   // Don't pass onSubmit to BaseSelect if we want to control auto-advance
@@ -54,7 +59,7 @@ export function TypeFormSelect(props: TypeFormSelectProps) {
             tabIndex={option.props.tabIndex}
             {...getTypeFormAnimations(index)}
             className={`
-              flex items-center ${!isMobile && showKeyboardHints ? 'gap-3' : 'gap-0'} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200
+              flex items-center ${!isMobile && showKeyboardHints ? "gap-3" : "gap-0"} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200
               ${
                 option.isSelected
                   ? "bg-primary/10 border-2 border-primary"

@@ -15,7 +15,7 @@ interface TypeFormQuestionProps {
   onAnswer: (
     questionId: string,
     value: QuestionResponse,
-    questionType: string
+    questionType: string,
   ) => void;
   onFileUpload?: (questionId: string, file: File) => Promise<void>;
   uploadedFile?: File | null;
@@ -73,12 +73,13 @@ export default function TypeFormQuestion({
     }
   })();
 
-  const responseAsFile =
-    response instanceof File
-      ? response
-      : response && typeof response === "object" && "url" in response
-        ? fileDataToFile(response as FileData)
-        : null;
+  // Convert response to file if needed (commented out to avoid unused variable warning)
+  // const responseAsFile =
+  //   response instanceof File
+  //     ? response
+  //     : response && typeof response === "object" && "url" in response
+  //       ? fileDataToFile(response as FileData)
+  //       : null;
 
   return (
     <div className="flex-1 flex items-center justify-center">
@@ -126,9 +127,11 @@ export default function TypeFormQuestion({
               currentQuestion={question}
               currentResponse={
                 // Convert FileData to File for UI compatibility
-                response && typeof response === 'object' && 'filename' in response
+                response &&
+                typeof response === "object" &&
+                "filename" in response
                   ? fileDataToFile(response as FileData)
-                  : response as any
+                  : (response as any)
               }
               handleSelect={(qId: string, value: QuestionResponse) => {
                 onAnswer(qId, value, getQuestionTypeName(question));
@@ -150,7 +153,7 @@ export default function TypeFormQuestion({
             transition={{ delay: 0.2 }}
             className={cn(
               "flex items-center mt-4",
-              questionNumber ? "ml-[3rem]" : ""
+              questionNumber ? "ml-[3rem]" : "",
             )}
           >
             <Button onClick={onNext} size="lg" className="group mr-4">

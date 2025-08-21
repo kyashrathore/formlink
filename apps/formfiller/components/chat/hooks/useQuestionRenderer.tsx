@@ -9,7 +9,11 @@ export const useQuestionRenderer = (
   handleFileUpload?: (questionId: string, file: File) => Promise<void>,
 ) => {
   const components = {
-    p: ({ node, children, ...props }: ComponentProps<"p"> & { node?: Element }) => {
+    p: ({
+      node,
+      children,
+      ...props
+    }: ComponentProps<"p"> & { node?: Element }) => {
       if (!node) return null;
       const hasQuestionLink = node.children.some(
         (child: Element | { type: string }) => {

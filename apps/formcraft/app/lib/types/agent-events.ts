@@ -1,12 +1,10 @@
-import {
-  Form,
-  Question as QuestionSchema,
-} from "@formlink/schema"
+import { Form, Question as QuestionSchema } from "@formlink/schema"
+import { nanoid } from "nanoid"
 
 // Define QuestionType locally since it's not exported from schema
-type QuestionType = 
+type QuestionType =
   | "text"
-  | "singleChoice" 
+  | "singleChoice"
   | "multipleChoice"
   | "rating"
   | "date"
@@ -15,7 +13,6 @@ type QuestionType =
   | "address"
   | "linearScale"
   | "likertScale"
-import { nanoid } from "nanoid"
 
 export interface AgentMessage {
   role: "system" | "user" | "assistant"

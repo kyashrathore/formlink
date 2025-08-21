@@ -230,7 +230,7 @@ const formEditorStore: StateCreator<
       const question = state.form?.questions.find(
         (q: Question) => q.id === questionId
       ) as QuestionWithLists | undefined
-      if (question && question.type && 'options' in question.type) {
+      if (question && question.type && "options" in question.type) {
         if (!question.type.options) question.type.options = []
 
         question.type.options.push(newOption as any)
@@ -406,7 +406,11 @@ const formEditorStore: StateCreator<
           draft.readableValidations = []
         if (draft.readableConditionalLogic === undefined)
           draft.readableConditionalLogic = []
-        if (draft.type && "options" in draft.type && draft.type.options === undefined)
+        if (
+          draft.type &&
+          "options" in draft.type &&
+          draft.type.options === undefined
+        )
           draft.type.options = []
         if (draft.conditionalLogic === undefined)
           draft.conditionalLogic = {

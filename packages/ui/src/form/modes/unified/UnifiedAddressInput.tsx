@@ -75,10 +75,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
     "country",
   ];
 
-  const handleKeyDown = (
-    e: React.KeyboardEvent,
-    field: keyof AddressData,
-  ) => {
+  const handleKeyDown = (e: React.KeyboardEvent, field: keyof AddressData) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
 

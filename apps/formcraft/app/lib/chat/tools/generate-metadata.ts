@@ -1,4 +1,10 @@
 import { getenv } from "@/lib/env"
+import { createOpenRouter } from "@openrouter/ai-sdk-provider"
+import { generateObject } from "ai"
+import { z } from "zod"
+import { ENHANCED_METADATA_PROMPT } from "../../prompts"
+import { createAgentEvent } from "../../types/agent-events"
+
 const QuestionTypeEnumSchema = z.enum([
   "text",
   "singleChoice",
@@ -10,12 +16,7 @@ const QuestionTypeEnumSchema = z.enum([
   "address",
   "linearScale",
   "likertScale",
-]);
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
-import { generateObject } from "ai"
-import { z } from "zod"
-import { ENHANCED_METADATA_PROMPT } from "../../prompts"
-import { createAgentEvent } from "../../types/agent-events"
+])
 
 /**
  * Schema for question details returned by the AI

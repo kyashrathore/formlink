@@ -32,7 +32,7 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
     className,
     ...baseProps
   } = props;
-  
+
   const isMobile = useIsMobile();
 
   const base = BaseMultiSelect<string>({
@@ -128,7 +128,7 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
                 tabIndex={option.props.tabIndex}
                 {...getTypeFormAnimations(index)}
                 className={cn(
-                  `flex items-center ${!isMobile && mode === "typeform" ? 'gap-3' : 'gap-0'} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200`,
+                  `flex items-center ${!isMobile && mode === "typeform" ? "gap-3" : "gap-0"} px-4 py-3 rounded-lg cursor-pointer transition-all duration-200`,
                   option.isSelected
                     ? "bg-primary/10 border-2 border-primary"
                     : "bg-muted/30 border border-border/50 hover:bg-muted/60 hover:border-border",

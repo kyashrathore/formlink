@@ -5,7 +5,20 @@ import { UIResponseValue } from "../types/generic";
 import { useFormMode } from "./context/FormModeContext";
 import { UnifiedFormInput } from "./modes/unified/UnifiedFormInput";
 import { FormInputType } from "./registry";
-import { Question, isTextQuestion, isChoiceQuestion, isRankingQuestion, isRatingQuestion, isLinearScaleQuestion, isFileUploadQuestion, getQuestionTypeName, getTextFormat, getOptions, getRatingConfig, getLinearScaleConfig } from "@formlink/schema";
+import {
+  Question,
+  isTextQuestion,
+  isChoiceQuestion,
+  isRankingQuestion,
+  isRatingQuestion,
+  isLinearScaleQuestion,
+  isFileUploadQuestion,
+  getQuestionTypeName,
+  getTextFormat,
+  getOptions,
+  getRatingConfig,
+  getLinearScaleConfig,
+} from "@formlink/schema";
 
 interface InputContainerProps {
   currentQuestion: Question;
@@ -140,9 +153,7 @@ function mapQuestionToUnifiedProps(
     },
     onSubmit: onNext as (() => void) | undefined,
     disabled: false,
-    required: Boolean(
-      question.validations?.required,
-    ),
+    required: Boolean(question.validations?.required),
     placeholder: (question as any).placeholder,
   };
 

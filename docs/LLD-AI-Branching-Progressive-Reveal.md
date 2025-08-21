@@ -9,7 +9,7 @@
 ## Table of Contents
 
 1. [Overview & Objectives](#1-overview--objectives)
-2. [Current State Analysis](#2-current-state-analysis) 
+2. [Current State Analysis](#2-current-state-analysis)
 3. [Progressive Reveal Architecture](#3-progressive-reveal-architecture)
 4. [AI Branching System](#4-ai-branching-system)
 5. [Navigation & History Management](#5-navigation--history-management)
@@ -33,12 +33,14 @@ The `mightBranchOffNext` property exists in the schema with different implementa
 ### 1.2 Success Criteria
 
 **Core Requirements:**
+
 - ✅ Progressive reveal works in Classic Mode - questions appear/disappear based on previous answers
 - ✅ AI branching API endpoint processes journey scripts and returns appropriate next steps
 - ✅ Navigation history properly tracks branched paths for backward/forward movement
 - ✅ Smooth UX with animations and loading states
 
 **Advanced Requirements:**
+
 - ✅ JSONata-based conditional logic for complex show/hide rules
 - ✅ Multi-page forms with branching across pages
 - ✅ Performance optimization for large forms with many conditions
@@ -47,19 +49,20 @@ The `mightBranchOffNext` property exists in the schema with different implementa
 ### 1.3 AI Enhancement Opportunities
 
 **Inspired by form library patterns but built for AI:**
+
 - Dynamic question adaptation based on user context
-- AI-powered validation with natural language feedback  
+- AI-powered validation with natural language feedback
 - Smart layout suggestions for better UX
 - Progressive question generation for conversation-like flows
 
 ### 1.4 Form Mode Comparison
 
-| Feature | TypeForm Mode | Classic Mode (Target) |
-|---------|---------------|----------------------|
-| **Display** | One question per screen | Multiple questions per page |
-| **Branching** | Jump to different question | Progressive reveal on same page |
-| **Navigation** | Previous/Next buttons | Scroll + form submission |
-| **UX Pattern** | Sequential flow | Dynamic form expansion |
+| Feature        | TypeForm Mode              | Classic Mode (Target)           |
+| -------------- | -------------------------- | ------------------------------- |
+| **Display**    | One question per screen    | Multiple questions per page     |
+| **Branching**  | Jump to different question | Progressive reveal on same page |
+| **Navigation** | Previous/Next buttons      | Scroll + form submission        |
+| **UX Pattern** | Sequential flow            | Dynamic form expansion          |
 
 ---
 
@@ -68,12 +71,14 @@ The `mightBranchOffNext` property exists in the schema with different implementa
 ### 2.1 ✅ What's Already Implemented
 
 **Schema Foundation:**
+
 ```typescript
 // packages/schema/src/index.ts:136
 mightBranchOffNext: z.boolean().optional(),
 ```
 
 **TypeForm Branching Logic:**
+
 ```typescript
 // apps/formfiller/components/typeform/TypeFormView.tsx:128-131
 if (currentQuestion?.mightBranchOffNext && formSchema.settings?.journeyScript) {
@@ -85,20 +90,23 @@ if (currentQuestion?.mightBranchOffNext && formSchema.settings?.journeyScript) {
 ```
 
 **Navigation History Tracking:**
+
 ```typescript
 // TypeFormView.tsx:74, 111
 const [navigationHistory, setNavigationHistory] = useState<number[]>([-1]);
-setNavigationHistory(prev => [...prev, nextIndex]);
+setNavigationHistory((prev) => [...prev, nextIndex]);
 ```
 
 ### 2.2 ❌ Critical Gaps
 
 **1. Classic Mode Implementation Missing**
+
 - Classic Mode doesn't implement `mightBranchOffNext` handling
 - No progressive reveal logic exists
 - Questions don't dynamically appear/disappear
 
 **2. Conditional Logic Intentionally Disabled**
+
 ```typescript
 // apps/formfiller/lib/stores/useAppFormStore.ts:102-106
 shouldShowQuestion: () => {
@@ -112,6 +120,7 @@ shouldShowQuestion: () => {
 ### 2.3 Settings Schema Gap
 
 **Missing `defaultMode` Field:**
+
 ```typescript
 // Current SettingsSchema lacks defaultMode but it's referenced in code
 // FormPageClient.tsx:176 tries to read formSchema.settings?.defaultMode
@@ -141,12 +150,14 @@ interface QuestionVisibilityState {
   processingCheckpoint: string | null;
 }
 
-const [visibilityState, setVisibilityState] = useState<QuestionVisibilityState>({
-  visibleQuestionIds: new Set(),
-  revealQueue: [],
-  hiddenByCondition: new Set(),
-  processingCheckpoint: null,
-});
+const [visibilityState, setVisibilityState] = useState<QuestionVisibilityState>(
+  {
+    visibleQuestionIds: new Set(),
+    revealQueue: [],
+    hiddenByCondition: new Set(),
+    processingCheckpoint: null,
+  },
+);
 ```
 
 ### 3.3 Question Filtering Logic
@@ -154,32 +165,35 @@ const [visibilityState, setVisibilityState] = useState<QuestionVisibilityState>(
 ```typescript
 // Progressive reveal algorithm
 const getVisibleQuestionsForPage = (
-  pageQuestions: Question[], 
+  pageQuestions: Question[],
   responses: Record<string, any>,
-  visibilityState: QuestionVisibilityState
+  visibilityState: QuestionVisibilityState,
 ): Question[] => {
   const visible: Question[] = [];
-  
+
   for (const question of pageQuestions) {
     // Always show if explicitly marked visible
     if (visibilityState.visibleQuestionIds.has(question.id)) {
       visible.push(question);
       continue;
     }
-    
+
     // Check conditional logic
-    if (question.conditionalLogic && !evaluateConditionalLogic(question, responses)) {
+    if (
+      question.conditionalLogic &&
+      !evaluateConditionalLogic(question, responses)
+    ) {
       visibilityState.hiddenByCondition.add(question.id);
       continue;
     }
-    
+
     // Progressive reveal logic
     if (visible.length === 0) {
       // Always show first question
       visible.push(question);
     } else {
       const lastVisibleQuestion = visible[visible.length - 1];
-      
+
       // Show next question if:
       // 1. Previous checkpoint is filled, OR
       // 2. Previous question is not a checkpoint
@@ -194,7 +208,7 @@ const getVisibleQuestionsForPage = (
       }
     }
   }
-  
+
   return visible;
 };
 ```
@@ -202,6 +216,7 @@ const getVisibleQuestionsForPage = (
 ### 3.4 Animation & UX Patterns
 
 **Reveal Animation:**
+
 ```css
 @keyframes revealQuestion {
   from {
@@ -222,6 +237,7 @@ const getVisibleQuestionsForPage = (
 ```
 
 **Loading States:**
+
 - Show spinner when processing checkpoint
 - Skeleton placeholders for questions being revealed
 - Smooth scroll to newly revealed questions
@@ -235,8 +251,9 @@ const getVisibleQuestionsForPage = (
 **File: `apps/formfiller/app/api/ai/branching/route.ts`**
 
 **Current Implementation:**
+
 - Uses OpenRouter with Gemini 2.5 Flash model
-- Validates requests and calls AI with journey script context  
+- Validates requests and calls AI with journey script context
 - Returns `nextQuestionId` for navigation
 - Fully functional and used by TypeForm mode
 
@@ -245,8 +262,8 @@ const getVisibleQuestionsForPage = (
 **Reference Implementation:**
 
 ```typescript
-import { NextRequest, NextResponse } from 'next/server';
-import { Question } from '@formlink/schema';
+import { NextRequest, NextResponse } from "next/server";
+import { Question } from "@formlink/schema";
 
 interface BranchingRequest {
   journeyScript: string;
@@ -257,18 +274,18 @@ interface BranchingRequest {
 
 export async function POST(request: NextRequest) {
   try {
-    const { 
-      journeyScript, 
-      answerHistory, 
-      questions, 
-      currentQuestionId 
+    const {
+      journeyScript,
+      answerHistory,
+      questions,
+      currentQuestionId,
     }: BranchingRequest = await request.json();
 
     // Validate required fields
     if (!journeyScript || !currentQuestionId) {
       return NextResponse.json(
-        { error: 'Missing required fields' }, 
-        { status: 400 }
+        { error: "Missing required fields" },
+        { status: 400 },
       );
     }
 
@@ -282,21 +299,23 @@ export async function POST(request: NextRequest) {
 
     // Call AI service
     const aiResponse = await callAIService(prompt);
-    
+
     // Parse AI response to extract next question ID
     const nextQuestionId = parseNextQuestionId(aiResponse, questions);
-    
+
     // Validate the AI's choice
-    if (!nextQuestionId || !questions.find(q => q.id === nextQuestionId)) {
+    if (!nextQuestionId || !questions.find((q) => q.id === nextQuestionId)) {
       // Fallback to sequential navigation
-      const currentIndex = questions.findIndex(q => q.id === currentQuestionId);
+      const currentIndex = questions.findIndex(
+        (q) => q.id === currentQuestionId,
+      );
       const nextIndex = currentIndex + 1;
       const fallbackId = questions[nextIndex]?.id;
-      
+
       return NextResponse.json({
         nextQuestionId: fallbackId,
         usedFallback: true,
-        reason: 'AI response invalid',
+        reason: "AI response invalid",
       });
     }
 
@@ -304,13 +323,12 @@ export async function POST(request: NextRequest) {
       nextQuestionId,
       usedFallback: false,
     });
-
   } catch (error) {
-    console.error('AI branching error:', error);
-    
+    console.error("AI branching error:", error);
+
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }
@@ -328,18 +346,18 @@ function buildBranchingPrompt({
 ${journeyScript}
 
 ## Current Question:
-${questions.find(q => q.id === currentQuestionId)?.title}
+${questions.find((q) => q.id === currentQuestionId)?.title}
 
 ## User's Answers So Far:
 ${Object.entries(answerHistory)
   .map(([qId, answer]) => {
-    const question = questions.find(q => q.id === qId);
+    const question = questions.find((q) => q.id === qId);
     return `${question?.title}: ${answer}`;
   })
-  .join('\n')}
+  .join("\n")}
 
 ## Available Next Questions:
-${questions.map(q => `${q.id}: ${q.title}`).join('\n')}
+${questions.map((q) => `${q.id}: ${q.title}`).join("\n")}
 
 Based on the journey script and the user's answers, which question should come next?
 
@@ -350,37 +368,40 @@ Respond with ONLY the question ID, nothing else.
 async function callAIService(prompt: string): Promise<string> {
   // Integrate with your existing AI service
   // This could be OpenAI, Anthropic, or your internal AI API
-  
-  const response = await fetch('/api/ai/completion', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+
+  const response = await fetch("/api/ai/completion", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       prompt,
       maxTokens: 50,
       temperature: 0.1, // Low temperature for consistent choices
     }),
   });
-  
+
   const { completion } = await response.json();
   return completion;
 }
 
-function parseNextQuestionId(aiResponse: string, questions: Question[]): string | null {
+function parseNextQuestionId(
+  aiResponse: string,
+  questions: Question[],
+): string | null {
   // Extract question ID from AI response
   const cleaned = aiResponse.trim();
-  
+
   // Try exact match first
-  if (questions.find(q => q.id === cleaned)) {
+  if (questions.find((q) => q.id === cleaned)) {
     return cleaned;
   }
-  
+
   // Try to find ID within the response
   for (const question of questions) {
     if (cleaned.includes(question.id)) {
       return question.id;
     }
   }
-  
+
   return null;
 }
 ```
@@ -388,6 +409,7 @@ function parseNextQuestionId(aiResponse: string, questions: Question[]): string 
 ### 4.2 Journey Script Processing
 
 **Enhanced Journey Script Format:**
+
 ```typescript
 // Example journey script in form settings
 const exampleJourneyScript = `
@@ -421,22 +443,22 @@ const exampleJourneyScript = `
 
 ```typescript
 // Enhanced conditional logic evaluation
-import jsonata from 'jsonata';
+import jsonata from "jsonata";
 
 function evaluateConditionalLogic(
-  question: Question, 
-  responses: Record<string, any>
+  question: Question,
+  responses: Record<string, any>,
 ): boolean {
   if (!question.conditionalLogic) return true;
-  
+
   try {
     // Use JSONata for complex conditional expressions
     const expression = jsonata(question.conditionalLogic.jsonata);
     const result = expression.evaluate(responses);
-    
+
     return Boolean(result);
   } catch (error) {
-    console.error('Conditional logic evaluation error:', error);
+    console.error("Conditional logic evaluation error:", error);
     // Fail open - show the question if evaluation fails
     return true;
   }
@@ -445,7 +467,7 @@ function evaluateConditionalLogic(
 // Example conditional logic in schema:
 const conditionalLogicExample = {
   prompt: "Show salary question only for employed users with experience",
-  jsonata: "employment_status = 'Employed' and years_experience > 2"
+  jsonata: "employment_status = 'Employed' and years_experience > 2",
 };
 ```
 
@@ -479,28 +501,27 @@ interface ClassicModeNavigationState {
 ```typescript
 const handleNavigateBack = () => {
   if (navigationState.pageHistory.length <= 1) return;
-  
+
   // Get previous page state
-  const previousPageState = navigationState.pageHistory[
-    navigationState.pageHistory.length - 2
-  ];
-  
+  const previousPageState =
+    navigationState.pageHistory[navigationState.pageHistory.length - 2];
+
   // Restore visibility state
-  setVisibilityState(prev => ({
+  setVisibilityState((prev) => ({
     ...prev,
     visibleQuestionIds: new Set(previousPageState.visibleQuestionIds),
   }));
-  
+
   // Restore form values
   form.reset(previousPageState.responses);
-  
+
   // Update navigation
-  setNavigationState(prev => ({
+  setNavigationState((prev) => ({
     ...prev,
     pageHistory: prev.pageHistory.slice(0, -1),
     currentPageIndex: prev.currentPageIndex - 1,
   }));
-  
+
   // Update page number
   setCurrentPage(previousPageState.pageNumber);
 };
@@ -518,38 +539,41 @@ const handlePageSubmission = async (formData: Record<string, any>) => {
     responses: { ...questionResponses, ...formData },
     timestamp: Date.now(),
   };
-  
+
   // Check for cross-page branching
   const lastQuestion = getCurrentPageQuestions().pop();
   if (lastQuestion?.mightBranchOffNext) {
     const branchingResult = await processBranching(lastQuestion, formData);
-    
+
     if (branchingResult.targetPage !== currentPage + 1) {
       // AI determined we should jump to a different page
       setCurrentPage(branchingResult.targetPage);
-      
+
       // Record branching decision
-      setBranchingHistory(prev => [...prev, {
-        questionId: lastQuestion.id,
-        chosenPath: branchingResult.targetPage.toString(),
-        alternativePaths: branchingResult.alternatives || [],
-        timestamp: Date.now(),
-      }]);
-      
+      setBranchingHistory((prev) => [
+        ...prev,
+        {
+          questionId: lastQuestion.id,
+          chosenPath: branchingResult.targetPage.toString(),
+          alternativePaths: branchingResult.alternatives || [],
+          timestamp: Date.now(),
+        },
+      ]);
+
       return; // Skip normal page increment
     }
   }
-  
+
   // Normal page progression
   if (currentPage < totalPages) {
-    setCurrentPage(prev => prev + 1);
+    setCurrentPage((prev) => prev + 1);
   } else {
     // Form completion
     onMarkCompleted();
   }
-  
+
   // Save state to history
-  setNavigationState(prev => ({
+  setNavigationState((prev) => ({
     ...prev,
     pageHistory: [...prev.pageHistory, currentPageState],
     currentPageIndex: prev.currentPageIndex + 1,
@@ -564,6 +588,7 @@ const handlePageSubmission = async (formData: Record<string, any>) => {
 ### Phase 1: Foundation & Basic Progressive Reveal (Week 1)
 
 **Objectives:**
+
 - Complete missing schema fields
 - Implement basic progressive reveal without AI
 - Create initial Classic Mode visibility logic
@@ -571,6 +596,7 @@ const handlePageSubmission = async (formData: Record<string, any>) => {
 **Tasks:**
 
 1. **Complete Settings Schema**
+
 ```typescript
 // File: packages/schema/src/index.ts
 export const SettingsSchema = z.object({
@@ -580,6 +606,7 @@ export const SettingsSchema = z.object({
 ```
 
 2. **Basic Progressive Reveal in ClassicFormView**
+
 ```typescript
 // File: apps/formfiller/components/classic/ClassicFormView.tsx
 // Implement getVisibleQuestionsForPage logic (without AI)
@@ -588,6 +615,7 @@ export const SettingsSchema = z.object({
 ```
 
 3. **Enhanced QuestionDetails UI**
+
 ```typescript
 // File: apps/formcraft/.../QuestionDetails.tsx
 // Add mightBranchOffNext toggle
@@ -596,6 +624,7 @@ export const SettingsSchema = z.object({
 ```
 
 **Success Criteria:**
+
 - ✅ Questions reveal progressively as checkpoints are filled
 - ✅ Basic animations work smoothly
 - ✅ Form editor allows setting checkpoint flags
@@ -603,6 +632,7 @@ export const SettingsSchema = z.object({
 ### Phase 2: TypeForm Mode Validation & Enhancement (Week 2)
 
 **Objectives:**
+
 - Validate existing TypeForm AI branching works correctly
 - Enhance error handling and user experience
 - Improve journey script authoring tools
@@ -610,6 +640,7 @@ export const SettingsSchema = z.object({
 **Tasks:**
 
 1. **Validate TypeForm AI Branching (Already Working) ✅**
+
 ```typescript
 // File: apps/formfiller/components/typeform/TypeFormView.tsx
 // Existing implementation already works with API
@@ -617,6 +648,7 @@ export const SettingsSchema = z.object({
 ```
 
 2. **Enhance Error Handling**
+
 ```typescript
 // File: apps/formfiller/components/typeform/TypeFormView.tsx
 // Add better fallback mechanisms
@@ -624,6 +656,7 @@ export const SettingsSchema = z.object({
 ```
 
 3. **Journey Script Editor Enhancement**
+
 ```typescript
 // File: apps/formcraft/.../FormJourneyStep.tsx
 // Add helpful templates and examples
@@ -631,6 +664,7 @@ export const SettingsSchema = z.object({
 ```
 
 **Success Criteria:**
+
 - ✅ TypeForm mode AI branching validated working end-to-end
 - ✅ Enhanced error handling and user feedback
 - ✅ Better journey script authoring experience
@@ -638,6 +672,7 @@ export const SettingsSchema = z.object({
 ### Phase 3: Classic Mode AI Integration (Week 3)
 
 **Objectives:**
+
 - Integrate AI branching with Classic Mode progressive reveal
 - Implement cross-page branching
 - Add advanced conditional logic with JSONata
@@ -645,6 +680,7 @@ export const SettingsSchema = z.object({
 **Tasks:**
 
 1. **Classic Mode AI Integration**
+
 ```typescript
 // File: apps/formfiller/components/classic/ClassicFormView.tsx
 // Add AI branching to progressive reveal
@@ -653,6 +689,7 @@ export const SettingsSchema = z.object({
 ```
 
 2. **JSONata Conditional Logic**
+
 ```typescript
 // File: apps/formfiller/lib/stores/useAppFormStore.ts
 // Implement real shouldShowQuestion logic
@@ -661,6 +698,7 @@ export const SettingsSchema = z.object({
 ```
 
 3. **Navigation History System**
+
 ```typescript
 // File: apps/formfiller/components/classic/ClassicFormView.tsx
 // Implement complete navigation state management
@@ -669,6 +707,7 @@ export const SettingsSchema = z.object({
 ```
 
 **Success Criteria:**
+
 - ✅ Classic Mode supports full AI branching
 - ✅ JSONata conditions work correctly
 - ✅ Navigation history preserves branching paths
@@ -676,6 +715,7 @@ export const SettingsSchema = z.object({
 ### Phase 4: Polish & Advanced Features (Week 4)
 
 **Objectives:**
+
 - Performance optimization for large forms
 - Advanced UX improvements
 - Comprehensive error handling
@@ -683,21 +723,25 @@ export const SettingsSchema = z.object({
 **Tasks:**
 
 1. **Performance Optimization**
+
 - Lazy loading for large question sets
 - Debounced conditional logic evaluation
 - Optimized re-rendering
 
 2. **Advanced UX Features**
+
 - Smart scrolling to revealed questions
 - Loading states and skeleton UI
 - Undo/redo for branching decisions
 
 3. **Error Handling & Fallbacks**
+
 - AI service failures
 - Invalid journey scripts
 - Network connectivity issues
 
 **Success Criteria:**
+
 - ✅ Large forms (50+ questions) perform smoothly
 - ✅ All error scenarios handled gracefully
 - ✅ UX feels polished and professional
@@ -709,57 +753,67 @@ export const SettingsSchema = z.object({
 ### 7.1 Unit Test Scenarios
 
 **Progressive Reveal Logic:**
+
 ```typescript
-describe('Progressive Reveal', () => {
-  it('should show questions up to first checkpoint', () => {
+describe("Progressive Reveal", () => {
+  it("should show questions up to first checkpoint", () => {
     const questions = [
-      { id: 'q1', mightBranchOffNext: false },
-      { id: 'q2', mightBranchOffNext: true },
-      { id: 'q3', mightBranchOffNext: false },
+      { id: "q1", mightBranchOffNext: false },
+      { id: "q2", mightBranchOffNext: true },
+      { id: "q3", mightBranchOffNext: false },
     ];
     const responses = {};
-    
-    const visible = getVisibleQuestionsForPage(questions, responses, initialState);
-    expect(visible.map(q => q.id)).toEqual(['q1', 'q2']);
+
+    const visible = getVisibleQuestionsForPage(
+      questions,
+      responses,
+      initialState,
+    );
+    expect(visible.map((q) => q.id)).toEqual(["q1", "q2"]);
   });
 
-  it('should reveal next question when checkpoint is filled', () => {
+  it("should reveal next question when checkpoint is filled", () => {
     const questions = [
-      { id: 'q1', mightBranchOffNext: false },
-      { id: 'q2', mightBranchOffNext: true },
-      { id: 'q3', mightBranchOffNext: false },
+      { id: "q1", mightBranchOffNext: false },
+      { id: "q2", mightBranchOffNext: true },
+      { id: "q3", mightBranchOffNext: false },
     ];
-    const responses = { q2: 'answered' };
-    
-    const visible = getVisibleQuestionsForPage(questions, responses, initialState);
-    expect(visible.map(q => q.id)).toEqual(['q1', 'q2', 'q3']);
+    const responses = { q2: "answered" };
+
+    const visible = getVisibleQuestionsForPage(
+      questions,
+      responses,
+      initialState,
+    );
+    expect(visible.map((q) => q.id)).toEqual(["q1", "q2", "q3"]);
   });
 });
 ```
 
 **JSONata Conditional Logic:**
+
 ```typescript
-describe('Conditional Logic', () => {
-  it('should evaluate simple conditions', () => {
+describe("Conditional Logic", () => {
+  it("should evaluate simple conditions", () => {
     const question = {
-      conditionalLogic: { jsonata: "employment_status = 'Employed'" }
+      conditionalLogic: { jsonata: "employment_status = 'Employed'" },
     };
-    const responses = { employment_status: 'Employed' };
-    
+    const responses = { employment_status: "Employed" };
+
     expect(evaluateConditionalLogic(question, responses)).toBe(true);
   });
 
-  it('should handle complex expressions', () => {
+  it("should handle complex expressions", () => {
     const question = {
-      conditionalLogic: { 
-        jsonata: "employment_status = 'Employed' and years_experience > 2" 
-      }
+      conditionalLogic: {
+        jsonata: "employment_status = 'Employed' and years_experience > 2",
+      },
     };
-    const responses = { 
-      employment_status: 'Employed', 
-      years_experience: 5 
+    const responses = {
+      employment_status: "Employed",
+      years_experience: 5,
     };
-    
+
     expect(evaluateConditionalLogic(question, responses)).toBe(true);
   });
 });
@@ -768,6 +822,7 @@ describe('Conditional Logic', () => {
 ### 7.2 Integration Test Plans
 
 **End-to-End Branching Flow:**
+
 1. Create form with branching checkpoint
 2. Fill out form up to checkpoint
 3. Verify API call to `/api/ai/branching`
@@ -775,6 +830,7 @@ describe('Conditional Logic', () => {
 5. Test backward navigation preserves state
 
 **Multi-Page Classic Mode:**
+
 1. Create 3-page form with cross-page branching
 2. Fill page 1, trigger branch to page 3
 3. Navigate back to page 1
@@ -784,6 +840,7 @@ describe('Conditional Logic', () => {
 ### 7.3 Performance Benchmarks
 
 **Target Metrics:**
+
 - Forms with 50+ questions: < 100ms to evaluate all conditions
 - Progressive reveal animation: 60fps smooth
 - API response time: < 500ms for branching decisions
@@ -792,6 +849,7 @@ describe('Conditional Logic', () => {
 ### 7.4 Edge Case Testing
 
 **Critical Edge Cases:**
+
 1. **Circular Dependencies**: Journey script creates infinite loop
 2. **Invalid AI Responses**: AI returns non-existent question ID
 3. **Network Failures**: API unavailable during branching
@@ -807,18 +865,19 @@ describe('Conditional Logic', () => {
 **Scenario**: AI branching API is unavailable or returns errors
 
 **Solution**:
+
 ```typescript
 const handleAIBranchingWithFallback = async (question: Question) => {
   try {
     const result = await callAIBranching(question);
     return result;
   } catch (error) {
-    console.warn('AI branching failed, using sequential fallback:', error);
-    
+    console.warn("AI branching failed, using sequential fallback:", error);
+
     // Fallback to sequential navigation
-    const currentIndex = questions.findIndex(q => q.id === question.id);
+    const currentIndex = questions.findIndex((q) => q.id === question.id);
     const nextQuestion = questions[currentIndex + 1];
-    
+
     return {
       nextQuestionId: nextQuestion?.id,
       usedFallback: true,
@@ -833,20 +892,21 @@ const handleAIBranchingWithFallback = async (question: Question) => {
 **Scenario**: User creates journey script with invalid references
 
 **Solution**:
+
 ```typescript
 const validateJourneyScript = (script: string, questions: Question[]) => {
-  const questionIds = new Set(questions.map(q => q.id));
+  const questionIds = new Set(questions.map((q) => q.id));
   const warnings: string[] = [];
-  
+
   // Extract question ID references from script
   const referencedIds = extractQuestionReferences(script);
-  
+
   for (const id of referencedIds) {
     if (!questionIds.has(id)) {
       warnings.push(`Journey script references non-existent question: ${id}`);
     }
   }
-  
+
   return {
     isValid: warnings.length === 0,
     warnings,
@@ -859,17 +919,20 @@ const validateJourneyScript = (script: string, questions: Question[]) => {
 **Scenario**: Journey script creates infinite branching loops
 
 **Solution**:
+
 ```typescript
 const detectCircularDependencies = (navigationHistory: string[]) => {
   const MAX_REVISITS = 3;
   const visitCounts = new Map<string, number>();
-  
+
   for (const questionId of navigationHistory) {
     const count = visitCounts.get(questionId) || 0;
     visitCounts.set(questionId, count + 1);
-    
+
     if (count >= MAX_REVISITS) {
-      throw new Error(`Circular dependency detected: ${questionId} visited ${count + 1} times`);
+      throw new Error(
+        `Circular dependency detected: ${questionId} visited ${count + 1} times`,
+      );
     }
   }
 };
@@ -882,30 +945,34 @@ const detectCircularDependencies = (navigationHistory: string[]) => {
 **Solutions**:
 
 1. **Debounced Evaluation**:
+
 ```typescript
 const debouncedEvaluateConditions = useMemo(
-  () => debounce((responses: Record<string, any>) => {
-    // Evaluate all conditional logic
-    evaluateAllConditions(responses);
-  }, 150),
-  []
+  () =>
+    debounce((responses: Record<string, any>) => {
+      // Evaluate all conditional logic
+      evaluateAllConditions(responses);
+    }, 150),
+  [],
 );
 ```
 
 2. **Lazy Loading**:
+
 ```typescript
 const useVirtualizedQuestions = (questions: Question[], pageSize = 10) => {
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: pageSize });
-  
+
   return questions.slice(visibleRange.start, visibleRange.end);
 };
 ```
 
 3. **Memoized Calculations**:
+
 ```typescript
 const visibleQuestions = useMemo(
   () => getVisibleQuestionsForPage(pageQuestions, responses, visibilityState),
-  [pageQuestions, responses, visibilityState]
+  [pageQuestions, responses, visibilityState],
 );
 ```
 
@@ -916,13 +983,14 @@ const visibleQuestions = useMemo(
 This comprehensive implementation plan provides everything needed to complete the AI branching and progressive reveal system. The phased approach ensures:
 
 1. **Foundation First**: Basic progressive reveal without AI complexity
-2. **API Completion**: Missing `/api/ai/branching` endpoint implementation  
+2. **API Completion**: Missing `/api/ai/branching` endpoint implementation
 3. **Full Integration**: AI branching with Classic Mode progressive reveal
 4. **Production Ready**: Performance optimization and error handling
 
 The system builds on the existing `mightBranchOffNext` foundation while adding the missing pieces for a complete, production-ready branching solution that works seamlessly across both TypeForm and Classic modes.
 
 **Key Benefits:**
+
 - ✅ **Backward Compatible**: Existing forms continue to work
 - ✅ **Mode Agnostic**: Works in both TypeForm and Classic modes
 - ✅ **Performance Optimized**: Handles large forms efficiently

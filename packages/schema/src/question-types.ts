@@ -13,7 +13,7 @@ export const TextQuestionSchema = z.object({
   name: z.literal("text"),
   format: z.enum([
     "text",
-    "textarea", 
+    "textarea",
     "email",
     "url",
     "tel",
@@ -31,16 +31,18 @@ export const ChoiceQuestionSchema = z.object({
 
 export const RatingQuestionSchema = z.object({
   name: z.literal("rating"),
-  config: z.object({
-    min: z.number().int().default(1),
-    max: z.number().int().positive(),
-    step: z.number().int().positive().default(1),
-    minLabel: z.string().optional(),
-    maxLabel: z.string().optional(),
-  }).refine((data) => data.max > data.min, {
-    message: "Rating 'max' must be greater than 'min'.",
-    path: ["max"],
-  }),
+  config: z
+    .object({
+      min: z.number().int().default(1),
+      max: z.number().int().positive(),
+      step: z.number().int().positive().default(1),
+      minLabel: z.string().optional(),
+      maxLabel: z.string().optional(),
+    })
+    .refine((data) => data.max > data.min, {
+      message: "Rating 'max' must be greater than 'min'.",
+      path: ["max"],
+    }),
 });
 
 export const DateQuestionSchema = z.object({
@@ -63,16 +65,18 @@ export const AddressQuestionSchema = z.object({
 
 export const LinearScaleQuestionSchema = z.object({
   name: z.literal("linearScale"),
-  config: z.object({
-    start: z.number().int(),
-    end: z.number().int(),
-    step: z.number().int().positive().default(1),
-    startLabel: z.string().optional(),
-    endLabel: z.string().optional(),
-  }).refine((data) => data.end > data.start, {
-    message: "Linear scale 'end' must be greater than 'start'.",
-    path: ["end"],
-  }),
+  config: z
+    .object({
+      start: z.number().int(),
+      end: z.number().int(),
+      step: z.number().int().positive().default(1),
+      startLabel: z.string().optional(),
+      endLabel: z.string().optional(),
+    })
+    .refine((data) => data.end > data.start, {
+      message: "Linear scale 'end' must be greater than 'start'.",
+      path: ["end"],
+    }),
 });
 
 export const LikertScaleQuestionSchema = z.object({

@@ -66,7 +66,7 @@ export function UnifiedRating({
           className={cn(
             "text-2xl font-semibold transition-all duration-200",
             isActive ? "text-primary" : "text-muted-foreground/50",
-            isHovered && !isActive && "text-primary/70"
+            isHovered && !isActive && "text-primary/70",
           )}
         >
           {index + 1}
@@ -105,7 +105,7 @@ export function UnifiedRating({
     // UNIFIED BEHAVIOR: Same color logic for both modes
     const colorClasses = cn(
       isActive ? "text-primary" : "text-muted-foreground/50",
-      isHovered && !isActive && "text-primary/70"
+      isHovered && !isActive && "text-primary/70",
     );
 
     const svgProps = {
@@ -217,7 +217,7 @@ export function UnifiedRating({
       <div
         className={cn(
           "flex items-center justify-start",
-          isMobile ? "gap-2" : "gap-3"
+          isMobile ? "gap-2" : "gap-3",
         )}
       >
         {Array.from({ length: max }, (_, index) => (
@@ -234,7 +234,7 @@ export function UnifiedRating({
                 index + 1 <= base.hoveredValue &&
                 "hover",
               base.value === index + 1 && "selected",
-              "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
             )}
             onClick={() => handleRatingSelect(index + 1)}
             onMouseEnter={() => base.setHoveredValue(index + 1)}

@@ -3,7 +3,6 @@ import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import type { QuestionResponse } from "@/lib/types";
 import { Question } from "@formlink/schema";
 
 // Initialize OpenRouter provider
@@ -64,32 +63,33 @@ And user answered employment_status = "Fresher", you should return:
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    
+
     // Validate request
     const validationResult = BranchingRequestSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
-        { 
+        {
           error: "Invalid request format",
-          details: validationResult.error.errors 
+          details: validationResult.error.errors,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const { journeyScript, answerHistory, questions, currentQuestionId } = validationResult.data;
+    const { journeyScript, answerHistory, questions, currentQuestionId } =
+      validationResult.data;
 
     // Extract question IDs for validation
     const validQuestionIds = questions.map((q: Question) => q.id);
 
-    // Build context for AI
-    const context = {
-      journeyScript,
-      answerHistory,
-      validQuestionIds,
-      currentQuestionId,
-      questionsCount: questions.length,
-    };
+    // Build context for AI (commented out to avoid unused variable warning)
+    // const context = {
+    //   journeyScript,
+    //   answerHistory,
+    //   validQuestionIds,
+    //   currentQuestionId,
+    //   questionsCount: questions.length,
+    // };
 
     // Generate AI response
     const { text: aiResponse } = await generateText({
@@ -105,7 +105,7 @@ USER ANSWER HISTORY:
 ${JSON.stringify(answerHistory, null, 2)}
 
 VALID QUESTION IDS:
-${validQuestionIds.join(', ')}
+${validQuestionIds.join(", ")}
 
 INSTRUCTIONS:
 Based on the branching logic in the journey script and the user's answer history, determine the next question ID to show. The user just completed question "${currentQuestionId}".
@@ -122,7 +122,11 @@ Return your response as valid JSON with the format:
     } catch {
       // Fallback: try to extract question ID from text
       const questionIdMatch = aiResponse.match(/["']([^"']+)["']/);
-      if (questionIdMatch && questionIdMatch[1] && validQuestionIds.includes(questionIdMatch[1])) {
+      if (
+        questionIdMatch &&
+        questionIdMatch[1] &&
+        validQuestionIds.includes(questionIdMatch[1])
+      ) {
         branchingDecision = { nextQuestionId: questionIdMatch[1] };
       } else {
         throw new Error("Could not parse AI response");
@@ -130,11 +134,12 @@ Return your response as valid JSON with the format:
     }
 
     // Validate AI response
-    const responseValidation = BranchingResponseSchema.safeParse(branchingDecision);
+    const responseValidation =
+      BranchingResponseSchema.safeParse(branchingDecision);
     if (!responseValidation.success) {
       return NextResponse.json(
         { error: "AI returned invalid response format" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -143,12 +148,12 @@ Return your response as valid JSON with the format:
     // Validate question ID exists
     if (!validQuestionIds.includes(nextQuestionId)) {
       return NextResponse.json(
-        { 
+        {
           error: "AI returned invalid question ID",
           invalidId: nextQuestionId,
-          validIds: validQuestionIds 
+          validIds: validQuestionIds,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -158,16 +163,15 @@ Return your response as valid JSON with the format:
       reasoning,
       success: true,
     });
-
   } catch (error) {
     console.error("Branching API error:", error);
-    
+
     return NextResponse.json(
-      { 
+      {
         error: "Internal server error",
-        message: error instanceof Error ? error.message : "Unknown error"
+        message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

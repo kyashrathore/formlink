@@ -413,9 +413,7 @@ function validateMinorUpdate(
       if (currentQuestions[i]?.id !== updatedQuestions[i]?.id) {
         return "Reordering questions is not allowed on a published form."
       }
-      if (
-        currentQuestions[i]?.type?.name !== updatedQuestions[i]?.type?.name
-      ) {
+      if (currentQuestions[i]?.type?.name !== updatedQuestions[i]?.type?.name) {
         return `Changing the type of question '${currentQuestions[i]?.title}' is not allowed.`
       }
     }

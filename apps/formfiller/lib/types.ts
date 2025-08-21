@@ -1,4 +1,15 @@
-import { AddressData, Form, Question, isRatingQuestion, isLinearScaleQuestion, isChoiceQuestion, isRankingQuestion, getRatingConfig, getLinearScaleConfig, getOptions } from "@formlink/schema";
+import {
+  AddressData,
+  Form,
+  Question,
+  isRatingQuestion,
+  isLinearScaleQuestion,
+  isChoiceQuestion,
+  isRankingQuestion,
+  getRatingConfig,
+  getLinearScaleConfig,
+  getOptions,
+} from "@formlink/schema";
 
 /**
  * Type definitions for FormFiller app
@@ -305,7 +316,10 @@ export interface AppFormActions {
 /**
  * Safe helper functions for question type access
  */
-export function safeGetRatingConfig(question: Question): { max: number; min: number } {
+export function safeGetRatingConfig(question: Question): {
+  max: number;
+  min: number;
+} {
   if (isRatingQuestion(question)) {
     const config = getRatingConfig(question);
     return { max: config.max, min: config.min || 1 };
@@ -313,7 +327,10 @@ export function safeGetRatingConfig(question: Question): { max: number; min: num
   return { max: 5, min: 1 }; // fallback
 }
 
-export function safeGetLinearScaleConfig(question: Question): { start: number; end: number } {
+export function safeGetLinearScaleConfig(question: Question): {
+  start: number;
+  end: number;
+} {
   if (isLinearScaleQuestion(question)) {
     const config = getLinearScaleConfig(question);
     return { start: config.start, end: config.end };
@@ -321,7 +338,9 @@ export function safeGetLinearScaleConfig(question: Question): { start: number; e
   return { start: 1, end: 5 }; // fallback
 }
 
-export function safeGetOptions(question: Question): Array<{ value: string; label: string }> {
+export function safeGetOptions(
+  question: Question,
+): Array<{ value: string; label: string }> {
   if (isChoiceQuestion(question) || isRankingQuestion(question)) {
     return getOptions(question);
   }

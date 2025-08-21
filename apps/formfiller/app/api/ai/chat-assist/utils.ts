@@ -206,7 +206,10 @@ export class FormValidator {
     }
 
     // Type-specific validation
-    const validatorKey = question.type.name === "text" ? (question.type as any).format || "text" : question.type.name;
+    const validatorKey =
+      question.type.name === "text"
+        ? (question.type as any).format || "text"
+        : question.type.name;
     const validator = this.validators[validatorKey];
 
     if (validator) {
@@ -286,7 +289,10 @@ export class FormValidator {
 
     // Validate all selections are valid options
     // Access options from the new type structure
-    const choiceType = question.type as { name: "multipleChoice"; options: Array<{ value: string; label: string }> };
+    const choiceType = question.type as {
+      name: "multipleChoice";
+      options: Array<{ value: string; label: string }>;
+    };
     const validOptions = choiceType.options?.map((opt) => opt.value) || [];
     const invalidSelections = input.filter(
       (val) => !validOptions.includes(val),
@@ -327,7 +333,10 @@ export class FormValidator {
 
     // Check if all options are ranked
     // Access options from the new type structure
-    const rankingType = question.type as { name: "ranking"; options: Array<{ value: string; label: string }> };
+    const rankingType = question.type as {
+      name: "ranking";
+      options: Array<{ value: string; label: string }>;
+    };
     const expectedOptions = rankingType.options?.map((opt) => opt.value) || [];
     if (input.length !== expectedOptions.length) {
       return { isValid: false, error: "Please rank all options" };

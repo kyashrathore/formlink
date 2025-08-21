@@ -27,11 +27,12 @@ export const OptionsSection: React.FC<OptionsSectionProps> = ({
   const shouldShow =
     (question.type.name === "singleChoice" ||
       question.type.name === "multipleChoice") &&
-    'options' in question.type && question.type.options !== undefined
+    "options" in question.type &&
+    question.type.options !== undefined
 
   if (!shouldShow) return null
 
-  const options = 'options' in question.type ? question.type.options : []
+  const options = "options" in question.type ? question.type.options : []
   const hasOptions = options && options.length > 0
 
   return (

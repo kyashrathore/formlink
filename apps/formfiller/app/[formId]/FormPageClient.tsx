@@ -6,7 +6,7 @@ import { FormModeProvider, useFormMode } from "@/contexts/FormModeContext";
 import { useThemeLoader } from "@/hooks/useThemeLoader";
 import { useAppFormStore } from "@/lib/stores/useAppFormStore";
 import type { QueryDataForForm, QuestionResponse } from "@/lib/types";
-import { Form, Question } from "@formlink/schema";
+import { Form } from "@formlink/schema";
 import React from "react";
 
 interface FormPageContentProps {
@@ -45,8 +45,7 @@ function FormPageContent({
     formSchema.id,
   ]);
 
-  // Use schema questions directly - no conversion needed
-  const questions = formSchema.questions;
+  // Questions are available directly from formSchema.questions
 
   // Business logic from app store
   const {

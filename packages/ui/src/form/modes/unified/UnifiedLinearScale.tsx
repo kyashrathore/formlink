@@ -32,7 +32,7 @@ export function UnifiedLinearScale({
   showKeyboardHints,
 }: UnifiedLinearScaleProps) {
   const isMobile = useIsMobile();
-  
+
   // Set default showKeyboardHints based on mode - hide on mobile
   const shouldShowKeyboardHints =
     showKeyboardHints ?? (mode === "typeform" ? !isMobile : false);
@@ -104,10 +104,10 @@ export function UnifiedLinearScale({
   const innerContainerClass =
     mode === "chat" ? "flex flex-col gap-4" : "flex flex-col gap-6";
   const buttonsContainerClass =
-    mode === "chat" 
-      ? "flex gap-2 justify-center" 
-      : isMobile 
-        ? "flex gap-1 justify-start flex-wrap" 
+    mode === "chat"
+      ? "flex gap-2 justify-center"
+      : isMobile
+        ? "flex gap-1 justify-start flex-wrap"
         : "flex gap-3 justify-start";
   const buttonClass =
     mode === "chat"

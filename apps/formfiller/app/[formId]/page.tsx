@@ -7,25 +7,36 @@ import { notFound } from "next/navigation";
 // Transform legacy string-based question types to new discriminated union format
 function transformLegacyQuestionType(legacyQuestion: any): any {
   const { type, questionType, ...rest } = legacyQuestion;
-  
+
   // Use questionType if it exists, otherwise fallback to type
   const legacyTypeValue = questionType || type;
-  
+
   // If type is already an object, return as-is
   if (typeof legacyTypeValue === "object" && legacyTypeValue !== null) {
     return { ...rest, type: legacyTypeValue };
   }
-  
+
   // Transform string-based types to discriminated union format
   let newType: any;
-  
+
   switch (legacyTypeValue) {
     case "text":
       // For text questions, check if there's a display.inputType to use as format
       const inputType = legacyQuestion.display?.inputType;
-      const format = inputType && ["text", "email", "url", "tel", "number", "password", "country", "textarea"].includes(inputType) 
-        ? inputType 
-        : "text";
+      const format =
+        inputType &&
+        [
+          "text",
+          "email",
+          "url",
+          "tel",
+          "number",
+          "password",
+          "country",
+          "textarea",
+        ].includes(inputType)
+          ? inputType
+          : "text";
       newType = { name: "text", format };
       break;
     case "email":
@@ -40,23 +51,35 @@ function transformLegacyQuestionType(legacyQuestion: any): any {
       newType = { name: "text", format: "textarea" };
       break;
     case "singleChoice":
-      const singleChoiceDisplay = legacyQuestion.display?.inputType === "dropdown" ? "dropdown" : "radio";
-      newType = { name: "singleChoice", display: singleChoiceDisplay, options: legacyQuestion.options || [] };
+      const singleChoiceDisplay =
+        legacyQuestion.display?.inputType === "dropdown" ? "dropdown" : "radio";
+      newType = {
+        name: "singleChoice",
+        display: singleChoiceDisplay,
+        options: legacyQuestion.options || [],
+      };
       break;
     case "multipleChoice":
-      const multipleChoiceDisplay = legacyQuestion.display?.inputType === "multiSelectDropdown" ? "multiSelectDropdown" : "checkbox";
-      newType = { name: "multipleChoice", display: multipleChoiceDisplay, options: legacyQuestion.options || [] };
+      const multipleChoiceDisplay =
+        legacyQuestion.display?.inputType === "multiSelectDropdown"
+          ? "multiSelectDropdown"
+          : "checkbox";
+      newType = {
+        name: "multipleChoice",
+        display: multipleChoiceDisplay,
+        options: legacyQuestion.options || [],
+      };
       break;
     case "rating":
-      newType = { 
-        name: "rating", 
+      newType = {
+        name: "rating",
         config: {
           min: legacyQuestion.min || 1,
           max: legacyQuestion.max || 5,
           step: legacyQuestion.step || 1,
           minLabel: legacyQuestion.minLabel,
-          maxLabel: legacyQuestion.maxLabel
-        }
+          maxLabel: legacyQuestion.maxLabel,
+        },
       };
       break;
     case "date":
@@ -75,21 +98,21 @@ function transformLegacyQuestionType(legacyQuestion: any): any {
       newType = { name: "address" };
       break;
     case "linearScale":
-      newType = { 
-        name: "linearScale", 
+      newType = {
+        name: "linearScale",
         config: {
           start: legacyQuestion.start || 0,
           end: legacyQuestion.end || 10,
           step: legacyQuestion.step || 1,
           startLabel: legacyQuestion.startLabel,
-          endLabel: legacyQuestion.endLabel
-        }
+          endLabel: legacyQuestion.endLabel,
+        },
       };
       break;
     case "likertScale":
-      newType = { 
-        name: "likertScale", 
-        options: legacyQuestion.options || []
+      newType = {
+        name: "likertScale",
+        options: legacyQuestion.options || [],
       };
       break;
     default:
@@ -97,12 +120,12 @@ function transformLegacyQuestionType(legacyQuestion: any): any {
       newType = { name: "text", format: "text" };
       break;
   }
-  
+
   return {
     ...rest,
     type: newType,
     // Ensure required fields exist
-    submissionBehavior: legacyQuestion.submissionBehavior || "manualAnswer"
+    submissionBehavior: legacyQuestion.submissionBehavior || "manualAnswer",
   };
 }
 
@@ -179,10 +202,10 @@ async function getFormSchemaById(
     const rawQuestions = Array.isArray(versionData.questions)
       ? versionData.questions
       : [];
-    
+
     // Transform legacy questions to new schema format
     const transformedQuestions = rawQuestions.map(transformLegacyQuestionType);
-    
+
     const formSchemaResult = {
       id: formData.id,
       short_id: formIdOrShortId,
@@ -205,7 +228,10 @@ async function getFormSchemaById(
         `Server Schema Validation Error for form ${formData.id} (version ${versionData.version_id}):`,
         JSON.stringify(validationResult.error.errors, null, 2),
       );
-      console.error("Form data being validated:", JSON.stringify(formSchemaResult, null, 2));
+      console.error(
+        "Form data being validated:",
+        JSON.stringify(formSchemaResult, null, 2),
+      );
 
       return null;
     }

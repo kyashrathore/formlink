@@ -109,12 +109,12 @@ New capabilities added:
   * Set categories to auto-detect
   * Define scoring rules
   * Configure insight generation
-  
+
 - Visualization Settings:
   * Choose chart types
   * Set dashboard layout
   * Configure real-time updates
-  
+
 - Public Page Settings:
   * Enable public sharing (yes/no)
   * Set custom URL
@@ -136,7 +136,7 @@ Form Relationships:
   * Customer journey (forms in sequence)
   * Progressive profile (building data over time)
   * Workflow steps (process stages)
-  
+
 Cross-Form Analysis:
 - Combine data from multiple forms
 - Generate insights across forms
@@ -201,7 +201,7 @@ When user says: "Score responses based on field X, show table sorted by score"
 
 Step 1: AI analyzes what's needed
 - Data requirement: Scoring system for form responses
-- UI requirement: Sortable table to display results  
+- UI requirement: Sortable table to display results
 - API requirement: Endpoint to serve scored data
 
 Step 2: AI generates the pieces
@@ -212,7 +212,7 @@ Step 2: AI generates the pieces
 
 Step 3: User gets complete solution
 - Working web page with scored data table
-- Real-time updates when new responses come in  
+- Real-time updates when new responses come in
 - Public URL they can share
 - Custom branding and styling
 ```

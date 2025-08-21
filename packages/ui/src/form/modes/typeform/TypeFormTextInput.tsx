@@ -96,7 +96,6 @@ export function TypeFormTextInput({
           {base.errors[0]?.message}
         </p>
       )}
-
     </motion.div>
   );
 }

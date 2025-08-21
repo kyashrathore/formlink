@@ -67,10 +67,9 @@ export const CreateFormAgentSchema = z.object({
 
 const AddQuestionActionSchema = z.object({
   action: z.literal("add"),
-  questionData: QuestionSchema
-    .describe(
-      "Complete data for the new question, conforming to QuestionSchema. The AI should generate all necessary fields."
-    ),
+  questionData: QuestionSchema.describe(
+    "Complete data for the new question, conforming to QuestionSchema. The AI should generate all necessary fields."
+  ),
 })
 
 const UpdateQuestionActionSchema = z.object({

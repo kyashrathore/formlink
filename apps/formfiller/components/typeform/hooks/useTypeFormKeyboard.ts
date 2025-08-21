@@ -2,7 +2,12 @@
 
 import { useTypeFormDropdown } from "@formlink/ui";
 import { useCallback, useEffect } from "react";
-import { UseTypeFormKeyboardProps, safeGetRatingConfig, safeGetLinearScaleConfig, safeGetOptions } from "../../../lib/types";
+import {
+  UseTypeFormKeyboardProps,
+  safeGetRatingConfig,
+  safeGetLinearScaleConfig,
+  safeGetOptions,
+} from "../../../lib/types";
 import { getQuestionTypeName } from "@formlink/schema";
 
 // UseTypeFormKeyboardProps is now imported from types.ts
@@ -24,12 +29,20 @@ export function useTypeFormKeyboard({
       if (currentQuestion.type.name === "rating") {
         const config = safeGetRatingConfig(currentQuestion);
         if (num >= config.min && num <= config.max) {
-          onAnswer(currentQuestion.id, num, getQuestionTypeName(currentQuestion));
+          onAnswer(
+            currentQuestion.id,
+            num,
+            getQuestionTypeName(currentQuestion),
+          );
         }
       } else if (currentQuestion.type.name === "linearScale") {
         const config = safeGetLinearScaleConfig(currentQuestion);
         if (num >= config.start && num <= config.end) {
-          onAnswer(currentQuestion.id, num, getQuestionTypeName(currentQuestion));
+          onAnswer(
+            currentQuestion.id,
+            num,
+            getQuestionTypeName(currentQuestion),
+          );
         }
       }
     },
@@ -76,7 +89,11 @@ export function useTypeFormKeyboard({
             ? currentArray.filter((v) => v !== selectedOption.value)
             : [...currentArray, selectedOption.value];
 
-          onAnswer(currentQuestion.id, newValue, getQuestionTypeName(currentQuestion));
+          onAnswer(
+            currentQuestion.id,
+            newValue,
+            getQuestionTypeName(currentQuestion),
+          );
         }
       }
     },
