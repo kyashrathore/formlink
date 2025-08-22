@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 interface FormPreviewProps {
   form: Form
   className?: string
-  formMode?: "chat" | "typeform"
+  formMode?: "chat" | "typeform" | "classic"
   shadcnCSSData?: {
     cssText: string
     version: number
@@ -39,7 +39,7 @@ interface FormUpdateMessage {
 interface FormModeUpdateMessage {
   type: "FORMCRAFT_MODE_UPDATE"
   payload: {
-    formMode: "chat" | "typeform"
+    formMode: "chat" | "typeform" | "classic"
     timestamp: number
   }
 }
@@ -127,7 +127,7 @@ export default function FormPreview({
   )
 
   const sendFormModeUpdate = useCallback(
-    (mode: "chat" | "typeform") => {
+    (mode: "chat" | "typeform" | "classic") => {
       if (!iframeRef.current?.contentWindow || !isReadyRef.current) {
         return
       }

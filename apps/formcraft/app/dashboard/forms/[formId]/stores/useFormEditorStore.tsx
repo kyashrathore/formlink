@@ -82,6 +82,7 @@ interface FormEditorActions {
 }
 
 export const getDefaultSettings = (): Settings => ({
+  defaultMode: "ai",
   redirectOnSubmissionUrl: "",
   creatorMailAddressOnSubmission: "",
   submissionNotificationEmail: "",

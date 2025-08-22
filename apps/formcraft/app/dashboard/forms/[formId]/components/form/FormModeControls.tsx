@@ -2,7 +2,7 @@
 
 import { ToggleGroup, ToggleGroupItem } from "@formlink/ui"
 
-export type FormMode = "chat" | "typeform"
+export type FormMode = "chat" | "typeform" | "classic"
 
 interface FormModeControlsProps {
   formMode: FormMode
@@ -20,6 +20,11 @@ const formModeOptions = [
     mode: "typeform" as const,
     label: "Typeform",
     description: "Traditional form layout",
+  },
+  {
+    mode: "classic" as const,
+    label: "Classic",
+    description: "Multi-step form with grid layout",
   },
 ]
 

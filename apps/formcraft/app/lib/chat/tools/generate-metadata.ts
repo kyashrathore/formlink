@@ -3,6 +3,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
 import { z } from "zod"
 import { ENHANCED_METADATA_PROMPT } from "../../prompts"
+import { getDefaultSettings } from "../../settings-defaults"
 import { createAgentEvent } from "../../types/agent-events"
 
 const QuestionTypeEnumSchema = z.enum([
@@ -143,7 +144,7 @@ export async function generateMetadata(
             title: aiResponseData.title,
             description: aiResponseData.description,
             questions: [],
-            settings: {},
+            settings: getDefaultSettings(),
             current_draft_version_id: null,
             current_published_version_id: null,
             short_id: undefined,
@@ -185,7 +186,10 @@ export async function generateMetadata(
             title: aiResponseData.title,
             description: aiResponseData.description,
             questions: [],
-            settings: { journeyScript: aiResponseData.journeyScript },
+            settings: {
+              ...getDefaultSettings(),
+              journeyScript: aiResponseData.journeyScript,
+            },
             current_draft_version_id: null,
             current_published_version_id: null,
             short_id: undefined,

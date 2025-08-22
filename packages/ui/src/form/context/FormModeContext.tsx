@@ -2,13 +2,14 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 
-export type FormMode = "chat" | "typeform";
+export type FormMode = "chat" | "typeform" | "classic";
 
 interface FormModeContextValue {
   mode: FormMode;
   setMode: (mode: FormMode) => void;
   isChatMode: boolean;
   isTypeFormMode: boolean;
+  isClassicMode: boolean;
 }
 
 const FormModeContext = createContext<FormModeContextValue | undefined>(
@@ -39,6 +40,7 @@ export function FormModeProvider({
     // 1. Check URL params first (highest priority)
     if (urlSearchParams?.mode === "typeform") return "typeform";
     if (urlSearchParams?.mode === "chat") return "chat";
+    if (urlSearchParams?.mode === "classic") return "classic";
 
     // Legacy param support: aimode=false means typeform, otherwise chat
     if (urlSearchParams?.aimode === "false") return "typeform";
@@ -63,6 +65,8 @@ export function FormModeProvider({
       setMode("typeform");
     } else if (urlSearchParams.mode === "chat") {
       setMode("chat");
+    } else if (urlSearchParams.mode === "classic") {
+      setMode("classic");
     } else if (urlSearchParams.aimode === "false") {
       setMode("typeform");
     } else if (urlSearchParams.aimode === "true") {
@@ -75,6 +79,7 @@ export function FormModeProvider({
     setMode,
     isChatMode: mode === "chat",
     isTypeFormMode: mode === "typeform",
+    isClassicMode: mode === "classic",
   };
 
   return (
@@ -99,6 +104,7 @@ export function useFormMode() {
       setMode: () => console.warn("setMode called on corrupted context"),
       isChatMode: true,
       isTypeFormMode: false,
+      isClassicMode: false,
     };
   }
 

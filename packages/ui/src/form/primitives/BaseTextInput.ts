@@ -168,9 +168,33 @@ export function BaseTextInput(props: BaseTextInputProps): BaseTextInputReturn {
 
   const handleChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
-      onChange(event.target.value);
+      let val = event.target.value;
+
+      // Special handling for number type
+      if (type === "number") {
+        // Only allow numeric characters, optional decimal point, and optional minus sign
+        const sanitized = val.replace(/[^0-9.-]/g, "");
+
+        // Ensure only one decimal point
+        const parts = sanitized.split(".");
+        const formatted =
+          parts.length > 2
+            ? parts[0] + "." + parts.slice(1).join("")
+            : sanitized;
+
+        // Ensure minus sign is only at the beginning
+        const minusCount = (formatted.match(/-/g) || []).length;
+        val =
+          minusCount > 1
+            ? formatted.replace(/-/g, "").replace(/^/, "-")
+            : minusCount === 1 && !formatted.startsWith("-")
+              ? formatted.replace(/-/g, "")
+              : formatted;
+      }
+
+      onChange(val);
     },
-    [onChange],
+    [onChange, type],
   );
 
   const handleBlur = useCallback(() => {
@@ -187,12 +211,71 @@ export function BaseTextInput(props: BaseTextInputProps): BaseTextInputReturn {
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
+      // Handle Enter key for submission
       if (event.key === "Enter" && autoSubmitOnChange && onSubmit) {
         event.preventDefault();
         onSubmit();
+        return;
+      }
+
+      // Special handling for number type
+      if (type === "number") {
+        // Allow backspace, delete, tab, escape, enter, arrows
+        const allowedKeys = [
+          "Backspace",
+          "Delete",
+          "Tab",
+          "Escape",
+          "Enter",
+          "ArrowLeft",
+          "ArrowRight",
+          "ArrowUp",
+          "ArrowDown",
+          "Home",
+          "End",
+        ];
+        if (allowedKeys.includes(event.key)) {
+          return;
+        }
+
+        // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        if (
+          (event.key === "a" ||
+            event.key === "c" ||
+            event.key === "v" ||
+            event.key === "x") &&
+          (event.ctrlKey || event.metaKey)
+        ) {
+          return;
+        }
+
+        const currentValue = (event.target as HTMLInputElement).value;
+        const selectionStart =
+          (event.target as HTMLInputElement).selectionStart || 0;
+
+        // Allow minus only at the beginning
+        if (event.key === "-") {
+          if (selectionStart !== 0 || currentValue.includes("-")) {
+            event.preventDefault();
+          }
+          return;
+        }
+
+        // Allow only one decimal point
+        if (event.key === ".") {
+          if (currentValue.includes(".")) {
+            event.preventDefault();
+          }
+          return;
+        }
+
+        // Only allow numeric keys
+        if (!/^[0-9]$/.test(event.key)) {
+          event.preventDefault();
+        }
       }
     },
-    [autoSubmitOnChange, onSubmit],
+    [autoSubmitOnChange, onSubmit, type],
   );
 
   const clear = useCallback(() => {
@@ -216,7 +299,9 @@ export function BaseTextInput(props: BaseTextInputProps): BaseTextInputReturn {
     ref: inputRef,
     id,
     name,
-    type,
+    type: type === "number" ? "text" : type, // Use text type for number to control input better
+    inputMode: type === "number" ? "numeric" : undefined, // Show numeric keyboard on mobile
+    pattern: type === "number" ? "[0-9.-]*" : pattern, // Pattern for mobile browsers
     value,
     onChange: handleChange,
     onBlur: handleBlur,
@@ -227,7 +312,6 @@ export function BaseTextInput(props: BaseTextInputProps): BaseTextInputReturn {
     placeholder,
     maxLength,
     minLength,
-    pattern,
     "aria-label": ariaLabel,
     "aria-describedby": ariaDescribedBy,
     "aria-invalid": errors.length > 0,

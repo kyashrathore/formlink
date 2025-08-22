@@ -1,24 +1,23 @@
 "use client";
 
-import React from "react";
+import {
+  Question,
+  getLinearScaleConfig,
+  getOptions,
+  getQuestionTypeName,
+  getRatingConfig,
+  getTextFormat,
+  isChoiceQuestion,
+  isFileUploadQuestion,
+  isLinearScaleQuestion,
+  isRankingQuestion,
+  isRatingQuestion,
+  isTextQuestion,
+} from "@formlink/schema";
 import { UIResponseValue } from "../types/generic";
 import { useFormMode } from "./context/FormModeContext";
 import { UnifiedFormInput } from "./modes/unified/UnifiedFormInput";
 import { FormInputType } from "./registry";
-import {
-  Question,
-  isTextQuestion,
-  isChoiceQuestion,
-  isRankingQuestion,
-  isRatingQuestion,
-  isLinearScaleQuestion,
-  isFileUploadQuestion,
-  getQuestionTypeName,
-  getTextFormat,
-  getOptions,
-  getRatingConfig,
-  getLinearScaleConfig,
-} from "@formlink/schema";
 
 interface InputContainerProps {
   currentQuestion: Question;
@@ -32,6 +31,9 @@ interface InputContainerProps {
   isUploading?: boolean;
   onNext?: () => void;
   questionNumber?: number;
+  onValidationChange?: (
+    errors: Array<{ type: string; message: string }>,
+  ) => void;
 }
 
 // Map Question schema to UnifiedFormInput props
@@ -40,6 +42,9 @@ function mapQuestionToUnifiedProps(
   currentResponse: UIResponseValue,
   handleSelect: (questionId: string, value: UIResponseValue) => void,
   onNext?: () => void,
+  onValidationChange?: (
+    errors: Array<{ type: string; message: string }>,
+  ) => void,
 ) {
   const questionType = getQuestionTypeName(question);
 
@@ -88,6 +93,14 @@ function mapQuestionToUnifiedProps(
       type = "text";
   }
 
+  // Defensive: never treat plain text format as number
+  if (questionType === "text") {
+    const rawFormat = (question as any)?.type?.format;
+    if (rawFormat !== "number" && type === "number") {
+      type = "text";
+    }
+  }
+
   // Convert currentResponse to appropriate format and handle null values
   let value = currentResponse;
   if (
@@ -105,7 +118,8 @@ function mapQuestionToUnifiedProps(
       type === "url" ||
       type === "tel" ||
       type === "password" ||
-      type === "textarea") &&
+      type === "textarea" ||
+      type === "number") &&
     value === null
   ) {
     value = "";
@@ -143,18 +157,24 @@ function mapQuestionToUnifiedProps(
   const baseProps = {
     type,
     value,
-    onChange: (newValue: UIResponseValue) => {
+    onChange: (newValue: unknown) => {
+      const castValue = newValue as UIResponseValue;
       // Ranking values need to be stringified back to JSON
       if (type === "ranking") {
-        handleSelect(question.id, JSON.stringify(newValue));
+        handleSelect(question.id, JSON.stringify(castValue));
       } else {
-        handleSelect(question.id, newValue);
+        handleSelect(question.id, castValue);
       }
     },
     onSubmit: onNext as (() => void) | undefined,
     disabled: false,
     required: Boolean(question.validations?.required),
     placeholder: (question as any).placeholder,
+    // Wire validation constraints through to primitives
+    minLength: (question as any).validations?.minLength?.value,
+    maxLength: (question as any).validations?.maxLength?.value,
+    pattern: (question as any).validations?.pattern?.value,
+    onValidationChange: onValidationChange,
   };
 
   // Type-specific props
@@ -218,6 +238,7 @@ export function InputContainer(props: InputContainerProps) {
     currentResponse,
     handleSelect,
     onNext,
+    props.onValidationChange,
   );
   const { handleFileUpload, uploadedFile, onFileSelect, isUploading } = props;
 

@@ -1,16 +1,16 @@
 "use client";
 
-import React, { useCallback, useState, useEffect } from "react";
+import { ArrowRight, File, X } from "lucide-react";
 import { motion } from "motion/react";
-import { BaseFileUpload, FileInfo } from "../../primitives/BaseFileUpload";
+import { useCallback, useEffect, useState } from "react";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
-import { X, File, ArrowRight } from "lucide-react";
 import {
   Dropzone,
   DropzoneContent,
   DropzoneEmptyState,
 } from "../../../ui/kibo-ui/dropzone";
+import { BaseFileUpload, FileInfo } from "../../primitives/BaseFileUpload";
 
 export type FormMode = "chat" | "typeform";
 
@@ -341,22 +341,7 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
               </Button>
             </div>
 
-            {onSubmit && !isUploading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3, delay: 0.2 }}
-              >
-                <Button
-                  onClick={onSubmit}
-                  disabled={disabled}
-                  className="w-full"
-                  size="lg"
-                >
-                  Continue
-                </Button>
-              </motion.div>
-            )}
+            {/* Remove duplicate Continue button in TypeForm mode - parent handles navigation */}
           </motion.div>
         )}
 
@@ -509,7 +494,7 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
             </div>
           ))}
 
-          {onSubmit && !isUploading && (
+          {mode === "chat" && onSubmit && !isUploading && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

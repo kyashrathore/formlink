@@ -9,6 +9,7 @@
 import logger from "@/app/lib/logger"
 import { Form } from "@formlink/schema"
 import { QUESTION_SCHEMA_PROMPT } from "../../prompts"
+import { getDefaultSettings } from "../../settings-defaults"
 import { AgentEvent, createAgentEvent } from "../../types/agent-events"
 import {
   finalizeForm,
@@ -63,7 +64,7 @@ function buildFormForEvent(
     title: formContent.title,
     description: formContent.description,
     questions: repairedQuestions as any,
-    settings: formContent.settings,
+    settings: (formContent.settings as any) || getDefaultSettings(),
     current_draft_version_id: versionId,
     current_published_version_id: undefined,
     short_id: shortId,

@@ -44,6 +44,7 @@ export interface ExtendedFormModeContext {
   setMode: (mode: string) => void;
   isChatMode?: boolean;
   isTypeFormMode?: boolean;
+  isClassicMode?: boolean;
 }
 
 // Validation types
@@ -303,6 +304,7 @@ export interface AppFormActions {
   shouldShowQuestion: (question: Question) => boolean;
   getNextValidQuestionIndex: (currentIndex: number) => number | null;
   markAsCompleted: () => void;
+  submitForm: () => Promise<boolean>;
 
   // File upload business logic
   handleFileUpload: (questionId: string, file: File) => Promise<string | null>;

@@ -1,9 +1,9 @@
-import React from "react";
 import { motion } from "motion/react";
-import { BaseTextInput } from "../../primitives/BaseTextInput";
+import React from "react";
 import { useThemeStyles } from "../../../hooks/ui/useTheme";
-import { getTypeFormAnimations } from "../shared/animations";
 import { cn } from "../../../lib/utils";
+import { BaseTextInput } from "../../primitives/BaseTextInput";
+import { getTypeFormAnimations } from "../shared/animations";
 
 export interface TypeFormTextInputProps {
   value: string | null;
@@ -70,32 +70,28 @@ export function TypeFormTextInput({
     base.inputProps.onKeyDown?.(e);
     if (e.key === "Enter" && !e.shiftKey && onSubmit) {
       e.preventDefault();
-      onSubmit();
+      // Validate before submitting; show errors if any
+      base.setTouched(true);
+      const errs = base.validate();
+      if (errs.length === 0) {
+        onSubmit();
+      }
     }
   };
-
-  const showError = base.isTouched && base.errors.length > 0;
 
   return (
     <motion.div
       className={cn(styles.container, "w-full max-w-2xl")}
-      {...getTypeFormAnimations(0, true)} // Disable hover scale for text input
+      {...(getTypeFormAnimations(0, true) as any)} // Disable hover scale for text input
     >
       <input
         {...base.inputProps}
         onKeyDown={handleKeyDown}
         className={cn(
           styles.input,
-          showError && "border-destructive",
           disabled && "opacity-50 cursor-not-allowed",
         )}
       />
-
-      {showError && (
-        <p className="text-sm text-destructive mt-2">
-          {base.errors[0]?.message}
-        </p>
-      )}
     </motion.div>
   );
 }

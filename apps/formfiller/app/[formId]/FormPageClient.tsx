@@ -2,6 +2,7 @@
 
 import FormAIComponent from "@/app/[formId]/FormAIComponent";
 import TypeFormView from "@/components/typeform/TypeFormView";
+import ClassicFormView from "@/components/classic/ClassicFormView";
 import { FormModeProvider, useFormMode } from "@/contexts/FormModeContext";
 import { useThemeLoader } from "@/hooks/useThemeLoader";
 import { useAppFormStore } from "@/lib/stores/useAppFormStore";
@@ -21,7 +22,7 @@ function FormPageContent({
   isTestSubmission,
   queryDataForForm,
 }: FormPageContentProps) {
-  const { isAIMode } = useFormMode();
+  const { isAIMode, isTypeFormMode, isClassicMode, mode } = useFormMode();
 
   // Load and apply themes from database
   const themeLoader = useThemeLoader(formSchema);
@@ -59,6 +60,7 @@ function FormPageContent({
     shouldShowQuestion,
     getNextValidQuestionIndex,
     markAsCompleted,
+    submitForm,
     handleFileUpload,
     getCurrentQuestion,
     getProgress,
@@ -135,7 +137,31 @@ function FormPageContent({
     );
   }
 
-  // Default to TypeForm mode if not in AI mode
+  if (isClassicMode) {
+    return (
+      <ClassicFormView
+        formSchema={formSchema}
+        formId={formSchema.id}
+        // Props down: business state
+        questionResponses={questionResponses}
+        isCompleted={isCompleted}
+        // Callbacks up: business actions
+        onInitialize={initialize}
+        onStartQuiz={handleStartQuiz}
+        onRestart={restart}
+        onAnswerChange={handleAnswerChange}
+        onFileUpload={handleFileUpload}
+        onNavigateNext={getNextValidQuestionIndex}
+        onMarkCompleted={markAsCompleted}
+        onSubmitForm={submitForm}
+        shouldShowQuestion={shouldShowQuestion}
+        getCurrentQuestion={getCurrentQuestion}
+        getProgress={getProgress}
+      />
+    );
+  }
+
+  // Default to TypeForm mode if not in AI or Classic mode
   return (
     <TypeFormView
       formSchema={formSchema}
@@ -151,6 +177,7 @@ function FormPageContent({
       onFileUpload={handleFileUpload}
       onNavigateNext={getNextValidQuestionIndex}
       onMarkCompleted={markAsCompleted}
+      onSubmitForm={submitForm}
       shouldShowQuestion={shouldShowQuestion}
       getCurrentQuestion={getCurrentQuestion}
       getProgress={getProgress}
@@ -175,6 +202,7 @@ export default function FormPageClient({
   const defaultMode = formSchema.settings?.defaultMode as
     | "ai"
     | "typeform"
+    | "classic"
     | undefined;
 
   // Convert search params to the format expected by FormModeProvider

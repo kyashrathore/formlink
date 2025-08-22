@@ -9,7 +9,7 @@ import {
 } from "@formlink/ui";
 import type { ExtendedFormModeContext } from "@/lib/types";
 
-export type AppFormMode = "ai" | "typeform";
+export type AppFormMode = "ai" | "typeform" | "classic";
 
 interface FormModeProviderProps {
   children: React.ReactNode;
@@ -44,7 +44,9 @@ export function FormModeProvider({
       ? "chat"
       : defaultMode === "typeform"
         ? "typeform"
-        : "chat"
+        : defaultMode === "classic"
+          ? "classic"
+          : "chat"
   ) as UIFormMode;
   const mappedFormSettings = formSettings
     ? {
@@ -52,7 +54,9 @@ export function FormModeProvider({
           ? "chat"
           : formSettings.defaultMode === "typeform"
             ? "typeform"
-            : "chat") as UIFormMode,
+            : formSettings.defaultMode === "classic"
+              ? "classic"
+              : "chat") as UIFormMode,
       }
     : undefined;
 
@@ -74,6 +78,7 @@ export function useFormMode() {
   const { mode, setMode } = extendedContext;
   const isChatMode = extendedContext.isChatMode ?? mode === "chat";
   const isTypeFormMode = extendedContext.isTypeFormMode ?? mode === "typeform";
+  const isClassicMode = (context as any).isClassicMode ?? mode === "classic";
 
   return {
     mode: mode === "chat" ? ("ai" as const) : (mode as AppFormMode),
@@ -82,6 +87,7 @@ export function useFormMode() {
     },
     isAIMode: isChatMode,
     isTypeFormMode: isTypeFormMode,
+    isClassicMode: isClassicMode,
   };
 }
 

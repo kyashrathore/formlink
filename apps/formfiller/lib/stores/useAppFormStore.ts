@@ -125,6 +125,39 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
       set({ isCompleted: true });
     },
 
+    submitForm: async () => {
+      const { formId, submissionId, questionResponses, formSchema } = get();
+
+      if (!formId || !submissionId) {
+        console.error("Cannot submit form: formId or submissionId missing");
+        return false;
+      }
+
+      try {
+        // Transform questionResponses to the format expected by the API
+        const answers = Object.entries(questionResponses).map(
+          ([questionId, value]) => ({
+            questionId,
+            value: value,
+          }),
+        );
+
+        await apiServices.saveAnswers(formId, {
+          submissionId,
+          answers,
+          formVersionId: formSchema?.version_id || "",
+          isTestSubmission: false,
+          status: "completed",
+        });
+
+        set({ isCompleted: true });
+        return true;
+      } catch (error) {
+        console.error("Failed to submit form:", error);
+        return false;
+      }
+    },
+
     handleFileUpload: async (
       questionId: string,
       file: File,
@@ -144,8 +177,12 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
       try {
         const result = await apiServices.uploadFile(formData);
 
-        // Save the returned URL as the answer
-        get().setQuestionResponse(questionId, result.url);
+        // Save the file data as an object that matches what FileUploadInput expects
+        get().setQuestionResponse(questionId, {
+          url: result.url,
+          name: file.name,
+          size: file.size,
+        });
 
         return result.url;
       } catch (error) {

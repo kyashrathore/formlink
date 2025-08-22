@@ -39,6 +39,7 @@ interface TypeFormViewProps {
   onFileUpload: (questionId: string, file: File) => Promise<string | null>;
   onNavigateNext: (currentIndex: number) => number | null;
   onMarkCompleted: () => void;
+  onSubmitForm: () => Promise<boolean>;
   shouldShowQuestion: (question: Question) => boolean;
   getCurrentQuestion: (activeIndex: number) => Question | null;
   getProgress: (activeIndex: number) => number;
@@ -56,6 +57,7 @@ export default function TypeFormView({
   onFileUpload,
   onNavigateNext,
   onMarkCompleted,
+  onSubmitForm,
   shouldShowQuestion,
   getCurrentQuestion,
   getProgress,
@@ -123,11 +125,51 @@ export default function TypeFormView({
     [formSchema, questionResponses],
   );
 
+  const isQuestionValid = useCallback(
+    (q: Question | null) => {
+      if (!q) return false;
+      const resp = questionResponses[q.id];
+
+      if (q.type.name === "text") {
+        const v = typeof resp === "string" ? resp : "";
+        const validations = (q as any).validations || {};
+        if (validations.required?.value && v.trim() === "") return false;
+
+        const minL = validations.minLength?.value;
+        if (typeof minL === "number" && v.length < minL) return false;
+
+        const maxL = validations.maxLength?.value;
+        if (typeof maxL === "number" && v.length > maxL) return false;
+
+        const pattern = validations.pattern?.value;
+        if (pattern && v) {
+          try {
+            const re = new RegExp(pattern);
+            if (!re.test(v)) return false;
+          } catch {
+            // ignore invalid regex
+          }
+        }
+
+        return v.trim() !== "";
+      }
+
+      // For non-text types, require any non-null response
+      return resp != null;
+    },
+    [questionResponses],
+  );
+
   // Track direction for next navigation
   const handleNextWithDirection = useCallback(async () => {
     setDirection(1); // Going forwards
 
     const currentQuestion = getCurrentQuestion(activeQuestionIndex);
+
+    // Block navigation only after intro (index >= 0)
+    if (activeQuestionIndex >= 0 && !isQuestionValid(currentQuestion)) {
+      return;
+    }
 
     // Check if current question should trigger AI branching
     if (
@@ -147,10 +189,14 @@ export default function TypeFormView({
       // Add to navigation history for proper backward navigation
       setNavigationHistory((prev) => [...prev, nextIndex]);
     } else {
-      // No more questions, mark as completed
-      onMarkCompleted();
-      setShowConfetti(true);
-      setActiveQuestionIndex(formSchema.questions.length);
+      // No more questions, submit form to API
+      const success = await onSubmitForm();
+      if (success) {
+        setShowConfetti(true);
+        setActiveQuestionIndex(formSchema.questions.length);
+      } else {
+        console.error("Failed to submit form");
+      }
     }
   }, [
     activeQuestionIndex,
@@ -158,7 +204,7 @@ export default function TypeFormView({
     handleAIBranching,
     formSchema,
     onNavigateNext,
-    onMarkCompleted,
+    onSubmitForm,
   ]);
 
   const handleNavigateToNextValidQuestion = useCallback(() => {
@@ -331,17 +377,7 @@ export default function TypeFormView({
               onPrevious={handlePrevious}
               onNext={handleNextWithDirection}
               canGoPrevious={activeQuestionIndex > 0}
-              canGoNext={
-                currentQuestion
-                  ? currentQuestion.type.name === "text"
-                    ? typeof questionResponses[currentQuestion.id] ===
-                        "string" &&
-                      (
-                        questionResponses[currentQuestion.id] as string
-                      ).trim() !== ""
-                    : questionResponses[currentQuestion.id] != null
-                  : false
-              }
+              canGoNext={isQuestionValid(currentQuestion)}
             />
           )}
 

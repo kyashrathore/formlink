@@ -186,6 +186,7 @@ export const QuestionSchema = z.object({
 
 export const SettingsSchema = z
   .object({
+    defaultMode: z.enum(["ai", "typeform", "classic"]).optional().default("ai"),
     resultPageGenerationPrompt: z.string().optional(),
     journeyScript: z.string().optional(),
     additionalFields: z

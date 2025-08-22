@@ -25,6 +25,7 @@ export type FormInputType =
   | "tel"
   | "password"
   | "textarea"
+  | "number"
   | "select"
   | "multiselect"
   | "multipleChoice"
@@ -77,7 +78,7 @@ const textInputTransformer = (
   const transformedProps = { ...props };
 
   // Override type for text variants (preserves current behavior)
-  if (["email", "url", "tel", "password"].includes(type)) {
+  if (["email", "url", "tel", "password", "number"].includes(type)) {
     transformedProps.type = type;
   } else if (type === "textarea") {
     transformedProps.type = "text";
@@ -157,6 +158,11 @@ export const componentRegistry: Record<FormInputType, ComponentRegistryEntry> =
       transformProps: textInputTransformer,
     },
     textarea: {
+      chatComponent: ChatTextInput,
+      typeformComponent: TypeFormTextInput,
+      transformProps: textInputTransformer,
+    },
+    number: {
       chatComponent: ChatTextInput,
       typeformComponent: TypeFormTextInput,
       transformProps: textInputTransformer,

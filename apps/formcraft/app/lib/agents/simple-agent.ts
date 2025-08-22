@@ -9,6 +9,7 @@ import { customAlphabet } from "nanoid"
 import { z } from "zod"
 import { createFormWorkflow } from "../chat/tools/create-form-workflow"
 import logger from "../logger"
+import { getDefaultSettings } from "../settings-defaults"
 import {
   AgentEvent,
   AgentState,
@@ -188,7 +189,7 @@ export async function* updateFormAgent(
       title: baseTitle,
       description: baseDescription,
       questions: repairedQuestions,
-      settings: dbVersionData?.settings || {},
+      settings: dbVersionData?.settings || getDefaultSettings(),
 
       current_draft_version_id:
         dbVersionData?.current_draft_version_id || undefined,
@@ -299,7 +300,7 @@ export async function* updateFormAgent(
       updatedFormData.description = updates.description
     if (updates.settings) {
       updatedFormData.settings = {
-        ...(updatedFormData.settings || {}),
+        ...(updatedFormData.settings || getDefaultSettings()),
         ...updates.settings,
       }
     }
@@ -480,7 +481,9 @@ export async function* updateFormAgent(
             title: agentState.formMetadata.title,
             description: agentState.formMetadata.description,
             questions: agentState.generatedQuestionSchemas,
-            settings: agentState.settings,
+            settings: agentState.settings
+              ? (agentState.settings as any)
+              : getDefaultSettings(),
           }
         : null
     )

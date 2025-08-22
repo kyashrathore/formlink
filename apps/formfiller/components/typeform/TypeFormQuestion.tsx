@@ -8,6 +8,7 @@ import { Question, getQuestionTypeName } from "@formlink/schema";
 import { Button, InputContainer } from "@formlink/ui";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
+import { useState } from "react";
 
 interface TypeFormQuestionProps {
   question: Question;
@@ -35,12 +36,78 @@ export default function TypeFormQuestion({
   questionNumber,
 }: TypeFormQuestionProps) {
   const isMobile = useIsMobile();
+  const [touched, setTouched] = useState(false);
+
+  // Helper function to validate text fields with format-specific rules
+  const validateTextValue = (
+    value: string,
+    format?: string,
+    validations?: any,
+  ) => {
+    if (validations?.required?.value && value.trim() === "") {
+      return validations?.required?.message || "This field is required";
+    }
+
+    const minL = validations?.minLength?.value;
+    if (typeof minL === "number" && value.length < minL) {
+      return `Minimum length is ${minL} characters`;
+    }
+
+    const maxL = validations?.maxLength?.value;
+    if (typeof maxL === "number" && value.length > maxL) {
+      return `Maximum length is ${maxL} characters`;
+    }
+
+    // Use custom pattern if provided, otherwise apply format-specific validation
+    const pattern = validations?.pattern?.value;
+    if (pattern && value) {
+      try {
+        const re = new RegExp(pattern);
+        if (!re.test(value)) {
+          return validations?.pattern?.message || "Invalid format";
+        }
+      } catch {
+        // ignore invalid regex
+      }
+    } else if (value && format) {
+      // Apply default format validation when no custom pattern
+      switch (format) {
+        case "email":
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+            return "Please enter a valid email address";
+          }
+          break;
+        case "url":
+          if (!/^https?:\/\/.+\..+/.test(value)) {
+            return "Please enter a valid URL (starting with http:// or https://)";
+          }
+          break;
+        case "tel":
+          const digitCount = (value.match(/\d/g) || []).length;
+          if (digitCount < 7) {
+            return "Please enter a valid phone number";
+          }
+          break;
+        case "number":
+          if (!/^-?\d+(\.\d+)?$/.test(value)) {
+            return "Please enter a valid number";
+          }
+          break;
+      }
+    }
+
+    return null;
+  };
   // Comprehensive response check for all question types
   const hasResponse = (() => {
     if (response === null || response === undefined) return false;
 
     switch ((question.type as any).name) {
       case "text":
+        // Check if it's a number format
+        if ((question.type as any).format === "number") {
+          return response !== "" && response !== null && response !== undefined;
+        }
         return response !== "";
       case "multipleChoice":
         return Array.isArray(response) && response.length > 0;
@@ -72,6 +139,55 @@ export default function TypeFormQuestion({
         return response !== "";
     }
   })();
+
+  const isValid = (() => {
+    if (!hasResponse) return false;
+
+    if ((question.type as any).name === "text") {
+      const v = typeof response === "string" ? response : "";
+      const validations = (question as any).validations || {};
+      if (validations?.required?.value && v.trim() === "") return false;
+
+      const minL = validations?.minLength?.value;
+      if (typeof minL === "number" && v.length < minL) return false;
+
+      const maxL = validations?.maxLength?.value;
+      if (typeof maxL === "number" && v.length > maxL) return false;
+
+      const pattern = validations?.pattern?.value;
+      if (pattern && v) {
+        try {
+          const re = new RegExp(pattern);
+          if (!re.test(v)) return false;
+        } catch {
+          // ignore invalid regex
+        }
+      }
+    }
+
+    return true;
+  })();
+
+  const errorMessage = (() => {
+    if (!touched) return null;
+
+    if ((question.type as any).name === "text") {
+      const v = typeof response === "string" ? response : "";
+      const format = (question.type as any).format;
+      const validations = (question as any).validations || {};
+
+      return validateTextValue(v, format, validations);
+    }
+    return null;
+  })();
+
+  const handleContinueClick = () => {
+    if (!isValid) {
+      setTouched(true);
+      return;
+    }
+    onNext();
+  };
 
   // Convert response to file if needed (commented out to avoid unused variable warning)
   // const responseAsFile =
@@ -145,8 +261,8 @@ export default function TypeFormQuestion({
           </div>
         </div>
 
-        {/* Continue button for all question types when they have a response - hidden on mobile */}
-        {hasResponse && !isMobile && (
+        {/* Continue button always visible on desktop; disabled when invalid */}
+        {!isMobile && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -156,7 +272,12 @@ export default function TypeFormQuestion({
               questionNumber ? "ml-[3rem]" : "",
             )}
           >
-            <Button onClick={onNext} size="lg" className="group mr-4">
+            <Button
+              onClick={handleContinueClick}
+              size="lg"
+              className="group mr-4"
+              disabled={!isValid}
+            >
               Continue
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
@@ -164,6 +285,11 @@ export default function TypeFormQuestion({
               press{" "}
               <kbd className="px-2 py-1 text-xs border rounded">Enter ↵</kbd>
             </div>
+            {errorMessage && (
+              <div className="ml-4 text-sm text-destructive">
+                {errorMessage}
+              </div>
+            )}
           </motion.div>
         )}
       </div>

@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
-import { Form } from "@formlink/schema";
 import FormPageClient from "@/app/[formId]/FormPageClient";
 import { ThemeApplicator } from "@/lib/theme/ThemeApplicator";
+import { Form } from "@formlink/schema";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 // Message types for postMessage communication
 interface FormUpdateMessage {
@@ -14,7 +14,7 @@ interface FormUpdateMessage {
 interface FormModeUpdateMessage {
   type: "FORMCRAFT_MODE_UPDATE";
   payload: {
-    formMode: "chat" | "typeform";
+    formMode: "chat" | "typeform" | "classic";
     timestamp: number;
   };
 }
@@ -89,8 +89,14 @@ export default function PreviewPageClient({
 }: PreviewPageClientProps) {
   const [currentFormSchema, setCurrentFormSchema] =
     useState<Form>(initialFormSchema);
-  const [currentFormMode, setCurrentFormMode] = useState<"chat" | "typeform">(
-    "chat",
+  const [currentFormMode, setCurrentFormMode] = useState<
+    "chat" | "typeform" | "classic"
+  >(
+    initialFormSchema.settings?.defaultMode === "classic"
+      ? "classic"
+      : initialFormSchema.settings?.defaultMode === "typeform"
+        ? "typeform"
+        : "chat",
   );
   const hasNotifiedReady = useRef(false);
   const themeApplicator = useRef(new ThemeApplicator());
@@ -214,6 +220,10 @@ export default function PreviewPageClient({
           break;
 
         case "FORMCRAFT_MODE_UPDATE":
+          console.log(
+            "PreviewPageClient received mode update:",
+            payload.formMode,
+          );
           setCurrentFormMode(payload.formMode);
           break;
 
@@ -238,10 +248,18 @@ export default function PreviewPageClient({
   // Create search params that force the desired form mode
   const searchParams = {
     formlinkai_testmode: "true",
-    mode: currentFormMode === "typeform" ? "typeform" : "chat",
+    mode:
+      currentFormMode === "typeform"
+        ? "typeform"
+        : currentFormMode === "classic"
+          ? "classic"
+          : "chat",
     // Keep aimode for backward compatibility
     aimode: currentFormMode === "chat" ? "true" : "false",
   };
+
+  console.log("PreviewPageClient - currentFormMode:", currentFormMode);
+  console.log("PreviewPageClient - searchParams:", searchParams);
 
   return (
     <div className="h-full w-full">
