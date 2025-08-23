@@ -387,7 +387,7 @@ export default function FormPreview({
           src={getPreviewUrl()}
           title="Form Preview"
           className="bg-background h-full w-full rounded-xl border"
-          sandbox="allow-scripts allow-same-origin allow-popups"
+          sandbox="allow-scripts allow-same-origin allow-popups clipboard-write"
           onLoad={handleIframeLoad}
           onError={handleIframeError}
         />

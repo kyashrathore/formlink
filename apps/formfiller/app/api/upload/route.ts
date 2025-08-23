@@ -3,57 +3,77 @@ import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
 export async function POST(request: Request) {
-  // Using service role client to allow anonymous form submissions
-  // Forms can be filled by users who are not logged in
-  const supabase = await createServerClient(null, "service");
-
-  const formData = await request.formData();
-  const file = formData.get("file") as File;
-  const formId = formData.get("formId") as string;
-  const submissionId = formData.get("submissionId") as string;
-  const questionId = formData.get("questionId") as string;
-
-  if (!file || !formId || !submissionId || !questionId) {
-    return NextResponse.json(
-      { error: "Missing required fields." },
-      { status: 400 },
-    );
-  }
-
-  // Validate file extension
-  const allowedExtensions = [
-    "jpg",
-    "jpeg",
-    "png",
-    "gif",
-    "pdf",
-    "doc",
-    "docx",
-    "txt",
-  ];
-  const fileExtension = file.name.split(".").pop()?.toLowerCase();
-
-  if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
-    return NextResponse.json(
-      {
-        error:
-          "Invalid file type. Allowed types: " + allowedExtensions.join(", "),
-      },
-      { status: 400 },
-    );
-  }
-
-  const fileName = `${uuidv4()}.${fileExtension}`;
-  const filePath = `${formId}/${submissionId}+${questionId}_${fileName}`;
-
   try {
+    // Using service role client to allow anonymous form submissions
+    // Forms can be filled by users who are not logged in
+    const supabase = await createServerClient(null, "service");
+
+    const formData = await request.formData();
+    const file = formData.get("file") as File;
+    const formId = formData.get("formId") as string;
+    const submissionId = formData.get("submissionId") as string;
+    const questionId = formData.get("questionId") as string;
+
+    console.log("Upload request received:", {
+      hasFile: !!file,
+      fileName: file?.name,
+      fileSize: file?.size,
+      formId,
+      submissionId,
+      questionId,
+    });
+
+    if (!file || !formId || !submissionId || !questionId) {
+      const missingFields = [];
+      if (!file) missingFields.push("file");
+      if (!formId) missingFields.push("formId");
+      if (!submissionId) missingFields.push("submissionId");
+      if (!questionId) missingFields.push("questionId");
+
+      return NextResponse.json(
+        { error: `Missing required fields: ${missingFields.join(", ")}` },
+        { status: 400 },
+      );
+    }
+
+    // Validate file extension
+    const allowedExtensions = [
+      "jpg",
+      "jpeg",
+      "png",
+      "gif",
+      "pdf",
+      "doc",
+      "docx",
+      "txt",
+    ];
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+
+    if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
+      return NextResponse.json(
+        {
+          error:
+            "Invalid file type. Allowed types: " + allowedExtensions.join(", "),
+        },
+        { status: 400 },
+      );
+    }
+
+    const fileName = `${uuidv4()}.${fileExtension}`;
+    const filePath = `${formId}/${submissionId}+${questionId}_${fileName}`;
     const { error: uploadError } = await supabase.storage
       .from("form-submissions-uploads")
       .upload(filePath, file);
 
     if (uploadError) {
       console.error("Supabase upload error:", uploadError);
-      return NextResponse.json({ error: uploadError.message }, { status: 500 });
+      console.error("Upload error details:", uploadError);
+      return NextResponse.json(
+        {
+          error: uploadError.message || "Failed to upload file to storage",
+        },
+        { status: 500 },
+      );
     }
 
     const { data: publicUrlData } = supabase.storage
@@ -94,9 +114,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Upload error:", error);
-    return NextResponse.json(
-      { error: "An unexpected error occurred." },
-      { status: 500 },
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "An unexpected error occurred";
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

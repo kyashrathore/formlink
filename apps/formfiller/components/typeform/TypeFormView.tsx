@@ -309,6 +309,12 @@ export default function TypeFormView({
       if (url) {
         handleNextWithDirection();
       }
+    } catch (error) {
+      // Display error message to user
+      const errorMessage =
+        error instanceof Error ? error.message : "File upload failed";
+      alert(`Upload Error: ${errorMessage}`);
+      console.error("File upload error:", error);
     } finally {
       setIsLoading(false);
     }

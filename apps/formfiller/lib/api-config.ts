@@ -11,9 +11,26 @@ import {
 
 /**
  * Get the base API URL based on environment
+ * In production, formfiller is proxied through /f/* from formcraft
  */
 function getBaseApiUrl(): string {
-  return process.env.NODE_ENV === "development" ? "" : "/f";
+  // Check if we're running on localhost (local development)
+  if (typeof window !== "undefined") {
+    const isLocalhost =
+      window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1";
+    // If on localhost, use direct API routes
+    if (isLocalhost) {
+      return "";
+    }
+  }
+
+  // In production or when accessed through formcraft, use /f prefix
+  // This handles both forms.formlink.ai (no prefix needed) and formlink.ai/f/* (prefix needed)
+  const needsPrefix =
+    typeof window !== "undefined" && window.location.pathname.startsWith("/f/");
+
+  return needsPrefix ? "/f" : "";
 }
 
 /**
@@ -63,7 +80,15 @@ export const apiServices = {
     });
 
     if (!response.ok) {
-      throw new Error("File upload failed.");
+      let errorMessage = "File upload failed";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch {
+        // If response is not JSON, use status text
+        errorMessage = `${errorMessage}: ${response.statusText} (${response.status})`;
+      }
+      throw new Error(errorMessage);
     }
 
     return response.json();

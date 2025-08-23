@@ -187,7 +187,8 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
         return result.url;
       } catch (error) {
         console.error("Error uploading file:", error);
-        return null;
+        // Throw the error so the UI can handle it properly
+        throw error;
       }
     },
 
