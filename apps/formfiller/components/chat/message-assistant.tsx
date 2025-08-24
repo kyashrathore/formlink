@@ -55,7 +55,7 @@ export function MessageAssistant({
                        prose-blockquote:border-l-2 prose-blockquote:border-muted-foreground/20
                        prose-blockquote:pl-4 prose-blockquote:italic"
             markdown={true}
-            components={components}
+            components={components as any}
           >
             {message.content}
           </MessageContent>
@@ -79,7 +79,7 @@ export function MessageAssistant({
                            prose-blockquote:border-l-2 prose-blockquote:border-muted-foreground/20
                            prose-blockquote:pl-4 prose-blockquote:italic"
                   markdown={true}
-                  components={components}
+                  components={components as any}
                 >
                   {part.text}
                 </MessageContent>
