@@ -8,7 +8,7 @@ import { TOOL_DESCRIPTIONS } from "../prompts"
 export function updateFormTool(context: ChatToolContext) {
   return tool({
     description: TOOL_DESCRIPTIONS.updateForm,
-    parameters: UpdateFormSchema,
+    inputSchema: UpdateFormSchema,
     execute: async ({ updates }): Promise<FormUpdateResult> => {
       const { dataStream, formId, userId, options, isFirstMessage } = context
 
@@ -35,7 +35,7 @@ export function updateFormTool(context: ChatToolContext) {
 }
 
 interface DataStream {
-  writeData: (data: unknown) => void
+  write: (data: { type: string; [key: string]: unknown }) => void
 }
 
 interface FormAgentOptions {
@@ -65,9 +65,9 @@ async function processFormUpdate(
   }
 
   for await (const agentEvent of updateFormAgent(agentUpdateParams, userId)) {
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: agentEvent,
+    dataStream.write({
+      type: "data-agent_event",
+      data: agentEvent,
     })
 
     if (
@@ -90,9 +90,9 @@ async function processFormUpdate(
   })
 
   if (isFirstMessage && success) {
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: {
+    dataStream.write({
+      type: "data-agent_event",
+      data: {
         type: "task_completed",
         category: "progress",
         data: {

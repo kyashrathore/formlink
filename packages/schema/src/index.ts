@@ -15,7 +15,7 @@ import {
 export const OptionSchema = z.object({
   value: z.string(),
   label: z.string(),
-  score: z.number().optional(),
+  score: z.number(),
 });
 export type Option = z.infer<typeof OptionSchema>;
 
@@ -68,9 +68,9 @@ export type QuestionValidations = z.infer<typeof QuestionValidationsSchema>;
 
 export const RatingConfigSchema = z
   .object({
-    min: z.number().int().default(1),
+    min: z.number().int(),
     max: z.number().int().positive(),
-    step: z.number().int().positive().default(1),
+    step: z.number().int().positive(),
     minLabel: z.string().optional(),
     maxLabel: z.string().optional(),
   })
@@ -83,7 +83,7 @@ export const LinearScaleConfigSchema = z
   .object({
     start: z.number().int(),
     end: z.number().int(),
-    step: z.number().int().positive().default(1),
+    step: z.number().int().positive(),
     startLabel: z.string().optional(),
     endLabel: z.string().optional(),
   })
@@ -131,8 +131,8 @@ export const QuestionSchema = z.object({
   label: z.string().optional(),
   page: z.number().int().optional(),
   styling: z
-    .object({ colSpan: z.number().int().min(1).max(12).optional() })
-    .optional(),
+    .object({ colSpan: z.number().int().min(1).max(12) })
+    .default({ colSpan: 12 }),
   mightBranchOffNext: z.boolean().optional(),
 
   // The new, unified type property

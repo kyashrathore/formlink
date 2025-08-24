@@ -2,7 +2,7 @@ import { SupabaseClient } from "@formlink/db"
 import logger from "../../logger"
 
 interface DataStream {
-  writeData: (data: unknown) => void
+  write: (data: { type: string; [key: string]: unknown }) => void
 }
 
 interface MessageRow {
@@ -77,17 +77,19 @@ export class ChatService {
     eventType: string,
     payload?: unknown
   ): void {
+    // AI SDK v5: Use data- prefix for custom data streaming
     if (payload) {
-      dataStream.writeData({ type: eventType, payload })
+      dataStream.write({ type: `data-${eventType}`, payload })
     } else {
-      dataStream.writeData(eventType)
+      dataStream.write({ type: `data-${eventType}` })
     }
   }
 
   writeCustomAgentEvent(dataStream: DataStream, agentEvent: unknown): void {
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: agentEvent,
+    // AI SDK v5: Use data- prefix for custom data streaming
+    dataStream.write({
+      type: "data-agent_event",
+      data: agentEvent,
     })
   }
 
@@ -96,7 +98,9 @@ export class ChatService {
     action: string,
     data: Record<string, unknown>
   ): void {
-    dataStream.writeData({
+    // AI SDK v5: Use data- prefix for custom data streaming
+    dataStream.write({
+      type: "data-ui_action",
       eventName: "ui_action",
       eventData: {
         action,

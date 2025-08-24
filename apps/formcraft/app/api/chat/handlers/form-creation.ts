@@ -1,3 +1,4 @@
+import { getModel } from "@/app/lib/ai/provider"
 import {
   buildContextualSystemPrompt,
   SYSTEM_PROMPT,
@@ -6,10 +7,14 @@ import { ChatService } from "@/app/lib/chat/services/chat-service"
 import { FormService } from "@/app/lib/chat/services/form-service"
 import { createChatTools } from "@/app/lib/chat/tools"
 import logger from "@/app/lib/logger"
-import { getenv } from "@/lib/env"
 import { SupabaseClient } from "@formlink/db"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
-import { createDataStreamResponse, Message, streamText } from "ai"
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  streamText,
+  UIMessage,
+} from "ai"
 import { customAlphabet } from "nanoid"
 
 const nanoid = customAlphabet(
@@ -19,11 +24,11 @@ const nanoid = customAlphabet(
 
 interface ChatRequestOptions {
   temperature?: number
-  maxTokens?: number
+  maxOutputTokens?: number
 }
 
 export async function handleChatRequest(
-  messages: Message[],
+  messages: UIMessage[],
   formId: string | undefined,
   userId: string,
   supabase: SupabaseClient,
@@ -49,20 +54,29 @@ export async function handleChatRequest(
   }
 
   const chatService = new ChatService(supabase)
+  // Convert UIMessages to compatible format for saving
   const lastMessage = messages[messages.length - 1]
   if (lastMessage && lastMessage.role === "user") {
-    await chatService.saveMessage(currentFormId, userId, lastMessage)
+    // Extract text from v5 UIMessage parts
+    const userText =
+      (lastMessage.parts?.find((p: any) => p.type === "text") as any)?.text ||
+      ""
+    const messageToSave = {
+      ...lastMessage,
+      content: userText,
+    }
+    await chatService.saveMessage(currentFormId, userId, messageToSave)
   }
 
-  return createDataStreamResponse({
-    execute: async (dataStream) => {
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
       try {
         if (isNewChat) {
         }
-        chatService.writeStreamEvent(dataStream as any, "chat_initialized")
+        chatService.writeStreamEvent(writer as any, "chat_initialized")
 
         const toolContext = {
-          dataStream: dataStream as any,
+          dataStream: writer as any,
           formId: currentFormId,
           supabase,
           userId,
@@ -72,9 +86,8 @@ export async function handleChatRequest(
 
         const tools = createChatTools(toolContext)
 
-        const apiKey = getenv("OPENROUTER_API_KEY") || ""
-        const openRouterProvider = createOpenRouter({ apiKey })
-        const MODEL = openRouterProvider("openai/gpt-4o")
+        // Use provider utility to get model - using vercel to avoid Azure issues
+        const MODEL = getModel("gpt-4o", "vercel")
 
         const contextualSystemPrompt = buildContextualSystemPrompt(
           SYSTEM_PROMPT,
@@ -87,14 +100,11 @@ export async function handleChatRequest(
 
         const result = await streamText({
           model: MODEL,
-          messages,
+          messages: convertToModelMessages(messages),
           tools,
           system: contextualSystemPrompt,
           temperature: options?.temperature || 0.7,
-          maxTokens: options?.maxTokens || 4000,
-          maxSteps: 5,
-
-          experimental_toolCallStreaming: true,
+          maxOutputTokens: options?.maxOutputTokens || 4000,
           onFinish: async ({ text, toolCalls, finishReason, usage }) => {
             logger.info("Chat completion finished", {
               userId,
@@ -137,7 +147,7 @@ export async function handleChatRequest(
                 error,
               })
             }
-            chatService.writeStreamEvent(dataStream as any, "chat_completed")
+            chatService.writeStreamEvent(writer as any, "chat_completed")
           },
           onError: async (error) => {
             logger.error("Chat completion error", {
@@ -169,7 +179,8 @@ export async function handleChatRequest(
           },
         })
 
-        result.mergeIntoDataStream(dataStream)
+        // AI SDK v5: Merge the result into the UI message stream
+        writer.merge(result.toUIMessageStream())
       } catch (executeError) {
         logger.error("Error in chat stream execution", {
           userId,
@@ -177,13 +188,7 @@ export async function handleChatRequest(
           error: executeError,
         })
 
-        dataStream.writeData({
-          type: "error",
-          message:
-            executeError instanceof Error
-              ? executeError.message
-              : "Stream execution error",
-        })
+        // Let AI SDK handle error formatting automatically
       }
     },
     onError: (error) => {
@@ -191,4 +196,6 @@ export async function handleChatRequest(
       return error instanceof Error ? error.message : String(error)
     },
   })
+
+  return createUIMessageStreamResponse({ stream })
 }

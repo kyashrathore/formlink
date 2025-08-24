@@ -6,7 +6,7 @@ import { TOOL_DESCRIPTIONS } from "../prompts"
 export function showConfigButtonTool(context: ChatToolContext) {
   return tool({
     description: TOOL_DESCRIPTIONS.showConfigButton,
-    parameters: ShowConfigButtonSchema,
+    inputSchema: ShowConfigButtonSchema,
     execute: async ({
       buttonType,
       formId: targetFormIdFromTool,
@@ -16,8 +16,8 @@ export function showConfigButtonTool(context: ChatToolContext) {
 
       const finalTargetFormId = targetFormIdFromTool || formId
 
-      dataStream.writeData({
-        eventName: "ui_action",
+      dataStream.write({
+        type: "data-ui_action",
         eventData: {
           action: "show_config_button",
           buttonType,

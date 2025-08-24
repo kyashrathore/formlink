@@ -7,7 +7,7 @@ import { TOOL_DESCRIPTIONS } from "../prompts"
 import { ChatToolContext, FormCreationResult } from "../types"
 
 interface DataStream {
-  writeData: (data: unknown) => void
+  write: (data: { type: string; [key: string]: unknown }) => void
 }
 
 interface FormAgentOptions {
@@ -18,7 +18,7 @@ interface FormAgentOptions {
 export function createFormTool(context: ChatToolContext) {
   return tool({
     description: TOOL_DESCRIPTIONS.createFormAgent,
-    parameters: CreateFormAgentSchema,
+    inputSchema: CreateFormAgentSchema,
     execute: async ({ prompt }): Promise<FormCreationResult> => {
       const { dataStream, formId, supabase, userId, options } = context
 
@@ -98,9 +98,9 @@ async function processFormCreation(
     // Remove circular references before serialization
     const safeAgentEvent = sanitizeAgentEventForSerialization(agentEvent)
 
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: safeAgentEvent,
+    dataStream.write({
+      type: "data-agent_event",
+      data: safeAgentEvent,
     })
 
     if (

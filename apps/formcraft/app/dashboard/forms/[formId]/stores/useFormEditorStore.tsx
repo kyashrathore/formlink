@@ -384,6 +384,7 @@ const formEditorStore: StateCreator<
               name: "text",
               format: "text",
             },
+            styling: { colSpan: 12 },
             validations: { required: { value: true } },
             readableValidations: ["This question is required."],
             readableConditionalLogic: [],

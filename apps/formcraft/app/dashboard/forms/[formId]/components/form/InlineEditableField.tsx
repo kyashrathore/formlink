@@ -68,7 +68,7 @@ const InlineEditableField: React.FC<InlineEditableFieldProps> = ({
           useTextArea ? (
             <Textarea
               {...props}
-              ref={ref as React.Ref<HTMLTextAreaElement>}
+              ref={ref as any}
               className="mx-auto w-[calc(100%-16px)]"
               rows={3}
               autoFocus
@@ -81,11 +81,7 @@ const InlineEditableField: React.FC<InlineEditableFieldProps> = ({
               onChange={(e) => props.onChange(e.target.value)}
             />
           ) : (
-            <Input
-              {...props}
-              ref={ref as React.Ref<HTMLInputElement>}
-              autoFocus
-            />
+            <Input {...props} ref={ref as any} autoFocus />
           )
         }
         keepEditViewOpenOnBlur={false}

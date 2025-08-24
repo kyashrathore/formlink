@@ -217,7 +217,7 @@ export interface ChatRequest {
   options?: {
     model?: string
     temperature?: number
-    maxTokens?: number
+    maxOutputTokens?: number
   }
 }
 

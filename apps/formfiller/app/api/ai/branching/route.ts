@@ -29,7 +29,7 @@ const BranchingRequestSchema = z.object({
 // Response schema
 const BranchingResponseSchema = z.object({
   nextQuestionId: z.string(),
-  reasoning: z.string().optional(),
+  reasoningText: z.string().optional(),
 });
 
 // System prompt for AI branching decisions
@@ -143,7 +143,7 @@ Return your response as valid JSON with the format:
       );
     }
 
-    const { nextQuestionId, reasoning } = responseValidation.data;
+    const { nextQuestionId, reasoningText } = responseValidation.data;
 
     // Validate question ID exists
     if (!validQuestionIds.includes(nextQuestionId)) {
@@ -160,7 +160,7 @@ Return your response as valid JSON with the format:
     // Return successful response
     return NextResponse.json({
       nextQuestionId,
-      reasoning,
+      reasoningText,
       success: true,
     });
   } catch (error) {

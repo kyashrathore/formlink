@@ -8,7 +8,7 @@ import { FormService } from "../services/form-service"
 export function getFormContextTool(context: ChatToolContext) {
   return tool({
     description: TOOL_DESCRIPTIONS.getFormContext,
-    parameters: GetFormContextSchema,
+    inputSchema: GetFormContextSchema,
     execute: async ({
       formId: toolCallFormId,
     }): Promise<GetFormContextResult> => {

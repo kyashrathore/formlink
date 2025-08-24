@@ -1,15 +1,17 @@
 import { cn } from "@/app/lib"
+import { Message, MessageContent } from "@formlink/ui"
 import type {
+  DynamicToolUIPart,
   StepStartUIPart,
   TextUIPart,
-  ToolInvocationUIPart,
-} from "@ai-sdk/ui-utils"
-import { Message, MessageContent } from "@formlink/ui"
-import { CheckCircle, Loader2 } from "lucide-react"
+  ToolUIPart,
+} from "ai"
+import { getToolName } from "ai"
+import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react"
 import React from "react"
 import { formatChatMessageTime } from "./utils"
 
-type MessagePart = TextUIPart | ToolInvocationUIPart | StepStartUIPart
+type MessagePart = TextUIPart | ToolUIPart | DynamicToolUIPart | StepStartUIPart
 
 interface MessageWithPartsProps {
   role: "user" | "assistant"
@@ -84,40 +86,102 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
               </Message>
             ) : null
 
-          case "tool-invocation":
-            const { state, toolName } = part.toolInvocation
+          case "step-start":
+            return isLastMessage ? (
+              <div key={index} className="bg-border my-2 h-px w-full" />
+            ) : null
 
-            if (!isLastMessage && state !== "result") {
+          default: {
+            // Handle tool parts in v5: 'tool-<name>' and 'dynamic-tool'
+            const isDynamic = (part as any).type === "dynamic-tool"
+            const isTool =
+              typeof (part as any).type === "string" &&
+              (part as any).type.startsWith("tool-")
+
+            if (!isDynamic && !isTool) return null
+
+            const toolPart = part as ToolUIPart | DynamicToolUIPart
+            const toolName = isDynamic
+              ? (toolPart as DynamicToolUIPart).toolName
+              : (getToolName(toolPart as ToolUIPart) as string)
+
+            const state = (toolPart as any).state as
+              | "input-streaming"
+              | "input-available"
+              | "output-available"
+              | "output-error"
+
+            if (!isLastMessage && state !== "output-available") {
               return null
             }
 
             const getStatusDisplay = () => {
+              // Inspect output payload if available to decide success/failure
+              const isOutputAvailable = state === "output-available"
+              const output: any = isOutputAvailable
+                ? (toolPart as any).output
+                : undefined
+              const hasSuccessFlag =
+                output && typeof output === "object" && "success" in output
+              const isSuccess = hasSuccessFlag
+                ? Boolean((output as any).success)
+                : undefined
+
               switch (state) {
-                case "result":
+                case "output-available":
+                  if (isSuccess === false) {
+                    return {
+                      icon: AlertTriangle,
+                      text:
+                        typeof output?.message === "string" && output.message
+                          ? `✗ ${toolName} failed: ${output.message}`
+                          : `✗ ${toolName} failed`,
+                      className:
+                        "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+                      spinning: false,
+                    }
+                  }
                   return {
                     icon: CheckCircle,
                     text: `✓ Completed ${toolName}`,
                     className:
                       "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800",
+                    spinning: false,
                   }
-                case "partial-call":
+                case "input-streaming":
                   return {
                     icon: Loader2,
                     text: `Preparing ${toolName}...`,
                     className: "bg-muted/30 text-foreground border-border",
+                    spinning: true,
                   }
-                default:
+                case "input-available":
                   return {
                     icon: Loader2,
                     text: `Running ${toolName}...`,
                     className: "bg-muted/30 text-foreground border-border",
+                    spinning: true,
+                  }
+                case "output-error":
+                  return {
+                    icon: AlertTriangle,
+                    text: `Error in ${toolName}`,
+                    className:
+                      "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800",
+                    spinning: false,
+                  }
+                default:
+                  return {
+                    icon: Loader2,
+                    text: `Processing ${toolName}...`,
+                    className: "bg-muted/30 text-foreground border-border",
+                    spinning: true,
                   }
               }
             }
 
             const statusDisplay = getStatusDisplay()
             const IconComponent = statusDisplay.icon
-            const isSpinning = state === "partial-call" || state === "call"
 
             return (
               <div
@@ -129,7 +193,10 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
               >
                 <div className="mb-2 flex items-center gap-2">
                   <IconComponent
-                    className={cn("h-4 w-4", isSpinning && "animate-spin")}
+                    className={cn(
+                      "h-4 w-4",
+                      statusDisplay.spinning && "animate-spin"
+                    )}
                   />
                   <span className="text-sm font-medium">
                     {statusDisplay.text}
@@ -142,14 +209,7 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
                 )}
               </div>
             )
-
-          case "step-start":
-            return isLastMessage ? (
-              <div key={index} className="bg-border my-2 h-px w-full" />
-            ) : null
-
-          default:
-            return null
+          }
         }
       })}
 

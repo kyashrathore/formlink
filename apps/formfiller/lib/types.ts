@@ -33,7 +33,7 @@ export interface TextPart {
 
 export interface ReasoningPart {
   type: "reasoning";
-  reasoning: string;
+  reasoningText: string;
 }
 
 export type MessagePart = TextPart | ReasoningPart;

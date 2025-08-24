@@ -91,7 +91,7 @@ export function MessageAssistant({
                 <MessageReasoning
                   key={key}
                   isLoading={!!isLast}
-                  reasoning={part.reasoning}
+                  reasoning={part.reasoningText}
                 />
               );
             }

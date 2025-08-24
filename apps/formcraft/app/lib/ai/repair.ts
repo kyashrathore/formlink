@@ -1,13 +1,9 @@
-import { getenv } from "@/lib/env"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
 import { z } from "zod"
+import { getModel } from "./provider"
 
-const openRouterProvider = createOpenRouter({
-  apiKey: getenv("OPENROUTER_API_KEY") || "",
-})
-
-const MODEL = openRouterProvider("anthropic/claude-3.5-sonnet")
+// Use provider utility - using vercel to avoid Azure issues
+const MODEL = getModel("claude-3.5-sonnet", "vercel")
 
 const newSystemPrompt = `## System Role: Form Schema JSON Repair Agent (Error-Focused)
 

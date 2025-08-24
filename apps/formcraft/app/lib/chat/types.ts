@@ -2,7 +2,7 @@ import { SupabaseClient } from "@formlink/db"
 import { ChatRequest } from "../types/chat"
 
 interface DataStream {
-  writeData: (data: unknown) => void
+  write: (data: { type: string; [key: string]: unknown }) => void
 }
 
 export interface FormCreationResult {

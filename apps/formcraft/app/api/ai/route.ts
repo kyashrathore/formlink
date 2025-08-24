@@ -1,3 +1,4 @@
+import { getModel } from "@/app/lib/ai/provider"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import {
   ADD_QUESTION_PROMPT,
@@ -6,7 +7,6 @@ import {
   SANITIZE_RESULT_GENERATION_PROMPT,
   VALIDATIONS_PROMPT,
 } from "@/app/lib/prompts"
-import { getenv } from "@/lib/env"
 import {
   Option,
   Question,
@@ -14,7 +14,6 @@ import {
   QuestionValidations,
   QuestionValidationsSchema,
 } from "@formlink/schema"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
 import { NextResponse } from "next/server"
 import { z } from "zod"
@@ -25,11 +24,10 @@ const generateJSONataExpressionPrompt = GENERATE_EXPRESSION_PROMPT
 const sanitizeResultGenerationPrompt = SANITIZE_RESULT_GENERATION_PROMPT
 const conditionsPrompt = CONDITIONS_PROMPT
 
-const openRouterProvider = createOpenRouter({
-  apiKey: getenv("OPENROUTER_API_KEY") || "",
-})
+// Removed - using provider utility instead
 
-const MODEL = openRouterProvider("openai/gpt-4.1")
+// Use provider utility - using vercel to avoid Azure issues
+const MODEL = getModel("gpt-4", "vercel")
 
 export const maxDuration = 20
 

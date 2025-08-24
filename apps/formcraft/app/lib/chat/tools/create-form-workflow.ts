@@ -23,7 +23,7 @@ import {
  * Interface for progress streaming
  */
 interface DataStream {
-  writeData: (data: unknown) => void
+  write: (data: { type: string; [key: string]: unknown }) => void
 }
 
 /**
@@ -119,9 +119,9 @@ export async function createFormWorkflow(
     events.push(initEvent)
 
     // Stream the initialization event
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: initEvent,
+    dataStream.write({
+      type: "data-agent_event",
+      data: initEvent,
     })
 
     logger.info(
@@ -272,9 +272,9 @@ export async function createFormWorkflow(
     )
     events.push(finalStateEvent)
 
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: finalStateEvent,
+    dataStream.write({
+      type: "data-agent_event",
+      data: finalStateEvent,
     })
 
     // Step 6: Finalize
@@ -294,9 +294,9 @@ export async function createFormWorkflow(
     )
     events.push(finalizeEvent)
 
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: finalizeEvent,
+    dataStream.write({
+      type: "data-agent_event",
+      data: finalizeEvent,
     })
 
     logger.info(
@@ -330,9 +330,27 @@ export async function createFormWorkflow(
     )
     events.push(errorEvent)
 
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: errorEvent,
+    dataStream.write({
+      type: "data-agent_event",
+      data: errorEvent,
+    })
+
+    // Always finalize so UI can exit loading state on failures
+    const finalizeEvent = createAgentEvent(
+      "agent_finalized",
+      "system",
+      {
+        message: "Simplified workflow completed with errors.",
+        details: { error: errorMessage },
+      },
+      formId,
+      userId,
+      eventSequence++
+    )
+    events.push(finalizeEvent)
+    dataStream.write({
+      type: "data-agent_event",
+      data: finalizeEvent,
     })
 
     return {

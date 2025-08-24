@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     viewTransition: true,
+    browserDebugInfoInTerminal: true,
   },
 }
 

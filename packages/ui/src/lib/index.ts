@@ -1,9 +1,4 @@
-import type {
-  CoreAssistantMessage,
-  CoreToolMessage,
-  Message,
-  UIMessage,
-} from "ai";
+import type { CoreAssistantMessage, CoreToolMessage, UIMessage } from "ai";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
@@ -53,8 +48,8 @@ function addToolMessageToChat({
   messages,
 }: {
   toolMessage: CoreToolMessage;
-  messages: Array<Message>;
-}): Array<Message> {
+  messages: Array<UIMessage>;
+}): Array<UIMessage> {
   return messages.map((message) => {
     if (message.toolInvocations) {
       return {

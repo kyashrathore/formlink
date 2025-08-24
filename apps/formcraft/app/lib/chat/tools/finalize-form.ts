@@ -17,7 +17,7 @@ export interface FormFinalizationResult {
  * Interface for progress streaming
  */
 interface DataStream {
-  writeData: (data: unknown) => void
+  write: (data: { type: string; [key: string]: unknown }) => void
 }
 
 /**
@@ -212,13 +212,7 @@ export async function finalizeForm(
   const { formId, userId, formContent, dataStream } = params
 
   try {
-    // Stream progress update
-    dataStream.writeData({
-      type: "progress",
-      message: "Starting form finalization process...",
-      step: "finalization_start",
-      progress: 10,
-    })
+    // Progress handled by workflow - removed raw stream write
 
     // Initialize Supabase client
     let supabase: Awaited<ReturnType<typeof createServerClient>>
@@ -229,11 +223,7 @@ export async function finalizeForm(
         "Failed to initialize Supabase client for DB operations."
       logger.error({ error: e }, errorMessage)
 
-      dataStream.writeData({
-        type: "error",
-        message: errorMessage,
-        step: "db_connection_error",
-      })
+      // Error handled by workflow - removed raw stream write
 
       return {
         success: false,
@@ -241,12 +231,7 @@ export async function finalizeForm(
       }
     }
 
-    dataStream.writeData({
-      type: "progress",
-      message: "Validating form questions...",
-      step: "validation",
-      progress: 30,
-    })
+    // Progress handled by workflow - removed raw stream write
 
     // Validate questions
     const questionValidation = await validateQuestions(formContent.questions)
@@ -254,11 +239,7 @@ export async function finalizeForm(
       const errorMessage =
         questionValidation.error || "Questions validation failed"
 
-      dataStream.writeData({
-        type: "error",
-        message: errorMessage,
-        step: "validation_error",
-      })
+      // Error handled by workflow - removed raw stream write
 
       return {
         success: false,
@@ -268,12 +249,7 @@ export async function finalizeForm(
 
     const validatedQuestions = questionValidation.data!
 
-    dataStream.writeData({
-      type: "progress",
-      message: "Creating form version...",
-      step: "version_creation",
-      progress: 60,
-    })
+    // Progress handled by workflow - removed raw stream write
 
     // Create form version
     const versionCreation = await createFormVersion(
@@ -287,11 +263,7 @@ export async function finalizeForm(
     if (!versionCreation.success) {
       const errorMessage = "Failed to create form version"
 
-      dataStream.writeData({
-        type: "error",
-        message: errorMessage,
-        step: "version_creation_error",
-      })
+      // Error handled by workflow - removed raw stream write
 
       return {
         success: false,
@@ -301,12 +273,7 @@ export async function finalizeForm(
 
     const newVersionId = versionCreation.versionId!
 
-    dataStream.writeData({
-      type: "progress",
-      message: "Updating form record...",
-      step: "form_update",
-      progress: 80,
-    })
+    // Progress handled by workflow - removed raw stream write
 
     // Update form record
     const formUpdate = await updateFormWithNewVersion(
@@ -325,14 +292,7 @@ export async function finalizeForm(
       // Continue as this is not critical - version was created successfully
     }
 
-    dataStream.writeData({
-      type: "progress",
-      message: `Form finalized successfully with ${validatedQuestions.length} questions`,
-      step: "finalization_complete",
-      progress: 100,
-      newVersionId,
-      questionCount: validatedQuestions.length,
-    })
+    // Progress handled by workflow - removed raw stream write
 
     logger.info(
       { formId, newVersionId, status: "COMPLETED" },
@@ -349,12 +309,7 @@ export async function finalizeForm(
 
     logger.error({ error }, "Form finalization failed")
 
-    dataStream.writeData({
-      type: "error",
-      message: "Form finalization failed",
-      error: errorMessage,
-      step: "finalization_error",
-    })
+    // Error handled by workflow - removed raw stream write
 
     return {
       success: false,

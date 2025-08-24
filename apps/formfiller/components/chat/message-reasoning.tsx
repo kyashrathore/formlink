@@ -6,12 +6,12 @@ import { CaretDown } from "@phosphor-icons/react/CaretDown";
 import { MessageContent } from "@formlink/ui";
 interface MessageReasoningProps {
   isLoading: boolean;
-  reasoning: string;
+  reasoningText: string;
 }
 
 export function MessageReasoning({
   isLoading,
-  reasoning,
+  reasoningText,
 }: MessageReasoningProps) {
   const [isExpanded, setIsExpanded] = useState(true);
 

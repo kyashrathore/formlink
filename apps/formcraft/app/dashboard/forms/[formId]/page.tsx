@@ -173,20 +173,20 @@ function TestUIPageContent() {
           // Form not found - placeholder is already set, do nothing
         } else {
           console.error(
-            "[TestUIPage] Error loading form data:",
+            "Error loading form data:",
             response.status,
             response.statusText
           )
 
           try {
             const errorData = await response.json()
-            console.error("[TestUIPage] Error details:", errorData)
+            console.error("Error details:", errorData)
           } catch (error) {
-            console.error("[TestUIPage] Could not parse error response:", error)
+            console.error("Could not parse error response:", error)
           }
         }
       } catch (error) {
-        console.error("[TestUIPage] Failed to load existing form:", error)
+        console.error("Failed to load existing form:", error)
       }
     }
 

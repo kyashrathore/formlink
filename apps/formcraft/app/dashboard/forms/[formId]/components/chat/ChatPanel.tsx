@@ -1,8 +1,9 @@
 import { useFormGenerationEventBridge } from "@/app/hooks/useFormGenerationEventBridge"
 import { MODEL_DEFAULT } from "@/app/lib/config"
 import { FormGenerationEventHandler } from "@/app/lib/handlers/FormGenerationEventHandler"
-import { useChat, type Message as VercelChatMessage } from "@ai-sdk/react"
+import { useChat } from "@ai-sdk/react"
 import { Button, PromptSuggestion } from "@formlink/ui"
+import { DefaultChatTransport } from "ai"
 import { AlertTriangle } from "lucide-react"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
@@ -59,19 +60,38 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const {
     messages: vercelChatMessages,
-    append,
+    sendMessage,
     status: chatStatus,
-    data: chatData,
     setMessages,
   } = useChat({
     id: formId,
-    api: "/api/chat",
-    body: { formId, userId: userId || "anonymous", selectedModel },
-    streamProtocol: "data",
+    transport: new DefaultChatTransport({
+      api: "/api/chat",
+      body: () => ({ formId, userId: userId || "anonymous", selectedModel }),
+    }),
+    onData: (dataPart) => {
+      try {
+        if (
+          dataPart &&
+          typeof dataPart === "object" &&
+          "type" in dataPart &&
+          (dataPart as any).type === "data-agent_event" &&
+          "data" in (dataPart as any)
+        ) {
+          const event = (dataPart as any).data as AgentEvent
 
+          if (eventHandlerRef.current) {
+            eventHandlerRef.current.handleRawEvent(event)
+          }
+          memoizedProcessEvent(event)
+          memoizedBridgeEvent(event)
+        }
+      } catch (err) {
+        console.error("[ChatPanel] onData handler error:", err)
+      }
+    },
     onError: (error) => {
       console.error("[ChatPanel] AI SDK Error:", error)
-      // Process error through the form generation store
       processEvent({
         id: `error-${Date.now()}`,
         type: "agent_error",
@@ -110,19 +130,22 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
         if (Array.isArray(historyMessages)) {
           const validRoles = ["user", "assistant", "system"]
-          const formattedMessages: VercelChatMessage[] = historyMessages
+          const formattedMessages = historyMessages
             .filter((msg) => validRoles.includes(msg.role))
-            .map((msg) => ({
-              id: msg.id?.toString() || uuidv4(),
-              role: msg.role as "user" | "assistant" | "system",
-              content:
-                typeof msg.content === "string"
-                  ? msg.content
-                  : JSON.stringify(msg.content || ""),
-              createdAt: msg.createdAt ? new Date(msg.createdAt) : new Date(),
-              ...(msg.parts && { parts: msg.parts }),
-            }))
-          setMessages(formattedMessages)
+            .map((msg) => {
+              const parts =
+                Array.isArray(msg.parts) && msg.parts.length > 0
+                  ? msg.parts
+                  : typeof msg.content === "string" && msg.content.length > 0
+                    ? [{ type: "text", text: msg.content }]
+                    : []
+              return {
+                id: msg.id?.toString() || uuidv4(),
+                role: msg.role as "user" | "assistant" | "system",
+                parts,
+              }
+            })
+          setMessages(formattedMessages as any)
         } else {
           setMessages([])
         }
@@ -144,10 +167,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     ) {
       const timer = setTimeout(() => {
         if (isMounted) {
-          append({
-            role: "user",
-            content: storedInitialMessage,
-          })
+          sendMessage(
+            { parts: [{ type: "text", text: storedInitialMessage }] },
+            { body: { formId, userId: userId || "anonymous", selectedModel } }
+          )
           setHasUserInteracted(true)
 
           if (window.location.pathname.includes("/dashboard/forms/")) {
@@ -165,70 +188,32 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     storedInitialMessage,
     vercelChatMessages.length,
     hasUserInteracted,
-    append,
+    sendMessage,
     formId,
     setInitialPrompt,
   ])
 
   const { formattedEventsForLogView } = useFormattedEvents(eventsLog)
-  const lastProcessedEventIndexRef = useRef(0)
 
-  // Process streaming data events for state machine
-  useEffect(() => {
-    if (chatData && chatData.length > lastProcessedEventIndexRef.current) {
-      const newEvents = chatData.slice(lastProcessedEventIndexRef.current)
-
-      newEvents.forEach((dataItem) => {
-        // Process direct agent events
-        if (
-          dataItem &&
-          typeof dataItem === "object" &&
-          "category" in dataItem &&
-          "type" in dataItem
-        ) {
-          const event = dataItem as unknown as AgentEvent
-
-          // Process with new architecture
-          if (eventHandlerRef.current) {
-            eventHandlerRef.current.handleRawEvent(event)
-          }
-
-          // Process with our generation store and bridge event
-          memoizedProcessEvent(event)
-          memoizedBridgeEvent(event)
-        } else if (
-          dataItem &&
-          typeof dataItem === "object" &&
-          "type" in dataItem &&
-          dataItem.type === "custom_agent_event" &&
-          "payload" in dataItem
-        ) {
-          const event = (dataItem as any).payload as AgentEvent
-
-          // Process with new architecture if enabled
-          if (eventHandlerRef.current) {
-            eventHandlerRef.current.handleRawEvent(event)
-          }
-
-          // Process with our generation store and bridge event
-          memoizedProcessEvent(event)
-          memoizedBridgeEvent(event)
-        }
-      })
-      lastProcessedEventIndexRef.current = chatData.length
-    }
-  }, [chatData, memoizedProcessEvent, memoizedBridgeEvent])
+  const messageTimestampRef = useRef<Map<string, string>>(new Map())
 
   const chatMessages: ChatMessage[] = useMemo(() => {
     return vercelChatMessages.map(
       (msg): ChatMessage => ({
         role: msg.role as "user" | "assistant",
-        content: msg.content,
-        timestamp: msg.createdAt?.toISOString() || new Date().toISOString(),
+        content: (Array.isArray((msg as any).parts) ? (msg as any).parts : [])
+          .filter((p: any) => p?.type === "text" && typeof p.text === "string")
+          .map((p: any) => p.text)
+          .join(""),
+        timestamp: (() => {
+          const existing = messageTimestampRef.current.get((msg as any).id)
+          if (existing) return existing
+          const t = new Date().toISOString()
+          messageTimestampRef.current.set((msg as any).id, t)
+          return t
+        })(),
+        // In v5, messages have parts automatically populated by the SDK
         ...(msg.parts ? { parts: msg.parts } : {}),
-        ...(msg.toolInvocations
-          ? { toolInvocations: msg.toolInvocations }
-          : {}),
       })
     )
   }, [vercelChatMessages])
@@ -239,9 +224,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const handleSendMessageForChatComponent = useCallback(
     async (message: string, model: string) => {
       setSelectedModel(model)
-      await append({ role: "user", content: message })
+      await sendMessage(
+        { parts: [{ type: "text", text: message }] },
+        {
+          body: { formId, userId: userId || "anonymous", selectedModel: model },
+        }
+      )
     },
-    [append]
+    [sendMessage, formId, userId]
   )
 
   const handleRetryClick = useCallback(() => {

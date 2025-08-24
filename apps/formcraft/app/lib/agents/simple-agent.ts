@@ -24,10 +24,10 @@ const nanoid = customAlphabet(
 )
 
 /**
- * Interface for progress streaming - needed for compatibility with workflow
+ * Interface for progress streaming - matches workflow interface
  */
 interface DataStream {
-  writeData: (data: unknown) => void
+  write: (data: { type: string; [key: string]: unknown }) => void
 }
 
 /**
@@ -59,17 +59,17 @@ export async function* createFormAgent(
   let workflowError: string | undefined
 
   const dataStream: DataStream = {
-    writeData: (data: unknown) => {
-      // Only process custom_agent_event data that contains AgentEvent payloads
+    write: (data: { type: string; [key: string]: unknown }) => {
+      // Only process data-agent_event data that contains AgentEvent payloads
       if (
         data &&
         typeof data === "object" &&
         "type" in data &&
-        data.type === "custom_agent_event" &&
-        "payload" in data
+        data.type === "data-agent_event" &&
+        "data" in data
       ) {
-        const payload = data.payload as AgentEvent
-        eventQueue.push(payload)
+        const agentEvent = data.data as AgentEvent
+        eventQueue.push(agentEvent)
       }
       // Ignore other progress events since they're handled by the workflow internally
     },

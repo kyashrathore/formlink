@@ -1,14 +1,13 @@
 import { parseFormSchema } from "@/app/lib"
+import { getModel } from "@/app/lib/ai/provider"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import { verifyGuestUserLimits } from "@/app/lib/middleware/authorization"
 import {
   CREATE_FORM_REPAIR_SYSTEM_PROMPT,
   CREATE_FORM_SYSTEM_PROMPT,
 } from "@/app/lib/prompts"
-import { getenv } from "@/lib/env"
 import { createServerClient, SupabaseClient } from "@formlink/db"
 import { Form, FormSchema } from "@formlink/schema"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
 import { customAlphabet } from "nanoid"
 import { cookies } from "next/headers"
@@ -22,11 +21,10 @@ const nanoid = customAlphabet(
 const createFormSystemPrompt = CREATE_FORM_SYSTEM_PROMPT
 const createFormRepairSystemPrompt = CREATE_FORM_REPAIR_SYSTEM_PROMPT
 
-const openRouterProvider = createOpenRouter({
-  apiKey: getenv("OPENROUTER_API_KEY") || "",
-})
+// Removed - using provider utility instead
 
-const MODEL = openRouterProvider("openai/gpt-4.1")
+// Use provider utility - using vercel to avoid Azure issues
+const MODEL = getModel("gpt-4", "vercel")
 
 async function getFormSchemaById(
   formId: string,
@@ -136,8 +134,8 @@ export async function POST(req: NextRequest) {
     }): Promise<string> => {
       maxRepairTries--
 
-      const { object: repairedSchema }: { object: Form } =
-        await generateObject<Form>({
+      const { object: repairedSchema }: { object: Form } = await generateObject(
+        {
           model: MODEL,
           schema: FormSchema,
           system: createFormRepairSystemPrompt as string,
@@ -148,7 +146,8 @@ export async function POST(req: NextRequest) {
           Original prompt: ${promptContent}
           Erroneous json:
           ${text}`,
-        })
+        }
+      )
       return JSON.stringify(repairedSchema)
     }
 

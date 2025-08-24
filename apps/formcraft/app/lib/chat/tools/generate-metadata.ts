@@ -1,7 +1,6 @@
-import { getenv } from "@/lib/env"
-import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 import { generateObject } from "ai"
 import { z } from "zod"
+import { getModel } from "../../ai/provider"
 import { ENHANCED_METADATA_PROMPT } from "../../prompts"
 import { getDefaultSettings } from "../../settings-defaults"
 import { createAgentEvent } from "../../types/agent-events"
@@ -63,7 +62,7 @@ export interface MetadataGenerationResult {
  * Interface for progress streaming
  */
 interface DataStream {
-  writeData: (data: unknown) => void
+  write: (data: { type: string; [key: string]: unknown }) => void
 }
 
 /**
@@ -86,8 +85,8 @@ export async function generateMetadata(
 ): Promise<MetadataGenerationResult> {
   try {
     // Stream progress update
-    dataStream.writeData({
-      type: "progress",
+    dataStream.write({
+      type: "data-progress",
       message: "Analyzing your input and generating form structure...",
       step: "metadata_generation",
       progress: 10,
@@ -100,21 +99,16 @@ export async function generateMetadata(
       normalizedInputContent
     )
 
-    // Initialize OpenRouter provider
-    const openRouterProvider = createOpenRouter({
-      apiKey: getenv("OPENROUTER_API_KEY") || "",
-    })
-
-    dataStream.writeData({
-      type: "progress",
+    dataStream.write({
+      type: "data-progress",
       message: "Generating form metadata with AI...",
       step: "ai_processing",
       progress: 30,
     })
 
-    // Core AI call - extracted from original lines 102-107
+    // Core AI call - using Vercel AI Gateway to avoid Azure JSON Schema issues
     const result = await generateObject({
-      model: openRouterProvider("openai/gpt-4o-mini"),
+      model: getModel("gpt-4o-mini", "vercel"),
       schema: MetadataResponseSchema,
       system: aiSystemPromptWithInput,
       prompt: normalizedInputContent,
@@ -132,9 +126,9 @@ export async function generateMetadata(
     }
 
     // Send metadata completion event for progressive UI
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: createAgentEvent(
+    dataStream.write({
+      type: "data-agent_event",
+      data: createAgentEvent(
         "state_snapshot",
         "state",
         {
@@ -174,9 +168,9 @@ export async function generateMetadata(
     })
 
     // Send journey completion event for progressive UI
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: createAgentEvent(
+    dataStream.write({
+      type: "data-agent_event",
+      data: createAgentEvent(
         "state_snapshot",
         "state",
         {
@@ -218,8 +212,8 @@ export async function generateMetadata(
     })
 
     // Keep original progress message for logging
-    dataStream.writeData({
-      type: "progress",
+    dataStream.write({
+      type: "data-progress",
       message: `Generated form "${aiResponseData.title}" with ${aiResponseData.questionDetails.length} questions`,
       step: "metadata_complete",
       progress: 100,
@@ -238,12 +232,7 @@ export async function generateMetadata(
     const errorMessage =
       (error as Error)?.message || "Unknown error during metadata generation."
 
-    dataStream.writeData({
-      type: "error",
-      message: "Failed to generate form metadata",
-      error: errorMessage,
-      step: "metadata_error",
-    })
+    // Let the workflow handle the error - don't write raw stream events
 
     return {
       success: false,

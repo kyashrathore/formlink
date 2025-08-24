@@ -13,7 +13,7 @@ export function validateChatRequest(
     messages,
     formId: formId as string | undefined,
     options: options as
-      | { model?: string; temperature?: number; maxTokens?: number }
+      | { model?: string; temperature?: number; maxOutputTokens?: number }
       | undefined,
   }
 }

@@ -107,3 +107,4 @@ notion-content-automation/
 aiseo/
 .opencode.json
 .opencode/
+.env*.local

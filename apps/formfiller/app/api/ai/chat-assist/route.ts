@@ -62,7 +62,7 @@ function createTools(context: ChatContext) {
   return {
     saveAnswer: tool({
       description: "Save a validated answer to the database",
-      parameters: z.object({
+      inputSchema: z.object({
         questionId: z.string(),
         answer: z.union([
           z.string(),
@@ -136,7 +136,7 @@ function createTools(context: ChatContext) {
 
     refreshFormContext: tool({
       description: "Get latest form submission state from database",
-      parameters: z.object({
+      inputSchema: z.object({
         includeMetadata: z.boolean().optional().default(false),
       }),
       execute: async ({ includeMetadata }) => {
@@ -195,7 +195,7 @@ function createTools(context: ChatContext) {
 
     completeSubmission: tool({
       description: "Mark form submission as complete",
-      parameters: z.object({
+      inputSchema: z.object({
         finalValidation: z.boolean().optional().default(true),
       }),
       execute: async ({ finalValidation }) => {
@@ -611,7 +611,7 @@ export async function POST(req: Request) {
         },
       });
 
-      return result.toDataStreamResponse({
+      return result.toUIMessageStreamResponse({
         headers: {
           "X-Submission-Id": activeSubmissionId,
         },

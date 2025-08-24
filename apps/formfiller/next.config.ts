@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingRoot: path.join(__dirname, "../../"),
   transpilePackages: ["@formlink/ui", "@formlink/db", "@formlink/schema"],
+  experimental: {
+    browserDebugInfoInTerminal: true,
+  },
 };
 
 export default nextConfig;

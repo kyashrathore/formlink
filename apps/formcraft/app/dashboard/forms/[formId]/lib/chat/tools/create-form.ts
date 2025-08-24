@@ -8,7 +8,7 @@ import { TOOL_DESCRIPTIONS } from "../prompts"
 export function createFormTool(context: ChatToolContext) {
   return tool({
     description: TOOL_DESCRIPTIONS.createFormAgent,
-    parameters: CreateFormAgentSchema,
+    inputSchema: CreateFormAgentSchema,
     execute: async ({ prompt }): Promise<FormCreationResult> => {
       const { dataStream, formId, supabase, userId, options } = context
 
@@ -52,7 +52,7 @@ export function createFormTool(context: ChatToolContext) {
 }
 
 interface DataStream {
-  writeData: (data: unknown) => void
+  write: (data: { type: string; [key: string]: unknown }) => void
 }
 
 interface FormAgentOptions {
@@ -94,9 +94,9 @@ async function processFormCreation(
       sequence: agentEvent.sequence,
     })
 
-    dataStream.writeData({
-      type: "custom_agent_event",
-      payload: agentEvent,
+    dataStream.write({
+      type: "data-agent_event",
+      data: agentEvent,
     })
 
     if (

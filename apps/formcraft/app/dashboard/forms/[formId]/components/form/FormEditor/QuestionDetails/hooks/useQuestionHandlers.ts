@@ -1,4 +1,4 @@
-import { EditableQuestionField, Question } from "@formlink/schema"
+import { EditableQuestionField, Option, Question } from "@formlink/schema"
 import { useCallback } from "react"
 import { useFormEditorStore } from "../../../../../stores/useFormEditorStore"
 
@@ -30,9 +30,14 @@ export const useQuestionHandlers = (question: Question | null) => {
   )
 
   const handleAddOption = useCallback(
-    (option: { label: string; value: string }) => {
+    (option: { label: string; value: string; score?: number }) => {
       if (!question) return
-      addQuestionOption(question.id, option)
+      const withScore: Option = {
+        label: option.label,
+        value: option.value,
+        score: option.score ?? 0,
+      }
+      addQuestionOption(question.id, withScore)
     },
     [question, addQuestionOption]
   )

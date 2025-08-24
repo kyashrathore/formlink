@@ -4,7 +4,7 @@ import { z } from "zod";
 const OptionSchema = z.object({
   value: z.string(),
   label: z.string(),
-  score: z.number().optional(),
+  score: z.number(),
 });
 
 // Individual question type schemas for composition and partial updates
@@ -33,9 +33,9 @@ export const RatingQuestionSchema = z.object({
   name: z.literal("rating"),
   config: z
     .object({
-      min: z.number().int().default(1),
+      min: z.number().int(),
       max: z.number().int().positive(),
-      step: z.number().int().positive().default(1),
+      step: z.number().int().positive(),
       minLabel: z.string().optional(),
       maxLabel: z.string().optional(),
     })
@@ -69,7 +69,7 @@ export const LinearScaleQuestionSchema = z.object({
     .object({
       start: z.number().int(),
       end: z.number().int(),
-      step: z.number().int().positive().default(1),
+      step: z.number().int().positive(),
       startLabel: z.string().optional(),
       endLabel: z.string().optional(),
     })
