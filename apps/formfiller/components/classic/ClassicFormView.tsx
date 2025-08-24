@@ -142,7 +142,9 @@ export default function ClassicFormView({
           schemaFields[questionId] = question.validations?.required?.value
             ? z
                 .union([
-                  z.instanceof(File, { message: "Please upload a file" }),
+                  z.instanceof(File, {
+                    message: "Please upload a file",
+                  }),
                   z.object({
                     url: z.string(),
                     name: z.string(),

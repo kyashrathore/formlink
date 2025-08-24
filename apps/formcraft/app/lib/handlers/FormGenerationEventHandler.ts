@@ -80,27 +80,39 @@ export class FormGenerationEventHandler {
     try {
       switch (event.type) {
         case "agent_initialized":
-          this.handleAgentInitialized(event)
+          this.handleAgentInitialized(
+            event as Extract<AgentEvent, { type: "agent_initialized" }>
+          )
           break
 
         case "state_snapshot":
-          this.handleStateSnapshot(event)
+          this.handleStateSnapshot(
+            event as Extract<AgentEvent, { type: "state_snapshot" }>
+          )
           break
 
         case "question_schema_generated":
-          this.handleQuestionGenerated(event)
+          this.handleQuestionGenerated(
+            event as Extract<AgentEvent, { type: "question_schema_generated" }>
+          )
           break
 
         case "agent_warning":
-          this.handleAgentWarning(event)
+          this.handleAgentWarning(
+            event as Extract<AgentEvent, { type: "agent_warning" }>
+          )
           break
 
         case "agent_error":
-          this.handleAgentError(event)
+          this.handleAgentError(
+            event as Extract<AgentEvent, { type: "agent_error" }>
+          )
           break
 
         case "agent_finalized":
-          this.handleAgentFinalized(event)
+          this.handleAgentFinalized(
+            event as Extract<AgentEvent, { type: "agent_finalized" }>
+          )
           break
       }
     } catch (error) {
@@ -164,13 +176,16 @@ export class FormGenerationEventHandler {
     if (validatedQuestion) {
       useFormGenerationStore
         .getState()
-        .addQuestion(validatedQuestion as unknown as Question, questionIndex)
+        .addQuestion(
+          validatedQuestion as unknown as Question,
+          questionIndex as number
+        )
 
       // Update total if provided
       if (event.data.totalQuestions) {
         useFormGenerationStore
           .getState()
-          .setQuestionTotal(event.data.totalQuestions)
+          .setQuestionTotal(event.data.totalQuestions as number)
       }
 
       this.trackAnalytics("question_generated", {

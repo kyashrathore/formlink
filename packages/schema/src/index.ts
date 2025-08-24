@@ -75,8 +75,8 @@ export const RatingConfigSchema = z
     maxLabel: z.string().optional(),
   })
   .refine((data) => data.max > data.min, {
-    message: "Rating 'max' must be greater than 'min'.",
     path: ["max"],
+    message: "Rating 'max' must be greater than 'min'.",
   });
 
 export const LinearScaleConfigSchema = z
@@ -88,8 +88,8 @@ export const LinearScaleConfigSchema = z
     endLabel: z.string().optional(),
   })
   .refine((data) => data.end > data.start, {
-    message: "Linear scale 'end' must be greater than 'start'.",
     path: ["end"],
+    message: "Linear scale 'end' must be greater than 'start'.",
   });
 
 // The new, unified type object composed from individual schemas
@@ -184,37 +184,36 @@ export const QuestionSchema = z.object({
     ),
 });
 
-export const SettingsSchema = z
-  .object({
-    defaultMode: z.enum(["ai", "typeform", "classic"]).optional().default("ai"),
-    resultPageGenerationPrompt: z.string().optional(),
-    journeyScript: z.string().optional(),
-    additionalFields: z
-      .object({
-        queryParamater: z.array(z.string()),
-        computedFromResponses: z.array(
-          z.object({
-            field_id: z.string(),
-            prompt: z.string(),
-            jsonata: z.string(),
-          }),
-        ),
-      })
-      .optional(),
-    redirectOnSubmissionUrl: z.string().optional(),
-    submissionNotificationEmail: z.string().optional(),
-    integrations: z
-      .object({
-        webhookUrl: z.string().optional(),
-      })
-      .optional(),
-    branching: z
-      .object({
-        enabled: z.boolean().optional().default(false),
-      })
-      .optional(),
-  })
-  .passthrough();
+export const SettingsSchema = z.object({
+  defaultMode: z.enum(["ai", "typeform", "classic"]).optional().default("ai"),
+  resultPageGenerationPrompt: z.string().optional(),
+  journeyScript: z.string().optional(),
+  additionalFields: z
+    .object({
+      queryParamater: z.array(z.string()),
+      computedFromResponses: z.array(
+        z.object({
+          field_id: z.string(),
+          prompt: z.string(),
+          jsonata: z.string(),
+        }),
+      ),
+    })
+    .optional(),
+  redirectOnSubmissionUrl: z.string().optional(),
+  creatorMailAddressOnSubmission: z.string().optional(),
+  submissionNotificationEmail: z.string().optional(),
+  integrations: z
+    .object({
+      webhookUrl: z.string().optional(),
+    })
+    .optional(),
+  branching: z
+    .object({
+      enabled: z.boolean().optional().default(false),
+    })
+    .optional(),
+});
 export type Settings = z.infer<typeof SettingsSchema>;
 
 export const FormSchema = z.object({

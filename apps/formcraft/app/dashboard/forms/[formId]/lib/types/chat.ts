@@ -103,7 +103,7 @@ const RemoveQuestionActionSchema = z.object({
 
 export const UpdateFormSchema = z.object({
   updates: z
-    .object({
+    .strictObject({
       title: FullFormSchema.shape.title
         .optional()
         .describe("New form title. Only include if changing."),
@@ -128,7 +128,6 @@ export const UpdateFormSchema = z.object({
           "Updates to form settings. Only include fields to be changed."
         ),
     })
-    .strict()
     .describe(
       "An object containing only the specific form fields to be updated. All properties are optional. " +
         "For 'questions', provide an array of actions. For 'add', 'questionData' should be a complete new question. " +
@@ -150,7 +149,7 @@ export const ShowConfigButtonSchema = z.object({
     .describe("Type of configuration button to show"),
   formId: z.string().describe("Form ID for the configuration"),
   metadata: z
-    .record(z.unknown())
+    .record(z.string(), z.unknown())
     .optional()
     .describe("Additional metadata for the button"),
 })

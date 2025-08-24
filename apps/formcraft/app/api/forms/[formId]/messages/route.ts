@@ -41,7 +41,10 @@ export async function GET(
 
   const { formId } = paramsValidation.data
 
-  const ownership = await verifyUserOwnsForm(formId, authResult.user.id)
+  const ownership = await verifyUserOwnsForm(
+    formId,
+    authResult.user.id as string
+  )
 
   if (!ownership.formExists) {
     return NextResponse.json({ error: "Form not found" }, { status: 404 })
@@ -57,7 +60,7 @@ export async function GET(
   const { data: messages, error } = await supabase
     .from("messages")
     .select("role, content, created_at, id")
-    .eq("form_id", formId)
+    .eq("form_id", formId as string)
     .order("created_at", { ascending: true })
 
   if (error) {

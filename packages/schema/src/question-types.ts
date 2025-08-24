@@ -40,8 +40,8 @@ export const RatingQuestionSchema = z.object({
       maxLabel: z.string().optional(),
     })
     .refine((data) => data.max > data.min, {
-      message: "Rating 'max' must be greater than 'min'.",
       path: ["max"],
+      message: "Rating 'max' must be greater than 'min'.",
     }),
 });
 
@@ -74,8 +74,8 @@ export const LinearScaleQuestionSchema = z.object({
       endLabel: z.string().optional(),
     })
     .refine((data) => data.end > data.start, {
-      message: "Linear scale 'end' must be greater than 'start'.",
       path: ["end"],
+      message: "Linear scale 'end' must be greater than 'start'.",
     }),
 });
 
