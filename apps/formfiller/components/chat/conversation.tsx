@@ -16,6 +16,11 @@ type ConversationProps = {
   messages: MessageType[];
   status?: "streaming" | "ready" | "submitted" | "error";
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
+  onSubmitSelection?: (
+    questionId: string,
+    value: any,
+    displayText: string,
+  ) => Promise<void>;
 };
 
 // Scroll button component
@@ -38,6 +43,7 @@ export function Conversation({
   messages,
   status = "ready",
   handleFileUpload,
+  onSubmitSelection,
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length);
 
@@ -68,6 +74,7 @@ export function Conversation({
               isLast={isLast}
               hasScrollAnchor={hasScrollAnchor}
               handleFileUpload={handleFileUpload}
+              onSubmitSelection={onSubmitSelection}
             />
           );
         })}

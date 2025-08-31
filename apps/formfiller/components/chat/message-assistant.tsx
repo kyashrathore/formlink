@@ -9,6 +9,11 @@ type MessageAssistantProps = {
   isLast?: boolean;
   hasScrollAnchor?: boolean;
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
+  onSubmitSelection?: (
+    questionId: string,
+    value: any,
+    displayText: string,
+  ) => Promise<void>;
 };
 
 export function MessageAssistant({
@@ -16,6 +21,7 @@ export function MessageAssistant({
   isLast,
   hasScrollAnchor,
   handleFileUpload,
+  onSubmitSelection,
 }: MessageAssistantProps) {
   const { id: messageId, parts } = message || {};
   const { components } = useQuestionRenderer(
@@ -23,6 +29,7 @@ export function MessageAssistant({
     isLast,
     "assistant",
     handleFileUpload,
+    onSubmitSelection,
   );
 
   return (

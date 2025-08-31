@@ -129,15 +129,6 @@ interface ChatState {
   isTestSubmission: boolean;
   ephemeralUploadedFile: File | null;
 
-  // New: For selection-to-user-message UX
-  triggerUserMessageForSelection: {
-    assistantMessageId: string;
-    questionId: string;
-    value: QuestionResponse;
-    displayText: string;
-    timestamp: number;
-  } | null;
-
   // Actions
   setupFormCore: (
     formSchemaData: Form,
@@ -163,13 +154,6 @@ interface ChatState {
   setLastError: (errorMsg: string) => void;
   setChatHistoryMessages: (messages: MessageType[]) => void;
   setCurrentInput: (questionId: string, value: QuestionResponse) => void;
-  setTriggerUserMessageForSelection: (
-    assistantMessageId: string,
-    questionId: string,
-    value: QuestionResponse,
-    displayText: string,
-  ) => void;
-  clearTriggerUserMessageForSelection: () => void;
   clearPersistedState: () => void;
   restartForm: () => void;
   setEphemeralUploadedFile: (file: File | null) => void;
@@ -198,7 +182,6 @@ export const useChatStore = create<ChatState>()(
       formDisplayState: "idle",
       lastError: null,
       chatHistoryMessages: [],
-      triggerUserMessageForSelection: null,
       isTestSubmission: false,
       ephemeralUploadedFile: null,
 
@@ -272,7 +255,6 @@ export const useChatStore = create<ChatState>()(
             ? prevFormDisplayState
             : "idle",
           lastError: null,
-          triggerUserMessageForSelection: null,
           isTestSubmission: isTestSubmissionFlag,
         });
 
@@ -489,25 +471,6 @@ export const useChatStore = create<ChatState>()(
             [questionId]: value,
           },
         })),
-      setTriggerUserMessageForSelection: (
-        assistantMessageId,
-        questionId,
-        value,
-        displayText,
-      ) => {
-        set({
-          triggerUserMessageForSelection: {
-            assistantMessageId,
-            questionId,
-            value,
-            displayText,
-            timestamp: Date.now(),
-          },
-        });
-      },
-      clearTriggerUserMessageForSelection: () => {
-        set({ triggerUserMessageForSelection: null });
-      },
 
       clearPersistedState: () => {
         // Clear only the persisted fields to reset localStorage
@@ -536,7 +499,6 @@ export const useChatStore = create<ChatState>()(
           setLastError,
           setCurrentInput,
           setFormDisplayState,
-          setTriggerUserMessageForSelection,
         } = get();
         if (!formId || !submissionId) {
           setLastError("Cannot upload file: missing form or submission ID.");
@@ -564,20 +526,6 @@ export const useChatStore = create<ChatState>()(
 
           // Set the input value immediately after successful upload
           setCurrentInput(questionId, fileDetails);
-
-          // Find the last assistant message to trigger the user message from
-          const lastAssistantMessage = get()
-            .chatHistoryMessages.filter((m) => m.role === "assistant")
-            .pop();
-
-          if (lastAssistantMessage) {
-            setTriggerUserMessageForSelection(
-              lastAssistantMessage.id,
-              questionId,
-              fileDetails,
-              `Uploaded file: ${fileName}`,
-            );
-          }
         } catch (error) {
           setLastError(
             error instanceof Error
@@ -599,7 +547,6 @@ export const useChatStore = create<ChatState>()(
             currentQuestionId: null,
             formDisplayState: "idle",
             lastError: null,
-            triggerUserMessageForSelection: null,
             ephemeralUploadedFile: null,
           };
         });

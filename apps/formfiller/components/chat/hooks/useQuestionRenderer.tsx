@@ -7,6 +7,11 @@ export const useQuestionRenderer = (
   isLast?: boolean,
   variant: "user" | "assistant" = "assistant",
   handleFileUpload?: (questionId: string, file: File) => Promise<void>,
+  onSubmitSelection?: (
+    questionId: string,
+    value: any,
+    displayText: string,
+  ) => Promise<void>,
 ) => {
   const components = {
     p: ({
@@ -60,6 +65,7 @@ export const useQuestionRenderer = (
             isLast={isLast}
             variant={variant}
             handleFileUpload={handleFileUpload}
+            onSubmitSelection={onSubmitSelection}
           />
         );
       }

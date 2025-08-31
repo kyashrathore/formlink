@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
-import type { ChatContext, QuestionResponse } from "@/lib/types";
+// Types used inline within this file
 import { FormValidator } from "@/lib/validation/FormValidator";
 import {
   AIContext,
@@ -39,7 +39,8 @@ function processUserInput(requestData: any): {
   return { messages, body, userInput };
 }
 
-// Context building utilities
+// Context building utilities - currently unused but may be needed for debugging
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function buildAIContext(
   sanitizedInput: string,
   submissionBehavior: "auto" | "manualClear" | "manualUnclear" | null,
@@ -320,16 +321,16 @@ export async function POST(req: Request) {
       }
     }
 
-    // Build AI context
-    const context = buildAIContext(
-      sanitizedInput,
-      submissionBehaviorNorm,
-      formSchema,
-      effectiveCurrentQuestionId ?? null,
-      effectiveResponses,
-      validationResult,
-      justSavedAnswer,
-    );
+    // Build AI context (for logging/debugging if needed)
+    // const context = buildAIContext(
+    //   sanitizedInput,
+    //   submissionBehaviorNorm,
+    //   formSchema,
+    //   effectiveCurrentQuestionId ?? null,
+    //   effectiveResponses,
+    //   validationResult,
+    //   justSavedAnswer,
+    // );
 
     const answeredQuestions = Object.keys(effectiveResponses || {});
     const nextQuestion = formSchema.questions.find(

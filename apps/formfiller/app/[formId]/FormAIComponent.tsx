@@ -17,11 +17,11 @@ import { DefaultChatTransport } from "ai";
 import { AlertCircle, ArrowRight, RefreshCw } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import React, { useEffect, useRef, useState } from "react";
+import { useFormSession } from "../../hooks/useFormSession";
 import { useRedirect } from "../../hooks/useRedirect";
-import { apiConfig } from "../../lib/api-config";
+import { apiConfig, apiServices } from "../../lib/api-config";
 import type {
   ChatError,
-  FormWithVersions,
   QueryDataForForm,
   QuestionResponse,
 } from "../../lib/types";
@@ -43,140 +43,44 @@ export default function FormAIComponent({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showRetry, setShowRetry] = useState(false);
   const [isInFallbackMode] = useState(false);
-  const [userId] = useState<string | null>(null);
-  const [historyLoading, setHistoryLoading] = useState(true);
   const [input, setInput] = useState("");
+
+  // Convert queryDataForForm to proper QuestionResponse format
+  const normalizeQueryData = (
+    queryData?: QueryDataForForm,
+  ): Record<string, QuestionResponse> => {
+    const initialData: Record<string, QuestionResponse> = {};
+    if (queryData) {
+      Object.entries(queryData).forEach(([key, value]) => {
+        // Convert boolean to string for compatibility
+        if (typeof value === "boolean") {
+          initialData[key] = value.toString();
+        } else if (value !== undefined && value !== null) {
+          initialData[key] = value;
+        }
+      });
+    }
+    return initialData;
+  };
+
+  const { isLoading } = useFormSession({
+    formId,
+    formSchema,
+    initialData: normalizeQueryData(queryDataForForm),
+    isTestSubmission,
+  });
 
   const {
     formDisplayState,
     currentQuestionId,
     chatHistoryMessages,
-    initializeForm,
-    startFormInteraction,
     processAssistantResponse,
     setFormDisplayState,
     setLastError,
-    submissionId,
     currentInputs,
-    triggerUserMessageForSelection,
-    clearTriggerUserMessageForSelection,
     setChatHistoryMessages,
-    hydrateFromHistory,
-    handleFileUpload,
     setCurrentInput,
   } = store;
-
-  const currentQuestionIdRef = useRef<string | null>(null);
-
-  // Fetch chat history from backend and hydrate chat state
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadHistory() {
-      // If we don't have IDs or schema yet, nothing to do
-
-      if (!submissionId || !formId || !formSchema) {
-        setHistoryLoading(false);
-        return;
-      }
-
-      try {
-        setHistoryLoading(true);
-        const res = await fetch(
-          `/api/forms/${formId}/chat-history?submissionId=${submissionId}`,
-        );
-        if (res.ok) {
-          const data: {
-            messages: Array<{
-              id: string;
-              role: "user" | "assistant";
-              content: string;
-              createdAt?: string;
-            }>;
-            responses?: Record<string, unknown>;
-            submissionStatus?: string;
-            completedAt?: string;
-          } = await res.json();
-
-          // Keep messages in simple format - useChat will convert them
-          const msgs = (data?.messages ?? []).map((msg: any) => ({
-            id: msg.id,
-            role: msg.role,
-            content: msg.content,
-            createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
-          }));
-          const responses = (data as any)?.responses ?? {};
-          if (!cancelled) {
-            hydrateFromHistory(msgs as any, responses as any, formSchema); // Pass formSchema to prevent race condition
-
-            // Check if submission is already completed
-            if (data.submissionStatus === "completed") {
-              setFormDisplayState("completed");
-            }
-          }
-        } else {
-          // Non-blocking: proceed with empty history
-          if (!cancelled) {
-            hydrateFromHistory([], {});
-          }
-        }
-      } catch {
-        if (!cancelled) {
-          hydrateFromHistory([], {});
-        }
-      } finally {
-        if (!cancelled) {
-          setHistoryLoading(false);
-        }
-      }
-    }
-
-    loadHistory();
-    return () => {
-      cancelled = true;
-    };
-  }, [submissionId, formId, formSchema, setChatHistoryMessages]);
-
-  // Note: In AI mode, all saves are handled by the chat-assist route
-  // This function is kept for potential future use but is not called in AI mode
-
-  useEffect(() => {
-    if (!submissionId || store.formId !== formId) {
-      const versionToUse =
-        (formSchema as FormWithVersions).current_published_version_id ||
-        (formSchema as FormWithVersions).current_draft_version_id ||
-        "";
-      // Convert queryDataForForm to proper QuestionResponse format
-      const initialData: Record<string, QuestionResponse> = {};
-      if (queryDataForForm) {
-        Object.entries(queryDataForForm).forEach(([key, value]) => {
-          // Convert boolean to string for compatibility
-          if (typeof value === "boolean") {
-            initialData[key] = value.toString();
-          } else if (value !== undefined && value !== null) {
-            initialData[key] = value;
-          }
-        });
-      }
-
-      initializeForm(
-        formSchema,
-        formId,
-        versionToUse,
-        true,
-        initialData,
-        isTestSubmission,
-      );
-    }
-  }, [
-    formId,
-    formSchema,
-    submissionId,
-    isTestSubmission,
-    queryDataForForm,
-    initializeForm,
-    store.formId,
-  ]);
 
   // Debug: Check what URL is being used
   const chatAssistUrl = apiConfig.getChatAssistUrl();
@@ -191,27 +95,46 @@ export default function FormAIComponent({
 
       // Helper to apply a single tool result consistently
       const applyToolResult = (toolName: string, result: any) => {
-        if (!result) return;
+        if (!result || typeof toolName !== "string") return;
 
-        if (toolName === "saveAnswer") {
-          if (
-            result?.saved &&
-            result?.questionId &&
-            result?.value !== undefined
-          ) {
-            setCurrentInput(result.questionId, result.value);
+        // Validate tool name is expected
+        const validToolNames = [
+          "saveAnswer",
+          "presentQuestion",
+          "completeSubmission",
+        ];
+        if (!validToolNames.includes(toolName)) {
+          console.warn(`Unknown tool name: ${toolName}`);
+          return;
+        }
+
+        try {
+          if (toolName === "saveAnswer") {
+            if (
+              result?.saved &&
+              typeof result?.questionId === "string" &&
+              result?.questionId.trim() &&
+              result?.value !== undefined
+            ) {
+              setCurrentInput(result.questionId, result.value);
+            }
+            if (
+              typeof result?.nextQuestionId === "string" &&
+              result.nextQuestionId.trim()
+            ) {
+              store.setCurrentQuestionId(result.nextQuestionId);
+            }
+          } else if (toolName === "presentQuestion") {
+            const qid = result?.questionId;
+            if (typeof qid === "string" && qid.trim()) {
+              store.setCurrentQuestionId(qid);
+            }
+          } else if (toolName === "completeSubmission") {
+            setFormDisplayState("completed");
+            // Don't clear persisted state - allow refreshing completed forms to show history
           }
-          if (result?.nextQuestionId) {
-            store.setCurrentQuestionId(result.nextQuestionId);
-          }
-        } else if (toolName === "presentQuestion") {
-          const qid = result?.questionId;
-          if (qid) {
-            store.setCurrentQuestionId(qid);
-          }
-        } else if (toolName === "completeSubmission") {
-          setFormDisplayState("completed");
-          // Don't clear persisted state - allow refreshing completed forms to show history
+        } catch (error) {
+          console.error(`Error applying tool result for ${toolName}:`, error);
         }
       };
 
@@ -220,11 +143,18 @@ export default function FormAIComponent({
 
       if (parts.length > 0) {
         parts.forEach((part: any) => {
-          // tool parts look like: { type: "tool-saveAnswer" | "tool-presentQuestion" | "tool-completeSubmission", state, input, output }
-          if (typeof part?.type === "string" && part.type.startsWith("tool-")) {
-            const toolName = part.type.replace("tool-", "");
-            const result = part.output ?? part.result;
-            applyToolResult(toolName, result);
+          try {
+            // tool parts look like: { type: "tool-saveAnswer" | "tool-presentQuestion" | "tool-completeSubmission", state, input, output }
+            if (
+              typeof part?.type === "string" &&
+              part.type.startsWith("tool-")
+            ) {
+              const toolName = part.type.replace("tool-", "");
+              const result = part.output ?? part.result;
+              applyToolResult(toolName, result);
+            }
+          } catch (error) {
+            console.error("Error processing part:", part, error);
           }
         });
       }
@@ -232,7 +162,16 @@ export default function FormAIComponent({
       // Back-compat: some transports expose toolInvocations
       if (Array.isArray(message?.toolInvocations)) {
         message.toolInvocations.forEach((toolCall: any) => {
-          applyToolResult(toolCall.toolName, toolCall.result);
+          try {
+            if (toolCall?.toolName && (toolCall.result || toolCall.output)) {
+              applyToolResult(
+                toolCall.toolName,
+                toolCall.result ?? toolCall.output,
+              );
+            }
+          } catch (error) {
+            console.error("Error processing toolInvocation:", toolCall, error);
+          }
         });
       }
 
@@ -264,11 +203,36 @@ export default function FormAIComponent({
   const chatResult = chat;
   const { messages, setMessages, sendMessage, status } = chatResult;
 
-  // Log what's actually available to debug
+  // Direct selection submission helper
+  async function submitSelection(
+    questionId: string,
+    value: QuestionResponse,
+    displayText: string,
+  ): Promise<void> {
+    // 1) optimistic local update
+    setCurrentInput(questionId, value);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInput(e.target.value);
-  };
+    // 2) assemble body (ensure responses include the latest value)
+    const updatedResponses = { ...currentInputs, [questionId]: value };
+    const body = {
+      userInput: value, // structured value (string/number/object), not used for chat rendering
+      submissionBehavior: "auto" as const,
+      currentQuestionId: store.currentQuestionId, // authoritative from last tool
+      justSavedAnswer: { questionId, value },
+      formSchema, // keep as-is for now
+      responses: updatedResponses,
+      submissionId: store.submissionId,
+      userId: null,
+      isTestSubmission,
+    };
+
+    // 3) guarded send
+    setFormDisplayState("chatting_ai_loading");
+    await sendMessage(
+      { parts: [{ type: "text", text: displayText }] }, // chat-visible text
+      { body },
+    );
+  }
 
   useEffect(() => {
     const historyLastMsg = chatHistoryMessages.at(-1);
@@ -281,157 +245,84 @@ export default function FormAIComponent({
 
   // After history fetch, hydrate chat messages if chat is empty
   useEffect(() => {
-    if (
-      !historyLoading &&
-      messages.length === 0 &&
-      chatHistoryMessages.length > 0
-    ) {
+    if (!isLoading && messages.length === 0 && chatHistoryMessages.length > 0) {
       setMessages(chatHistoryMessages);
     }
-  }, [historyLoading, messages, chatHistoryMessages, setMessages]);
+  }, [isLoading, messages, chatHistoryMessages, setMessages]);
 
-  useEffect(() => {
-    if (triggerUserMessageForSelection && sendMessage && formSchema) {
-      const { questionId, value, displayText } = triggerUserMessageForSelection;
-
-      const handleAutoSubmission = async () => {
-        // Clear the trigger first thing in the async function to prevent re-triggers
-        clearTriggerUserMessageForSelection();
-
-        try {
-          // In AI mode, the chat-assist route handles all saves
-          // Don't save directly to database
-
-          // Update local state
-          setCurrentInput(questionId, value);
-
-          // Find next question (but don't update currentQuestionId yet)
-          const updatedInputs = { ...currentInputs, [questionId]: value };
-
-          // Don't update currentQuestionId here - let the QuestionWrapper handle it
-          // when the AI presents the next question
-          // if (nextQuestion) {
-          //   store.setCurrentQuestionId(nextQuestion.id);
-          // }
-
-          // Determine submission behavior based on how the answer was submitted
-          const submissionBehavior = "auto"; // User clicked on an input component
-
-          const submissionBody = {
-            userInput: value,
-            submissionBehavior,
-            currentQuestionId: questionId, // The question that was just answered
-            justSavedAnswer: { questionId, value }, // Include info about saved answer
-            formSchema,
-            responses: updatedInputs, // Use updated inputs that include the new answer
-            submissionId,
-            userId,
-            isTestSubmission,
-          };
-
-          // AI SDK v5 sendMessage handles adding the user message automatically
-          await sendMessage(
-            {
-              parts: [{ type: "text", text: displayText }],
-            },
-            { body: submissionBody },
-          );
-
-          setFormDisplayState("chatting_ai_loading");
-        } catch (error) {
-          console.error("Failed to save answer:", error);
-          setErrorMessage("Failed to save your answer. Please try again.");
-        }
-      };
-
-      handleAutoSubmission();
-    }
-  }, [
-    triggerUserMessageForSelection, // ADD THIS!
-    clearTriggerUserMessageForSelection, // ADD THIS!
-    formDisplayState,
-    chatHistoryMessages,
-    messages,
-    sendMessage,
-    formSchema,
-    submissionId,
-    userId,
-    setFormDisplayState,
-    isTestSubmission,
-    historyLoading,
-    currentInputs,
-    setCurrentInput,
-  ]);
-
-  const handleAISubmit = async (
-    e?: React.FormEvent<HTMLFormElement> | React.KeyboardEvent,
-  ) => {
+  async function handleAISubmit(e?: React.FormEvent | React.KeyboardEvent) {
     e?.preventDefault();
-
     if (!input.trim()) return;
 
-    currentQuestionIdRef.current = currentQuestionId;
     setErrorMessage(null);
-
-    // Derive the effective current question id from latest tool outputs, falling back to store/computed
-    let derivedCurrentQ: string | null = null;
-    try {
-      const lastAssistant = [...messages]
-        .reverse()
-        .find((m: any) => m?.role === "assistant");
-      const parts = Array.isArray((lastAssistant as any)?.parts)
-        ? (lastAssistant as any).parts
-        : [];
-      for (let i = parts.length - 1; i >= 0; i--) {
-        const p = parts[i];
-        if (p?.type === "tool-presentQuestion" && p?.output?.questionId) {
-          derivedCurrentQ = p.output.questionId;
-          break;
-        }
-        if (p?.type === "tool-saveAnswer" && p?.output?.nextQuestionId) {
-          derivedCurrentQ = p.output.nextQuestionId;
-          break;
-        }
-      }
-    } catch {
-      // noop - best effort
-    }
-
-    // Fallbacks: store, then first unanswered based on currentInputs
-    if (!derivedCurrentQ) {
-      derivedCurrentQ = currentQuestionId ?? null;
-    }
-    if (!derivedCurrentQ && Array.isArray(formSchema?.questions)) {
-      for (const q of formSchema.questions) {
-        if (!Object.prototype.hasOwnProperty.call(currentInputs || {}, q.id)) {
-          derivedCurrentQ = q.id;
-          break;
-        }
-      }
-    }
-
-    // Keep store in sync if we computed a better value
-    if (derivedCurrentQ && derivedCurrentQ !== currentQuestionId) {
-      store.setCurrentQuestionId(derivedCurrentQ);
-    }
 
     const body = {
       userInput: input,
-      submissionBehavior: "manualUnclear", // User typed and hit enter
-      currentQuestionId: derivedCurrentQ,
+      submissionBehavior: "manualUnclear" as const,
+      currentQuestionId: store.currentQuestionId ?? null, // do not guess from parts
       formSchema,
       responses: currentInputs,
-      submissionId,
-      userId,
+      submissionId: store.submissionId,
+      userId: null,
       isTestSubmission,
     };
 
     setFormDisplayState("chatting_ai_loading");
-
     await sendMessage({ parts: [{ type: "text", text: input }] }, { body });
+    setInput("");
+  }
 
-    setInput(""); // Clear input after submission
-  };
+  // File upload handler that calls submitSelection directly
+  async function handleFileUploadWithSubmission(
+    questionId: string,
+    file: File | File[],
+  ): Promise<void> {
+    // Handle case where file is passed as an array (from onFileSelect callback)
+    const actualFile: File = Array.isArray(file)
+      ? (file[0] as File)
+      : (file as File);
+
+    if (!store.formId || !store.submissionId) {
+      setErrorMessage("Cannot upload file: missing form or submission ID.");
+      return;
+    }
+
+    setFormDisplayState("uploading_file");
+
+    const formData = new FormData();
+    formData.append("file", actualFile);
+    formData.append("formId", store.formId);
+    formData.append("submissionId", store.submissionId);
+    formData.append("questionId", questionId);
+
+    try {
+      const result = await apiServices.uploadFile(formData);
+      const { url, fileName, fileSize } = result;
+
+      const fileDetails = {
+        url: url,
+        name: fileName,
+        size: fileSize,
+      };
+
+      // Call submitSelection directly instead of using the trigger flag
+      await submitSelection(
+        questionId,
+        fileDetails,
+        `Uploaded file: ${fileName}`,
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "An unknown error occurred during file upload.",
+      );
+      // Reset UI state on upload failure; success path transitions via submitSelection/onFinish
+      setFormDisplayState("chatting_ai_ready");
+    } finally {
+      // Do not override chat state here; submitSelection/onFinish manage it
+    }
+  }
 
   const handleRetry = async () => {
     setErrorMessage(null);
@@ -441,24 +332,21 @@ export default function FormAIComponent({
       const lastUserMessage = [...messages]
         .reverse()
         .find((m) => m.role === "user");
-      if (lastUserMessage && input) {
+      if (lastUserMessage) {
+        const retryText = (lastUserMessage as any).content || "";
         const body = {
-          userInput: input,
+          userInput: retryText,
           submissionBehavior: "manualUnclear",
-          currentQuestionId,
+          currentQuestionId: store.currentQuestionId ?? null,
           formSchema,
           responses: currentInputs,
-          submissionId,
-          userId,
+          submissionId: store.submissionId,
+          userId: null,
           isTestSubmission,
         };
         try {
           await sendMessage(
-            {
-              parts: [
-                { type: "text", text: (lastUserMessage as any).content || "" },
-              ],
-            },
+            { parts: [{ type: "text", text: retryText }] },
             { body },
           );
         } catch (error) {
@@ -483,131 +371,81 @@ export default function FormAIComponent({
   // Track if we've sent the initial message
   const hasInitiatedRef = useRef(false);
 
-  // Auto-start form when component mounts
+  // One-shot kickoff/resume after isLoading
   useEffect(() => {
-    if (submissionId && formDisplayState === "idle") {
-      startFormInteraction();
-    }
-  }, [submissionId, formDisplayState, startFormInteraction]);
+    if (isLoading || !sendMessage) return;
+    if (!store.submissionId) return;
 
-  // Send initial message to AI when form interaction starts
-  useEffect(() => {
-    // Only initiate if:
-    // 1. We're in the ready state
-    // 2. We can send messages
-    // 3. We haven't initiated yet
-    // 4. History loading is complete
-    // 5. There's no existing history or messages
+    const hasHistory = (chatHistoryMessages?.length ?? 0) > 0;
+
     if (
-      (formDisplayState === "idle" ||
-        formDisplayState === "chatting_ai_ready") &&
-      sendMessage &&
       !hasInitiatedRef.current &&
-      !historyLoading && // Wait for history check to complete
-      chatHistoryMessages.length === 0 && // No history exists
-      messages.length === 0 // No current messages
+      !hasHistory &&
+      (formDisplayState === "idle" || formDisplayState === "chatting_ai_ready")
     ) {
+      // auto-start
       hasInitiatedRef.current = true;
-
       const submissionBody = {
         userInput: "Start the form",
         submissionBehavior: "auto" as const,
         currentQuestionId: null,
         formSchema,
         responses: {},
-        submissionId,
-        userId,
+        submissionId: store.submissionId,
+        userId: null,
         isTestSubmission,
       };
 
-      const sendAutoStartMessage = async () => {
-        try {
-          await sendMessage(
-            {
-              parts: [{ type: "text", text: "Start the form" }],
-            },
-            { body: submissionBody },
-          );
-          setFormDisplayState("chatting_ai_loading");
-        } catch (error) {
-          console.error("Failed to send auto-start message:", error);
-          setFormDisplayState("idle"); // Reset form state
-          hasInitiatedRef.current = false; // Reset so user can try again
-        }
-      };
-
-      sendAutoStartMessage();
+      setFormDisplayState("chatting_ai_loading");
+      sendMessage(
+        { parts: [{ type: "text", text: "Start the form" }] },
+        { body: submissionBody },
+      ).catch((error) => {
+        console.error("Failed to send auto-start message:", error);
+        setFormDisplayState("idle");
+        hasInitiatedRef.current = false;
+      });
+      return;
     }
-  }, [
-    formDisplayState,
-    chatHistoryMessages,
-    messages,
-    sendMessage,
-    formSchema,
-    submissionId,
-    userId,
-    setFormDisplayState,
-    isTestSubmission,
-    historyLoading,
-  ]);
 
-  // Resume conversation when history exists and there's a current question to present
-  useEffect(() => {
-    // Only resume if:
-    // 1. History loading is complete
-    // 2. We have existing history
-    // 3. There's a current question to ask
-    // 4. We're not in a loading or completed state already
-    // 5. We haven't initiated this session yet
     if (
-      !historyLoading &&
-      chatHistoryMessages.length > 0 &&
+      !hasInitiatedRef.current &&
+      hasHistory &&
       currentQuestionId &&
-      formDisplayState === "idle" &&
-      sendMessage &&
-      !hasInitiatedRef.current
+      formDisplayState === "idle"
     ) {
+      // resume
       hasInitiatedRef.current = true;
-
       const resumeBody = {
         userInput: "Continue where we left off",
         submissionBehavior: "auto" as const,
         currentQuestionId,
         formSchema,
         responses: currentInputs,
-        submissionId,
-        userId,
+        submissionId: store.submissionId,
+        userId: null,
         isTestSubmission,
       };
 
-      const sendResumeMessage = async () => {
-        try {
-          await sendMessage(
-            {
-              parts: [{ type: "text", text: "Continue where we left off" }],
-            },
-            { body: resumeBody },
-          );
-          setFormDisplayState("chatting_ai_loading");
-        } catch (error) {
-          console.error("Failed to send resume message:", error);
-          setFormDisplayState("idle");
-          hasInitiatedRef.current = false;
-        }
-      };
-
-      sendResumeMessage();
+      setFormDisplayState("chatting_ai_loading");
+      sendMessage(
+        { parts: [{ type: "text", text: "Continue where we left off" }] },
+        { body: resumeBody },
+      ).catch((error) => {
+        console.error("Failed to send resume message:", error);
+        setFormDisplayState("idle");
+        hasInitiatedRef.current = false;
+      });
     }
   }, [
-    historyLoading,
-    chatHistoryMessages.length,
-    currentQuestionId,
-    formDisplayState,
+    isLoading,
     sendMessage,
-    formSchema,
+    store.submissionId,
+    formDisplayState,
+    currentQuestionId,
+    chatHistoryMessages,
     currentInputs,
-    submissionId,
-    userId,
+    formSchema,
     isTestSubmission,
     setFormDisplayState,
   ]);
@@ -617,7 +455,7 @@ export default function FormAIComponent({
   // 2. We're in a chatting state (ready or loading) OR
   // 3. History is still loading (to prevent flicker)
   const isChatActive =
-    historyLoading || // Show chat UI while loading history
+    isLoading || // Show chat UI while loading history
     chatHistoryMessages.length > 0 ||
     messages.length > 0 ||
     formDisplayState === "chatting_ai_ready" ||
@@ -625,7 +463,7 @@ export default function FormAIComponent({
     formDisplayState === "completed" ||
     formDisplayState === "saved";
 
-  if (!submissionId) {
+  if (!store.submissionId) {
     return (
       <div className="flex items-center justify-center h-full">
         <span>Loading form...</span>
@@ -674,9 +512,7 @@ export default function FormAIComponent({
           <div key="loading-screen" className="h-full">
             <div className="flex flex-col items-center justify-center h-full p-4 text-center lg:max-w-3xl md:max-w-3xl mx-auto">
               <div className="text-muted-foreground">
-                {historyLoading
-                  ? "Loading chat history..."
-                  : "Initializing chat..."}
+                {isLoading ? "Loading chat history..." : "Initializing chat..."}
               </div>
             </div>
           </div>
@@ -688,7 +524,8 @@ export default function FormAIComponent({
                   messages={messages}
                   status={status}
                   data={null}
-                  handleFileUpload={handleFileUpload}
+                  handleFileUpload={handleFileUploadWithSubmission}
+                  onSubmitSelection={submitSelection}
                 />
               </div>
 
@@ -702,12 +539,7 @@ export default function FormAIComponent({
                             <PromptInput
                               className="border-input bg-popover relative z-10 overflow-hidden border p-0 pb-2 shadow-xs backdrop-blur-xl"
                               value={input}
-                              onValueChange={(value: string) => {
-                                const event = {
-                                  target: { value },
-                                } as React.ChangeEvent<HTMLInputElement>;
-                                handleInputChange?.(event);
-                              }}
+                              onValueChange={(value: string) => setInput(value)}
                               onSubmit={handleAISubmit}
                             >
                               <PromptInputTextarea
@@ -723,7 +555,7 @@ export default function FormAIComponent({
                                     disabled={
                                       !input.trim() ||
                                       status === "streaming" ||
-                                      !submissionId
+                                      !store.submissionId
                                     }
                                     type="submit"
                                     aria-label="Send answer"

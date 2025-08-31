@@ -1,13 +1,9 @@
-import React, { useEffect, useRef } from "react";
-import { useChatStore } from "./store/useChatStore";
-import { InputContainer } from "@formlink/ui";
-import { Question, AddressData } from "@formlink/schema";
+import type { FileData, QuestionResponse } from "@/lib/types";
 import { fileDataToFile } from "@/lib/utils";
-import type {
-  QuestionResponse,
-  FileData,
-  QuestionWithPlaceholder,
-} from "@/lib/types";
+import { AddressData, Question } from "@formlink/schema";
+import { InputContainer } from "@formlink/ui";
+import React from "react";
+import { useChatStore } from "./store/useChatStore";
 
 interface QuestionWrapperProps {
   questionId: string;
@@ -15,6 +11,11 @@ interface QuestionWrapperProps {
   isLast?: boolean;
   variant: "user" | "assistant";
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
+  onSubmitSelection?: (
+    questionId: string,
+    value: QuestionResponse,
+    displayText: string,
+  ) => Promise<void>;
 }
 
 // Format response based on question type
@@ -167,50 +168,19 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
   isLast,
   variant,
   handleFileUpload,
+  onSubmitSelection,
 }) => {
   const store = useChatStore();
   const {
     formSchema,
     currentInputs,
     setCurrentInput,
-    setTriggerUserMessageForSelection,
     formDisplayState,
     currentQuestionId,
-    setCurrentQuestionId,
   } = store;
 
   const question = formSchema?.questions.find((q) => q.id === questionId);
   const response = currentInputs[questionId];
-
-  // Use ref to track if we've updated for this specific question
-  const hasUpdatedRef = useRef<string | null>(null);
-
-  // Backup mechanism: Update currentQuestionId if it's stale
-  useEffect(() => {
-    // Only update if:
-    // 1. This is the last assistant message
-    // 2. Question has no response yet
-    // 3. Current question ID doesn't match
-    // 4. We haven't already updated for this question
-    if (
-      isLast &&
-      variant === "assistant" &&
-      !response &&
-      question &&
-      currentQuestionId !== questionId &&
-      hasUpdatedRef.current !== questionId
-    ) {
-      hasUpdatedRef.current = questionId;
-
-      // Use setTimeout to defer update to next tick, preventing render loops
-      const timeoutId = setTimeout(() => {
-        setCurrentQuestionId(questionId);
-      }, 0);
-
-      return () => clearTimeout(timeoutId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLast, variant, response, question, questionId]); // Note: currentQuestionId NOT in deps to prevent render loops
 
   if (!question) return null;
 
@@ -323,15 +293,11 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
             (question.type as any).name !== "address" &&
             (question.type as any).name !== "ranking" &&
             (question.type as any).name !== "fileUpload" &&
-            value
+            value &&
+            onSubmitSelection
           ) {
             const formattedResponse = formatResponse(question, value);
-            setTriggerUserMessageForSelection(
-              messageId,
-              qId,
-              value,
-              formattedResponse,
-            );
+            onSubmitSelection(qId, value, formattedResponse);
           }
         }}
         handleFileUpload={handleFileUpload}
@@ -350,14 +316,9 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
           const currentValue =
             useChatStore.getState().currentInputs[question.id];
 
-          if (currentValue) {
+          if (currentValue && onSubmitSelection) {
             const formattedResponse = formatResponse(question, currentValue);
-            setTriggerUserMessageForSelection(
-              messageId,
-              question.id,
-              currentValue,
-              formattedResponse,
-            );
+            onSubmitSelection(question.id, currentValue, formattedResponse);
           }
         }}
       />

@@ -12,6 +12,11 @@ type MessageProps = {
   isLast?: boolean;
   hasScrollAnchor?: boolean;
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
+  onSubmitSelection?: (
+    questionId: string,
+    value: any,
+    displayText: string,
+  ) => Promise<void>;
 };
 
 export function Message({
@@ -21,6 +26,7 @@ export function Message({
   isLast,
   hasScrollAnchor,
   handleFileUpload,
+  onSubmitSelection,
 }: MessageProps) {
   if (variant === "user") {
     return (
@@ -39,6 +45,7 @@ export function Message({
         isLast={isLast}
         hasScrollAnchor={hasScrollAnchor}
         handleFileUpload={handleFileUpload}
+        onSubmitSelection={onSubmitSelection}
       />
     );
   }
