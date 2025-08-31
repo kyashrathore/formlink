@@ -36,6 +36,120 @@ interface InputContainerProps {
   ) => void;
 }
 
+/**
+ * Temporary compatibility: normalize legacy question objects produced by older generators.
+ * Converts shapes like:
+ *  - { type: "question", questionType: "text", display: { inputType: "email" } }
+ * into the new discriminated union:
+ *  - { type: { name: "text", format: "email" } }
+ */
+function normalizeLegacyQuestion(raw: any): Question {
+  // Already in new format
+  if (
+    raw?.type &&
+    typeof raw.type === "object" &&
+    typeof raw.type.name === "string"
+  ) {
+    return raw as Question;
+  }
+
+  // Legacy "type: 'question'" shape with "questionType"
+  if (raw?.type === "question" && typeof raw?.questionType === "string") {
+    const name = raw.questionType as string;
+    const inputType = raw?.display?.inputType;
+
+    const asChoiceOptions = Array.isArray(raw?.options) ? raw.options : [];
+
+    switch (name) {
+      case "text": {
+        const allowed = [
+          "text",
+          "textarea",
+          "email",
+          "url",
+          "tel",
+          "number",
+          "password",
+          "country",
+        ];
+        const format = allowed.includes(inputType) ? inputType : "text";
+        raw.type = { name: "text", format };
+        break;
+      }
+      case "singleChoice": {
+        const display = inputType === "dropdown" ? "dropdown" : "radio";
+        raw.type = { name: "singleChoice", display, options: asChoiceOptions };
+        break;
+      }
+      case "multipleChoice": {
+        const display =
+          inputType === "multiSelectDropdown"
+            ? "multiSelectDropdown"
+            : "checkbox";
+        raw.type = {
+          name: "multipleChoice",
+          display,
+          options: asChoiceOptions,
+        };
+        break;
+      }
+      case "date": {
+        const format = inputType === "dateRange" ? "dateRange" : "date";
+        raw.type = { name: "date", format };
+        break;
+      }
+      case "rating": {
+        const config = raw?.ratingConfig ?? { min: 1, max: 5, step: 1 };
+        raw.type = { name: "rating", config };
+        break;
+      }
+      case "linearScale": {
+        const config = raw?.linearScaleConfig ?? { start: 1, end: 5, step: 1 };
+        raw.type = { name: "linearScale", config };
+        break;
+      }
+      case "likertScale": {
+        let options: string[] = [];
+        if (Array.isArray(raw?.options)) {
+          options = raw.options
+            .map((o: any) =>
+              typeof o === "string" ? o : (o?.label ?? o?.value),
+            )
+            .filter(Boolean);
+        }
+        if (options.length === 0) {
+          options = [
+            "Strongly Disagree",
+            "Disagree",
+            "Neutral",
+            "Agree",
+            "Strongly Agree",
+          ];
+        }
+        raw.type = { name: "likertScale", options };
+        break;
+      }
+      case "address": {
+        raw.type = { name: "address" };
+        break;
+      }
+      case "ranking": {
+        raw.type = { name: "ranking", options: asChoiceOptions };
+        break;
+      }
+      case "fileUpload": {
+        raw.type = { name: "fileUpload" };
+        break;
+      }
+      default: {
+        raw.type = { name: "text", format: "text" };
+      }
+    }
+  }
+
+  return raw as Question;
+}
+
 // Map Question schema to UnifiedFormInput props
 function mapQuestionToUnifiedProps(
   question: Question,
@@ -46,16 +160,17 @@ function mapQuestionToUnifiedProps(
     errors: Array<{ type: string; message: string }>,
   ) => void,
 ) {
-  const questionType = getQuestionTypeName(question);
+  const q = normalizeLegacyQuestion(question as any);
+  const questionType = getQuestionTypeName(q);
 
   // Map questionType to FormInputType
   let type: FormInputType;
   switch (questionType) {
     case "text": {
-      if (!isTextQuestion(question)) {
+      if (!isTextQuestion(q)) {
         throw new Error(`Expected text question for ${question.id}`);
       }
-      const inputType = getTextFormat(question);
+      const inputType = getTextFormat(q);
       if (inputType === "tel") type = "tel";
       else if (inputType === "textarea") type = "textarea";
       else if (inputType === "star") type = "rating";
@@ -95,7 +210,7 @@ function mapQuestionToUnifiedProps(
 
   // Defensive: never treat plain text format as number
   if (questionType === "text") {
-    const rawFormat = (question as any)?.type?.format;
+    const rawFormat = (q as any)?.type?.format;
     if (rawFormat !== "number" && type === "number") {
       type = "text";
     }
@@ -155,7 +270,14 @@ function mapQuestionToUnifiedProps(
 
   // Address expects an object, not null
   if (type === "address" && value === null) {
-    value = {};
+    value = {
+      street1: "",
+      street2: "",
+      city: "",
+      stateProvince: "",
+      postalCode: "",
+      country: "",
+    };
   }
 
   // Base props
@@ -184,16 +306,16 @@ function mapQuestionToUnifiedProps(
 
   // Type-specific props
   if (type === "select" || type === "multipleChoice" || type === "ranking") {
-    if (isChoiceQuestion(question) || isRankingQuestion(question)) {
-      (baseProps as Record<string, unknown>).options = getOptions(question);
+    if (isChoiceQuestion(q) || isRankingQuestion(q)) {
+      (baseProps as Record<string, unknown>).options = getOptions(q);
     } else {
       (baseProps as Record<string, unknown>).options = [];
     }
   }
 
   if (type === "rating") {
-    if (isRatingQuestion(question)) {
-      const config = getRatingConfig(question);
+    if (isRatingQuestion(q)) {
+      const config = getRatingConfig(q);
       (baseProps as Record<string, unknown>).max = config.max;
     } else {
       (baseProps as Record<string, unknown>).max = 5;
@@ -201,8 +323,8 @@ function mapQuestionToUnifiedProps(
   }
 
   if (type === "linear-scale") {
-    if (isLinearScaleQuestion(question)) {
-      const linearConfig = getLinearScaleConfig(question);
+    if (isLinearScaleQuestion(q)) {
+      const linearConfig = getLinearScaleConfig(q);
       (baseProps as Record<string, unknown>).config = {
         start: linearConfig.start,
         end: linearConfig.end,
@@ -220,7 +342,7 @@ function mapQuestionToUnifiedProps(
   }
 
   if (type === "fileUpload") {
-    if (isFileUploadQuestion(question)) {
+    if (isFileUploadQuestion(q)) {
       // File upload questions don't have config in current schema, using defaults
       (baseProps as Record<string, unknown>).accept = undefined;
       (baseProps as Record<string, unknown>).maxSize = 5 * 1024 * 1024; // 5MB default
