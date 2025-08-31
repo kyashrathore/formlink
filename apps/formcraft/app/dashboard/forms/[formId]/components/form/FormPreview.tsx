@@ -4,6 +4,7 @@ import { getFormFillerPreviewBasePath } from "@/app/lib/config"
 import { Form } from "@formlink/schema"
 import { AlertCircle, Loader2, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
 
 interface FormPreviewProps {
   form: Form
@@ -94,6 +95,47 @@ export default function FormPreview({
     const finalUrl = `${previewBasePath}/${stableFormId}`
     return finalUrl
   }, [stableFormId])
+
+  // Build an effective form that includes incrementally generated questions/journey while the agent runs.
+  const {
+    generatedQuestions,
+    currentForm: genCurrentForm,
+    loadingPhase,
+    agentState,
+  } = useFormGenerationStore()
+
+  const effectiveForm: Form = useMemo(() => {
+    // Prefer generated questions (filtering out nulls) if present; otherwise use original form.questions
+    const generated = Array.isArray(generatedQuestions)
+      ? (generatedQuestions.filter(Boolean) as Form["questions"])
+      : undefined
+
+    const questions =
+      generated && generated.length > 0 ? generated : (form.questions as any)
+
+    // Prefer journeyScript from generation snapshot if available
+    const journeyScript =
+      genCurrentForm?.settings?.journeyScript ?? form.settings?.journeyScript
+
+    return {
+      ...form,
+      questions: questions as any,
+      settings: {
+        ...(form.settings as any),
+        ...(journeyScript ? { journeyScript } : {}),
+      } as any,
+    }
+  }, [form, generatedQuestions, genCurrentForm])
+
+  // Gate chat preview only during active form generation
+  // Don't gate if the form already exists or we're just switching modes
+  const gateChatPreview = useMemo(
+    () =>
+      formMode === "chat" &&
+      loadingPhase !== "complete" && // Still loading
+      (agentState as any)?.status === "IN_PROGRESS", // Agent is actively working
+    [formMode, loadingPhase, agentState]
+  )
 
   const getPreviewUrl = useCallback(() => stablePreviewUrl, [stablePreviewUrl])
 
@@ -215,7 +257,7 @@ export default function FormPreview({
         isReadyRef.current = true
         setPreviewState({ type: "ready" })
 
-        sendFormUpdate(form)
+        sendFormUpdate(effectiveForm)
         sendFormModeUpdate(formMode)
       } else if (message.type === "FORMFILLER_SHADCN_CSS_APPLIED") {
         if (onShadcnApplied) {
@@ -299,16 +341,16 @@ export default function FormPreview({
   }, [retryCount])
 
   useEffect(() => {
-    if (isReadyRef.current) {
-      sendFormUpdate(form)
+    if (isReadyRef.current && !gateChatPreview) {
+      sendFormUpdate(effectiveForm)
     }
-  }, [form, sendFormUpdate])
+  }, [effectiveForm, sendFormUpdate, gateChatPreview])
 
   useEffect(() => {
-    if (isReadyRef.current) {
+    if (isReadyRef.current && !gateChatPreview) {
       sendFormModeUpdate(formMode)
     }
-  }, [formMode, sendFormModeUpdate])
+  }, [formMode, sendFormModeUpdate, gateChatPreview])
 
   useEffect(() => {
     if (isReadyRef.current && shadcnCSSData) {
@@ -379,6 +421,19 @@ export default function FormPreview({
           </div>
         </div>
       )}
+      {gateChatPreview && (
+        <div className="bg-muted/80 absolute inset-0 z-10 flex items-center justify-center rounded-xl">
+          <div className="flex flex-col items-center space-y-2 text-center">
+            <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
+            <p className="text-foreground text-sm font-medium">
+              Finalizing chat preview...
+            </p>
+            <p className="text-muted-foreground text-xs">
+              The agent is completing the form. Preview will appear when ready.
+            </p>
+          </div>
+        </div>
+      )}
 
       {}
       <div className="flex h-full w-full items-center justify-center">
@@ -387,7 +442,7 @@ export default function FormPreview({
           src={getPreviewUrl()}
           title="Form Preview"
           className="bg-background h-full w-full rounded-xl border"
-          sandbox="allow-scripts allow-same-origin allow-popups clipboard-write"
+          sandbox="allow-scripts allow-same-origin allow-popups"
           onLoad={handleIframeLoad}
           onError={handleIframeError}
         />

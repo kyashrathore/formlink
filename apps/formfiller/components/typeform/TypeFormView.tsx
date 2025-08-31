@@ -38,7 +38,6 @@ interface TypeFormViewProps {
   ) => void;
   onFileUpload: (questionId: string, file: File) => Promise<string | null>;
   onNavigateNext: (currentIndex: number) => number | null;
-  onMarkCompleted: () => void;
   onSubmitForm: () => Promise<boolean>;
   shouldShowQuestion: (question: Question) => boolean;
   getCurrentQuestion: (activeIndex: number) => Question | null;
@@ -56,7 +55,6 @@ export default function TypeFormView({
   onAnswerChange,
   onFileUpload,
   onNavigateNext,
-  onMarkCompleted,
   onSubmitForm,
   shouldShowQuestion,
   getCurrentQuestion,

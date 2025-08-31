@@ -14,15 +14,6 @@ export async function POST(request: Request) {
     const submissionId = formData.get("submissionId") as string;
     const questionId = formData.get("questionId") as string;
 
-    console.log("Upload request received:", {
-      hasFile: !!file,
-      fileName: file?.name,
-      fileSize: file?.size,
-      formId,
-      submissionId,
-      questionId,
-    });
-
     if (!file || !formId || !submissionId || !questionId) {
       const missingFields = [];
       if (!file) missingFields.push("file");
@@ -47,6 +38,15 @@ export async function POST(request: Request) {
       "docx",
       "txt",
     ];
+
+    // Defensive check: ensure file.name exists before calling split
+    if (!file.name) {
+      return NextResponse.json(
+        { error: "File is missing a name property" },
+        { status: 400 },
+      );
+    }
+
     const fileExtension = file.name.split(".").pop()?.toLowerCase();
 
     if (!fileExtension || !allowedExtensions.includes(fileExtension)) {
@@ -84,6 +84,24 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "Could not get public URL." },
         { status: 500 },
+      );
+    }
+
+    // Check if submission exists
+    const { data: existingSubmission } = await supabase
+      .from("form_submissions")
+      .select("submission_id")
+      .eq("submission_id", submissionId)
+      .single();
+
+    if (!existingSubmission) {
+      return NextResponse.json(
+        {
+          error:
+            "Please answer at least one question before uploading files. The form submission must be created first.",
+          code: "SUBMISSION_REQUIRED",
+        },
+        { status: 400 },
       );
     }
 

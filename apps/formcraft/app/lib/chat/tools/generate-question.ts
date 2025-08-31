@@ -92,9 +92,8 @@ export async function generateQuestion(
     }): Promise<string | null> => {
       if (remainingRepairs-- <= 0) return null
       const { object: repaired } = await generateObject({
-        model: getModel("gpt-4o-mini", "vercel"), // Using Vercel AI Gateway to avoid Azure JSON Schema issues
+        model: getModel("google/gemini-2.5-pro", "openrouter"), // Using OpenRouter to avoid Vercel restrictions
         schema: QuestionSchema,
-        mode: "json",
         system: CREATE_FORM_REPAIR_SYSTEM_PROMPT as string,
         experimental_repairText:
           remainingRepairs > 0 ? repairFunction : undefined,
@@ -129,6 +128,7 @@ CRITICAL SCHEMA SHAPE (align with @formlink/schema):
       // singleChoice:  { "name":"singleChoice",  "display": "radio"|"dropdown",              "options":[{ "value":string, "label":string, "score":number }] }
       // multipleChoice:{ "name":"multipleChoice","display": "checkbox"|"multiSelectDropdown", "options":[{ "value":string, "label":string, "score":number }] }
       // rating:        { "name":"rating",       "config":      { "min":number, "max":number (>min), "step":number, "minLabel"?:string, "maxLabel"?:string } }
+      // date:          { "name":"date", "format":"date"|"dateRange" }
       // linearScale:   { "name":"linearScale",  "config": { "start":number, "end":number (>start), "step":number, "startLabel"?:string, "endLabel"?:string } }
       // ranking:       { "name":"ranking",      "options":[{ "value":string, "label":string, "score":number }] }
       // fileUpload:    { "name":"fileUpload" }
@@ -157,9 +157,8 @@ Notes:
 `
 
     const generateSchemaResult = await generateObject({
-      model: getModel("gpt-4o-mini", "vercel"), // Using Vercel AI Gateway to avoid Azure JSON Schema issues
+      model: getModel("google/gemini-2.5-pro", "openrouter"), // Using OpenRouter to avoid Vercel restrictions
       schema: QuestionSchema,
-      mode: "json",
       system: enrichedSystemPrompt,
       prompt: userPrompt,
       experimental_repairText: repairFunction,
@@ -188,6 +187,16 @@ Notes:
           return { ...opt, score }
         }
       )
+    }
+
+    // Ensure date questions have format field (required by DateQuestionSchema)
+    if (
+      generatedQuestion?.type &&
+      typeof generatedQuestion.type === "object" &&
+      generatedQuestion.type.name === "date" &&
+      !generatedQuestion.type.format
+    ) {
+      generatedQuestion.type.format = "date" // Default to single date format
     }
 
     // Ensure submissionBehavior exists and is coherent with type
@@ -321,9 +330,6 @@ export async function generateQuestionsParallel(
       })
     }
   })
-
-  const successCount = results.filter((r) => r.success).length
-  const errorCount = results.filter((r) => !r.success).length
 
   // Progress handled by workflow - removed raw stream write
 

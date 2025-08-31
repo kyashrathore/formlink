@@ -39,8 +39,17 @@ export const useQuestionRenderer = (
         node?.children?.[0]?.type === "text" ? node.children[0].value : "";
 
       if (linkText === "question" && props.href) {
-        const url = new URL(props.href);
-        const questionId = url.searchParams.get("qId") || "";
+        // Handle both full URLs and relative URLs like "url?qId=xxx"
+        let questionId = "";
+        try {
+          // First try as a full URL
+          const url = new URL(props.href);
+          questionId = url.searchParams.get("qId") || "";
+        } catch {
+          // If that fails, try to extract qId from the string directly
+          const match = props.href.match(/[?&]qId=([^&]+)/);
+          questionId = match?.[1] || "";
+        }
 
         if (!questionId) return null;
 

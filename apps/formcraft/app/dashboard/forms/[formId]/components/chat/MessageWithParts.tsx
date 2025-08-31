@@ -92,26 +92,54 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
             ) : null
 
           default: {
-            // Handle tool parts in v5: 'tool-<name>' and 'dynamic-tool'
+            // Handle tool parts in v5 and persisted shapes:
+            // - 'tool-<name>' (ToolUIPart)
+            // - 'dynamic-tool' (DynamicToolUIPart)
+            // - 'tool-invocation' (persisted invocation shape)
             const isDynamic = (part as any).type === "dynamic-tool"
             const isTool =
               typeof (part as any).type === "string" &&
               (part as any).type.startsWith("tool-")
+            const isInvocation = (part as any).type === "tool-invocation"
+            const isSavedToolCall = (part as any).type === "tool-call"
 
-            if (!isDynamic && !isTool) return null
+            if (!isDynamic && !isTool && !isInvocation && !isSavedToolCall)
+              return null
 
             const toolPart = part as ToolUIPart | DynamicToolUIPart
-            const toolName = isDynamic
-              ? (toolPart as DynamicToolUIPart).toolName
-              : (getToolName(toolPart as ToolUIPart) as string)
+            const partType = (part as any).type as string
+            const toolName = isInvocation
+              ? ((part as any).toolInvocation?.toolName ?? "tool")
+              : isDynamic
+                ? (toolPart as DynamicToolUIPart).toolName
+                : partType === "tool-call" && (toolPart as any).toolName
+                  ? ((toolPart as any).toolName as string)
+                  : (getToolName(toolPart as ToolUIPart) as string)
 
-            const state = (toolPart as any).state as
-              | "input-streaming"
-              | "input-available"
-              | "output-available"
-              | "output-error"
+            // Normalize state across live and persisted shapes
+            const rawState =
+              (toolPart as any).state ??
+              (isInvocation
+                ? (part as any).toolInvocation?.state
+                : undefined) ??
+              (partType === "tool-call" ? "result" : undefined)
 
-            if (!isLastMessage && state !== "output-available") {
+            const state =
+              rawState === "result"
+                ? "output-available"
+                : rawState === "error"
+                  ? "output-error"
+                  : (rawState as
+                      | "input-streaming"
+                      | "input-available"
+                      | "output-available"
+                      | "output-error")
+
+            // Hide only active/in-progress states for non-last messages
+            if (
+              !isLastMessage &&
+              (state === "input-streaming" || state === "input-available")
+            ) {
               return null
             }
 
@@ -119,7 +147,9 @@ export const MessageWithParts: React.FC<MessageWithPartsProps> = ({
               // Inspect output payload if available to decide success/failure
               const isOutputAvailable = state === "output-available"
               const output: any = isOutputAvailable
-                ? (toolPart as any).output
+                ? isInvocation
+                  ? (part as any).toolInvocation?.result
+                  : (toolPart as any).output
                 : undefined
               const hasSuccessFlag =
                 output && typeof output === "object" && "success" in output

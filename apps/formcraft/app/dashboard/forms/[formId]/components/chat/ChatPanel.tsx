@@ -130,17 +130,72 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
         if (Array.isArray(historyMessages)) {
           const validRoles = ["user", "assistant", "system"]
+
+          // Normalize saved assistant tool calls (toolCalls) to UI parts ('tool-invocation')
+          const normalizeParts = (rawParts: any[], fallbackText: string) => {
+            if (!Array.isArray(rawParts) || rawParts.length === 0) {
+              return fallbackText ? [{ type: "text", text: fallbackText }] : []
+            }
+            return rawParts.map((p: any) => {
+              // AI SDK saved tool calls (onFinish.toolCalls) are not UI parts.
+              // Two common shapes we need to normalize:
+              // 1) { toolCallType: "function", toolName, toolCallId, args }
+              // 2) { type: "tool-call", toolName, toolCallId, input: {...} }
+              const isFunctionCall =
+                p &&
+                typeof p === "object" &&
+                p.toolCallType === "function" &&
+                p.toolName
+
+              const isToolCall =
+                p &&
+                typeof p === "object" &&
+                p.type === "tool-call" &&
+                p.toolName
+
+              if (isFunctionCall || isToolCall) {
+                // Extract args/input robustly
+                let parsedArgs: any = isFunctionCall ? p.args : p.input
+                try {
+                  if (typeof parsedArgs === "string") {
+                    parsedArgs = JSON.parse(parsedArgs)
+                  }
+                } catch {
+                  // leave as-is if parse fails
+                }
+                return {
+                  type: "tool-invocation",
+                  toolInvocation: {
+                    state: "result", // treat persisted calls as completed so UI shows "✓ Completed"
+                    step: 1,
+                    toolCallId: p.toolCallId || p.id || uuidv4(),
+                    toolName: p.toolName,
+                    args: parsedArgs,
+                    // result is unknown on reload; UI defaults to success when not explicitly false
+                  },
+                }
+              }
+
+              // If already a UI part (text/tool/dynamic-tool/step-start), keep as is
+              return p
+            })
+          }
+
           const formattedMessages = historyMessages
             .filter((msg) => validRoles.includes(msg.role))
             .map((msg) => {
-              const parts =
-                Array.isArray(msg.parts) && msg.parts.length > 0
-                  ? msg.parts
-                  : typeof msg.content === "string" && msg.content.length > 0
-                    ? [{ type: "text", text: msg.content }]
-                    : []
+              const baseId = msg.id?.toString() || uuidv4()
+              const fallbackText =
+                typeof msg.content === "string" && msg.content.length > 0
+                  ? msg.content
+                  : ""
+              const parts = normalizeParts(
+                Array.isArray(msg.parts) ? msg.parts : [],
+                fallbackText
+              )
+
               return {
-                id: msg.id?.toString() || uuidv4(),
+                id: baseId,
                 role: msg.role as "user" | "assistant" | "system",
                 parts,
               }
@@ -258,10 +313,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     [handleSendMessageForChatComponent, selectedModel]
   )
 
-  const displaySummaryMessage = getDisplaySummaryMessage(
-    formattedEventsForLogView,
-    null // agentState not available in new store
-  )
+  const displaySummaryMessage =
+    formattedEventsForLogView && formattedEventsForLogView.length > 0
+      ? getDisplaySummaryMessage(formattedEventsForLogView, null)
+      : ""
 
   return (
     <div className="flex h-full flex-col">

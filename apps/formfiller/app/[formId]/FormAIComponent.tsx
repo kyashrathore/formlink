@@ -2,9 +2,8 @@
 
 import { Conversation } from "@/components/chat/conversation";
 import { useChatStore } from "@/components/chat/store/useChatStore";
-import type { Message } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react";
-import { Form, Question } from "@formlink/schema";
+import { Form } from "@formlink/schema";
 import {
   Alert,
   AlertDescription,
@@ -14,10 +13,10 @@ import {
   PromptInputActions,
   PromptInputTextarea,
 } from "@formlink/ui";
+import { DefaultChatTransport } from "ai";
 import { AlertCircle, ArrowRight, RefreshCw } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import React, { useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { useRedirect } from "../../hooks/useRedirect";
 import { apiConfig } from "../../lib/api-config";
 import type {
@@ -45,6 +44,8 @@ export default function FormAIComponent({
   const [showRetry, setShowRetry] = useState(false);
   const [isInFallbackMode] = useState(false);
   const [userId] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [input, setInput] = useState("");
 
   const {
     formDisplayState,
@@ -60,11 +61,81 @@ export default function FormAIComponent({
     triggerUserMessageForSelection,
     clearTriggerUserMessageForSelection,
     setChatHistoryMessages,
+    hydrateFromHistory,
     handleFileUpload,
     setCurrentInput,
   } = store;
 
   const currentQuestionIdRef = useRef<string | null>(null);
+
+  // Fetch chat history from backend and hydrate chat state
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadHistory() {
+      // If we don't have IDs or schema yet, nothing to do
+
+      if (!submissionId || !formId || !formSchema) {
+        setHistoryLoading(false);
+        return;
+      }
+
+      try {
+        setHistoryLoading(true);
+        const res = await fetch(
+          `/api/forms/${formId}/chat-history?submissionId=${submissionId}`,
+        );
+        if (res.ok) {
+          const data: {
+            messages: Array<{
+              id: string;
+              role: "user" | "assistant";
+              content: string;
+              createdAt?: string;
+            }>;
+            responses?: Record<string, unknown>;
+            submissionStatus?: string;
+            completedAt?: string;
+          } = await res.json();
+
+          // Keep messages in simple format - useChat will convert them
+          const msgs = (data?.messages ?? []).map((msg: any) => ({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+            createdAt: msg.createdAt ? new Date(msg.createdAt) : undefined,
+          }));
+          const responses = (data as any)?.responses ?? {};
+          if (!cancelled) {
+            hydrateFromHistory(msgs as any, responses as any, formSchema); // Pass formSchema to prevent race condition
+
+            // Check if submission is already completed
+            if (data.submissionStatus === "completed") {
+              setFormDisplayState("completed");
+            }
+          }
+        } else {
+          // Non-blocking: proceed with empty history
+          if (!cancelled) {
+            hydrateFromHistory([], {});
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          hydrateFromHistory([], {});
+        }
+      } finally {
+        if (!cancelled) {
+          setHistoryLoading(false);
+        }
+      }
+    }
+
+    loadHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [submissionId, formId, formSchema, setChatHistoryMessages]);
 
   // Note: In AI mode, all saves are handled by the chat-assist route
   // This function is kept for potential future use but is not called in AI mode
@@ -107,82 +178,62 @@ export default function FormAIComponent({
     store.formId,
   ]);
 
+  // Debug: Check what URL is being used
+  const chatAssistUrl = apiConfig.getChatAssistUrl();
+
   const chat = useChat({
-    api: apiConfig.getChatAssistUrl(),
-    initialMessages: chatHistoryMessages,
-    body: {
-      submissionId,
-      formSchema,
-      responses: currentInputs,
-      userId,
-      currentQuestionId,
-      isTestSubmission,
-    },
-    onFinish: (message: Message) => {
+    transport: new DefaultChatTransport({
+      api: chatAssistUrl,
+    }),
+    onFinish: (data: any) => {
+      const message = data.message || data;
       processAssistantResponse();
 
-      // Check for tool invocations
-      if (message.toolInvocations) {
-        // Update local state for any saveAnswer tool calls
-        message.toolInvocations.forEach((toolCall) => {
+      // Helper to apply a single tool result consistently
+      const applyToolResult = (toolName: string, result: any) => {
+        if (!result) return;
+
+        if (toolName === "saveAnswer") {
           if (
-            toolCall.toolName === "saveAnswer" &&
-            toolCall.state === "result"
+            result?.saved &&
+            result?.questionId &&
+            result?.value !== undefined
           ) {
-            const result = toolCall.result;
-            if (
-              result?.saved &&
-              result?.questionId &&
-              result?.answer !== undefined
-            ) {
-              setCurrentInput(result.questionId, result.answer);
-            }
+            setCurrentInput(result.questionId, result.value);
+          }
+          if (result?.nextQuestionId) {
+            store.setCurrentQuestionId(result.nextQuestionId);
+          }
+        } else if (toolName === "presentQuestion") {
+          const qid = result?.questionId;
+          if (qid) {
+            store.setCurrentQuestionId(qid);
+          }
+        } else if (toolName === "completeSubmission") {
+          setFormDisplayState("completed");
+          // Don't clear persisted state - allow refreshing completed forms to show history
+        }
+      };
+
+      // Prefer AI SDK v5 parts[] shape
+      const parts = Array.isArray(message?.parts) ? message.parts : [];
+
+      if (parts.length > 0) {
+        parts.forEach((part: any) => {
+          // tool parts look like: { type: "tool-saveAnswer" | "tool-presentQuestion" | "tool-completeSubmission", state, input, output }
+          if (typeof part?.type === "string" && part.type.startsWith("tool-")) {
+            const toolName = part.type.replace("tool-", "");
+            const result = part.output ?? part.result;
+            applyToolResult(toolName, result);
           }
         });
-
-        // Check for completion
-        if (
-          message.toolInvocations.some(
-            (t) => t.toolName === "completeSubmission",
-          )
-        ) {
-          setFormDisplayState("completed");
-        }
       }
 
-      // Extract questionId from the message content if present
-      try {
-        // Look for all question links in the message
-        const questionLinkRegex = /\[question\]\([^)]+\?qId=([^)]+)\)/g;
-        const matches = [
-          ...(message.content?.matchAll(questionLinkRegex) || []),
-        ];
-
-        if (matches.length > 0) {
-          // Use the last question link found (most likely the current question)
-          const lastMatch = matches[matches.length - 1];
-          const newQuestionId = lastMatch?.[1];
-
-          // Validate that this question exists in the form schema
-          if (newQuestionId) {
-            const questionExists = formSchema?.questions?.some(
-              (q: Question) => q.id === newQuestionId,
-            );
-
-            if (questionExists) {
-              store.setCurrentQuestionId(newQuestionId);
-            } else {
-              console.warn(
-                `[FormAIComponent] Question ID ${newQuestionId} not found in form schema`,
-              );
-            }
-          }
-        }
-      } catch (error) {
-        console.error(
-          "[FormAIComponent] Error extracting question ID from AI response:",
-          error,
-        );
+      // Back-compat: some transports expose toolInvocations
+      if (Array.isArray(message?.toolInvocations)) {
+        message.toolInvocations.forEach((toolCall: any) => {
+          applyToolResult(toolCall.toolName, toolCall.result);
+        });
       }
 
       setErrorMessage(null);
@@ -206,28 +257,18 @@ export default function FormAIComponent({
 
       setShowRetry(true);
       setLastError(error.message);
+      setFormDisplayState("chatting_ai_ready"); // Reset to ready state to allow retry
     },
   });
 
-  const {
-    messages,
-    setMessages,
-    append,
-    input,
-    handleInputChange,
-    handleSubmit,
-    status,
-  } = chat;
+  const chatResult = chat;
+  const { messages, setMessages, sendMessage, status } = chatResult;
 
-  useEffect(() => {
-    if (
-      formDisplayState === "idle" &&
-      chatHistoryMessages.length === 0 &&
-      messages.length > 0
-    ) {
-      setMessages([]);
-    }
-  }, [formDisplayState, chatHistoryMessages, messages, setMessages]);
+  // Log what's actually available to debug
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setInput(e.target.value);
+  };
 
   useEffect(() => {
     const historyLastMsg = chatHistoryMessages.at(-1);
@@ -238,11 +279,25 @@ export default function FormAIComponent({
     }
   }, [messages, setChatHistoryMessages, chatHistoryMessages]);
 
+  // After history fetch, hydrate chat messages if chat is empty
   useEffect(() => {
-    if (triggerUserMessageForSelection && append && formSchema) {
+    if (
+      !historyLoading &&
+      messages.length === 0 &&
+      chatHistoryMessages.length > 0
+    ) {
+      setMessages(chatHistoryMessages);
+    }
+  }, [historyLoading, messages, chatHistoryMessages, setMessages]);
+
+  useEffect(() => {
+    if (triggerUserMessageForSelection && sendMessage && formSchema) {
       const { questionId, value, displayText } = triggerUserMessageForSelection;
 
       const handleAutoSubmission = async () => {
+        // Clear the trigger first thing in the async function to prevent re-triggers
+        clearTriggerUserMessageForSelection();
+
         try {
           // In AI mode, the chat-assist route handles all saves
           // Don't save directly to database
@@ -259,13 +314,6 @@ export default function FormAIComponent({
           //   store.setCurrentQuestionId(nextQuestion.id);
           // }
 
-          const newUserMessage = {
-            id: uuidv4(),
-            role: "user" as const,
-            content: displayText || String(value || ""),
-            createdAt: new Date(),
-          };
-
           // Determine submission behavior based on how the answer was submitted
           const submissionBehavior = "auto"; // User clicked on an input component
 
@@ -281,32 +329,41 @@ export default function FormAIComponent({
             isTestSubmission,
           };
 
-          append(newUserMessage, { body: submissionBody });
+          // AI SDK v5 sendMessage handles adding the user message automatically
+          await sendMessage(
+            {
+              parts: [{ type: "text", text: displayText }],
+            },
+            { body: submissionBody },
+          );
+
           setFormDisplayState("chatting_ai_loading");
         } catch (error) {
           console.error("Failed to save answer:", error);
           setErrorMessage("Failed to save your answer. Please try again.");
-        } finally {
-          clearTriggerUserMessageForSelection();
         }
       };
 
       handleAutoSubmission();
     }
   }, [
-    triggerUserMessageForSelection,
-    clearTriggerUserMessageForSelection,
-    append,
+    triggerUserMessageForSelection, // ADD THIS!
+    clearTriggerUserMessageForSelection, // ADD THIS!
+    formDisplayState,
+    chatHistoryMessages,
+    messages,
+    sendMessage,
     formSchema,
-    currentInputs,
-    setFormDisplayState,
-    setCurrentInput,
     submissionId,
     userId,
+    setFormDisplayState,
     isTestSubmission,
+    historyLoading,
+    currentInputs,
+    setCurrentInput,
   ]);
 
-  const handleAISubmit = (
+  const handleAISubmit = async (
     e?: React.FormEvent<HTMLFormElement> | React.KeyboardEvent,
   ) => {
     e?.preventDefault();
@@ -316,10 +373,52 @@ export default function FormAIComponent({
     currentQuestionIdRef.current = currentQuestionId;
     setErrorMessage(null);
 
+    // Derive the effective current question id from latest tool outputs, falling back to store/computed
+    let derivedCurrentQ: string | null = null;
+    try {
+      const lastAssistant = [...messages]
+        .reverse()
+        .find((m: any) => m?.role === "assistant");
+      const parts = Array.isArray((lastAssistant as any)?.parts)
+        ? (lastAssistant as any).parts
+        : [];
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const p = parts[i];
+        if (p?.type === "tool-presentQuestion" && p?.output?.questionId) {
+          derivedCurrentQ = p.output.questionId;
+          break;
+        }
+        if (p?.type === "tool-saveAnswer" && p?.output?.nextQuestionId) {
+          derivedCurrentQ = p.output.nextQuestionId;
+          break;
+        }
+      }
+    } catch {
+      // noop - best effort
+    }
+
+    // Fallbacks: store, then first unanswered based on currentInputs
+    if (!derivedCurrentQ) {
+      derivedCurrentQ = currentQuestionId ?? null;
+    }
+    if (!derivedCurrentQ && Array.isArray(formSchema?.questions)) {
+      for (const q of formSchema.questions) {
+        if (!Object.prototype.hasOwnProperty.call(currentInputs || {}, q.id)) {
+          derivedCurrentQ = q.id;
+          break;
+        }
+      }
+    }
+
+    // Keep store in sync if we computed a better value
+    if (derivedCurrentQ && derivedCurrentQ !== currentQuestionId) {
+      store.setCurrentQuestionId(derivedCurrentQ);
+    }
+
     const body = {
       userInput: input,
       submissionBehavior: "manualUnclear", // User typed and hit enter
-      currentQuestionId,
+      currentQuestionId: derivedCurrentQ,
       formSchema,
       responses: currentInputs,
       submissionId,
@@ -327,14 +426,17 @@ export default function FormAIComponent({
       isTestSubmission,
     };
 
-    handleSubmit(e, { body });
     setFormDisplayState("chatting_ai_loading");
+
+    await sendMessage({ parts: [{ type: "text", text: input }] }, { body });
+
+    setInput(""); // Clear input after submission
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     setErrorMessage(null);
     setShowRetry(false);
-    // Resend the last message
+    // Resend the last message if available
     if (messages.length > 0) {
       const lastUserMessage = [...messages]
         .reverse()
@@ -350,7 +452,19 @@ export default function FormAIComponent({
           userId,
           isTestSubmission,
         };
-        append(lastUserMessage, { body });
+        try {
+          await sendMessage(
+            {
+              parts: [
+                { type: "text", text: (lastUserMessage as any).content || "" },
+              ],
+            },
+            { body },
+          );
+        } catch (error) {
+          console.error("Failed to retry message:", error);
+          setErrorMessage("Failed to resend message. Please try again.");
+        }
       }
     }
   };
@@ -378,21 +492,22 @@ export default function FormAIComponent({
 
   // Send initial message to AI when form interaction starts
   useEffect(() => {
+    // Only initiate if:
+    // 1. We're in the ready state
+    // 2. We can send messages
+    // 3. We haven't initiated yet
+    // 4. History loading is complete
+    // 5. There's no existing history or messages
     if (
-      formDisplayState === "chatting_ai_ready" &&
-      append &&
-      !hasInitiatedRef.current
+      (formDisplayState === "idle" ||
+        formDisplayState === "chatting_ai_ready") &&
+      sendMessage &&
+      !hasInitiatedRef.current &&
+      !historyLoading && // Wait for history check to complete
+      chatHistoryMessages.length === 0 && // No history exists
+      messages.length === 0 // No current messages
     ) {
       hasInitiatedRef.current = true;
-
-      // Send a hidden user message to initiate the form
-      const initiationMessage = {
-        id: uuidv4(),
-        role: "user" as const,
-        content: "Start the form",
-        createdAt: new Date(),
-        hidden: true, // Mark as hidden so it won't be displayed
-      };
 
       const submissionBody = {
         userInput: "Start the form",
@@ -405,27 +520,110 @@ export default function FormAIComponent({
         isTestSubmission,
       };
 
-      append(initiationMessage, { body: submissionBody });
-      setFormDisplayState("chatting_ai_loading");
+      const sendAutoStartMessage = async () => {
+        try {
+          await sendMessage(
+            {
+              parts: [{ type: "text", text: "Start the form" }],
+            },
+            { body: submissionBody },
+          );
+          setFormDisplayState("chatting_ai_loading");
+        } catch (error) {
+          console.error("Failed to send auto-start message:", error);
+          setFormDisplayState("idle"); // Reset form state
+          hasInitiatedRef.current = false; // Reset so user can try again
+        }
+      };
+
+      sendAutoStartMessage();
     }
   }, [
     formDisplayState,
     chatHistoryMessages,
-    append,
+    messages,
+    sendMessage,
     formSchema,
     submissionId,
     userId,
     setFormDisplayState,
     isTestSubmission,
+    historyLoading,
   ]);
 
-  // Calculate isChatActive early
-  const isChatActive = !(
-    formDisplayState === "idle" ||
-    (chatHistoryMessages.length === 0 &&
-      (formDisplayState === "displaying_question_classical" ||
-        formDisplayState === "chatting_ai_ready"))
-  );
+  // Resume conversation when history exists and there's a current question to present
+  useEffect(() => {
+    // Only resume if:
+    // 1. History loading is complete
+    // 2. We have existing history
+    // 3. There's a current question to ask
+    // 4. We're not in a loading or completed state already
+    // 5. We haven't initiated this session yet
+    if (
+      !historyLoading &&
+      chatHistoryMessages.length > 0 &&
+      currentQuestionId &&
+      formDisplayState === "idle" &&
+      sendMessage &&
+      !hasInitiatedRef.current
+    ) {
+      hasInitiatedRef.current = true;
+
+      const resumeBody = {
+        userInput: "Continue where we left off",
+        submissionBehavior: "auto" as const,
+        currentQuestionId,
+        formSchema,
+        responses: currentInputs,
+        submissionId,
+        userId,
+        isTestSubmission,
+      };
+
+      const sendResumeMessage = async () => {
+        try {
+          await sendMessage(
+            {
+              parts: [{ type: "text", text: "Continue where we left off" }],
+            },
+            { body: resumeBody },
+          );
+          setFormDisplayState("chatting_ai_loading");
+        } catch (error) {
+          console.error("Failed to send resume message:", error);
+          setFormDisplayState("idle");
+          hasInitiatedRef.current = false;
+        }
+      };
+
+      sendResumeMessage();
+    }
+  }, [
+    historyLoading,
+    chatHistoryMessages.length,
+    currentQuestionId,
+    formDisplayState,
+    sendMessage,
+    formSchema,
+    currentInputs,
+    submissionId,
+    userId,
+    isTestSubmission,
+    setFormDisplayState,
+  ]);
+
+  // Calculate isChatActive - show chat interface when:
+  // 1. We have chat history OR
+  // 2. We're in a chatting state (ready or loading) OR
+  // 3. History is still loading (to prevent flicker)
+  const isChatActive =
+    historyLoading || // Show chat UI while loading history
+    chatHistoryMessages.length > 0 ||
+    messages.length > 0 ||
+    formDisplayState === "chatting_ai_ready" ||
+    formDisplayState === "chatting_ai_loading" ||
+    formDisplayState === "completed" ||
+    formDisplayState === "saved";
 
   if (!submissionId) {
     return (
@@ -475,7 +673,11 @@ export default function FormAIComponent({
         {!isChatActive ? (
           <div key="loading-screen" className="h-full">
             <div className="flex flex-col items-center justify-center h-full p-4 text-center lg:max-w-3xl md:max-w-3xl mx-auto">
-              <div className="text-muted-foreground">Loading form...</div>
+              <div className="text-muted-foreground">
+                {historyLoading
+                  ? "Loading chat history..."
+                  : "Initializing chat..."}
+              </div>
             </div>
           </div>
         ) : (

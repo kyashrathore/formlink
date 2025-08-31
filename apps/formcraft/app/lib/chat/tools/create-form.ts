@@ -17,7 +17,7 @@ interface FormAgentOptions {
 
 export function createFormTool(context: ChatToolContext) {
   return tool({
-    description: TOOL_DESCRIPTIONS.createFormAgent,
+    description: TOOL_DESCRIPTIONS.createForm,
     inputSchema: CreateFormAgentSchema,
     execute: async ({ prompt }): Promise<FormCreationResult> => {
       const { dataStream, formId, supabase, userId, options } = context
@@ -49,7 +49,7 @@ export function createFormTool(context: ChatToolContext) {
           options
         )
       } catch (error) {
-        logger.error("[TOOL] Error in createFormAgent tool", { error })
+        logger.error("[TOOL] Error in createForm tool", { error })
         return {
           success: false,
           formId,
@@ -69,7 +69,7 @@ async function processFormCreation(
   prompt: string,
   options?: FormAgentOptions
 ): Promise<FormCreationResult> {
-  logger.info("[TOOL] createFormAgent called", {
+  logger.info("[TOOL] createForm called", {
     formId,
     userId,
     prompt: prompt.substring(0, 100) + "...",
@@ -89,7 +89,7 @@ async function processFormCreation(
 
   for await (const agentEvent of createFormAgent(agentParams, userId)) {
     logger.info({
-      message: "[TOOL] Processing agentEvent from createFormAgent",
+      message: "[TOOL] Processing agentEvent from createForm",
       type: agentEvent.type,
       category: agentEvent.category,
       sequence: agentEvent.sequence,

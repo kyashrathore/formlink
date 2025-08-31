@@ -8,7 +8,7 @@ import { useRef } from "react";
 import { Message } from "./message";
 import { MessageLoading } from "./message-loading";
 
-import { Message as MessageType } from "@ai-sdk/react";
+import { UIMessage as MessageType } from "@ai-sdk/react";
 import { Form } from "@formlink/schema";
 
 type ConversationProps = {

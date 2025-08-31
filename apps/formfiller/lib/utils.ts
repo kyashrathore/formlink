@@ -37,11 +37,13 @@ export function shouldShowQuestion(question: Question): boolean {
 }
 
 export function fileDataToFile(fileData: FileData): File {
+  // Create a proper File object with correct size from the start
   const blob = new Blob([], { type: "application/octet-stream" });
   const file = new File([blob], fileData.name || fileData.filename || "file", {
     lastModified: Date.now(),
   });
-  return Object.assign(file, {
-    size: fileData.size || 0,
-  });
+
+  // Cannot modify File properties directly, return as-is
+  // The size will be 0 for the empty blob, which is expected for display purposes
+  return file;
 }

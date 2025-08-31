@@ -8,7 +8,7 @@ import { Question } from "@formlink/schema";
 // Initialize OpenRouter provider
 const apiKey = process.env.OPENROUTER_API_KEY || "";
 if (!apiKey) {
-  console.error("OPENROUTER_API_KEY not found in environment");
+  console.warn("OPENROUTER_API_KEY not found in environment");
 }
 
 const openRouterProvider = createOpenRouter({

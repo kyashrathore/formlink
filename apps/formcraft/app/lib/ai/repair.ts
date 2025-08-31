@@ -2,8 +2,8 @@ import { generateObject } from "ai"
 import { z } from "zod"
 import { getModel } from "./provider"
 
-// Use provider utility - using vercel to avoid Azure issues
-const MODEL = getModel("claude-3.5-sonnet", "vercel")
+// Use OpenRouter for Gemini models as Vercel has restrictions
+const MODEL = getModel("google/gemini-2.5-pro", "openrouter")
 
 const newSystemPrompt = `## System Role: Form Schema JSON Repair Agent (Error-Focused)
 

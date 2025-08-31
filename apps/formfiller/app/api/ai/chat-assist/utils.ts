@@ -1,16 +1,15 @@
-import { Question, Form, AddressData } from "@formlink/schema";
-import posthog from "posthog-js";
 import type {
-  ValidationResult,
   AIContext,
-  QuestionResponse,
   ExtendedValidations,
-  WebhookData,
   FileData,
+  QuestionResponse,
+  ValidationResult,
+  WebhookData,
 } from "@/lib/types";
+import { AddressData, Form, Question } from "@formlink/schema";
 
 // Re-export types
-export type { Question, Form, ValidationResult, AIContext };
+export type { AIContext, Form, Question, ValidationResult };
 
 // Types are now imported from @/lib/types
 
@@ -381,148 +380,30 @@ export class FormValidator {
   }
 }
 
-// Context Manager Class
-export class ContextManager {
-  private static readonly MAX_CONTEXT_SIZE = 10000; // tokens
-  private static readonly MAX_RESPONSE_HISTORY = 20;
-
-  static compressContext(context: AIContext): AIContext {
-    // Estimate token count (rough: 1 token ≈ 4 chars)
-    const estimatedTokens = JSON.stringify(context).length / 4;
-
-    if (estimatedTokens < this.MAX_CONTEXT_SIZE) {
-      return context;
-    }
-
-    // Compress strategies
-    const compressed: AIContext = { ...context };
-
-    // 1. Only include relevant questions based on conditional logic
-    const answeredIds = Object.keys(context.responses);
-    const relevantQuestions = this.getRelevantQuestions(
-      context.formSchema.questions,
-      context.responses,
-      context.currentQuestionId,
-    );
-
-    compressed.formSchema = {
-      ...context.formSchema,
-      questions: relevantQuestions,
-    };
-
-    // 2. Summarize previous responses if too many
-    if (answeredIds.length > this.MAX_RESPONSE_HISTORY) {
-      const recentIds = answeredIds.slice(-this.MAX_RESPONSE_HISTORY);
-      compressed.responses = Object.fromEntries(
-        recentIds
-          .map((id) => [id, context.responses[id]])
-          .filter(([, value]) => value !== undefined),
-      );
-      compressed.responseSummary = {
-        totalAnswered: answeredIds.length,
-        truncated: true,
-        earliestIncluded: recentIds[0] || "",
-      };
-    }
-
-    // 3. Keep questions as is - they're already minimal
-    // The Question type is already optimized
-
-    return compressed;
-  }
-
-  private static getRelevantQuestions(
-    allQuestions: Question[],
-    responses: Record<string, QuestionResponse>,
-    currentQuestionId: string | null,
-  ): Question[] {
-    const relevant = new Set<string>();
-
-    // Always include current question
-    if (currentQuestionId) {
-      relevant.add(currentQuestionId);
-    }
-
-    // Include answered questions
-    Object.keys(responses).forEach((id) => relevant.add(id));
-
-    // Include next possible questions based on conditional logic
-    const currentIndex = allQuestions.findIndex(
-      (q) => q.id === currentQuestionId,
-    );
-    for (
-      let i = currentIndex;
-      i < Math.min(currentIndex + 5, allQuestions.length);
-      i++
-    ) {
-      if (i >= 0 && i < allQuestions.length) {
-        const question = allQuestions[i];
-        if (question && this.evaluateCondition(question, responses)) {
-          relevant.add(question.id);
-        }
-      }
-    }
-
-    return allQuestions.filter((q) => relevant.has(q.id));
-  }
-
-  private static evaluateCondition(
-    question: Question,
-    responses: Record<string, QuestionResponse>,
-  ): boolean {
-    if (!question.conditionalLogic) return true;
-
-    // Handle different conditional logic types
-    const logic = question.conditionalLogic as {
-      conditions?: Array<{
-        questionId: string;
-        operator: string;
-        value: string | number;
-      }>;
-      action?: string;
-    };
-
-    // If it has conditions and action properties (standard format)
-    if (logic.conditions && logic.action) {
-      const conditionsMet = logic.conditions.every((condition) => {
-        const answer = responses[condition.questionId];
-        switch (condition.operator) {
-          case "equals":
-            return answer === condition.value;
-          case "not_equals":
-            return answer !== condition.value;
-          case "contains":
-            return String(answer).includes(String(condition.value));
-          case "greater_than":
-            return Number(answer) > Number(condition.value);
-          // Add more operators...
-          default:
-            return true;
-        }
-      });
-      return logic.action === "show" ? conditionsMet : !conditionsMet;
-    }
-
-    // Default to showing the question
-    return true;
-  }
-}
-
 // PostHog Analytics Helper
 export function trackServerEvent(
   event: string,
   properties?: Record<string, unknown>,
 ) {
-  if (process.env.NODE_ENV === "development") {
-    return;
-  }
+  if (process.env.NODE_ENV === "development") return;
 
   try {
-    // PostHog handles queueing and batching automatically
-    posthog.capture(event, properties);
-  } catch (error) {
-    // Fail silently - don't break the main flow
-    console.error("PostHog tracking error:", error);
+    // Only attempt analytics in a browser environment; avoid SSR import of posthog-js
+    if (typeof window !== "undefined") {
+      // Dynamically import to keep server bundle clean
+      import("posthog-js")
+        .then((mod: any) => {
+          const ph = mod && mod.capture ? mod : mod?.default || null;
+          if (ph && typeof ph.capture === "function") {
+            ph.capture(event, properties);
+          }
+        })
+        .catch(() => {
+          // swallow analytics failures
+        });
+    }
+  } catch {
+    // swallow
   }
 }
 

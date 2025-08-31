@@ -168,6 +168,7 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
   variant,
   handleFileUpload,
 }) => {
+  const store = useChatStore();
   const {
     formSchema,
     currentInputs,
@@ -176,7 +177,7 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
     formDisplayState,
     currentQuestionId,
     setCurrentQuestionId,
-  } = useChatStore();
+  } = store;
 
   const question = formSchema?.questions.find((q) => q.id === questionId);
   const response = currentInputs[questionId];
@@ -280,34 +281,39 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
   }
 
   if (isLast && variant === "assistant") {
-    // Only skip plain text questions without specific input requirements
-    // Allow structured inputs like email, tel, url, etc. and questions with validations
-    if (
-      (question.type as any).name === "text" &&
-      (question.type as any).format === "text" &&
-      !question.validations?.pattern &&
-      !question.validations?.minLength &&
-      !question.validations?.maxLength &&
-      !(question as QuestionWithPlaceholder).placeholder?.includes("@") && // Allow email-like inputs
-      !(question as QuestionWithPlaceholder).placeholder?.includes("phone") && // Allow phone-like inputs
-      !(question as QuestionWithPlaceholder).placeholder?.includes("url")
-    ) {
-      // Allow URL-like inputs
-      return null;
-    }
-
+    // Note: When presentQuestion tool explicitly calls this component,
+    // we should always render input components regardless of question type
+    // The old logic that skipped basic text questions is disabled for tool-based rendering
     const responseAsFile =
       response instanceof File
         ? response
-        : response && typeof response === "object" && "url" in response
-          ? fileDataToFile(response as FileData)
-          : null;
+        : Array.isArray(response) &&
+            response.length > 0 &&
+            response[0] instanceof File
+          ? response[0] // Extract the File from array
+          : response && typeof response === "object" && "url" in response
+            ? fileDataToFile(response as FileData)
+            : Array.isArray(response) &&
+                response.length > 0 &&
+                response[0] &&
+                typeof response[0] === "object" &&
+                "url" in response[0]
+              ? fileDataToFile(response[0] as FileData)
+              : null;
+
+    // For non-file question types, pass the response directly (not responseAsFile which is for files)
+    const isFileType = (question.type as any).name === "fileUpload";
+    const currentResponseValue: any = isFileType
+      ? responseAsFile
+      : (response ?? null);
 
     return (
       <InputContainer
         currentQuestion={question}
-        currentResponse={responseAsFile}
+        currentResponse={currentResponseValue}
         handleSelect={(qId: string, value: QuestionResponse) => {
+          // For multipleChoice, the value should already be the complete array
+          // For other types, just set the value directly
           setCurrentInput(qId, value);
 
           // For single select and other types, trigger submission immediately
@@ -319,21 +325,22 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
             (question.type as any).name !== "fileUpload" &&
             value
           ) {
+            const formattedResponse = formatResponse(question, value);
             setTriggerUserMessageForSelection(
               messageId,
               qId,
               value,
-              formatResponse(question, value),
+              formattedResponse,
             );
           }
         }}
         handleFileUpload={handleFileUpload}
         isUploading={formDisplayState === "uploading_file"}
-        uploadedFile={response instanceof File ? response : null}
+        uploadedFile={responseAsFile}
         onFileSelect={(file: File | null) => {
-          // Chat mode: Store file directly as response
-          if (file) {
-            setCurrentInput(question.id, file);
+          // Chat mode: Trigger upload flow instead of storing File directly
+          if (file && handleFileUpload) {
+            handleFileUpload(question.id, file);
           } else {
             setCurrentInput(question.id, null);
           }
@@ -342,12 +349,14 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
           // Get the current value from the store, not the stale closure value
           const currentValue =
             useChatStore.getState().currentInputs[question.id];
+
           if (currentValue) {
+            const formattedResponse = formatResponse(question, currentValue);
             setTriggerUserMessageForSelection(
               messageId,
               question.id,
               currentValue,
-              formatResponse(question, currentValue),
+              formattedResponse,
             );
           }
         }}

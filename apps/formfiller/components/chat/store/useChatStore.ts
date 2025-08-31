@@ -1,4 +1,5 @@
-import { Message as MessageType } from "@ai-sdk/react";
+import { UIMessage as MessageType } from "@ai-sdk/react";
+import { createServerClient } from "@formlink/db";
 import { Form, Question } from "@formlink/schema";
 import jsonata from "jsonata";
 import { v4 as uuidv4 } from "uuid";
@@ -60,7 +61,7 @@ function saveAnswerToApi(
   const { formId, versionId, submissionId, isTestSubmission } =
     apiConfiguration;
   if (!formId || !versionId || !submissionId) {
-    console.error("Missing IDs for saveAnswerToApi");
+    console.warn("Missing IDs for saveAnswerToApi");
     return;
   }
   fetch(apiConfig.getSaveAnswersUrl(formId), {
@@ -78,6 +79,30 @@ function saveAnswerToApi(
       testmode: isTestSubmission,
     }),
   });
+}
+
+// Database validation utility
+async function validateSubmissionExists(
+  submissionId: string,
+): Promise<boolean> {
+  try {
+    const supabase = await createServerClient(null, "service");
+    const { data, error } = await supabase
+      .from("form_submissions")
+      .select("submission_id")
+      .eq("submission_id", submissionId)
+      .maybeSingle();
+
+    if (error) {
+      console.warn(`Error checking submission existence: ${error.message}`);
+      return false;
+    }
+
+    return !!data;
+  } catch (err) {
+    console.warn(`Exception checking submission existence:`, err);
+    return false;
+  }
 }
 
 type FormDisplayState =
@@ -121,7 +146,7 @@ interface ChatState {
     aiModeFlag: boolean,
     initialData?: Record<string, QuestionResponse>,
     isTestSubmissionFlag?: boolean,
-  ) => void;
+  ) => Promise<void>;
   startFormInteraction: () => void;
   initializeForm: (
     formSchemaData: Form,
@@ -130,7 +155,7 @@ interface ChatState {
     aiModeFlag: boolean,
     initialData?: Record<string, QuestionResponse>,
     isTestSubmissionFlag?: boolean,
-  ) => void;
+  ) => Promise<void>;
   submitAnswerClassical: (answerValue: QuestionResponse) => void;
   processAssistantResponse: () => void;
   getCurrentQuestion: () => Question | undefined;
@@ -145,10 +170,19 @@ interface ChatState {
     displayText: string,
   ) => void;
   clearTriggerUserMessageForSelection: () => void;
+  clearPersistedState: () => void;
   restartForm: () => void;
   setEphemeralUploadedFile: (file: File | null) => void;
   handleFileUpload: (questionId: string, file: File) => Promise<void>;
   setCurrentQuestionId: (questionId: string | null) => void;
+  updateSubmissionId: (newSubmissionId: string) => void;
+
+  // New: Hydrate from server chat-history (messages + responses)
+  hydrateFromHistory: (
+    messages: MessageType[],
+    responses: Record<string, QuestionResponse>,
+    formSchemaOverride?: Form,
+  ) => void;
 }
 
 export const useChatStore = create<ChatState>()(
@@ -168,7 +202,7 @@ export const useChatStore = create<ChatState>()(
       isTestSubmission: false,
       ephemeralUploadedFile: null,
 
-      setupFormCore: (
+      setupFormCore: async (
         formSchemaData,
         formIdVal,
         versionIdVal,
@@ -185,14 +219,38 @@ export const useChatStore = create<ChatState>()(
           currentInputs: prevCurrentInputs,
         } = get();
 
-        // Determine if we are re-initializing the exact same form instance
-        const isContinuingSameFormInstance =
-          prevFormId === formIdVal && prevSubmissionId;
+        // Validate if prevSubmissionId is a valid UUID
+        const isValidUUID = (id: string | null): boolean => {
+          if (!id) return false;
+          const uuidRegex =
+            /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+          return uuidRegex.test(id);
+        };
 
         let newSubmissionId = prevSubmissionId;
-        // Generate a new submissionId if it's a different form or no submissionId was persisted
-        if (!prevSubmissionId || prevFormId !== formIdVal) {
+        let isContinuingSameFormInstance = false;
+
+        // Case 1: No previous submission ID or invalid format - generate new one
+        if (!isValidUUID(prevSubmissionId) || prevFormId !== formIdVal) {
           newSubmissionId = uuidv4();
+        }
+        // Case 2: Valid UUID and same form - check if it exists in database
+        else if (prevFormId === formIdVal && isValidUUID(prevSubmissionId)) {
+          const submissionExists = await validateSubmissionExists(
+            prevSubmissionId!,
+          ); // Non-null assertion safe after isValidUUID check
+          if (submissionExists) {
+            isContinuingSameFormInstance = true;
+          } else {
+            // Clear stale persisted state when submission no longer exists
+            newSubmissionId = uuidv4();
+            // Clear chat history since the old submission is invalid
+            set({
+              chatHistoryMessages: [],
+              currentInputs: {},
+              currentQuestionId: null,
+            });
+          }
         }
 
         set({
@@ -217,6 +275,17 @@ export const useChatStore = create<ChatState>()(
           triggerUserMessageForSelection: null,
           isTestSubmission: isTestSubmissionFlag,
         });
+
+        // If we're continuing a form instance with history but no current question,
+        // re-hydrate to calculate the correct current question now that we have form schema
+        if (
+          isContinuingSameFormInstance &&
+          prevChatHistoryMessages.length > 0 &&
+          !prevCurrentQuestionId
+        ) {
+          const store = get();
+          store.hydrateFromHistory(prevChatHistoryMessages, prevCurrentInputs);
+        }
       },
 
       startFormInteraction: () => {
@@ -227,6 +296,8 @@ export const useChatStore = create<ChatState>()(
           submissionId,
           versionId,
           isTestSubmission,
+          chatHistoryMessages,
+          currentQuestionId,
         } = get();
         if (!formSchema) return;
 
@@ -260,22 +331,28 @@ export const useChatStore = create<ChatState>()(
             ? formSchema.questions[0]?.id
             : null;
 
-        // Always start with empty chat history for startFormInteraction
-        // This ensures the AI system message can be sent properly
-        const initialChatHistoryMessages: MessageType[] = [];
+        // Preserve existing chat history if present; start fresh only when none exists
+        const hasExistingHistory =
+          Array.isArray(chatHistoryMessages) && chatHistoryMessages.length > 0;
 
-        const newState = {
+        const initialChatHistoryMessages: MessageType[] = hasExistingHistory
+          ? chatHistoryMessages
+          : [];
+
+        const resolvedCurrentQuestionId = hasExistingHistory
+          ? (currentQuestionId ?? firstQuestionId)
+          : firstQuestionId;
+
+        set({
           chatHistoryMessages: initialChatHistoryMessages,
           formDisplayState: (aiMode
             ? "chatting_ai_ready"
             : "displaying_question_classical") as FormDisplayState,
-          currentQuestionId: firstQuestionId,
-        };
-
-        set(newState);
+          currentQuestionId: resolvedCurrentQuestionId,
+        });
       },
 
-      initializeForm: (
+      initializeForm: async (
         formSchemaData,
         formIdVal,
         versionIdVal,
@@ -283,7 +360,7 @@ export const useChatStore = create<ChatState>()(
         initialData = {},
         isTestSubmissionFlag = false,
       ) => {
-        get().setupFormCore(
+        await get().setupFormCore(
           formSchemaData,
           formIdVal,
           versionIdVal,
@@ -385,10 +462,12 @@ export const useChatStore = create<ChatState>()(
       },
 
       processAssistantResponse: async () => {
-        // This function is now a stub, as the primary logic
-        // for handling question transitions is managed by the link-based system
-        // and the backend's `processUserAnswer` endpoint.
-        // We can retain it for potential future use cases or logging.
+        // Set state back to ready after processing assistant response
+        // This ensures the form is ready for user interaction
+        const { formDisplayState } = get();
+        if (formDisplayState === "chatting_ai_loading") {
+          set({ formDisplayState: "chatting_ai_ready" });
+        }
       },
 
       getCurrentQuestion: () => {
@@ -415,7 +494,7 @@ export const useChatStore = create<ChatState>()(
         questionId,
         value,
         displayText,
-      ) =>
+      ) => {
         set({
           triggerUserMessageForSelection: {
             assistantMessageId,
@@ -424,13 +503,33 @@ export const useChatStore = create<ChatState>()(
             displayText,
             timestamp: Date.now(),
           },
-        }),
-      clearTriggerUserMessageForSelection: () =>
-        set({ triggerUserMessageForSelection: null }),
+        });
+      },
+      clearTriggerUserMessageForSelection: () => {
+        set({ triggerUserMessageForSelection: null });
+      },
+
+      clearPersistedState: () => {
+        // Clear only the persisted fields to reset localStorage
+        set({
+          submissionId: null,
+          formId: null,
+          versionId: null,
+          currentInputs: {},
+          chatHistoryMessages: [],
+          currentQuestionId: null,
+        });
+      },
 
       setEphemeralUploadedFile: (file) => set({ ephemeralUploadedFile: file }),
 
       handleFileUpload: async (questionId, file) => {
+        // Handle case where file is passed as an array (from onFileSelect callback)
+        let actualFile = file;
+        if (Array.isArray(file) && file.length > 0) {
+          actualFile = file[0];
+        }
+
         const {
           formId,
           submissionId,
@@ -444,11 +543,11 @@ export const useChatStore = create<ChatState>()(
           return;
         }
 
-        set({ ephemeralUploadedFile: file });
+        set({ ephemeralUploadedFile: actualFile });
         setFormDisplayState("uploading_file");
 
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", actualFile);
         formData.append("formId", formId);
         formData.append("submissionId", submissionId);
         formData.append("questionId", questionId);
@@ -493,48 +592,73 @@ export const useChatStore = create<ChatState>()(
 
       restartForm: () => {
         set((state) => {
-          // Get initial data used for the current form setup.
-          // This is a bit tricky as initialData isn't stored directly.
-          // We'll assume initialData was {} if not provided during the last setupFormCore.
-          // A more robust solution might involve storing initialData in the state if it's always needed for restart.
-          // For now, resetting to empty or a predefined initial state.
-          // The original plan mentioned `queryDataForForm || {}`. This data comes from component props.
-          // The store itself doesn't have direct access to `queryDataForForm` from `FormAIComponent` props.
-          // So, we'll reset to an empty object for `currentInputs`.
-          // If `queryDataForForm` is critical for restart, `initializeForm` with preserved `submissionId`
-          // might be a more suitable approach, but that's a larger refactor.
-          // The current request is to "remove localstorage value keep same submission id".
-          // Resetting currentInputs effectively does this for the form data part.
-
           return {
-            ...state, // Keep existing state
-            currentInputs: {}, // Reset to empty, or re-evaluate if queryDataForForm is essential here
-            chatHistoryMessages: [], // Clear chat history
-            currentQuestionId: null, // Reset current question
-            formDisplayState: "idle", // Go back to start screen
+            ...state,
+            currentInputs: {},
+            chatHistoryMessages: [],
+            currentQuestionId: null,
+            formDisplayState: "idle",
             lastError: null,
-            triggerUserMessageForSelection: null, // Clear any pending UI triggers
+            triggerUserMessageForSelection: null,
             ephemeralUploadedFile: null,
-            // submissionId, formId, formSchema, versionId, aiMode, isTestSubmission are preserved
           };
         });
       },
 
       setCurrentQuestionId: (questionId) =>
         set({ currentQuestionId: questionId }),
+
+      updateSubmissionId: (newSubmissionId) => {
+        // Validate the new submission ID is a valid UUID
+        const uuidRegex =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (uuidRegex.test(newSubmissionId)) {
+          set({ submissionId: newSubmissionId });
+        } else {
+          console.error(`Invalid submission ID format: ${newSubmissionId}`);
+        }
+      },
+
+      // Hydrate store from server-provided history and responses
+      hydrateFromHistory: (messages, responses, formSchemaOverride) => {
+        const store = get();
+        const formSchema = formSchemaOverride || store.formSchema;
+
+        let nextQuestionId: string | null = null;
+
+        if (formSchema?.questions?.length) {
+          for (const q of formSchema.questions) {
+            if (!Object.prototype.hasOwnProperty.call(responses || {}, q.id)) {
+              nextQuestionId = q.id;
+              break;
+            }
+          }
+        }
+
+        const newState = {
+          chatHistoryMessages: messages,
+          currentInputs: responses as Record<string, QuestionResponse>,
+          currentQuestionId: nextQuestionId,
+          formSchema: formSchema, // Add formSchema to the state
+          // Set display state to ready if there's an unanswered question
+          formDisplayState: (nextQuestionId
+            ? "chatting_ai_ready"
+            : "idle") as any,
+        };
+
+        set(newState);
+      },
     }),
     {
-      name: "form-junction-chat-history-v2",
-      partialize: (state) =>
-        Object.fromEntries(
-          Object.entries(state).filter(
-            ([key]) =>
-              ![
-                "ephemeralUploadedFile",
-                "triggerUserMessageForSelection",
-              ].includes(key),
-          ),
-        ),
+      name: "formfiller-chat-store",
+      partialize: (state) => ({
+        // Only persist essential data, not UI state
+        submissionId: state.submissionId,
+        formId: state.formId,
+      }),
+      version: 1,
+      // Skip hydration if there's no valid data to prevent conflicts
+      skipHydration: false,
     },
   ),
 );

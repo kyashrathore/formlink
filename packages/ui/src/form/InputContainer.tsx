@@ -153,6 +153,11 @@ function mapQuestionToUnifiedProps(
     value = "";
   }
 
+  // Address expects an object, not null
+  if (type === "address" && value === null) {
+    value = {};
+  }
+
   // Base props
   const baseProps = {
     type,

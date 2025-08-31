@@ -2,7 +2,7 @@
 
 import { Message as MessageContainer, MessageContent } from "@formlink/ui";
 
-import { Message as MessageType } from "@ai-sdk/react";
+import { UIMessage as MessageType } from "@ai-sdk/react";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 
@@ -27,7 +27,7 @@ export function MessageUser({ hasScrollAnchor, message }: MessageUserProps) {
         transition={{ duration: 0.3, ease: "easeOut" }}
       >
         <div className="flex flex-col gap-2">
-          {message?.content ? (
+          {(message as any)?.content ? (
             // Handle content as a simple string
             <MessageContent
               className="bg-primary/10 dark:bg-primary/20 
@@ -42,11 +42,11 @@ export function MessageUser({ hasScrollAnchor, message }: MessageUserProps) {
                          prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5"
               markdown={true}
             >
-              {message.content}
+              {(message as any).content || ""}
             </MessageContent>
           ) : (
             // Handle parts if content is not available
-            message?.parts?.map((part, index) => {
+            (message as any)?.parts?.map((part: any, index: number) => {
               const { type } = part;
               const key = `part-${index}`;
 
@@ -66,7 +66,7 @@ export function MessageUser({ hasScrollAnchor, message }: MessageUserProps) {
                                prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5"
                     markdown={true}
                   >
-                    {part.text}
+                    {part.text || ""}
                   </MessageContent>
                 );
               }

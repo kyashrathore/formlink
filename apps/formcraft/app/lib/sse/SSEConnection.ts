@@ -149,13 +149,6 @@ export class SSEConnection {
 
     this.retryCount++
 
-    if (process.env.NODE_ENV === "development") {
-      // eslint-disable-next-line no-console
-      console.log(
-        `[SSE] Reconnecting in ${delay}ms (attempt ${this.retryCount}/${this.options.maxRetries})`
-      )
-    }
-
     this.retryTimer = setTimeout(() => {
       this.connect()
     }, delay)

@@ -12,6 +12,7 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  stepCountIs,
   streamText,
   UIMessage,
 } from "ai"
@@ -84,10 +85,20 @@ export async function handleChatRequest(
           isFirstMessage,
         }
 
-        const tools = createChatTools(toolContext)
+        // Build tools. On first message/new chat, expose only createForm to prevent premature getFormContext.
+        const baseTools = createChatTools(toolContext) as any
+        const tools = isFirstMessage
+          ? { createForm: baseTools.createForm }
+          : baseTools
 
-        // Use provider utility to get model - using vercel to avoid Azure issues
-        const MODEL = getModel("gpt-4o", "vercel")
+        if (isFirstMessage) {
+          logger.info(
+            "[handleChatRequest] First message detected. Restricting tools to { createForm } for deterministic creation flow."
+          )
+        }
+
+        // Use provider utility to get model - using OpenRouter to avoid Vercel restrictions
+        const MODEL = getModel("google/gemini-2.5-pro", "openrouter")
 
         const contextualSystemPrompt = buildContextualSystemPrompt(
           SYSTEM_PROMPT,
@@ -177,6 +188,8 @@ export async function handleChatRequest(
               logger.error("Failed to save error message", { saveError })
             }
           },
+          toolChoice: "auto",
+          stopWhen: stepCountIs(5),
         })
 
         // AI SDK v5: Merge the result into the UI message stream

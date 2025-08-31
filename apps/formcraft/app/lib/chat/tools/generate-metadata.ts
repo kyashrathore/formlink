@@ -106,9 +106,9 @@ export async function generateMetadata(
       progress: 30,
     })
 
-    // Core AI call - using Vercel AI Gateway to avoid Azure JSON Schema issues
+    // Core AI call - using OpenRouter to avoid Vercel restrictions
     const result = await generateObject({
-      model: getModel("gpt-4o-mini", "vercel"),
+      model: getModel("google/gemini-2.5-pro", "openrouter"),
       schema: MetadataResponseSchema,
       system: aiSystemPromptWithInput,
       prompt: normalizedInputContent,

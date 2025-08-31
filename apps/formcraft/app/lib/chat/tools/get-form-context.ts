@@ -15,6 +15,19 @@ export function getFormContextTool(context: ChatToolContext) {
       const { formId, supabase } = context
       const targetFormId = toolCallFormId || formId
 
+      // Guard: On first message/new chat, do NOT allow getFormContext pre-check. Instruct to use createForm.
+      if (context.isFirstMessage) {
+        logger.info(
+          "[TOOL getFormContext] Blocked on first message. Instructing to use createForm for new creation."
+        )
+        return {
+          success: false,
+          formId: targetFormId,
+          error:
+            "New session detected. Use the createForm tool to create a new form. Do not pre-check with getFormContext.",
+        }
+      }
+
       if (!targetFormId) {
         logger.warn(
           "[TOOL getFormContext] Attempted to get context without a targetFormId."

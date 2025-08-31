@@ -13,11 +13,11 @@ export type ProviderType = "vercel" | "openrouter" | "openai"
  *
  * @example
  * // Use Vercel AI Gateway (default)
- * const model = getModel("gpt-4o")
+ * const model = getModel("gpt-5")
  *
  * @example
  * // Use OpenRouter
- * const model = getModel("openai/gpt-4o", "openrouter")
+ * const model = getModel("openai/gpt-5", "vercel")
  */
 export function getModel(
   modelName: string,
@@ -64,13 +64,7 @@ export function convertModelName(
   // Convert from Vercel to OpenRouter format
   if (fromProvider === "vercel" && toProvider === "openrouter") {
     const modelMap: Record<string, string> = {
-      "gpt-4o": "openai/gpt-4o",
-      "gpt-4o-mini": "openai/gpt-4o-mini",
-      "gpt-4": "openai/gpt-4",
-      "gpt-3.5-turbo": "openai/gpt-3.5-turbo",
-      "claude-3-5-sonnet": "anthropic/claude-3.5-sonnet",
-      "claude-3-opus": "anthropic/claude-3-opus",
-      "claude-3-haiku": "anthropic/claude-3-haiku",
+      "gpt-5": "openai/gpt-5",
     }
     return modelMap[modelName] || modelName
   }
@@ -79,6 +73,7 @@ export function convertModelName(
   if (fromProvider === "openrouter" && toProvider === "vercel") {
     const modelMap: Record<string, string> = {
       "openai/gpt-4o": "gpt-4o",
+      "openai/gpt-5": "gpt-5",
       "openai/gpt-4o-mini": "gpt-4o-mini",
       "openai/gpt-4": "gpt-4",
       "openai/gpt-3.5-turbo": "gpt-3.5-turbo",

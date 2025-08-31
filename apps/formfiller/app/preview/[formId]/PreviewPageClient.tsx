@@ -220,10 +220,6 @@ export default function PreviewPageClient({
           break;
 
         case "FORMCRAFT_MODE_UPDATE":
-          console.log(
-            "PreviewPageClient received mode update:",
-            payload.formMode,
-          );
           setCurrentFormMode(payload.formMode);
           break;
 
@@ -258,8 +254,61 @@ export default function PreviewPageClient({
     aimode: currentFormMode === "chat" ? "true" : "false",
   };
 
-  console.log("PreviewPageClient - currentFormMode:", currentFormMode);
-  console.log("PreviewPageClient - searchParams:", searchParams);
+  // Heuristic polling to reduce preview lag in non-chat modes:
+  // If only 0-1 question is currently available right after generation starts,
+  // poll the form schema for a short time to pick up newly generated questions without requiring a hard reload.
+  useEffect(() => {
+    // Only relevant for classic/typeform previews; chat mode streams via AI route
+    if (currentFormMode === "chat") return;
+
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const maxAttempts = 10;
+    let attempts = 0;
+
+    const currentCount = Array.isArray(currentFormSchema?.questions)
+      ? currentFormSchema.questions.length
+      : 0;
+
+    // Only poll if it looks like we don't yet have the full schema
+    if (currentCount <= 1) {
+      const poll = async () => {
+        try {
+          attempts++;
+          const res = await fetch(`/api/forms/${initialFormSchema.id}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (res.ok) {
+            const data = (await res.json()) as Form;
+            const newCount = Array.isArray(data.questions)
+              ? data.questions.length
+              : 0;
+            const currCount = Array.isArray(currentFormSchema?.questions)
+              ? currentFormSchema.questions.length
+              : 0;
+
+            // Update when we see more questions than we currently have
+            if (newCount > currCount) {
+              setCurrentFormSchema(data);
+            }
+          }
+        } catch {
+          // swallow and retry
+        } finally {
+          if (attempts < maxAttempts) {
+            timer = setTimeout(poll, 2000);
+          }
+        }
+      };
+
+      // kick off polling
+      poll();
+    }
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [currentFormMode, currentFormSchema?.questions, initialFormSchema.id]);
 
   return (
     <div className="h-full w-full">

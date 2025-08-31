@@ -212,16 +212,6 @@ export default function ClassicFormView({
     mode: "onChange",
   });
 
-  // Add debugging
-  console.log("ClassicFormView - form object:", form);
-  console.log("ClassicFormView - formSchema_zod:", formSchema_zod);
-
-  // Early return if form is not initialized properly
-  if (!form || !form.formState) {
-    console.log("ClassicFormView - Form not ready, showing loading...");
-    return <div>Loading form...</div>;
-  }
-
   // Initialize form on mount (Classic mode starts immediately)
   useEffect(() => {
     if (formSchema) {
@@ -469,6 +459,11 @@ export default function ClassicFormView({
     });
     form.reset();
   };
+
+  // Early return if form is not initialized properly
+  if (!form || !form.formState) {
+    return <div>Loading form...</div>;
+  }
 
   // Render completion screen
   if (isCompleted) {

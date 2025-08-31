@@ -22,7 +22,7 @@ function FormPageContent({
   isTestSubmission,
   queryDataForForm,
 }: FormPageContentProps) {
-  const { isAIMode, isTypeFormMode, isClassicMode, mode } = useFormMode();
+  const { isAIMode, isClassicMode } = useFormMode();
 
   // Load and apply themes from database
   const themeLoader = useThemeLoader(formSchema);
@@ -176,7 +176,6 @@ function FormPageContent({
       onAnswerChange={handleAnswerChange}
       onFileUpload={handleFileUpload}
       onNavigateNext={getNextValidQuestionIndex}
-      onMarkCompleted={markAsCompleted}
       onSubmitForm={submitForm}
       shouldShowQuestion={shouldShowQuestion}
       getCurrentQuestion={getCurrentQuestion}
