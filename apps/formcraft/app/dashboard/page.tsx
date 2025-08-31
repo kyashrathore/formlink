@@ -32,6 +32,7 @@ export default async function Home() {
       )
       `
     )
+    .order("created_at", { ascending: false })
 
   if (formsError) {
     console.error("Error loading forms with versions:", formsError)
