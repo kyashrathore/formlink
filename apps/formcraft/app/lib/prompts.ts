@@ -66,13 +66,13 @@ Your primary task is to analyze the user's request and generate a single, valid 
 
 **Mandatory Base Fields (Always Required):**
 
-- \`type\`: Must always be \`"question"\`.
+- \`type\`: Structured object with a \`name\` field (one of: "multipleChoice", "singleChoice", "text", "date", "rating", "address", "ranking", "fileUpload", "linearScale", "likertScale"). Include additional fields depending on the \`name\` (e.g., \`format\` for text; \`display\` and \`options\` for choice; \`config\` for rating/linearScale; \`options\` string[] for likertScale).
 - \`id\`: Unique, readable string ID, preferably with the format \`q_<topic>_<purpose>\` (e.g., \`q_feedback_taste\`).
 - \`questionNo\`: Determine an appropriate number based on the sequence of any provided \`existingQuestions\` or suggest \`1\` if none exist.
 - \`title\`: The main text of the question, derived from the user's request.
-- \`questionType\`: Select the most appropriate type from \`QuestionTypeEnumSchema\` ("multipleChoice", "singleChoice", "text", "date", "rating", "address", "ranking", "fileUpload", "linearScale", "likertScale").
+- \`type.name\`: Select the most appropriate value from the allowed set ("multipleChoice", "singleChoice", "text", "date", "rating", "address", "ranking", "fileUpload", "linearScale", "likertScale").
 - \`display\`: This is a mandatory object.
-  - \`inputType\`: **Mandatory within \`display\`**. Select a compatible \`InputType\` from \`InputTypeEnumSchema\` that matches the \`questionType\`. Refer to the \`QuestionSchema\`'s internal logic (like the \`allowedInputTypesMap\` in the \`superRefine\`) for valid combinations. Pay attention to suggestions based on the number of options (e.g., dropdown/multiSelectDropdown for >4 options, radio/checkbox for <4 options).
+  - \`inputType\`: **Mandatory within \`display\`**. Select a compatible \`InputType\` from \`InputTypeEnumSchema\` that matches the \`type.name\`. Refer to the \`QuestionSchema\`'s internal logic (like the \`allowedInputTypesMap\` in the \`superRefine\`) for valid combinations. Pay attention to suggestions based on the number of options (e.g., dropdown/multiSelectDropdown for >4 options, radio/checkbox for <4 options).
     - **Allowed Input Types per Question Type:**
       - \`multipleChoice\`: \`"checkbox"\` (for <4 options), \`"multiSelectDropdown"\` (for &ge;4 options)
       - \`singleChoice\`: \`"radio"\` (for <4 options), \`"dropdown"\` (for &ge;4 options)
@@ -88,13 +88,14 @@ Your primary task is to analyze the user's request and generate a single, valid 
   - \`showDescription\`: boolean (defaults to true if not specified, but best to include).
 - \`submissionBehavior\`: **Mandatory**. Determine the appropriate behavior based on the chosen \`inputType\`. Refer to the \`QuestionSchema\`'s internal logic (like the \`expectedBehavior\` map in the \`superRefine\`). Common examples: "autoAnswer" for radio, dropdown, date, rating, linearScale, likertScale, file; "manualAnswer" for checkbox, multiSelectDropdown, addressBlock, rankOrder; "manualUnclear" for text, textarea, email, url, tel, number, password.
 
-**Conditionally Required Fields (Required based on \`questionType\`):**
+**Type-specific Fields (on \`type\` object):**
 
-- \`options\`: Required for \`questionType\` "multipleChoice", "singleChoice", and "ranking". Provide an array of \`OptionSchema\` objects (\`{ value: string, label: string }\`). Infer options from the user's request.
-- \`ratingConfig\`: Required for \`questionType\` "rating". Provide a \`RatingConfigSchema\` object (\`{ min: number, max: number, step: number, minLabel?: string, maxLabel?: string }\`). Infer range and labels from the user's request (default min=1, step=1 if not specified). \`max\` must be greater than \`min\`.
-- \`linearScaleConfig\`: Required for \`questionType\` "linearScale". Provide a \`LinearScaleConfigSchema\` object (\`{ start: number, end: number, step: number, startLabel?: string, endLabel?: string }\`). Infer range, step, and labels from the user's request (default step=1 if not specified). \`end\` must be greater than \`start\`.
-- \`rankingConfig\`: Required for \`questionType\` "ranking". Provide a \`RatingConfigSchema\` object (as per schema definition). Infer min, max, and step from the user's request or use defaults.
-- \`fileUploadConfig\`: Required for \`questionType\` "fileUpload". Provide a \`FileUploadConfigSchema\` object (with \`allowedFileTypes\`, \`maxFileSizeMB\`, and/or \`maxFiles\`). Infer restrictions from the user's request.
+- For \`type.name\` "singleChoice" or "multipleChoice": Provide \`type.options\` as an array of \`OptionSchema\` objects (\`{ value: string, label: string, score?: number }\`). Set \`type.display\` to "radio"/"dropdown" (singleChoice) or "checkbox"/"multiSelectDropdown" (multipleChoice) based on options count.
+- For \`type.name\` "rating": Provide \`type.config\` as \`{ min: number, max: number, step: number, minLabel?: string, maxLabel?: string }\`.
+- For \`type.name\` "linearScale": Provide \`type.config\` as \`{ start: number, end: number, step: number, startLabel?: string, endLabel?: string }\`.
+- For \`type.name\` "ranking": Provide \`type.options\` as an array of \`{ value: string, label: string, score?: number }\`.
+- For \`type.name\` "likertScale": Provide \`type.options\` as an array of strings (e.g., ["Strongly Disagree", ..., "Strongly Agree"]).
+- For \`type.name\` "address" or "fileUpload": No extra fields required on \`type\`.
 
 **Optional Fields (Include if applicable/inferable from user request):**
 
@@ -104,7 +105,7 @@ Your primary task is to analyze the user's request and generate a single, valid 
     - \`value\`: The actual value for the validation (e.g., \`true\` for required, \`10\` for minLength).
     - \`message\`: (Optional but recommended) A human-readable error message for the end-user if the validation fails (e.g., \`"This field is required."\`).
     - \`originalText\`: The original natural language text to describe this specific validation rule was derived, (e.g., "Answer must be provided").
-- \`defaultValue\`: Optional default value. The type must be compatible with the \`questionType\` and \`inputType\` (e.g., string for text, array of strings for multiple choice, AddressSchema object for address).
+- \`defaultValue\`: Optional default value. The type must be compatible with the \`type.name\` and \`inputType\` (e.g., string for text, array of strings for multiple choice, AddressSchema object for address).
 - \`conditionalLogic\`: Optional object describing conditional visibility for the question. Only include if the user explicitly requests conditional visibility based on other questions (unlikely from a simple "add question" request, typically handled separately).
   - If present, this object must contain:
     - \`prompt\`: A natural language description of the condition (e.g., "Only show this if Q1 is Yes").
@@ -308,7 +309,7 @@ Your primary task is to analyze the provided topic **if and only if** the reques
         - \`message\`: (Optional but recommended) A human-readable error message for the end-user if the validation fails (e.g., \`"This field is required."\`).
         - \`originalText\`: The original natural language text to describe this specific validation rule was derived, (e.g., "Answer must be provided").
     - \`display\`: Provide:
-      - \`inputType\`: **CRITICAL RULE - Select based on \`questionType\` AND Number of Options:**
+      - \`inputType\`: **CRITICAL RULE - Select based on \`type.name\` AND Number of Options:**
         - **\`multipleChoice\`:**
           - If you defined **2 or 3 \`options\`**: USE \`"checkbox"\`.
           - If you defined **4 or more \`options\`**: USE \`"multiSelectDropdown"\`.
