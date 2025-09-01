@@ -74,7 +74,7 @@ export default function RealEmbedPreview({ shortId }: { shortId: string }) {
           ref={iframeRef}
           title="Embed Preview"
           className="bg-muted h-full w-full rounded-xl border"
-          sandbox="allow-scripts allow-same-origin allow-popups"
+          sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
         />
       </div>
     </div>

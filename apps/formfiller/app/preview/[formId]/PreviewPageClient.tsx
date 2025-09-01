@@ -171,9 +171,12 @@ export default function PreviewPageClient({
             result.appliedDarkVariables,
             result.warnings,
           );
-          console.error(
+          console.log(
             `Applied ${result.appliedRootVariables.length} root variables and ${result.appliedDarkVariables.length} dark variables`,
           );
+          
+          // Force a reflow to ensure CSS variables are applied
+          document.documentElement.offsetHeight;
         } else {
           console.error("Shadcn CSS application failed:", result);
           sendShadcnAppliedMessage(
