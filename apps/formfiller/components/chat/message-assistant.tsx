@@ -1,5 +1,5 @@
 import { UIMessage as MessageType } from "@ai-sdk/react";
-import { Message, MessageContent } from "@formlink/ui";
+import { Message, MessageContent } from "@formlink/ui/ai-elements";
 import { cn } from "@formlink/ui/lib/utils";
 import { motion } from "motion/react";
 import { useQuestionRenderer } from "./hooks/useQuestionRenderer";
@@ -34,8 +34,9 @@ export function MessageAssistant({
 
   return (
     <Message
+      from="assistant"
       className={cn(
-        "group flex w-full max-w-3xl items-start gap-4 px-3 py-0.5 sm:px-4 md:px-6",
+        "w-full max-w-3xl px-3 py-0.5 sm:px-4 md:px-6",
         hasScrollAnchor && "min-h-scroll-anchor",
       )}
     >
@@ -60,8 +61,6 @@ export function MessageAssistant({
                        prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
                        prose-blockquote:border-l-2 prose-blockquote:border-muted-foreground/20
                        prose-blockquote:pl-4 prose-blockquote:italic"
-            markdown={true}
-            components={components as any}
           >
             {(message as any).content || ""}
           </MessageContent>
@@ -86,8 +85,6 @@ export function MessageAssistant({
                              prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
                              prose-blockquote:border-l-2 prose-blockquote:border-muted-foreground/20
                              prose-blockquote:pl-4 prose-blockquote:italic"
-                    markdown={true}
-                    components={components as any}
                   >
                     {part.text || ""}
                   </MessageContent>

@@ -3,7 +3,6 @@ import {
   Button,
   Card,
   CodeBlock,
-  CodeBlockCode,
   ToggleGroup,
   ToggleGroupItem,
 } from "@formlink/ui"
@@ -87,14 +86,11 @@ export default function ShareTabContent({
           </ToggleGroup>
           <Card className="flex flex-col gap-2 p-1">
             <div className="p-2">
-              <CodeBlock className="m-0 text-sm">
-                <CodeBlockCode
-                  code={embedCodeParts.element}
-                  language="html"
-                  theme={appliedTheme}
-                  className=""
-                />
-              </CodeBlock>
+              <CodeBlock
+                code={embedCodeParts.element}
+                language="html"
+                className="m-0 text-sm"
+              />
             </div>
             <Button
               variant="secondary"
@@ -113,14 +109,11 @@ export default function ShareTabContent({
           {embedCodeParts.script && (
             <div className="mt-3">
               <div className="mb-1 text-xs font-semibold">{`Required Script (add to <head> of your document)`}</div>
-              <CodeBlock className="m-0 text-xs">
-                <CodeBlockCode
-                  code={embedCodeParts.script}
-                  language="html"
-                  theme={appliedTheme}
-                  className=""
-                />
-              </CodeBlock>
+              <CodeBlock
+                code={embedCodeParts.script}
+                language="html"
+                className="m-0 text-xs"
+              />
             </div>
           )}
         </div>

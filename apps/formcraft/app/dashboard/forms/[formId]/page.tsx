@@ -302,7 +302,6 @@ function TestUIPageContent() {
         {userData && <UserMenu user={userData} />}
       </div>
 
-      {}
       <div className="flex-1 overflow-hidden">
         <TwoColumnLayout
           leftPanel={leftPanel}
@@ -316,7 +315,6 @@ function TestUIPageContent() {
         />
       </div>
 
-      {}
       {isFloating && (
         <FloatingPanel>
           {({ onHeaderMouseDown }) => (

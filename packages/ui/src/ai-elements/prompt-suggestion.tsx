@@ -1,7 +1,7 @@
 "use client";
 
 import { Button, buttonVariants } from "../ui/button";
-import { cn } from "@/lib/utils";
+import { cn } from "../lib/utils";
 import { VariantProps } from "class-variance-authority";
 
 export type PromptSuggestionProps = {

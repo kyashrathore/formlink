@@ -56,3 +56,8 @@ export {
   type ToolOutputProps,
   type ToolLogsProps,
 } from "./tool";
+
+export {
+  PromptSuggestion,
+  type PromptSuggestionProps,
+} from "./prompt-suggestion";

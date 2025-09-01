@@ -43,7 +43,6 @@ export default function ChatDesignPanel({
 
   return (
     <div className="flex h-full flex-col">
-      {}
       <div
         className={`border-border bg-muted/30 flex items-center justify-between border-b ${isFloating ? "cursor-grab rounded-t-lg" : "rounded-t-lg"}`}
         onMouseDown={isFloating ? onHeaderMouseDown : undefined}
@@ -84,7 +83,6 @@ export default function ChatDesignPanel({
         </button>
       </div>
 
-      {}
       <div className="flex-1 overflow-hidden">
         {activeChatTab === "chat" ? chatContent : designContent}
       </div>

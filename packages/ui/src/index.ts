@@ -11,6 +11,7 @@ export * from "./ui/button";
 export * from "./ui/calendar";
 export * from "./ui/card";
 export * from "./ui/checkbox";
+export * from "./ui/code-block";
 export * from "./ui/code-editor";
 export * from "./ui/collapsible";
 export * from "./ui/command";
@@ -51,15 +52,12 @@ export * from "./motion/scroll-button";
 export * from "./motion/text-morph";
 export * from "./motion/useClickOutside";
 
-// Chat UI components (prompt-kit)
-export * from "./chat-ui/chat-container";
-export * from "./chat-ui/code-block";
-export * from "./chat-ui/file-upload";
+// Chat UI components (prompt-kit) - remaining components still in use
 export * from "./chat-ui/loader";
-export * from "./chat-ui/markdown";
-export * from "./chat-ui/message";
-export * from "./chat-ui/prompt-input";
-export * from "./chat-ui/prompt-suggestion";
+
+// AI Elements - new architecture components
+// Includes: Message, MessageContent, MessageAvatar, Conversation, PromptInput, Tool, PromptSuggestion
+export * from "./ai-elements";
 
 // Icons
 export { default as ClaudeIcon } from "./icons/claude";
