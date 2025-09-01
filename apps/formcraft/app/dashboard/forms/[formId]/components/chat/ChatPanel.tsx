@@ -10,8 +10,8 @@ import { v4 as uuidv4 } from "uuid"
 import { AgentEvent } from "../../lib/types/agent-events"
 import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
 import Chat from "./chat-components/chat"
+import { Conversation } from "./conversation"
 import { useAutoScroll, useFormattedEvents } from "./hooks"
-import { MessageWithParts } from "./MessageWithParts"
 import type { ChatMessage, ChatPanelProps } from "./types"
 import { getDisplaySummaryMessage, getLastUserMessage } from "./utils"
 
@@ -320,23 +320,38 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
   return (
     <div className="flex h-full flex-col">
-      <div
-        ref={chatContainerRef}
-        className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4"
-      >
-        {chatMessages.map((message, index) => (
-          <MessageWithParts
-            key={index}
-            role={message.role}
-            content={message.content}
-            timestamp={message.timestamp}
-            parts={"parts" in message ? (message as any).parts : undefined}
-            isLastMessage={index === chatMessages.length - 1}
+      <div ref={chatContainerRef} className="min-h-0 flex-1 overflow-hidden">
+        {chatMessages.length > 0 ? (
+          <Conversation
+            messages={chatMessages}
+            status={isStreaming ? "streaming" : "ready"}
             displaySummaryMessage={displaySummaryMessage}
           />
-        ))}
+        ) : (
+          <div className="p-8 text-center">
+            <div className="text-muted-foreground mb-6">
+              <div className="mb-2 text-lg font-medium">
+                Start a conversation
+              </div>
+              <div className="text-sm">
+                Choose a suggestion below or ask me anything about forms
+              </div>
+            </div>
 
-        {chatMessages.length === 0 && (
+            <div className="mx-auto flex max-w-md flex-wrap justify-center gap-2">
+              {initialFormPrompts.map((prompt, index) => (
+                <PromptSuggestion
+                  key={index}
+                  onClick={() => handleSuggestionClick(prompt)}
+                >
+                  {prompt}
+                </PromptSuggestion>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {chatMessages.length === 0 && false && (
           <div className="p-8 text-center">
             <div className="text-muted-foreground mb-6">
               <div className="mb-2 text-lg font-medium">

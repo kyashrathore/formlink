@@ -1,6 +1,6 @@
 "use client";
 
-import FormAIComponent from "@/app/[formId]/FormAIComponent_v2";
+import FormAIComponent from "@/app/[formId]/FormAIComponent";
 import TypeFormView from "@/components/typeform/TypeFormView";
 import ClassicFormView from "@/components/classic/ClassicFormView";
 import { FormModeProvider, useFormMode } from "@/contexts/FormModeContext";

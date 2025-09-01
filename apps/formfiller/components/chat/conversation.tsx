@@ -1,15 +1,17 @@
 "use client";
 
-import { Button } from "@formlink/ui";
-import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
-import { ArrowDown } from "lucide-react";
-
-import { useRef } from "react";
-import { Message } from "./message";
-import { MessageLoading } from "./message-loading";
-
+import {
+  Conversation as AIConversation,
+  ConversationContent,
+  ConversationScrollButton,
+  Message as AIMessage,
+  MessageContent,
+} from "@formlink/ui/ai-elements";
 import { UIMessage as MessageType } from "@ai-sdk/react";
 import { Form } from "@formlink/schema";
+import { useRef } from "react";
+import { MessageLoading } from "./message-loading";
+import { MessageAssistant } from "./message-assistant";
 
 type ConversationProps = {
   data?: Form | null;
@@ -21,22 +23,6 @@ type ConversationProps = {
     value: any,
     displayText: string,
   ) => Promise<void>;
-};
-
-// Scroll button component
-const ConversationScrollButton = () => {
-  const { isAtBottom, scrollToBottom } = useStickToBottomContext();
-
-  return !isAtBottom ? (
-    <Button
-      size="icon"
-      variant="secondary"
-      className="absolute bottom-4 right-4 rounded-full shadow-md hover:shadow-lg transition-shadow z-10"
-      onClick={() => scrollToBottom()}
-    >
-      <ArrowDown className="h-4 w-4" />
-    </Button>
-  ) : null;
 };
 
 export function Conversation({
@@ -54,35 +40,52 @@ export function Conversation({
   });
 
   return (
-    <StickToBottom
-      className="relative flex h-[calc(75vh)] w-full overflow-y-auto overflow-x-hidden"
-      resize="smooth"
-      initial="smooth"
-    >
-      <StickToBottom.Content className="flex w-full flex-col items-center">
+    <AIConversation className="relative flex h-[calc(75vh)] w-full overflow-y-auto overflow-x-hidden">
+      <ConversationContent className="flex w-full flex-col items-center">
         {visibleMessages?.map((message, index) => {
           const isLast =
             index === visibleMessages.length - 1 && status !== "submitted";
           const hasScrollAnchor =
             isLast && messages.length > initialMessageCount.current;
-          return (
-            <Message
-              message={message}
-              key={message.id}
-              id={message.id}
-              variant={message.role}
-              isLast={isLast}
-              hasScrollAnchor={hasScrollAnchor}
-              handleFileUpload={handleFileUpload}
-              onSubmitSelection={onSubmitSelection}
-            />
-          );
+
+          if (message.role === "user") {
+            // Extract text from AI SDK v5 format: message.parts
+            const textPart = message.parts?.find(
+              (p: any) => p.type === "text",
+            ) as any;
+            const userText = textPart?.text || (message as any).content || "";
+            return (
+              <AIMessage
+                key={message.id}
+                from="user"
+                className="w-full max-w-3xl"
+              >
+                <MessageContent>{userText}</MessageContent>
+              </AIMessage>
+            );
+          }
+
+          if (message.role === "assistant") {
+            // Use the existing MessageAssistant component to preserve question rendering
+            return (
+              <MessageAssistant
+                key={message.id}
+                message={message}
+                isLast={isLast}
+                hasScrollAnchor={hasScrollAnchor}
+                handleFileUpload={handleFileUpload}
+                onSubmitSelection={onSubmitSelection}
+              />
+            );
+          }
+
+          return null;
         })}
         {(status === "submitted" || status === "streaming") && (
           <MessageLoading />
         )}
-      </StickToBottom.Content>
+      </ConversationContent>
       <ConversationScrollButton />
-    </StickToBottom>
+    </AIConversation>
   );
 }

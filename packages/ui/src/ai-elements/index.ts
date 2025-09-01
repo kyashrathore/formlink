@@ -41,3 +41,18 @@ export {
   type PromptInputModelSelectItemProps,
   type PromptInputModelSelectValueProps,
 } from "./prompt-input";
+
+export {
+  Tool,
+  ToolHeader,
+  ToolContent,
+  ToolInput,
+  ToolOutput,
+  ToolLogs,
+  type ToolProps,
+  type ToolHeaderProps,
+  type ToolContentProps,
+  type ToolInputProps,
+  type ToolOutputProps,
+  type ToolLogsProps,
+} from "./tool";

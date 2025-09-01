@@ -4,17 +4,16 @@ import { Conversation } from "@/components/chat/conversation";
 import { useChatStore } from "@/components/chat/store/useChatStore";
 import { useChat } from "@ai-sdk/react";
 import { Form } from "@formlink/schema";
+import { Alert, AlertDescription, Button } from "@formlink/ui";
 import {
-  Alert,
-  AlertDescription,
-  Button,
   PromptInput,
-  PromptInputAction,
-  PromptInputActions,
   PromptInputTextarea,
-} from "@formlink/ui";
+  PromptInputToolbar,
+  PromptInputTools,
+  PromptInputSubmit,
+} from "@formlink/ui/ai-elements";
 import { DefaultChatTransport } from "ai";
-import { AlertCircle, ArrowRight, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useFormSession } from "../../hooks/useFormSession";
@@ -535,37 +534,33 @@ export default function FormAIComponent({
                     <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
                       <div className="lg:max-w-3xl md:max-w-3xl mx-auto w-full">
                         <div className="relative order-2 px-2 pb-3 sm:pb-4 md:order-1">
-                          <form onSubmit={handleAISubmit}>
-                            <PromptInput
-                              className="border-input bg-popover relative z-10 overflow-hidden border p-0 pb-2 shadow-xs backdrop-blur-xl"
+                          <PromptInput
+                            className="border-input bg-popover relative z-10 overflow-hidden border p-0 pb-2 shadow-xs backdrop-blur-xl"
+                            onSubmit={handleAISubmit}
+                          >
+                            <PromptInputTextarea
+                              placeholder="Your answer..."
+                              className="mt-2 ml-2 min-h-[44px] text-base leading-[1.3] sm:text-base md:text-base !bg-popover"
                               value={input}
-                              onValueChange={(value: string) => setInput(value)}
-                              onSubmit={handleAISubmit}
-                            >
-                              <PromptInputTextarea
-                                placeholder="Your answer..."
-                                className="mt-2 ml-2 min-h-[44px] text-base leading-[1.3] sm:text-base md:text-base !bg-popover"
-                              />
-                              <PromptInputActions className="mt-5 w-full justify-end px-2">
-                                <PromptInputAction tooltip="Send" className="">
-                                  <Button
-                                    variant="default"
-                                    size="sm"
-                                    className="h-9 w-9 cursor-pointer rounded-full transition-all duration-300 ease-out"
-                                    disabled={
-                                      !input.trim() ||
-                                      status === "streaming" ||
-                                      !store.submissionId
-                                    }
-                                    type="submit"
-                                    aria-label="Send answer"
-                                  >
-                                    <ArrowRight className="size-4" />
-                                  </Button>
-                                </PromptInputAction>
-                              </PromptInputActions>
-                            </PromptInput>
-                          </form>
+                              onChange={(
+                                e: React.ChangeEvent<HTMLTextAreaElement>,
+                              ) => setInput(e.target.value)}
+                            />
+                            <PromptInputToolbar className="mt-5 w-full justify-end px-2">
+                              <PromptInputTools>
+                                <PromptInputSubmit
+                                  className="h-9 w-9 cursor-pointer rounded-full transition-all duration-300 ease-out"
+                                  disabled={
+                                    !input.trim() ||
+                                    status === "streaming" ||
+                                    !store.submissionId
+                                  }
+                                  status={status}
+                                  aria-label="Send answer"
+                                />
+                              </PromptInputTools>
+                            </PromptInputToolbar>
+                          </PromptInput>
                         </div>
                       </div>
                     </div>

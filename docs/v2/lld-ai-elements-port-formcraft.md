@@ -1,204 +1,386 @@
-# AI Elements Porting Plan - FormCraft Chat
+# Low-level Implementation Doc: Port FormCraft Chat to AI Elements (non-breaking, commit-gated)
 
-## Current State Analysis
+This document defines a safe migration of FormCraft’s chat UI to Vercel AI Elements, without changing business logic, API contracts, event handling, or stores. The integration mirrors the FormFiller approach by consuming AI Elements from `@formlink/ui/ai-elements` (installed and isolated under `packages/ui/src/ai-elements`). We will test changes on a branch/PR and merge when green; no runtime feature flag.
 
-### FormCraft Chat Implementation
-The FormCraft AI chat currently uses custom chat components and has not been ported to AI elements yet. Key files:
+## Non-breaking principles
 
-1. **ChatPanel.tsx** - Main chat interface component
-   - Uses `useChat` from AI SDK v5
-   - Custom message rendering with `MessageWithParts` component
-   - Handles tool invocations and parts properly
-   - Already using AI SDK v5 message format
+- UI-layer swap only:
+  - Replace Conversation/Message rendering and the Prompt composer.
+  - Do not change server endpoints, transports, tool invocation contracts, or store shapes.
+- Isolation:
+  - Import AI Elements strictly from `@formlink/ui/ai-elements`.
+  - Do not run any installer in `apps/formcraft` or touch its `components.json`.
+- Zero collisions:
+  - No writes to shared primitives or app-level primitives.
+  - Optionally keep legacy copies as `*_legacy.tsx` for easy diff/rollback during review.
 
-2. **MessageWithParts.tsx** - Custom message renderer
-   - Handles text parts, tool parts, step-start parts
-   - Complex logic for tool state management
-   - Custom styling for different message types
+## Current FormCraft architecture snapshot
 
-3. **Chat.tsx** - Input component wrapper
-   - Uses `ChatInput` component (custom)
-   - Model selection functionality
-   - Basic text input handling
+Key files (verified):
 
-4. **ChatInput** - Custom input component (referenced but not seen)
-   - File upload support
-   - Model selection
-   - System prompt selection
+- apps/formcraft/app/dashboard/forms/[formId]/components/chat/ChatPanel.tsx
+  - Main chat container; uses `useChat` (AI SDK v5), renders messages via `MessageWithParts`.
+  - Handles tool invocations/parts; coordinates with event systems and stores.
+- apps/formcraft/app/dashboard/forms/[formId]/components/chat/MessageWithParts.tsx
+  - Custom renderer for `message.parts` (`text`, tool parts, step-start, errors).
+  - Manages complex tool visualization and states.
+- apps/formcraft/app/components/chat/chat.tsx
+  - Input component wrapper; renders `ChatInput`.
+  - Model selection and system prompt selection; basic text input handling.
+- apps/formcraft/app/components/chat/chat-input.tsx
+  - Concrete input widget; file upload support; keyboard handlers.
 
-### FormFiller Success (Reference Implementation)
-The FormFiller app was successfully ported and shows:
-- Clean AI elements integration
-- Proper message content extraction from `message.parts`
-- File upload support through AI elements
-- Minimal custom code needed
+Supporting systems to preserve:
 
-## Porting Strategy
+- Multiple tools (create-form, update-form, get-form-context, show-config) with progress/success/failure visualization.
+- Event bridge: `FormGenerationEventHandler`, `useFormGenerationEventBridge`.
+- Model selection and system prompt selection.
+- Chat history persistence and error handling.
 
-### Phase 1: Replace Message Components
-**Goal**: Replace custom `MessageWithParts` with AI elements message components
+## AI Elements surface to adopt
 
-**Files to modify**:
-- `ChatPanel.tsx` - Replace message rendering
-- Create new `conversation_v3.tsx` component (following FormFiller pattern)
+Consume from the design system (already isolated in `packages/ui/src/ai-elements` per the FormFiller LLD):
 
-**Steps**:
-1. Create new conversation component using AI elements:
-   ```tsx
-   import {
-     Conversation,
-     ConversationContent,
-     Message,
-     MessageContent,
-   } from "@formlink/ui/ai-elements";
-   ```
-
-2. Extract text content from `message.parts` (learned from FormFiller fix):
-   ```tsx
-   const textPart = message.parts?.find((p: any) => p.type === "text") as any;
-   const userText = textPart?.text || (message as any).content || "";
-   ```
-
-3. Handle tool invocation display in assistant messages
-4. Preserve existing tool state management logic
-
-### Phase 2: Replace Input Components
-**Goal**: Replace custom `ChatInput` with AI elements prompt input
-
-**Files to modify**:
-- `chat.tsx` - Replace input component
-- Remove custom `ChatInput` dependencies
-
-**Steps**:
-1. Use AI elements prompt input:
-   ```tsx
-   import {
-     PromptInput,
-     PromptInputTextarea,
-     PromptInputToolbar,
-     PromptInputTools,
-     PromptInputSubmit,
-   } from "@formlink/ui/ai-elements";
-   ```
-
-2. Migrate file upload functionality
-3. Preserve model selection (may need custom solution)
-4. Preserve system prompt selection
-
-### Phase 3: Integration & Testing
-**Goal**: Ensure feature parity and fix any issues
-
-**Tasks**:
-1. Test message display for all types (text, tools, errors)
-2. Test file uploads
-3. Test model selection
-4. Test form generation flow
-5. Test chat history persistence
-6. Test error handling and retries
-
-## Key Differences from FormFiller
-
-### Complex Tool Management
-FormCraft has more complex tool invocation handling:
-- Multiple tool types (create-form, update-form, get-form-context, show-config)
-- Tool success/failure states with visual feedback
-- Tool progress indicators
-- Summary messages from events
-
-### Model Selection
-FormCraft allows runtime model selection, which AI elements may not support directly. Options:
-1. Keep model selection as custom UI outside AI elements
-2. Extend AI elements to support model selection
-3. Use system prompt approach for model hints
-
-### File Upload Integration
-FormCraft's file upload may be more complex than FormFiller's. Need to analyze:
-- File types supported
-- Upload endpoints
-- Integration with form generation
-
-### Event System Integration
-FormCraft uses complex event bridging:
-- `FormGenerationEventHandler`
-- `useFormGenerationEventBridge`
-- Agent events and state management
-
-This needs to be preserved during the port.
-
-## Implementation Plan
-
-### Step 1: Create Conversation Component
-```bash
-# Create new conversation component
-apps/formcraft/app/dashboard/forms/[formId]/components/chat/conversation_v3.tsx
+```ts
+import {
+  Conversation,
+  Message,
+  MessageContent,
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputTools,
+  PromptInputSubmit,
+} from "@formlink/ui/ai-elements";
 ```
 
-### Step 2: Update ChatPanel
-```bash
-# Update ChatPanel to use new conversation component
-apps/formcraft/app/dashboard/forms/[formId]/components/chat/ChatPanel.tsx
+Notes:
+
+- MessageContent may be used to render plain text; for markdown/code, use your existing renderer if required.
+- AI Elements “Tool”/“Reasoning” UIs are optional and purely presentational; FormCraft’s detailed tool UI stays custom.
+
+## Migration strategy (phased, commit-gated)
+
+- Phase 1: Conversation/Message swap
+  - Render messages via `Conversation` + `Message`; map text from `message.parts`.
+  - Keep `MessageWithParts.tsx` checked in as legacy for diff/rollback.
+- Phase 2: Prompt composer swap
+  - Replace `ChatInput` with `PromptInput` composite.
+  - Embed model/system prompt controls in a toolbar; reuse existing file upload flow.
+- Phase 3: Integration, a11y, regression verification
+  - Validate all message types, tools, file uploads, event bridge, persistence, errors, mobile, and dark mode.
+
+## Implementation steps
+
+### 1) Create AI Elements conversation layer
+
+New file:
+
+- apps/formcraft/app/dashboard/forms/[formId]/components/chat/conversation_v3.tsx
+
+Responsibilities:
+
+- Render messages with AI Elements; extract user/assistant text from parts.
+- Do not replace custom tool visualization; keep that in `ChatPanel`/adjacent components.
+- Preserve hidden/ephemeral filtering.
+
+Skeleton:
+
+```tsx
+"use client";
+
+import {
+  Conversation,
+  Message,
+  MessageContent,
+} from "@formlink/ui/ai-elements";
+
+type Part =
+  | { type: "text"; text: string }
+  | { type: string; [k: string]: unknown };
+
+type ChatMessage = {
+  id: string;
+  role: "user" | "assistant" | "system" | "tool";
+  parts?: Part[];
+  // other fields already in your message shape
+};
+
+export function ConversationV3({ messages }: { messages: ChatMessage[] }) {
+  return (
+    <Conversation>
+      {messages.map((m) => {
+        const textPart = m.parts?.find((p) => p.type === "text") as
+          | { type: "text"; text: string }
+          | undefined;
+        const text = textPart?.text ?? (m as any).content ?? ""; // fallback if some messages still have content
+        return (
+          <Message key={m.id} role={m.role as "user" | "assistant"}>
+            <MessageContent>
+              {text}
+              {/* If desired: light, non-authoritative tool activity summary line */}
+            </MessageContent>
+          </Message>
+        );
+      })}
+    </Conversation>
+  );
+}
 ```
 
-### Step 3: Update Chat Input
-```bash
-# Update chat input component
-apps/formcraft/app/dashboard/forms/[formId]/components/chat/chat-components/chat.tsx
+Notes:
+
+- If you need markdown, replace the inner content with your existing markdown renderer (keep parity with current appearance).
+- Stick-to-bottom: AI Elements typically handle this; if needed, keep your current hook.
+
+### 2) Wire `ChatPanel` to ConversationV3
+
+File to modify:
+
+- apps/formcraft/app/dashboard/forms/[formId]/components/chat/ChatPanel.tsx
+
+Changes:
+
+- Import and render `ConversationV3` directly (no conditional at runtime).
+- Do not change `useChat`, handlers, tool logic, or event bridge integration.
+- Keep `MessageWithParts` file in repo for easy diff/rollback if needed.
+
+Pseudo-diff (illustrative):
+
+```tsx
+import { ConversationV3 } from "./conversation_v3";
+
+// ...
+export function ChatPanel(/* existing props */) {
+  // messages, handlers, tool state, events remain as-is
+
+  return (
+    <>
+      <ConversationV3 messages={messages} />
+      {/* The rest of your panel layout (tool UI sections, side panes, etc.) stays the same */}
+    </>
+  );
+}
 ```
 
-### Step 4: Testing & Refinement
-1. Test in development environment
-2. Compare with current functionality
-3. Fix any missing features
-4. Update related components if needed
+### 3) Build a Prompt composer using AI Elements
 
-## Risks & Considerations
+New file:
 
-### Complexity Risk
-FormCraft's chat is more complex than FormFiller's:
-- Multiple tool types with different states
-- Event system integration
-- Model selection
-- Complex message history handling
+- apps/formcraft/app/components/chat/chat_v3.tsx
 
-### Feature Loss Risk
-Potential features that might be lost:
-- Advanced tool state visualization
-- Model selection UI
-- Custom error handling
-- Summary message display
+Responsibilities:
 
-### Performance Risk
-AI elements may have different performance characteristics than custom components.
+- Render `PromptInput` + toolbar + submit.
+- Keep file upload flow unchanged.
+- Embed model/system prompt selection in the toolbar.
+- Match keyboard behavior (Enter send; Shift+Enter newline).
 
-## Success Criteria
+Skeleton:
 
-1. **Feature Parity**: All existing chat features work identically
-2. **UI Consistency**: Messages display correctly with proper styling
-3. **Tool Handling**: All tool invocations display proper states
-4. **File Upload**: File upload works for form generation
-5. **Model Selection**: Users can still select different models
-6. **Error Handling**: Errors display properly with retry functionality
-7. **Chat History**: Message persistence works across sessions
+```tsx
+"use client";
 
-## Rollback Plan
+import {
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputTools,
+  PromptInputSubmit,
+} from "@formlink/ui/ai-elements";
 
-If porting fails or introduces issues:
-1. Keep existing components as `*_legacy.tsx`
-2. Feature flag the new implementation
-3. Easy rollback to legacy components
-4. Incremental rollout to test users first
+type ChatComposerV3Props = {
+  value: string;
+  onChange: (v: string) => void;
+  onSubmit: () => void;
+  disabled?: boolean;
+  onFiles?: (files: File[]) => void;
+  model: string;
+  onModelChange: (m: string) => void;
+  systemPrompt: string;
+  onSystemPromptChange: (v: string) => void;
+};
 
-## Timeline Estimate
+export function ChatComposerV3(props: ChatComposerV3Props) {
+  const {
+    value,
+    onChange,
+    onSubmit,
+    disabled,
+    onFiles,
+    model,
+    onModelChange,
+    systemPrompt,
+    onSystemPromptChange,
+  } = props;
 
-- **Phase 1**: 4-6 hours (message components)
-- **Phase 2**: 3-4 hours (input components)  
-- **Phase 3**: 3-5 hours (integration & testing)
-- **Total**: ~10-15 hours
+  return (
+    <PromptInput onSubmit={onSubmit} disabled={!!disabled}>
+      <PromptInputTextarea
+        value={value}
+        onChange={onChange}
+        // replicate current Enter/Shift+Enter behavior if defaults differ
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            onSubmit();
+          }
+        }}
+      />
+      <PromptInputToolbar>
+        {/* Preserve model selection */}
+        <ModelSelector model={model} onChange={onModelChange} />
+        {/* Preserve system prompt selection */}
+        <SystemPromptSelector
+          value={systemPrompt}
+          onChange={onSystemPromptChange}
+        />
+        <PromptInputTools>
+          {/* Reuse existing file upload flow */}
+          <FileAttach onFiles={onFiles} />
+        </PromptInputTools>
+        <PromptInputSubmit disabled={!!disabled} />
+      </PromptInputToolbar>
+    </PromptInput>
+  );
+}
+```
 
-## Next Steps
+### 4) Replace composer with AI Elements PromptInput
 
-1. Start with Phase 1 - create conversation component
-2. Test message display thoroughly
-3. Move to input component replacement
-4. Comprehensive integration testing
-5. Deploy behind feature flag for gradual rollout
+File to modify:
+
+- apps/formcraft/app/components/chat/chat.tsx
+
+Changes:
+
+- Replace `ChatInput` usage with `ChatComposerV3` directly.
+- Ensure `onSubmit` builds the same payload used today (no API changes).
+
+Illustrative excerpt:
+
+```tsx
+import { ChatComposerV3 } from "./chat_v3";
+
+export function Chat(/* existing props or internal hooks */) {
+  // existing state/hooks: input, model, systemPrompt, file handling, submit handler
+  // ensure onSubmit builds the same payload used today (no API changes)
+
+  return (
+    <ChatComposerV3
+      value={input}
+      onChange={setInput}
+      onSubmit={handleSubmit}
+      disabled={isDisabled}
+      onFiles={handleFiles}
+      model={model}
+      onModelChange={setModel}
+      systemPrompt={systemPrompt}
+      onSystemPromptChange={setSystemPrompt}
+    />
+  );
+}
+```
+
+### 5) Preserve file upload integration
+
+- Keep current endpoints, validations, and form generation flows.
+- The AI Elements toolbar is presentational; all actual upload control and lifecycle remain in your existing services and handlers.
+- Ensure attachments are injected into the outgoing message parts exactly as before.
+
+### 6) Preserve tool invocation visualization
+
+- Do not remove or rewrite the existing tool UI or its state machines.
+- AI Elements are used for message presentation only.
+- If desired, add a small, non-authoritative status hint inside `MessageContent` for assistant messages, but the definitive visualization stays in your current custom views.
+
+### 7) Preserve event system and stores
+
+- Keep `FormGenerationEventHandler` and `useFormGenerationEventBridge` untouched.
+- `onFinish`, `onError`, tool-part handling, and state transitions remain as-is.
+- Do not change store contracts, selectors, or message shapes.
+
+## Theming and a11y
+
+- AI Elements inherit tokens and Tailwind from `@formlink/ui`.
+- Verify:
+  - Dark mode parity and color tokens.
+  - Focus management for composer and toolbar controls.
+  - Keyboard: Enter-to-send and Shift+Enter-newline (override if AI Elements default differs).
+  - Mobile layout and virtual keyboard interactions.
+
+## Testing matrix
+
+Messages
+
+- Roles: user, assistant (system/tool as currently presented).
+- Types: text-only, tool-only, mixed, step-start, error, long markdown, code blocks.
+- Hidden/ephemeral filtering.
+
+Tools
+
+- create-form, update-form, get-form-context, show-config:
+  - Progress → success/failure visualization.
+  - Retry flows.
+
+Composer
+
+- Model selection, system prompt selection.
+- File uploads: types, sizes, validation, error handling.
+- Keyboard: Enter/Shift+Enter behavior; disabled states (streaming/empty/missing preconditions).
+
+State and events
+
+- Chat history persistence.
+- Event bridge updates while streaming; race conditions.
+
+Theming and a11y
+
+- Dark mode, focus states, ARIA labels.
+
+Mobile
+
+- Layout resilience, sticky composer, IME behavior.
+
+## Acceptance criteria
+
+- No server, transport, or store contract changes.
+- Feature parity across message rendering and tool states.
+- File upload works identically; same endpoints and validations.
+- Model and system prompt selection remain fully functional.
+- All AI Elements imports resolve from `@formlink/ui/ai-elements`.
+- Visual style matches current theme (including dark mode).
+- CI green; manual regression checklist passed.
+
+## Rollout and rollback (commit-gated)
+
+- Rollout:
+  - Open PR with changes from Phase 1..3.
+  - Run CI + manual regression from the testing matrix.
+  - Merge when green.
+- Rollback:
+  - Revert the commit(s) in git, or restore `*_legacy.tsx` files.
+  - No runtime flag involved.
+
+## Risks and mitigations
+
+- Risk: Installer collisions in app scope.
+  - Mitigation: Never run the generator in `apps/formcraft`. Consume from `@formlink/ui/ai-elements` only.
+- Risk: Primitive duplication.
+  - Mitigation: Design system already isolates AI Elements via adapters; no primitives are duplicated here.
+- Risk: Markdown/code rendering differences.
+  - Mitigation: Keep your existing markdown renderer inside `MessageContent` where needed.
+- Risk: A11y/keyboard regressions.
+  - Mitigation: Verify behaviors; override `onKeyDown` to enforce parity.
+
+## Timeline (conservative)
+
+- Phase 1: 4–6 hours (messages; account for tool-related edge cases)
+- Phase 2: 3–4 hours (composer, toolbar integrations)
+- Phase 3: 4–6 hours (integration, a11y, testing, polish)
+
+## Appendix: Reference implementation (FormFiller)
+
+- FormFiller consumes AI Elements from `@formlink/ui/ai-elements` and keeps business logic intact.
+- It provided the isolated design system installation and adapter strategy documented in `docs/v2/lld-ai-elements-swap.md`.
+- Mirror its approach; do not diverge on installer or primitive usage.
