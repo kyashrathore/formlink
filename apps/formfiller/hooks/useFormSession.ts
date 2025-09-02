@@ -75,7 +75,9 @@ export function useFormSession({
             history.messages = (data?.messages ?? []).map((m: any) => ({
               id: m.id,
               role: m.role,
-              content: m.content,
+              parts:
+                m.parts ||
+                (m.content ? [{ text: m.content, type: "text" }] : []),
               createdAt: m.createdAt ? new Date(m.createdAt) : undefined,
             }));
             history.responses = data?.responses ?? {};

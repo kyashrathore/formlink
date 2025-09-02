@@ -1,17 +1,17 @@
 "use client";
 
-import {
-  Conversation as AIConversation,
-  ConversationContent,
-  ConversationScrollButton,
-  Message as AIMessage,
-  MessageContent,
-} from "@formlink/ui/ai-elements";
 import { UIMessage as MessageType } from "@ai-sdk/react";
 import { Form } from "@formlink/schema";
+import {
+  Conversation as AIConversation,
+  Message as AIMessage,
+  ConversationContent,
+  ConversationScrollButton,
+  MessageContent,
+} from "@formlink/ui/ai-elements";
 import { useRef } from "react";
-import { MessageLoading } from "./message-loading";
 import { MessageAssistant } from "./message-assistant";
+import { MessageLoading } from "./message-loading";
 
 type ConversationProps = {
   data?: Form | null;
@@ -49,18 +49,20 @@ export function Conversation({
             isLast && messages.length > initialMessageCount.current;
 
           if (message.role === "user") {
-            // Extract text from AI SDK v5 format: message.parts
-            const textPart = message.parts?.find(
-              (p: any) => p.type === "text",
-            ) as any;
-            const userText = textPart?.text || (message as any).content || "";
             return (
               <AIMessage
                 key={message.id}
                 from="user"
                 className="w-full max-w-3xl"
               >
-                <MessageContent>{userText}</MessageContent>
+                <MessageContent>
+                  {message.parts?.map((part: any, i: number) => {
+                    if (part.type === "text") {
+                      return <div key={i}>{part.text}</div>;
+                    }
+                    return null;
+                  })}
+                </MessageContent>
               </AIMessage>
             );
           }

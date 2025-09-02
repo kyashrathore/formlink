@@ -1,8 +1,9 @@
 import { UIMessage as MessageType } from "@ai-sdk/react";
-import { Message, MessageContent } from "@formlink/ui/ai-elements";
+import { Message, MessageContent, Response } from "@formlink/ui/ai-elements";
 import { cn } from "@formlink/ui/lib/utils";
-import { motion } from "motion/react";
 import { useQuestionRenderer } from "./hooks/useQuestionRenderer";
+import { QuestionWrapper } from "./QuestionWrapper";
+import { remarkSlots } from "./remark-slots-streamdown";
 
 type MessageAssistantProps = {
   message: MessageType;
@@ -36,65 +37,51 @@ export function MessageAssistant({
     <Message
       from="assistant"
       className={cn(
-        "w-full max-w-3xl px-3 py-0.5 sm:px-4 md:px-6",
+        "w-full max-w-3xl",
         hasScrollAnchor && "min-h-scroll-anchor",
       )}
     >
-      <motion.div
-        className={cn(
-          "flex max-w-[90%] sm:max-w-[85%] md:max-w-[70%] flex-col gap-2",
-          isLast && "pb-8",
-        )}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-      >
-        {(message as any)?.content ? (
-          // Handle content as a simple string
-          <MessageContent
-            className="bg-transparent prose prose-sm dark:prose-invert max-w-none
-                       prose-p:my-1.5 prose-headings:mt-4 prose-headings:mb-3
-                       prose-strong:font-semibold prose-strong:text-foreground
-                       prose-code:px-1 prose-code:py-0.5 prose-code:rounded-md
-                       prose-code:text-sm
-                       prose-pre:my-3 prose-pre:p-4
-                       prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
-                       prose-blockquote:border-l-2 prose-blockquote:border-muted-foreground/20
-                       prose-blockquote:pl-4 prose-blockquote:italic"
-          >
-            {(message as any).content || ""}
-          </MessageContent>
-        ) : (
-          // Handle parts if content is not available - filter out reasoning parts
-          parts
-            ?.filter((part: any) => part.type !== "reasoning")
-            ?.map((part: any, index: number) => {
-              const { type } = part;
-              const key = `part-${index}`;
+      <MessageContent className="bg-transparent">
+        {parts
+          ?.filter((part: any) => part.type !== "reasoning")
+          ?.map((part: any, index: number) => {
+            const { type } = part;
+            const key = `part-${index}`;
 
-              if (type === "text") {
-                return (
-                  <MessageContent
-                    key={key}
-                    className="bg-transparent prose prose-sm dark:prose-invert max-w-none
-                             prose-p:my-1.5 prose-headings:mt-4 prose-headings:mb-3
-                             prose-strong:font-semibold prose-strong:text-foreground
-                             prose-code:px-1 prose-code:py-0.5 prose-code:rounded-md
-                             prose-code:text-sm
-                             prose-pre:my-3 prose-pre:p-4
-                             prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5
-                             prose-blockquote:border-l-2 prose-blockquote:border-muted-foreground/20
-                             prose-blockquote:pl-4 prose-blockquote:italic"
-                  >
-                    {part.text || ""}
-                  </MessageContent>
-                );
-              }
+            if (type === "text") {
+              return (
+                <Response
+                  key={key}
+                  remarkPlugins={[remarkSlots]}
+                  parseIncompleteMarkdown={false}
+                  components={
+                    {
+                      ...components,
+                      PresentQuestionInputComponent: ({
+                        qId,
+                      }: {
+                        qId: string | number;
+                      }) => (
+                        <QuestionWrapper
+                          questionId={String(qId)}
+                          messageId={messageId}
+                          isLast={isLast}
+                          variant="assistant"
+                          handleFileUpload={handleFileUpload}
+                          onSubmitSelection={onSubmitSelection}
+                        />
+                      ),
+                    } as any
+                  }
+                >
+                  {part.text || ""}
+                </Response>
+              );
+            }
 
-              return null;
-            })
-        )}
-      </motion.div>
+            return null;
+          })}
+      </MessageContent>
     </Message>
   );
 }

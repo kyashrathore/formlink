@@ -60,12 +60,15 @@ export async function saveSubmissionMessage(
 ): Promise<void> {
   try {
     const supabase = await createServerClient(null, "service");
-    const { error } = await supabase.from("submission_messages").insert({
-      submission_id: submissionId,
-      role: message.role,
-      content: message,
-      user_id: userId || null,
-    });
+    const { data, error } = await supabase
+      .from("submission_messages")
+      .insert({
+        submission_id: submissionId,
+        role: message.role,
+        content: message,
+        user_id: userId || null,
+      })
+      .select();
 
     if (error) {
       console.error("Error saving message to submission_messages:", error);
@@ -76,7 +79,9 @@ export async function saveSubmissionMessage(
     }
   } catch (err) {
     console.error("Exception while saving message:", err);
-    trackServerEvent("message.save.exception", { role: message.role });
+    trackServerEvent("message.save.exception", {
+      role: message?.role || "unknown",
+    });
     throw err;
   }
 }

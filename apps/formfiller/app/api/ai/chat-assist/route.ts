@@ -1,7 +1,18 @@
-import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { NextResponse } from "next/server";
 // Types used inline within this file
 import { FormValidator } from "@/lib/validation/FormValidator";
+import { createUIMessageStreamResponse } from "ai";
+import { streamAIResponse } from "./_lib/ai";
+import { SIMPLE_FORM_ASSISTANT_PROMPT } from "./_lib/constants";
+import {
+  ensureSubmissionExists,
+  hydrateEffectiveResponses,
+  preSaveAnswer,
+  saveSubmissionMessage,
+} from "./_lib/submission";
+import { createAITools } from "./_lib/tools";
+import { ChatAssistBodySchema } from "./schema";
 import {
   AIContext,
   Question,
@@ -9,16 +20,6 @@ import {
   trackServerEvent,
   ValidationResult,
 } from "./utils";
-import {
-  ensureSubmissionExists,
-  saveSubmissionMessage,
-  hydrateEffectiveResponses,
-  preSaveAnswer,
-} from "./_lib/submission";
-import { createAITools } from "./_lib/tools";
-import { streamAIResponse } from "./_lib/ai";
-import { SIMPLE_FORM_ASSISTANT_PROMPT } from "./_lib/constants";
-import { ChatAssistBodySchema } from "./schema";
 
 // Input processing utilities
 function processUserInput(requestData: any): {
@@ -341,26 +342,19 @@ export async function POST(req: Request) {
       nextQuestion?.id || "ALL_ANSWERED",
     );
 
-    // Save user message
-    if (sanitizedInput) {
-      // Ensure content is a string for display
-      let messageContent = sanitizedInput;
-      if (Array.isArray(sanitizedInput)) {
-        messageContent = sanitizedInput.join(", ");
-      } else if (
-        typeof sanitizedInput === "object" &&
-        sanitizedInput !== null
-      ) {
-        messageContent = JSON.stringify(sanitizedInput);
-      } else {
-        messageContent = String(sanitizedInput);
-      }
+    // Save user message - find the last user message from the request
+    if (sanitizedInput && messages.length > 0) {
+      const lastUserMessage = [...messages]
+        .reverse()
+        .find((msg: any) => msg.role === "user");
 
-      await saveSubmissionMessage(
-        activeSubmissionId,
-        { role: "user", content: messageContent, id: Date.now().toString() },
-        userId ?? undefined,
-      );
+      if (lastUserMessage) {
+        await saveSubmissionMessage(
+          activeSubmissionId,
+          lastUserMessage,
+          userId ?? undefined,
+        );
+      }
     }
 
     // Track metrics
@@ -385,14 +379,15 @@ export async function POST(req: Request) {
 
     // Stream AI response
     try {
-      // Ensure at least one valid message with content for the model
+      // Ensure at least one valid message for the model
+      // Messages can have either 'content' or 'parts' format
       const aiMessages = (Array.isArray(messages) ? messages : []).filter(
-        (m: any) => m && m.role && m.content,
+        (m: any) => m && m.role && (m.content || m.parts),
       );
       if (aiMessages.length === 0) {
         aiMessages.push({
           role: "user",
-          content: sanitizedInput || "Start the form",
+          parts: [{ type: "text", text: sanitizedInput || "Start the form" }],
         });
       }
 
@@ -415,10 +410,15 @@ export async function POST(req: Request) {
       };
       aiMessages.push({
         role: "user",
-        content: `FORM_CONTEXT:${JSON.stringify(minimalContext)}`,
+        parts: [
+          {
+            type: "text",
+            text: `FORM_CONTEXT:${JSON.stringify(minimalContext)}`,
+          },
+        ],
       });
 
-      const result = await streamAIResponse(
+      const stream = await streamAIResponse(
         aiMessages,
         systemPrompt,
         tools,
@@ -428,20 +428,7 @@ export async function POST(req: Request) {
         startTime,
       );
 
-      const responseHeaders: Record<string, string> = {
-        "X-Submission-Id": activeSubmissionId,
-        "X-Submission-Regenerated":
-          activeSubmissionId !== submissionId ? "true" : "false",
-      };
-      if (serverNextQuestionId) {
-        responseHeaders["X-Next-Question-Id"] = serverNextQuestionId;
-      } else if (nextQuestion?.id) {
-        responseHeaders["X-Next-Question-Id"] = nextQuestion.id;
-      }
-
-      return result.toUIMessageStreamResponse({
-        headers: responseHeaders,
-      });
+      return createUIMessageStreamResponse({ stream });
     } catch (aiError) {
       console.error("AI processing failed:", {
         error: aiError,

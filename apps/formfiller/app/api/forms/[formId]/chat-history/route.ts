@@ -1,14 +1,6 @@
 import { createServerClient } from "@formlink/db";
 import { NextResponse } from "next/server";
 
-// Shape compatible with @ai-sdk/react Message
-type HistoryMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  createdAt?: string;
-};
-
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ formId: string }> },
@@ -30,25 +22,6 @@ export async function GET(
       return NextResponse.json(
         { error: "Missing submissionId query parameter" },
         { status: 400 },
-      );
-    }
-
-    // Validate submissionId is a valid UUID
-    const uuidRegex =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(submissionId)) {
-      console.warn(
-        `[chat-history] Invalid submission ID format: ${submissionId}`,
-      );
-      // Return empty messages for invalid IDs (e.g., temporary IDs from old localStorage)
-      return NextResponse.json(
-        {
-          formId,
-          submissionId,
-          messages: [],
-          count: 0,
-        },
-        { status: 200 },
       );
     }
 
@@ -102,17 +75,27 @@ export async function GET(
       );
     }
 
-    const messages: HistoryMessage[] =
+    const messages =
       rows?.map((r: any) => {
-        // Return the stored UIMessage as-is (should now be properly formatted)
-        return r.content && typeof r.content === "object" && r.content.role
-          ? r.content
-          : {
-              id: String(r.id),
-              role: r.role === "assistant" ? "assistant" : "user",
-              content: r.content,
-              createdAt: r.created_at ?? undefined,
-            };
+        // Return the stored UIMessage as-is if it's a properly formatted UIMessage with parts
+        if (r.content && typeof r.content === "object") {
+          // Check if it's a UIMessage with parts array (new format)
+          if (r.content.parts && Array.isArray(r.content.parts)) {
+            return r.content;
+          }
+          // Check if it's a legacy format with role (old format)
+          if (r.content.role) {
+            return r.content;
+          }
+        }
+
+        // Fallback: convert legacy content to parts format
+        return {
+          id: String(r.id),
+          role: r.role === "assistant" ? "assistant" : "user",
+          parts: [{ text: String(r.content || ""), type: "text" }],
+          createdAt: r.created_at ?? undefined,
+        };
       }) ?? [];
 
     // Also return aggregated responses from form_answers to hydrate UI state on reload

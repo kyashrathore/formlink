@@ -1,5 +1,10 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { stepCountIs, streamText } from "ai";
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  stepCountIs,
+  streamText,
+} from "ai";
 import { trackServerEvent } from "../utils";
 import { saveSubmissionMessage } from "./submission";
 
@@ -25,112 +30,53 @@ export async function streamAIResponse(
 ) {
   const model = createAIProvider();
 
-  const validMessages = messages
-    .filter((msg: any) => msg && msg.role && msg.content)
-    .map((msg: any) => {
-      // Convert content to proper format for AI SDK v5
-      let content = msg.content;
+  // Use AI SDK's built-in converter to handle UIMessages properly
+  const modelMessages = convertToModelMessages(messages);
 
-      // Convert content to string format for AI SDK v5
-      if (Array.isArray(content)) {
-        if (content.every((item) => typeof item === "string")) {
-          // Array of strings: convert to comma-separated string
-          content = content.join(", ");
-        } else if (
-          content.some(
-            (item) =>
-              item instanceof File ||
-              (item && item.constructor && item.constructor.name === "File") ||
-              (item &&
-                typeof item === "object" &&
-                "url" in item &&
-                "name" in item),
-          )
-        ) {
-          // Array containing files or file metadata: convert to file descriptions
-          content = content
-            .map((item) => {
-              if (
-                item instanceof File ||
-                (item && item.constructor && item.constructor.name === "File")
-              ) {
-                return `Uploaded: ${item.name || "unknown"}`;
-              } else if (
-                item &&
-                typeof item === "object" &&
-                "url" in item &&
-                "name" in item
-              ) {
-                return `Uploaded: ${item.name || "unknown"}`;
-              }
-              return String(item);
-            })
-            .join(", ");
-        } else {
-          // Array of other types: convert to comma-separated string
-          content = content.map((item) => String(item)).join(", ");
-        }
-      } else if (typeof content === "number") {
-        // Number: convert to string
-        content = content.toString();
-      } else if (typeof content === "boolean") {
-        // Boolean: convert to string
-        content = content.toString();
-      } else if (
-        typeof content === "object" &&
-        content !== null &&
-        !Array.isArray(content)
-      ) {
-        // Check if it's a File object or file metadata
-        if (
-          content instanceof File ||
-          (content.constructor && content.constructor.name === "File")
-        ) {
-          // File object: convert to upload message
-          content = `Uploaded: ${content.name || "unknown"}`;
-        } else if (content && "url" in content && "name" in content) {
-          // File metadata: convert to upload message
-          content = `Uploaded: ${content.name || "unknown"}`;
-        } else {
-          // Other objects (like address): convert to JSON string
-          content = JSON.stringify(content);
-        }
-      }
-
-      return {
-        ...msg,
-        content,
-      };
-    });
-
-  return streamText({
-    model,
-    system: systemPrompt,
-    messages: validMessages,
-    tools,
-    toolChoice: "auto",
-    stopWhen: stepCountIs(12),
-    onFinish: async ({ text, toolCalls }) => {
-      try {
-        await saveSubmissionMessage(
-          submissionId,
-          { role: "assistant", content: text, id: Date.now().toString() },
-          userId,
-        );
-
-        const duration = Date.now() - startTime;
-        trackServerEvent("api.form_assist.duration", {
-          duration,
-          formId: formSchema.id,
-          toolCallCount: toolCalls?.length || 0,
-        });
-
-        toolCalls?.forEach((call) => {
-          trackServerEvent("tool.usage", {
-            toolName: call.toolName,
-            formId: formSchema.id,
+  // Create UI message stream with proper format
+  return createUIMessageStream({
+    async execute({ writer }) {
+      // Stream the AI response
+      const result = await streamText({
+        model,
+        system: systemPrompt,
+        messages: modelMessages,
+        tools,
+        toolChoice: "auto",
+        stopWhen: stepCountIs(12),
+        onFinish: async ({ toolCalls }) => {
+          // Track tool usage
+          toolCalls?.forEach((call) => {
+            trackServerEvent("tool.usage", {
+              toolName: call.toolName,
+              formId: formSchema.id,
+            });
           });
-        });
+
+          const duration = Date.now() - startTime;
+          trackServerEvent("api.form_assist.duration", {
+            duration,
+            formId: formSchema.id,
+            toolCallCount: toolCalls?.length || 0,
+          });
+        },
+      });
+
+      // Merge the streamText result as UI message stream
+      writer.merge(result.toUIMessageStream());
+    },
+    onError: (error) => {
+      console.error("Stream error:", error);
+      return `Error: ${error instanceof Error ? error.message : "Unknown error"}`;
+    },
+    originalMessages: messages,
+    onFinish: async ({ messages }) => {
+      try {
+        // Save the assistant message with proper parts format
+        const assistantMessage = messages[messages.length - 1];
+        if (assistantMessage && assistantMessage.role === "assistant") {
+          await saveSubmissionMessage(submissionId, assistantMessage, userId);
+        }
       } catch (finishError) {
         console.error("Error in onFinish callback:", finishError);
       }
