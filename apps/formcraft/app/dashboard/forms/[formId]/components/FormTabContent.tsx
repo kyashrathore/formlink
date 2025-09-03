@@ -12,6 +12,7 @@ import FormEditor from "./form/FormEditor"
 import FormModeControls, { FormMode } from "./form/FormModeControls"
 import FormPreviewWithDevices from "./form/FormPreviewWithDevices"
 import PreviewControls from "./form/PreviewControls"
+import { MetadataShimmer, QuestionsShimmer } from "./form/shimmers/FormShimmers"
 
 const mockUser = {
   id: "test-user-id",
@@ -41,7 +42,7 @@ export default function FormTabContent({
   onShadcnApplied,
 }: FormTabContentProps) {
   const { form: initialForm, isLoading } = useFormEditorStore()
-  const { currentForm } = useFormGenerationStore()
+  const { currentForm, isFormGenerating } = useFormGenerationStore()
   const form = currentForm || initialForm
   const { editMode, toggleEditMode } = usePanelState()
   const [formMode, setFormMode] = useState<FormMode>("chat")
@@ -49,11 +50,11 @@ export default function FormTabContent({
 
   const isPreviewMode = !editMode
 
-  if (isLoading) {
+  if (isLoading || isFormGenerating) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="mr-2 h-8 w-8 animate-spin" />
-        <span className="text-muted-foreground">Loading form...</span>
+      <div className="bg-background flex h-full flex-col space-y-4 overflow-auto p-4">
+        <MetadataShimmer />
+        <QuestionsShimmer count={3} />
       </div>
     )
   }
@@ -144,7 +145,7 @@ export default function FormTabContent({
           className={`absolute inset-0 z-10 ${isPreviewMode ? "block" : "hidden"}`}
         >
           <div className="h-full p-4">
-            {hasFormContent && (
+            {hasFormContent && form.short_id ? (
               <FormPreviewWithDevices
                 form={form}
                 className="h-full"
@@ -156,7 +157,18 @@ export default function FormTabContent({
                 shadcnCSSData={shadcnCSSData}
                 onShadcnApplied={onShadcnApplied}
               />
-            )}
+            ) : hasFormContent ? (
+              <div className="flex h-full items-center justify-center">
+                <div className="text-muted-foreground text-center">
+                  <div className="mb-2 text-lg font-medium">
+                    Preview not available
+                  </div>
+                  <div className="text-sm">
+                    Form needs to be saved to enable preview
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
 

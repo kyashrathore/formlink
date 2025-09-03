@@ -1,23 +1,23 @@
 "use client"
 
-import { cn } from "@/app/lib"
 import {
   Conversation as AIConversation,
-  Message as AIMessage,
   ConversationContent,
   ConversationScrollButton,
+  Message,
   MessageContent,
+  Response,
   Tool,
   ToolContent,
   ToolHeader,
   ToolLogs,
   ToolOutput,
 } from "@formlink/ui/ai-elements"
-import type { DynamicToolUIPart, ToolUIPart } from "ai"
 import { getToolName } from "ai"
 import { Loader2 } from "lucide-react"
+import { cn } from "../../lib"
+import { useQuestionRenderer } from "./hooks/useQuestionRenderer"
 import type { ChatMessage } from "./types"
-import { formatChatMessageTime } from "./utils"
 
 type ConversationProps = {
   messages: ChatMessage[]
@@ -30,7 +30,7 @@ export function Conversation({
   status = "ready",
   displaySummaryMessage = "",
 }: ConversationProps) {
-  // Filter out hidden messages (preserve existing logic)
+  // Filter out hidden messages
   const visibleMessages = messages.filter((msg) => {
     const msgWithHidden = msg as ChatMessage & { hidden?: boolean }
     return !msgWithHidden.hidden
@@ -38,173 +38,150 @@ export function Conversation({
 
   return (
     <AIConversation className="relative flex h-[calc(75vh)] w-full overflow-x-hidden overflow-y-auto">
-      <ConversationContent className="flex w-full flex-col items-center">
+      <ConversationContent className="flex w-full flex-col">
         {visibleMessages?.map((message, index) => {
           const isLast =
             index === visibleMessages.length - 1 && status !== "submitted"
+          const messageId = `msg-${message.timestamp || index}`
 
-          if (message.role === "user") {
-            // Extract text from AI SDK v5 format: message.parts
-            const textPart = message.parts?.find(
-              (p: any) => p && typeof p === "object" && p.type === "text"
-            ) as any
-            const userText = textPart?.text || message.content || ""
+          // Get components for question rendering
+          const { components } = useQuestionRenderer(
+            messageId,
+            isLast,
+            message.role as "user" | "assistant"
+          )
 
-            return (
-              <AIMessage
-                key={`user-${index}`}
-                from="user"
-                className="w-full max-w-3xl"
+          return (
+            <Message key={`${message.role}-${index}`} from={message.role}>
+              <MessageContent
+                className={cn(message.role === "user" ? "" : "px-0")}
               >
-                <MessageContent>{userText}</MessageContent>
-              </AIMessage>
-            )
-          }
+                {message.role === "user"
+                  ? // User messages - extract text from parts
+                    (() => {
+                      const textPart = message.parts?.find(
+                        (p: any) =>
+                          p && typeof p === "object" && p.type === "text"
+                      ) as any
+                      const userText = textPart?.text || message.content || ""
+                      return <Response>{userText}</Response>
+                    })()
+                  : // Assistant messages - render parts
+                    message.parts?.map((part: any, partIndex: number) => {
+                      if (!part || typeof part !== "object") return null
 
-          if (message.role === "assistant") {
-            // For assistant messages, we need to handle both text and tool parts
-            // Keep the existing tool visualization logic but wrap in AI Elements
-            return (
-              <div
-                key={`assistant-${index}`}
-                className={cn(
-                  "flex w-full max-w-3xl flex-col items-start pb-2"
-                )}
-              >
-                {message.parts && message.parts.length > 0
-                  ? // Render parts (text and tools) - safely handle unknown[] type
-                    message.parts
-                      .filter(
-                        (p): p is any => p != null && typeof p === "object"
-                      )
-                      .map((part, partIndex) => {
-                        switch (part.type) {
-                          case "text":
-                            return part.text ? (
-                              <AIMessage
-                                key={`text-${partIndex}`}
-                                from="assistant"
-                                className="mb-2 flex w-full max-w-3xl flex-col"
-                              >
-                                <MessageContent className="prose dark:prose-invert prose-sm max-w-none">
-                                  {part.text}
-                                </MessageContent>
-                              </AIMessage>
-                            ) : null
+                      // Skip reasoning and step-start parts
+                      if (
+                        part.type === "reasoning" ||
+                        part.type === "step-start"
+                      ) {
+                        return null
+                      }
 
-                          case "step-start":
-                            return isLast ? (
-                              <div
-                                key={partIndex}
-                                className="bg-border my-2 h-px w-full"
-                              />
-                            ) : null
+                      // Handle text parts
+                      if (part.type === "text" && part.text) {
+                        return (
+                          <Response
+                            parseIncompleteMarkdown={false}
+                            key={`part-${partIndex}`}
+                            components={components}
+                            defaultOrigin="https://formlink.ai"
+                            allowedLinkPrefixes={["*"]}
+                          >
+                            {part.text}
+                          </Response>
+                        )
+                      }
 
-                          default: {
-                            // Handle tool parts using AI Elements Tool component
-                            const isDynamic =
-                              (part as any).type === "dynamic-tool"
-                            const isTool =
-                              typeof (part as any).type === "string" &&
-                              (part as any).type.startsWith("tool-")
-                            const isInvocation =
-                              (part as any).type === "tool-invocation"
-                            const isSavedToolCall =
-                              (part as any).type === "tool-call"
+                      // Handle tool parts
+                      const isDynamic = part.type === "dynamic-tool"
+                      const isTool =
+                        typeof part.type === "string" &&
+                        part.type.startsWith("tool-")
+                      const isInvocation = part.type === "tool-invocation"
+                      const isSavedToolCall = part.type === "tool-call"
 
-                            if (
-                              !isDynamic &&
-                              !isTool &&
-                              !isInvocation &&
-                              !isSavedToolCall
-                            )
-                              return null
+                      if (
+                        isDynamic ||
+                        isTool ||
+                        isInvocation ||
+                        isSavedToolCall
+                      ) {
+                        const toolName = isInvocation
+                          ? (part.toolInvocation?.toolName ?? "tool")
+                          : isDynamic
+                            ? part.toolName
+                            : part.type === "tool-call" && part.toolName
+                              ? part.toolName
+                              : getToolName(part)
 
-                            const toolPart = part as
-                              | ToolUIPart
-                              | DynamicToolUIPart
-                            const partType = (part as any).type as string
-                            const toolName = isInvocation
-                              ? ((part as any).toolInvocation?.toolName ??
-                                "tool")
-                              : isDynamic
-                                ? (toolPart as DynamicToolUIPart).toolName
-                                : partType === "tool-call" &&
-                                    (toolPart as any).toolName
-                                  ? ((toolPart as any).toolName as string)
-                                  : (getToolName(
-                                      toolPart as ToolUIPart
-                                    ) as string)
+                        const rawState =
+                          part.state ??
+                          (isInvocation
+                            ? part.toolInvocation?.state
+                            : undefined) ??
+                          (part.type === "tool-call" ? "result" : undefined)
 
-                            // Normalize state across live and persisted shapes
-                            const rawState =
-                              (toolPart as any).state ??
-                              (isInvocation
-                                ? (part as any).toolInvocation?.state
-                                : undefined) ??
-                              (partType === "tool-call" ? "result" : undefined)
+                        const state =
+                          rawState === "result"
+                            ? "output-available"
+                            : rawState === "error"
+                              ? "output-error"
+                              : rawState
 
-                            const state =
-                              rawState === "result"
-                                ? "output-available"
-                                : rawState === "error"
-                                  ? "output-error"
-                                  : (rawState as
-                                      | "input-streaming"
-                                      | "input-available"
-                                      | "output-available"
-                                      | "output-error")
-
-                            // Hide only active/in-progress states for non-last messages
-                            if (
-                              !isLast &&
-                              (state === "input-streaming" ||
-                                state === "input-available")
-                            ) {
-                              return null
-                            }
-
-                            const result = isInvocation
-                              ? (part as any).toolInvocation?.result
-                              : (toolPart as any).output
-
-                            const errorText = (toolPart as any).errorText
-
-                            return (
-                              <Tool key={partIndex} state={state}>
-                                <ToolHeader type={toolName} state={state} />
-                                <ToolContent>
-                                  {(state === "input-streaming" ||
-                                    state === "input-available") &&
-                                    displaySummaryMessage && (
-                                      <ToolLogs logs={displaySummaryMessage} />
-                                    )}
-
-                                  {/* Show output/results for completed states */}
-                                  {(result || errorText) &&
-                                    state !== "input-streaming" &&
-                                    state !== "input-available" && (
-                                      <ToolOutput
-                                        output={result}
-                                        errorText={errorText}
-                                      />
-                                    )}
-                                </ToolContent>
-                              </Tool>
-                            )
-                          }
+                        // Hide active states for non-last messages
+                        if (
+                          !isLast &&
+                          (state === "input-streaming" ||
+                            state === "input-available")
+                        ) {
+                          return null
                         }
-                      })
-                  : null}
 
-                <div className="mt-1 text-xs opacity-70">
-                  {formatChatMessageTime(message.timestamp)}
-                </div>
-              </div>
-            )
-          }
+                        const result = isInvocation
+                          ? part.toolInvocation?.result
+                          : part.output
 
-          return null
+                        const errorText = isInvocation
+                          ? part.toolInvocation?.errorText
+                          : part.errorText
+
+                        return (
+                          <div key={`tool-${partIndex}`} className="my-2">
+                            <Tool state={state}>
+                              <ToolHeader type={toolName} state={state} />
+                              <ToolContent>
+                                {(state === "input-streaming" ||
+                                  state === "input-available") &&
+                                  displaySummaryMessage && (
+                                    <ToolLogs logs={displaySummaryMessage} />
+                                  )}
+
+                                {state !== "input-streaming" &&
+                                  state !== "input-available" &&
+                                  (result || errorText ? (
+                                    <ToolOutput
+                                      output={result}
+                                      errorText={errorText}
+                                    />
+                                  ) : displaySummaryMessage ? (
+                                    <ToolLogs logs={displaySummaryMessage} />
+                                  ) : (
+                                    <div className="text-muted-foreground p-4 text-xs">
+                                      ✓ Completed {toolName}
+                                    </div>
+                                  ))}
+                              </ToolContent>
+                            </Tool>
+                          </div>
+                        )
+                      }
+
+                      return null
+                    })}
+              </MessageContent>
+            </Message>
+          )
         })}
 
         {(status === "submitted" || status === "streaming") && (

@@ -5,10 +5,11 @@ import { cn } from "@/lib";
 import type { FileData, QuestionResponse } from "@/lib/types";
 import { fileDataToFile } from "@/lib/utils";
 import { Question, getQuestionTypeName } from "@formlink/schema";
-import { Button, InputContainer } from "@formlink/ui";
+import { Button } from "@formlink/ui";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
+import TypeFormQuestionInputSwitcher from "./TypeFormQuestionInputSwitcher";
 
 interface TypeFormQuestionProps {
   question: Question;
@@ -131,8 +132,36 @@ export default function TypeFormQuestion({
         return response !== null && response !== undefined && response !== 0;
       case "likertScale":
         return response !== null && response !== undefined && response !== "";
-      case "address":
-        return response !== null && response !== undefined;
+      case "address": {
+        if (response === null || response === undefined) return false;
+
+        let addressResponse = response;
+        if (typeof addressResponse === "string") {
+          try {
+            addressResponse = JSON.parse(addressResponse);
+          } catch (e) {
+            return false; // Not a valid JSON string
+          }
+        }
+
+        if (typeof addressResponse !== "object" || addressResponse === null) {
+          return false;
+        }
+
+        const requiredFields = [
+          "street1",
+          "city",
+          "stateProvince",
+          "postalCode",
+          "country",
+        ];
+        for (const field of requiredFields) {
+          if (!(addressResponse as any)[field]) {
+            return false;
+          }
+        }
+        return true;
+      }
       case "date":
         return response !== null && response !== undefined && response !== "";
       default:
@@ -182,6 +211,11 @@ export default function TypeFormQuestion({
   })();
 
   const handleContinueClick = () => {
+    if ((question.type as any).name === "address") {
+      if ((window as any).triggerAddressSubmit) {
+        (window as any).triggerAddressSubmit();
+      }
+    }
     if (!isValid) {
       setTouched(true);
       return;
@@ -189,13 +223,13 @@ export default function TypeFormQuestion({
     onNext();
   };
 
-  // Convert response to file if needed (commented out to avoid unused variable warning)
-  // const responseAsFile =
-  //   response instanceof File
-  //     ? response
-  //     : response && typeof response === "object" && "url" in response
-  //       ? fileDataToFile(response as FileData)
-  //       : null;
+  // Normalize response for UI components
+  const normalizedResponse =
+    response instanceof File
+      ? response
+      : response && typeof response === "object" && "filename" in response
+        ? fileDataToFile(response as FileData)
+        : (response as any);
 
   return (
     <div className="flex-1 flex items-center justify-center">
@@ -239,23 +273,15 @@ export default function TypeFormQuestion({
           className={questionNumber ? (isMobile ? "ml-4" : "ml-[3rem]") : ""}
         >
           <div className="w-full">
-            <InputContainer
-              currentQuestion={question}
-              currentResponse={
-                // Convert FileData to File for UI compatibility
-                response &&
-                typeof response === "object" &&
-                "filename" in response
-                  ? fileDataToFile(response as FileData)
-                  : (response as any)
-              }
-              handleSelect={(qId: string, value: QuestionResponse) => {
-                onAnswer(qId, value, getQuestionTypeName(question));
+            <TypeFormQuestionInputSwitcher
+              question={question}
+              response={normalizedResponse as any}
+              onAnswer={(value) => {
+                onAnswer(question.id, value, getQuestionTypeName(question));
               }}
-              handleFileUpload={onFileUpload}
+              onFileUpload={onFileUpload}
               uploadedFile={uploadedFile}
               onFileSelect={onFileSelect}
-              disabled={false}
               onNext={onNext}
             />
           </div>
@@ -274,6 +300,7 @@ export default function TypeFormQuestion({
           >
             <Button
               onClick={handleContinueClick}
+              variant="default"
               size="lg"
               className="group mr-4"
               disabled={!isValid}

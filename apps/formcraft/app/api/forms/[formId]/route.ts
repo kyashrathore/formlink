@@ -34,7 +34,7 @@ async function getFormSchemaById(
 ): Promise<Form | null> {
   const { data: formData, error: formError } = await supabase
     .from("forms")
-    .select("current_published_version_id, current_draft_version_id")
+    .select("current_published_version_id,short_id, current_draft_version_id")
     .eq("id", formId)
     .single()
 
@@ -74,6 +74,7 @@ async function getFormSchemaById(
       settings: v.settings,
       current_published_version_id: formData.current_published_version_id,
       current_draft_version_id: formData.current_draft_version_id,
+      short_id: formData.short_id,
     }
     return formSchemaResult
   } catch {

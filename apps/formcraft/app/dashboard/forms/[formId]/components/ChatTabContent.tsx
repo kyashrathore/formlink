@@ -18,7 +18,6 @@ export default function ChatTabContent({
     <ChatPanel
       formId={formId}
       userId={userId || undefined}
-      showSuggestions={true}
       initialMessage={initialPrompt || undefined}
     />
   )

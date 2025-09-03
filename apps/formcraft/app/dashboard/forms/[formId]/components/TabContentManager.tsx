@@ -1,7 +1,7 @@
 "use client"
 
-import { useFormShortId } from "../hooks/useFormShortId"
 import { usePanelState } from "../hooks/usePanelState"
+import { useFormEditorStore } from "../stores/useFormEditorStore"
 import FormTabContent from "./FormTabContent"
 import ResponsesTabContent from "./ResponsesTabContent"
 import SettingsTabContent from "./SettingsTabContent"
@@ -28,11 +28,7 @@ export default function TabContentManager({
   onShadcnApplied,
 }: TabContentManagerProps) {
   const { activeMainTab } = usePanelState()
-  const {
-    shortId,
-    loading: shortIdLoading,
-    error: shortIdError,
-  } = useFormShortId(formId)
+  const shortId = useFormEditorStore((s) => s.form?.short_id)
 
   const renderContent = () => {
     switch (activeMainTab) {
@@ -51,8 +47,8 @@ export default function TabContentManager({
           <ShareTabContent
             formId={formId}
             shortId={shortId || undefined}
-            shortIdLoading={shortIdLoading}
-            shortIdError={shortIdError}
+            shortIdLoading={false}
+            shortIdError={null}
           />
         )
       case "settings":

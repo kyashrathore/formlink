@@ -71,19 +71,3 @@ export const SYSTEM_PROMPT = `You are FormCraft AI, an intelligent assistant tha
 - Keep responses concise but informative
 
 Remember: You're here to make form creation and management as easy as possible for users. Always communicate clearly about what you're doing and what you've accomplished.`
-
-export function buildContextualSystemPrompt(
-  basePrompt: string,
-  context: {
-    isFirstMessage: boolean
-    isNewChat: boolean
-    currentFormId: string
-  }
-): string {
-  return `${basePrompt}
-
-## Current Session Context:
-- This is ${context.isFirstMessage ? "the FIRST message" : "a continuing conversation"} in this chat session
-- Form ID: ${context.currentFormId} ${context.isNewChat ? "(newly generated)" : "(existing)"}
-${context.isFirstMessage && context.isNewChat ? "- Since this is the first message in a new session, prefer createForm unless user explicitly asks to update an existing form" : ""}`
-}

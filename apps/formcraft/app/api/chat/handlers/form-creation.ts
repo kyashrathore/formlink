@@ -1,8 +1,5 @@
 import { getModel } from "@/app/lib/ai/provider"
-import {
-  buildContextualSystemPrompt,
-  SYSTEM_PROMPT,
-} from "@/app/lib/chat/prompts"
+import { SYSTEM_PROMPT } from "@/app/lib/chat/prompts"
 import { ChatService } from "@/app/lib/chat/services/chat-service"
 import { FormService } from "@/app/lib/chat/services/form-service"
 import { createChatTools } from "@/app/lib/chat/tools"
@@ -12,7 +9,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  stepCountIs,
   streamText,
   UIMessage,
 } from "ai"
@@ -28,6 +24,25 @@ interface ChatRequestOptions {
   maxOutputTokens?: number
 }
 
+async function ensureFormExists(
+  supabase: SupabaseClient,
+  formId: string,
+  userId: string
+) {
+  const formService = new FormService(supabase)
+  try {
+    await formService.ensureFormExists(formId, userId)
+    logger.info(`[handleChatRequest] Form ${formId} ensured for user ${userId}`)
+  } catch (error) {
+    logger.error(`[handleChatRequest] Failed to ensure form exists`, {
+      formId,
+      userId,
+      error,
+    })
+    throw error
+  }
+}
+
 export async function handleChatRequest(
   messages: UIMessage[],
   formId: string | undefined,
@@ -36,163 +51,56 @@ export async function handleChatRequest(
   options?: ChatRequestOptions
 ) {
   const currentFormId = formId || `form_${nanoid()}`
-  const isNewChat = !formId
-  const isFirstMessage = messages.length === 1
 
-  const formService = new FormService(supabase)
-  try {
-    await formService.ensureFormExists(currentFormId, userId)
-    logger.info(
-      `[handleChatRequest] Form ${currentFormId} ensured for user ${userId}`
-    )
-  } catch (error) {
-    logger.error(`[handleChatRequest] Failed to ensure form exists`, {
-      formId: currentFormId,
-      userId,
-      error,
-    })
-    throw error
-  }
+  await ensureFormExists(supabase, currentFormId, userId)
 
-  const chatService = new ChatService(supabase)
-  // Convert UIMessages to compatible format for saving
-  const lastMessage = messages[messages.length - 1]
-  if (lastMessage && lastMessage.role === "user") {
-    // Extract text from v5 UIMessage parts
-    const userText =
-      (lastMessage.parts?.find((p: any) => p.type === "text") as any)?.text ||
-      ""
-    const messageToSave = {
-      ...lastMessage,
-      content: userText,
-    }
-    await chatService.saveMessage(currentFormId, userId, messageToSave)
+  const chatDB = new ChatService(supabase)
+
+  // Persist the last user message as-is
+  const lastUserMessage = messages[messages.length - 1]
+  if (lastUserMessage?.role === "user") {
+    await chatDB.saveMessage(currentFormId, userId, lastUserMessage)
   }
 
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       try {
-        if (isNewChat) {
-        }
-        chatService.writeStreamEvent(writer as any, "chat_initialized")
+        chatDB.writeStreamEvent(writer as any, "chat_initialized")
 
         const toolContext = {
-          dataStream: writer as any,
+          dataStream: writer as any, // Cast to 'any' to avoid type mismatch
           formId: currentFormId,
           supabase,
           userId,
           options,
-          isFirstMessage,
+          isFirstMessage: messages.length <= 1,
         }
 
-        // Build tools. On first message/new chat, expose only createForm to prevent premature getFormContext.
-        const baseTools = createChatTools(toolContext) as any
-        const tools = isFirstMessage
-          ? { createForm: baseTools.createForm }
-          : baseTools
-
-        if (isFirstMessage) {
-          logger.info(
-            "[handleChatRequest] First message detected. Restricting tools to { createForm } for deterministic creation flow."
-          )
-        }
-
-        // Use provider utility to get model - using OpenRouter to avoid Vercel restrictions
+        const tools = createChatTools(toolContext)
+        const system = `${SYSTEM_PROMPT}\n\n## Current Session Context:\n- Form ID: ${currentFormId}`
         const MODEL = getModel("google/gemini-2.5-pro", "openrouter")
-
-        const contextualSystemPrompt = buildContextualSystemPrompt(
-          SYSTEM_PROMPT,
-          {
-            isFirstMessage,
-            isNewChat,
-            currentFormId,
-          }
-        )
 
         const result = await streamText({
           model: MODEL,
           messages: convertToModelMessages(messages),
           tools,
-          system: contextualSystemPrompt,
-          temperature: options?.temperature || 0.7,
-          maxOutputTokens: options?.maxOutputTokens || 4000,
-          onFinish: async ({ text, toolCalls, finishReason, usage }) => {
-            logger.info("Chat completion finished", {
-              userId,
-              formId: currentFormId,
-              text,
-              usage,
-              finishReason,
-            })
-
-            try {
-              const assistantMessage = {
-                role: "assistant",
-                content: text,
-                parts: toolCalls || null,
-              }
-
-              logger.info("Attempting to save assistant message", {
-                formId: currentFormId,
-                userId,
-                messageRole: assistantMessage.role,
-                messageContent:
-                  assistantMessage.content?.substring(0, 100) + "...",
-                hasToolCalls: !!toolCalls,
-              })
-
-              await chatService.saveMessage(
-                currentFormId,
-                userId,
-                assistantMessage
-              )
-
-              logger.info("Assistant message saved successfully", {
-                formId: currentFormId,
-                userId,
-              })
-            } catch (error) {
-              logger.error("Error saving assistant message", {
-                formId: currentFormId,
-                userId,
-                error,
-              })
-            }
-            chatService.writeStreamEvent(writer as any, "chat_completed")
-          },
-          onError: async (error) => {
-            logger.error("Chat completion error", {
-              userId,
-              formId: currentFormId,
-              error,
-            })
-
-            try {
-              await chatService.saveMessage(currentFormId, userId, {
-                role: "assistant",
-                content:
-                  "I encountered an error while processing your request. Please try again.",
-                parts: [
-                  {
-                    type: "tool-invocation",
-                    toolInvocation: {
-                      state: "error",
-                      toolName: "system",
-                      error:
-                        error instanceof Error ? error.message : String(error),
-                    },
-                  },
-                ],
-              })
-            } catch (saveError) {
-              logger.error("Failed to save error message", { saveError })
-            }
-          },
+          system,
+          maxOutputTokens: options?.maxOutputTokens ?? 2000,
           toolChoice: "auto",
-          stopWhen: stepCountIs(5),
+          stopWhen({ steps }) {
+            // Stop if `createForm` has been successfully called and produced a result.
+            const hasCreateFormResult = steps.some((s) =>
+              s.toolResults?.some(
+                (tr) =>
+                  tr.toolName === "createForm" &&
+                  "result" in tr &&
+                  tr.result != null
+              )
+            )
+            return steps.length > 10 || hasCreateFormResult
+          },
         })
 
-        // AI SDK v5: Merge the result into the UI message stream
         writer.merge(result.toUIMessageStream())
       } catch (executeError) {
         logger.error("Error in chat stream execution", {
@@ -200,9 +108,28 @@ export async function handleChatRequest(
           formId: currentFormId,
           error: executeError,
         })
-
-        // Let AI SDK handle error formatting automatically
       }
+    },
+    onFinish: async ({ messages: finalMessages }) => {
+      // The last message in the stream is the complete assistant message
+      const assistantMessage = finalMessages[finalMessages.length - 1]
+
+      if (assistantMessage && assistantMessage.role === "assistant") {
+        try {
+          await chatDB.saveMessage(currentFormId, userId, assistantMessage)
+          logger.info("Assistant message saved successfully", {
+            formId: currentFormId,
+            userId,
+          })
+        } catch (error) {
+          logger.error("Error saving assistant message", {
+            formId: currentFormId,
+            userId,
+            error,
+          })
+        }
+      }
+      chatDB.writeStreamEvent((stream as any).writer, "chat_completed")
     },
     onError: (error) => {
       logger.error("Error in chat stream:", { error })

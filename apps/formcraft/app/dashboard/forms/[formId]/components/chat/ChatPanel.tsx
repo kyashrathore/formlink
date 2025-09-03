@@ -1,4 +1,3 @@
-import { useFormGenerationEventBridge } from "@/app/hooks/useFormGenerationEventBridge"
 import { MODEL_DEFAULT } from "@/app/lib/config"
 import { FormGenerationEventHandler } from "@/app/lib/handlers/FormGenerationEventHandler"
 import { useChat } from "@ai-sdk/react"
@@ -7,11 +6,15 @@ import { DefaultChatTransport } from "ai"
 import { AlertTriangle } from "lucide-react"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
+import { useChatHistoryQuery } from "../../hooks/useChatHistoryQuery"
 import { AgentEvent } from "../../lib/types/agent-events"
+import { useFormEditorStore } from "../../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
 import Chat from "./chat-components/chat"
 import { Conversation } from "./conversation"
 import { useAutoScroll, useFormattedEvents } from "./hooks"
+import { normalizePersistedParts } from "./parts"
+import { computeChatStatus } from "./status"
 import type { ChatMessage, ChatPanelProps } from "./types"
 import { getDisplaySummaryMessage, getLastUserMessage } from "./utils"
 
@@ -20,6 +23,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   userId,
   initialMessage,
 }) => {
+  // Group all store hooks together at the start to maintain consistent order
   const { agentState, eventsLog, processEvent, setInitialPrompt } =
     useFormGenerationStore((state) => ({
       agentState: state.agentState,
@@ -29,34 +33,22 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       errorDetails: state.errorDetails,
     }))
 
-  // Memoize event handlers to prevent re-renders
-  const memoizedProcessEvent = useCallback(processEvent, [processEvent])
-  const { bridgeEvent } = useFormGenerationEventBridge(useFormGenerationStore)
-  const memoizedBridgeEvent = useCallback(bridgeEvent, [bridgeEvent])
+  const editorForm = useFormEditorStore((s) => s.form)
+  const generationForm = useFormGenerationStore((s) => s.currentForm)
 
-  // Always use new architecture - handler is initialized lazily when needed
+  // All refs together
   const eventHandlerRef = useRef<FormGenerationEventHandler | null>(null)
+  const chatHistoryLoadedRef = useRef(false)
 
+  // All state hooks together
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
   const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
-
   const [storedInitialMessage, setStoredInitialMessage] = useState<
     string | undefined
   >(() => initialMessage)
 
-  const initialFormPrompts = [
-    "Quick contact form (Name, Email)?",
-    "Survey: 'Coffee vs Tea' poll",
-    "Fun quiz: 3 quick questions!",
-    "Event sign-up form (easy RSVP)",
-    "Need a job form? (CV upload ready)",
-  ]
-
-  useEffect(() => {
-    if (initialMessage && initialMessage !== storedInitialMessage) {
-      setStoredInitialMessage(initialMessage)
-    }
-  }, [initialMessage, storedInitialMessage])
+  // All queries and hooks together
+  const chatHistoryQuery = useChatHistoryQuery(formId, Boolean(formId))
 
   const {
     messages: vercelChatMessages,
@@ -84,7 +76,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             eventHandlerRef.current.handleRawEvent(event)
           }
           memoizedProcessEvent(event)
-          memoizedBridgeEvent(event)
         }
       } catch (err) {
         console.error("[ChatPanel] onData handler error:", err)
@@ -109,108 +100,52 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     },
   })
 
+  // Derived state and constants - after all hooks
+  const memoizedProcessEvent = useCallback(processEvent, [processEvent])
+  const formReady = Boolean(editorForm?.id) || Boolean(generationForm?.id)
+  const historyLoading =
+    chatHistoryQuery.isFetching && !chatHistoryLoadedRef.current
+
+  const initialFormPrompts = [
+    "Quick contact form (Name, Email)?",
+    "Survey: 'Coffee vs Tea' poll",
+    "Fun quiz: 3 quick questions!",
+    "Event sign-up form (easy RSVP)",
+    "Need a job form? (CV upload ready)",
+  ]
+
   useEffect(() => {
-    async function fetchChatHistoryAndSet() {
-      if (!formId) {
-        setMessages([])
-        return
-      }
-      try {
-        const response = await fetch(`/api/chat?formId=${formId}`)
-        if (!response.ok) {
-          if (response.status === 404) {
-            setMessages([])
-            return
-          }
-          throw new Error(
-            `Failed to fetch chat history: ${response.statusText}`
-          )
-        }
-        const historyMessages = await response.json()
+    if (initialMessage && initialMessage !== storedInitialMessage) {
+      setStoredInitialMessage(initialMessage)
+    }
+  }, [initialMessage, storedInitialMessage])
 
-        if (Array.isArray(historyMessages)) {
-          const validRoles = ["user", "assistant", "system"]
+  useEffect(() => {
+    if (
+      chatHistoryQuery.isSuccess &&
+      chatHistoryQuery.data &&
+      !chatHistoryLoadedRef.current
+    ) {
+      const historyMessages = chatHistoryQuery.data
 
-          // Normalize saved assistant tool calls (toolCalls) to UI parts ('tool-invocation')
-          const normalizeParts = (rawParts: any[], fallbackText: string) => {
-            if (!Array.isArray(rawParts) || rawParts.length === 0) {
-              return fallbackText ? [{ type: "text", text: fallbackText }] : []
-            }
-            return rawParts.map((p: any) => {
-              // AI SDK saved tool calls (onFinish.toolCalls) are not UI parts.
-              // Two common shapes we need to normalize:
-              // 1) { toolCallType: "function", toolName, toolCallId, args }
-              // 2) { type: "tool-call", toolName, toolCallId, input: {...} }
-              const isFunctionCall =
-                p &&
-                typeof p === "object" &&
-                p.toolCallType === "function" &&
-                p.toolName
-
-              const isToolCall =
-                p &&
-                typeof p === "object" &&
-                p.type === "tool-call" &&
-                p.toolName
-
-              if (isFunctionCall || isToolCall) {
-                // Extract args/input robustly
-                let parsedArgs: any = isFunctionCall ? p.args : p.input
-                try {
-                  if (typeof parsedArgs === "string") {
-                    parsedArgs = JSON.parse(parsedArgs)
-                  }
-                } catch {
-                  // leave as-is if parse fails
-                }
-                return {
-                  type: "tool-invocation",
-                  toolInvocation: {
-                    state: "result", // treat persisted calls as completed so UI shows "✓ Completed"
-                    step: 1,
-                    toolCallId: p.toolCallId || p.id || uuidv4(),
-                    toolName: p.toolName,
-                    args: parsedArgs,
-                    // result is unknown on reload; UI defaults to success when not explicitly false
-                  },
-                }
-              }
-
-              // If already a UI part (text/tool/dynamic-tool/step-start), keep as is
-              return p
-            })
-          }
-
-          const formattedMessages = historyMessages
-            .filter((msg) => validRoles.includes(msg.role))
-            .map((msg) => {
-              const baseId = msg.id?.toString() || uuidv4()
-              const fallbackText =
-                typeof msg.content === "string" && msg.content.length > 0
-                  ? msg.content
-                  : ""
-              const parts = normalizeParts(
-                Array.isArray(msg.parts) ? msg.parts : [],
-                fallbackText
-              )
-
-              return {
-                id: baseId,
-                role: msg.role as "user" | "assistant" | "system",
-                parts,
-              }
-            })
-          setMessages(formattedMessages as any)
-        } else {
-          setMessages([])
-        }
-      } catch (_error) {
-        console.error("Failed to fetch chat history", _error)
-        setMessages([])
+      if (Array.isArray(historyMessages)) {
+        const formattedMessages = historyMessages
+          .filter((msg) => ["user", "assistant", "system"].includes(msg.role))
+          .map((msg) => {
+            const id = msg.id?.toString() ?? uuidv4()
+            const fallbackText =
+              typeof msg.content === "string" ? msg.content : ""
+            const parts = normalizePersistedParts(
+              Array.isArray(msg.parts) ? msg.parts : [],
+              fallbackText
+            )
+            return { id, role: msg.role, parts }
+          })
+        setMessages(formattedMessages as any)
+        chatHistoryLoadedRef.current = true
       }
     }
-    fetchChatHistoryAndSet()
-  }, [formId, userId, setMessages])
+  }, [chatHistoryQuery.isSuccess, chatHistoryQuery.data, setMessages])
 
   useEffect(() => {
     let isMounted = true
@@ -218,7 +153,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     if (
       storedInitialMessage &&
       vercelChatMessages.length === 0 &&
-      !hasUserInteracted
+      !hasUserInteracted &&
+      !historyLoading
     ) {
       const timer = setTimeout(() => {
         if (isMounted) {
@@ -243,6 +179,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     storedInitialMessage,
     vercelChatMessages.length,
     hasUserInteracted,
+    historyLoading,
     sendMessage,
     formId,
     setInitialPrompt,
@@ -318,16 +255,41 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       ? getDisplaySummaryMessage(formattedEventsForLogView, null)
       : ""
 
+  const suggestionsVisible =
+    !historyLoading &&
+    !formReady &&
+    !storedInitialMessage &&
+    !hasUserInteracted &&
+    chatMessages.length === 0
+
+  const lastAssistantMessage = chatMessages.find(
+    (m) => m.role === "assistant" && Array.isArray(m.parts)
+  )
+  const lastAssistantParts = lastAssistantMessage?.parts
+  const uiStatus = computeChatStatus({
+    chatStatus,
+    lastAssistantParts,
+    agentFailed: agentState?.status === "FAILED",
+  })
+
   return (
     <div className="flex h-full flex-col">
       <div ref={chatContainerRef} className="min-h-0 flex-1 overflow-hidden">
         {chatMessages.length > 0 ? (
           <Conversation
             messages={chatMessages}
-            status={isStreaming ? "streaming" : "ready"}
+            status={
+              uiStatus === "streaming"
+                ? "streaming"
+                : uiStatus === "preparing"
+                  ? "submitted"
+                  : uiStatus === "error"
+                    ? "error"
+                    : "ready"
+            }
             displaySummaryMessage={displaySummaryMessage}
           />
-        ) : (
+        ) : suggestionsVisible ? (
           <div className="p-8 text-center">
             <div className="text-muted-foreground mb-6">
               <div className="mb-2 text-lg font-medium">
@@ -343,37 +305,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                 <PromptSuggestion
                   key={index}
                   onClick={() => handleSuggestionClick(prompt)}
+                  variant="outline"
+                  size="sm"
+                  className="text-sm"
+                  highlight={false}
                 >
                   {prompt}
                 </PromptSuggestion>
               ))}
             </div>
           </div>
-        )}
-
-        {chatMessages.length === 0 && false && (
-          <div className="p-8 text-center">
-            <div className="text-muted-foreground mb-6">
-              <div className="mb-2 text-lg font-medium">
-                Start a conversation
-              </div>
-              <div className="text-sm">
-                Choose a suggestion below or ask me anything about forms
-              </div>
-            </div>
-
-            <div className="mx-auto flex max-w-md flex-wrap justify-center gap-2">
-              {initialFormPrompts.map((prompt, index) => (
-                <PromptSuggestion
-                  key={index}
-                  onClick={() => handleSuggestionClick(prompt)}
-                >
-                  {prompt}
-                </PromptSuggestion>
-              ))}
-            </div>
-          </div>
-        )}
+        ) : null}
       </div>
 
       {agentState?.status === "FAILED" && !isStreaming && (
@@ -399,7 +341,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         <div className="border-border bg-background flex-shrink-0 border-t p-4">
           <Chat
             onSubmit={handleSendMessageForChatComponent}
-            isLoading={isStreaming}
+            isLoading={
+              uiStatus === "streaming" ||
+              uiStatus === "preparing" ||
+              uiStatus === "tool-running"
+            }
             showSuggestions={false}
             onInputChange={handleInputChange}
           />

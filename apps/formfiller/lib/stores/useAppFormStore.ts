@@ -1,10 +1,10 @@
 "use client";
 
-import { create } from "zustand";
-import { v4 as uuidv4 } from "uuid";
-import { apiServices } from "../api-config";
 import { Form, Question } from "@formlink/schema";
-import { AppFormState, AppFormActions, QuestionResponse } from "../types";
+import { v4 as uuidv4 } from "uuid";
+import { create } from "zustand";
+import { apiServices } from "../api-config";
+import { AppFormActions, AppFormState, QuestionResponse } from "../types";
 
 // Helper function to get all questions from the form schema
 const getAllQuestions = (formSchema: Form): Question[] => {
@@ -168,8 +168,26 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
         return null;
       }
 
+      const safeFile =
+        !file || !(file as any).name || (file as any).name === ""
+          ? new File(
+              [file],
+              `upload-${Date.now()}.${
+                (((file as any)?.type as string | undefined)?.split(
+                  "/",
+                )?.[1] as string | undefined) || "bin"
+              }`,
+              {
+                type:
+                  ((file as any)?.type as string | undefined as string) ||
+                  "application/octet-stream",
+                lastModified: Date.now(),
+              },
+            )
+          : file;
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", safeFile);
       formData.append("formId", formId);
       formData.append("submissionId", submissionId);
       formData.append("questionId", questionId);
@@ -180,8 +198,8 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
         // Save the file data as an object that matches what FileUploadInput expects
         get().setQuestionResponse(questionId, {
           url: result.url,
-          name: file.name,
-          size: file.size,
+          name: safeFile.name,
+          size: safeFile.size,
         });
 
         return result.url;

@@ -28,6 +28,7 @@ export default function NavigationBar({
   const formFromStore = useFormEditorStore((state) => state.form)
   const isDirty = useFormEditorStore(selectIsDirty)
   const updateSnapshot = useFormEditorStore((state) => state.updateSnapshot)
+  const hasShortId = Boolean(formFromStore?.short_id)
 
   const updateFormMutation = useMutation({
     mutationFn: async (updates: unknown) => {
@@ -177,11 +178,14 @@ export default function NavigationBar({
         </button>
 
         <button
-          onClick={() => setActiveMainTab("share")}
+          onClick={() => hasShortId && setActiveMainTab("share")}
+          disabled={!hasShortId}
           className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            activeMainTab === "share"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            !hasShortId
+              ? "text-muted-foreground/50 cursor-not-allowed"
+              : activeMainTab === "share"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
           } `}
         >
           <span>Share</span>

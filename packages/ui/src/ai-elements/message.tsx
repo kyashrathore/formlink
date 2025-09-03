@@ -1,7 +1,7 @@
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { cn } from "../lib/utils";
 import type { UIMessage } from "ai";
 import type { ComponentProps, HTMLAttributes } from "react";
+import { cn } from "../lib/utils";
+import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
   from: UIMessage["role"];
@@ -29,8 +29,8 @@ export const MessageContent = ({
   <div
     className={cn(
       "flex flex-col gap-2 overflow-hidden rounded-lg px-4 py-3 text-foreground text-sm",
-      "group-[.is-user]:bg-primary group-[.is-user]:text-primary-foreground",
-      "group-[.is-assistant]:bg-secondary group-[.is-assistant]:text-foreground",
+      "group-[.is-user]:bg-secondary group-[.is-user]:text-primary",
+      " group-[.is-assistant]:text-foreground",
       "is-user:dark",
       className,
     )}

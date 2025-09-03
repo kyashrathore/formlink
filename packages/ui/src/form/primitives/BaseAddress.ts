@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BasePrimitiveProps,
   BasePrimitiveReturn,
@@ -373,7 +373,7 @@ export function BaseAddress(props: BaseAddressProps): BaseAddressReturn {
         ...value,
         [field]: fieldValue,
       };
-      onChange(newValue);
+      onChange?.(newValue);
     },
     [value, onChange],
   );

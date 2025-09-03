@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import React, { useEffect, useState } from "react";
 import {
-  questionVariants,
   questionTransition,
+  questionVariants,
 } from "./animations/questionTransitions";
 
 interface TypeFormTransitionProps {
@@ -48,7 +48,7 @@ export default function TypeFormTransition({
         animate="center"
         exit="exit"
         transition={questionTransition}
-        className="w-full"
+        className="w-full relative z-10 pointer-events-auto"
       >
         {children}
       </motion.div>

@@ -5,8 +5,14 @@ import UserMenu from "@/app/components/layout/user-menu"
 import { useAuth } from "@/app/hooks/useAuth"
 import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react"
-import { v4 as uuidv4 } from "uuid"
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import ChatDesignPanel from "./components/ChatDesignPanel"
 import ChatTabContent from "./components/ChatTabContent"
 import DesignTabContent from "./components/DesignTabContent"
@@ -14,11 +20,9 @@ import FloatingPanel from "./components/FloatingPanel"
 import NavigationBar from "./components/NavigationBar"
 import TabContentManager from "./components/TabContentManager"
 import TwoColumnLayout from "./components/TwoColumnLayout"
+import { useFormDataQuery } from "./hooks/useFormDataQuery"
 import { usePanelState } from "./hooks/usePanelState"
-import {
-  getDefaultSettings,
-  useFormEditorStore,
-} from "./stores/useFormEditorStore"
+import { useFormEditorStore } from "./stores/useFormEditorStore"
 import { useFormGenerationStore } from "./stores/useFormGenerationStore"
 
 function TestUIPageContent() {
@@ -56,7 +60,20 @@ function TestUIPageContent() {
   const searchParams = useSearchParams()
 
   const formIdFromUrl = params.formId as string
-  const [formId, setFormId] = useState(() => formIdFromUrl || uuidv4())
+  // Defer formId creation - only use real IDs, not sentinels like "new"
+  const formId =
+    formIdFromUrl && formIdFromUrl !== "new" ? formIdFromUrl : undefined
+
+  const {
+    data: formData,
+    isLoading: formQueryLoading,
+    isSuccess,
+  } = useFormDataQuery(formId)
+  const { setForm, setLoading } = useFormEditorStore((s) => ({
+    setForm: s.setForm,
+    setLoading: s.setLoading,
+  }))
+  const formSetRef = useRef(false)
 
   const [shadcnStatus, setShadcnStatus] = useState<{
     loading: boolean
@@ -106,16 +123,37 @@ function TestUIPageContent() {
   )
 
   useEffect(() => {
-    if (!formIdFromUrl && formId) {
-      router.replace(`/dashboard/forms/${formId}`)
-    } else if (formIdFromUrl && formIdFromUrl !== formId) {
-      setFormId(formIdFromUrl)
+    if (isSuccess && formData && !formSetRef.current) {
+      setForm(formData)
+      formSetRef.current = true
+      setLoading(false)
     }
-  }, [formId, formIdFromUrl, router])
+  }, [isSuccess, formData, setForm, setLoading])
 
+  const formAgent_currentForm = useFormGenerationStore(
+    (state) => state.currentForm
+  )
+
+  // Maintain isLoading=true until either query success OR form-generation provides snapshot
   useEffect(() => {
-    useFormGenerationStore.getState().initializeConnection(formId)
-  }, [formId])
+    const hasFormFromQuery = isSuccess && formData
+    const hasFormFromGeneration = Boolean(formAgent_currentForm)
+    const hasAnyForm = hasFormFromQuery || hasFormFromGeneration
+
+    // Show loading if:
+    // 1. We have a formId and query is loading (existing form case)
+    // 2. We don't have any form data yet (new form case - show until generation starts)
+    const shouldBeLoading = (formId && formQueryLoading) || !hasAnyForm
+
+    setLoading(shouldBeLoading)
+  }, [
+    formId,
+    formQueryLoading,
+    isSuccess,
+    formData,
+    formAgent_currentForm,
+    setLoading,
+  ])
 
   // Read initial prompt from URL query parameter and set it in the store
   useEffect(() => {
@@ -131,104 +169,54 @@ function TestUIPageContent() {
   }, [searchParams])
 
   useEffect(() => {
-    const currentStoreForm = useFormEditorStore.getState().form
-
-    // Set placeholder form if none exists or form ID doesn't match
-    if (!currentStoreForm || currentStoreForm.id !== formId) {
-      const placeholderForm = {
-        id: formId,
-        version_id: uuidv4(),
-        title: "Untitled Form",
-        description: "",
-        questions: [],
-        settings: getDefaultSettings(),
-        current_draft_version_id: null,
-        current_published_version_id: null,
-        short_id: undefined,
-      }
-
-      useFormEditorStore.getState().setForm(placeholderForm)
+    if (formId) {
+      useFormGenerationStore.getState().initializeConnection(formId)
     }
-
-    // Reset form store if form ID has changed
-    if (currentStoreForm && currentStoreForm.id !== formId) {
-      useFormEditorStore.getState().resetForm()
-    }
-
-    async function loadExistingFormData() {
-      if (!formId) {
-        return
-      }
-
-      try {
-        const response = await fetch(`/api/forms/${formId}`)
-
-        if (response.ok) {
-          const existingForm = await response.json()
-
-          if (!currentStoreForm || currentStoreForm.id !== existingForm.id) {
-            useFormEditorStore.getState().setForm(existingForm)
-          }
-        } else if (response.status === 404) {
-          // Form not found - placeholder is already set, do nothing
-        } else {
-          console.error(
-            "Error loading form data:",
-            response.status,
-            response.statusText
-          )
-
-          try {
-            const errorData = await response.json()
-            console.error("Error details:", errorData)
-          } catch (error) {
-            console.error("Could not parse error response:", error)
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load existing form:", error)
-      }
-    }
-
-    // Use setTimeout to defer execution and avoid potential race conditions
-    setTimeout(() => loadExistingFormData(), 0)
   }, [formId])
-
-  const formAgent_currentForm = useFormGenerationStore((state) =>
-    state.currentForm?.id === formId ? state.currentForm : null
-  )
 
   useEffect(() => {
     if (formAgent_currentForm) {
-      const currentFormInStore = useFormEditorStore.getState().form
-
-      const newFormForStore = {
-        id: formAgent_currentForm.id,
-        version_id: formAgent_currentForm.version_id,
-        title: formAgent_currentForm.title,
-        description: formAgent_currentForm.description,
-        questions: formAgent_currentForm.questions,
-        settings: formAgent_currentForm.settings,
-        short_id:
-          formAgent_currentForm.short_id || currentFormInStore?.short_id,
-
-        current_draft_version_id: formAgent_currentForm.version_id,
-        current_published_version_id:
-          currentFormInStore?.current_published_version_id || null,
+      // Handle router replacement when form is created
+      if (!formId && formAgent_currentForm.id) {
+        router.replace(`/dashboard/forms/${formAgent_currentForm.id}`)
+        return
       }
 
-      const hasChanges =
-        currentFormInStore?.version_id !== newFormForStore.version_id ||
-        currentFormInStore?.title !== newFormForStore.title ||
-        currentFormInStore?.description !== newFormForStore.description ||
-        currentFormInStore?.questions?.length !==
-          newFormForStore.questions?.length
+      // Only process if this is our form
+      if (formAgent_currentForm.id === formId) {
+        const currentFormInStore = useFormEditorStore.getState().form
 
-      if (hasChanges) {
-        useFormEditorStore.getState().setForm(newFormForStore as any)
+        const newFormForStore = {
+          id: formAgent_currentForm.id,
+          version_id: formAgent_currentForm.version_id,
+          title: formAgent_currentForm.title,
+          description: formAgent_currentForm.description,
+          questions: formAgent_currentForm.questions,
+          settings: formAgent_currentForm.settings,
+          short_id:
+            formAgent_currentForm.short_id ||
+            currentFormInStore?.short_id ||
+            formData?.short_id,
+
+          current_draft_version_id: formAgent_currentForm.version_id,
+          current_published_version_id:
+            currentFormInStore?.current_published_version_id || null,
+        }
+
+        const hasChanges =
+          currentFormInStore?.version_id !== newFormForStore.version_id ||
+          currentFormInStore?.title !== newFormForStore.title ||
+          currentFormInStore?.description !== newFormForStore.description ||
+          currentFormInStore?.questions?.length !==
+            newFormForStore.questions?.length
+
+        if (hasChanges) {
+          useFormEditorStore.getState().setForm(newFormForStore as any)
+          useFormEditorStore.getState().setLoading(false)
+        }
       }
     }
-  }, [formAgent_currentForm, formId])
+  }, [formAgent_currentForm, formId, router])
 
   // Reset tab states when form page unmounts to ensure clean state for next form
   useEffect(() => {
@@ -261,10 +249,10 @@ function TestUIPageContent() {
 
   const handlePublishForm = () => {}
 
-  const chatContent = <ChatTabContent userId={userId} formId={formId} />
+  const chatContent = <ChatTabContent userId={userId} formId={formId || ""} />
   const designContent = (
     <DesignTabContent
-      formId={formId}
+      formId={formId || ""}
       onShadcnCSSApply={handleShadcnCSSApply}
       shadcnStatus={shadcnStatus}
     />
@@ -277,12 +265,12 @@ function TestUIPageContent() {
   const rightPanel = (
     <div className="flex h-full flex-col">
       <NavigationBar
-        formId={formId}
+        formId={formId || ""}
         onSaveForm={handleSaveForm}
         onPublishForm={handlePublishForm}
       />
       <TabContentManager
-        formId={formId}
+        formId={formId || ""}
         shadcnCSSData={shadcnCSSData || undefined}
         onShadcnApplied={handleShadcnApplied}
       />
@@ -319,7 +307,9 @@ function TestUIPageContent() {
         <FloatingPanel>
           {({ onHeaderMouseDown }) => (
             <ChatDesignPanel
-              chatContent={<ChatTabContent userId={userId} formId={formId} />}
+              chatContent={
+                <ChatTabContent userId={userId} formId={formId || ""} />
+              }
               designContent={designContent}
               onHeaderMouseDown={onHeaderMouseDown}
             />

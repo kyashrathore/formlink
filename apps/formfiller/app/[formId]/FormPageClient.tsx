@@ -88,10 +88,12 @@ function FormPageContent({
         }
         break;
       case "ranking":
-        // Store ranking as JSON string
         if (Array.isArray(value)) {
-          setQuestionResponse(questionId, JSON.stringify(value));
-        } else if (typeof value === "string") {
+          setQuestionResponse(questionId, value);
+        }
+        break;
+      case "address":
+        if (typeof value === "object" && value !== null) {
           setQuestionResponse(questionId, value);
         }
         break;

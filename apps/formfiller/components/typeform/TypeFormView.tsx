@@ -2,7 +2,7 @@
 
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { QuestionResponse } from "@/lib/types";
-import { Form, Question } from "@formlink/schema";
+import { Form, getQuestionTypeName, Question } from "@formlink/schema";
 import {
   CompletionScreen,
   FormModeProvider,
@@ -238,10 +238,11 @@ export default function TypeFormView({
       "linearScale",
       "likertScale",
     ];
+
     if (autoAdvanceTypes.includes(questionType)) {
       setTimeout(() => {
         handleNextWithDirection();
-      }, 300); // Small delay for visual feedback
+      }, 100); // Small delay for visual feedback
     }
   };
 
@@ -262,6 +263,16 @@ export default function TypeFormView({
     }
   };
 
+  const isInteractiveQuestion =
+    !!currentQuestion &&
+    [
+      "ranking",
+      "likertScale",
+      "multipleChoice",
+      "address",
+      "fileUpload",
+    ].includes(getQuestionTypeName(currentQuestion));
+
   // Setup keyboard navigation
   useTypeFormKeyboard({
     currentQuestion: currentQuestion,
@@ -277,14 +288,22 @@ export default function TypeFormView({
   useTypeFormScroll({
     onNext: handleNextWithDirection,
     onPrevious: handlePrevious,
-    enabled: !isMobileView && activeQuestionIndex >= 0 && !isCompleted,
+    enabled:
+      !isMobileView &&
+      activeQuestionIndex >= 0 &&
+      !isCompleted &&
+      !isInteractiveQuestion,
   });
 
   // Setup swipe navigation (mobile)
   useTypeFormSwipe({
     onNext: handleNextWithDirection,
     onPrevious: handlePrevious,
-    enabled: isMobileView && activeQuestionIndex >= 0 && !isCompleted,
+    enabled:
+      isMobileView &&
+      activeQuestionIndex >= 0 &&
+      !isCompleted &&
+      !isInteractiveQuestion,
   });
 
   const handleStartQuiz = () => {
@@ -375,7 +394,6 @@ export default function TypeFormView({
         <TypeFormLayout>
           <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
 
-          {/* Navigation Arrows */}
           {activeQuestionIndex >= 0 && !isCompleted && (
             <TypeFormNavigation
               onPrevious={handlePrevious}
@@ -384,7 +402,6 @@ export default function TypeFormView({
               canGoNext={isQuestionValid(currentQuestion)}
             />
           )}
-
           <KeyboardShortcutModal
             open={showKeyboardHelp}
             onOpenChange={setShowKeyboardHelp}

@@ -61,3 +61,5 @@ export {
   PromptSuggestion,
   type PromptSuggestionProps,
 } from "./prompt-suggestion";
+
+export { Response } from "../ui/response";

@@ -1,10 +1,5 @@
 "use client";
 
-import React from "react";
-import { motion } from "motion/react";
-import { getChatAnimations } from "../shared/animations";
-import { cn } from "../../../lib/utils";
-
 export interface ChatTextInputProps {
   value: string | null;
   onChange: (value: string) => void;
@@ -52,24 +47,5 @@ export function ChatTextInput({
     return constraints.length > 0 ? ` (${constraints.join(", ")})` : "";
   };
 
-  return (
-    <motion.div {...getChatAnimations(0)} className="space-y-3">
-      <div
-        className={cn(
-          "bg-muted/50 rounded-lg p-4 text-center",
-          "border border-muted-foreground/10",
-        )}
-      >
-        <p className="text-muted-foreground">
-          Type your {getInputTypeLabel()} in the message field below
-          {getConstraintMessage()}
-        </p>
-        {value && (
-          <p className="mt-2 text-sm text-foreground/70">
-            Current answer: <span className="font-medium">{value}</span>
-          </p>
-        )}
-      </div>
-    </motion.div>
-  );
+  return null;
 }

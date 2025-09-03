@@ -1,15 +1,12 @@
+"use client";
+
+import { cn } from "@/lib/utils";
 import { AddressData } from "@formlink/schema";
-import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 import React from "react";
-import { cn } from "../../../lib/utils";
-import { Button } from "../../../ui/button";
-import { BaseAddress } from "../../primitives";
+import { BaseAddress } from "../../../../packages/ui/src/form/primitives";
 
-export type FormMode = "chat" | "typeform";
-
-export interface UnifiedAddressInputProps {
-  mode: FormMode;
+export interface TypeFormAddressInputProps {
   value?: AddressData | null;
   onChange: (value: AddressData) => void;
   onSubmit?: () => void;
@@ -20,7 +17,6 @@ export interface UnifiedAddressInputProps {
   className?: string;
 }
 
-// Grid layout configuration for fields
 const fieldGridConfig: Record<keyof AddressData, string> = {
   street1: "col-span-2",
   street2: "col-span-2",
@@ -30,9 +26,8 @@ const fieldGridConfig: Record<keyof AddressData, string> = {
   country: "col-span-1",
 };
 
-export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
+export function TypeFormAddressInput(props: TypeFormAddressInputProps) {
   const {
-    mode,
     value = null,
     onChange,
     onSubmit,
@@ -49,7 +44,6 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
     className,
   } = props;
 
-  // Use BaseAddress primitive for all field state management and validation
   const addressPrimitive = BaseAddress({
     value,
     onChange: onChange as any,
@@ -57,15 +51,13 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
     required,
     requiredFields,
     autoFocus,
-    // Never auto-submit - both modes handle submission manually
     autoSubmitOnComplete: false,
-    onSubmit,
+    onSubmit: onSubmit,
   });
 
   const { fieldProps, isComplete, errors, isTouched, validate } =
     addressPrimitive;
 
-  // Field order for rendering
   const fieldOrder: (keyof AddressData)[] = [
     "street1",
     "street2",
@@ -78,11 +70,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
   const handleKeyDown = (e: React.KeyboardEvent, field: keyof AddressData) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-
-      // Find current field index
       const currentIndex = fieldOrder.indexOf(field);
-
-      // Try to focus next field
       if (currentIndex < fieldOrder.length - 1) {
         const nextField = fieldOrder[currentIndex + 1];
         if (nextField) {
@@ -93,34 +81,18 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
             nextInput.focus();
           }
         }
-      } else if (isComplete && onSubmit && mode === "chat") {
-        // Only submit on Enter in chat mode when complete
-        onSubmit();
       }
-      // TypeForm mode: Don't submit on Enter, let parent handle navigation
     }
   };
 
-  // Mode-specific styling
-  const containerClass =
-    mode === "chat" ? "w-full space-y-6" : "w-full space-y-4";
-
-  const inputClass =
-    mode === "chat"
-      ? cn(
-          "w-full px-4 py-3 border-2 rounded-lg transition-all duration-200",
-          "text-lg placeholder:text-muted-foreground/50",
-          "focus:outline-none focus:border-primary focus:ring-0",
-        )
-      : cn(
-          "w-full px-3 py-2 border rounded-lg transition-all duration-200",
-          "text-base placeholder:text-muted-foreground/50",
-          "focus:outline-none focus:border-primary focus:ring-0",
-        );
+  const inputClass = cn(
+    "w-full px-3 py-2 border rounded-lg transition-all duration-200",
+    "text-base placeholder:text-muted-foreground/50",
+    "focus:outline-none focus:border-primary focus:ring-0",
+  );
 
   return (
-    <div className={cn(containerClass, className)}>
-      {/* Address Fields Grid */}
+    <div className={cn("w-full space-y-4", className)}>
       <div className="grid grid-cols-2 gap-4">
         {fieldOrder.map((field, index) => {
           const fieldData = fieldProps[field];
@@ -155,9 +127,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
                     ? "border-red-500 bg-red-50/50"
                     : fieldValue
                       ? "border-green-500 bg-green-50/30"
-                      : mode === "chat"
-                        ? "border-muted hover:border-muted-foreground/50"
-                        : "border-border hover:border-border-hover",
+                      : "border-border hover:border-border-hover",
                   domProps.disabled && "opacity-50 cursor-not-allowed",
                 )}
               />
@@ -165,8 +135,6 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
           );
         })}
       </div>
-
-      {/* Error Messages */}
       {isTouched && required && !isComplete && errors.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -176,34 +144,6 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
           Please complete all required address fields
         </motion.div>
       )}
-
-      {/* Submit Button - ONLY for Chat Mode */}
-      {mode === "chat" && onSubmit && isComplete && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center mt-4"
-        >
-          <Button
-            onClick={() => {
-              // Validate on submit - only place validation should happen
-              const validationErrors = validate();
-              if (validationErrors.length === 0 && onSubmit) {
-                onSubmit();
-              }
-            }}
-            disabled={disabled}
-            size="lg"
-            className="group"
-          >
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Button>
-        </motion.div>
-      )}
-
-      {/* TypeForm Mode: No continue button - let parent handle navigation */}
     </div>
   );
 }
