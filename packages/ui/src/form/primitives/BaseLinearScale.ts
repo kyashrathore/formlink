@@ -124,7 +124,7 @@ export function BaseLinearScale(
       onChange(selectedValue);
       setIsTouched(true);
 
-      // Controlled by prop instead of hardcoded
+      // Auto-submit immediately since we have the valid value
       if (autoSubmitOnChange && onSubmit) {
         onSubmit();
       }

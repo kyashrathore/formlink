@@ -34,6 +34,8 @@ export default function TypeFormTransition({
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, [prefersReducedMotion]);
 
+  // no-op
+
   if (isReducedMotion) {
     return <>{children}</>;
   }

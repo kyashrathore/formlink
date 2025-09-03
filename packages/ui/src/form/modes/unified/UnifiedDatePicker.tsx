@@ -78,11 +78,7 @@ export function UnifiedDatePicker({
     "w-full flex items-center justify-between px-3 py-2 border rounded-lg transition-all duration-200",
     "text-base bg-background hover:bg-accent/50",
     "focus:outline-none focus:border-primary focus:ring-0",
-    hasError
-      ? "border-red-500"
-      : value
-        ? "border-green-500"
-        : "border-border hover:border-border-hover",
+    hasError ? "border-destructive" : "border-border hover:border-border/80",
     disabled && "opacity-50 cursor-not-allowed",
   );
 

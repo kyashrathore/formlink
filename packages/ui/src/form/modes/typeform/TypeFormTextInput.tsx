@@ -19,6 +19,7 @@ export interface TypeFormTextInputProps {
   showEnterHint?: boolean;
   onValidate?: (value: string) => Array<{ type: string; message: string }>;
   ariaLabel?: string;
+  isInvalid?: boolean; // New prop to control submission
 }
 
 /**
@@ -43,6 +44,7 @@ export function TypeFormTextInput({
   showEnterHint = true,
   onValidate,
   ariaLabel,
+  isInvalid = false, // Default to false
 }: TypeFormTextInputProps) {
   // Use the primitive for all logic
   const base = BaseTextInput({
@@ -70,10 +72,8 @@ export function TypeFormTextInput({
     base.inputProps.onKeyDown?.(e);
     if (e.key === "Enter" && !e.shiftKey && onSubmit) {
       e.preventDefault();
-      // Validate before submitting; show errors if any
-      base.setTouched(true);
-      const errs = base.validate();
-      if (errs.length === 0) {
+      // Only submit if the parent component says the input is valid
+      if (!isInvalid) {
         onSubmit();
       }
     }

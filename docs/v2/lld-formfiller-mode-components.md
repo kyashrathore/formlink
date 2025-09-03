@@ -101,6 +101,14 @@ Acceptance:
 - **[DONE]** linearScale 1–10 with startLabel; rating min/max/step respected.
 - **[DONE]** Typeform Continue button correctly validates text formats (email/url/tel/number) before enabling.
 
+Post-implementation notes (navigation + auto-advance):
+
+- Auto-advance types: `singleChoice`, `rating`, `linearScale`, `likertScale`, `fileUpload`.
+- Fresh-interaction gating: Auto-advance only triggers after a new interaction on the active question. This prevents “bounce-forward” when navigating back to an already-answered question.
+- Back navigation: Always allowed; uses a navigation stack to respect AI branching and skips.
+- Scroll/swipe: Wheel delta with threshold + cooldown and swipe up/down are wired to next/previous and disabled when overlays are open.
+- Keyboard: Enter advances when valid; 0–9 map to rating/linear; A–Z map to choices. ArrowUp/ArrowDown are currently logged but not bound; either implement or update the help modal.
+
 ### Phase 1 — Typeform wrappers (compose unified primitives, add Typeform chrome)
 
 **Status: [DONE]** This is the current architecture. Unified primitives exist in `packages/ui/src/form/modes/unified` and are consumed by Typeform components. Thin wrappers are used where necessary.
@@ -187,7 +195,13 @@ Pseudo-code:
 
 **Status: [IN PROGRESS]** Primitives have good a11y foundations. This needs to be verified and expanded upon in the mode-specific wrappers.
 
-...
+Current Typeform semantics:
+
+- Enter: submit/continue when valid; ignored with modifier keys.
+- Number keys (0–9): quick select for rating/linear; clamped to configured ranges.
+- Letters (A–Z): quick select/toggle for single/multi choice, guarded by focus (disabled inside inputs/textarea/contentEditable).
+- Overlay gating: all keyboard/scroll/swipe navigation disabled when overlay is open.
+- ArrowUp/ArrowDown: currently not bound; help modal references them. Decision required: implement navigation (Up=previous, Down=next if valid) or update help to remove.
 
 ---
 
@@ -216,7 +230,11 @@ Pseudo-code:
 - **[DONE]** Pass full config to rating/linear/date/file from question.
 - **[DONE]** Define minimal coercers inside switcher or a small local util module.
 
-...
+Additional TODOs discovered during implementation:
+
+- [PENDING] Align KeyboardShortcutModal with actual behavior or wire ArrowUp/ArrowDown navigation.
+- [PENDING] Remove temporary debug logs after QA of navigation/auto-advance completes.
+- [PENDING] If click-through ever resurfaces, finalize z-index/pointer-events for nav vs transition wrapper as described above.
 
 ---
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTypeFormDropdown } from "@formlink/ui";
+import { useTypeFormOverlay } from "@formlink/ui";
 import { useCallback, useEffect } from "react";
 import {
   UseTypeFormKeyboardProps,
@@ -10,8 +10,6 @@ import {
 } from "../../../lib/types";
 import { getQuestionTypeName } from "@formlink/schema";
 
-// UseTypeFormKeyboardProps is now imported from types.ts
-
 export function useTypeFormKeyboard({
   currentQuestion,
   onAnswer,
@@ -19,8 +17,9 @@ export function useTypeFormKeyboard({
   onPrevious,
   showHelp,
   getCurrentResponse,
+  isCurrentQuestionValid,
 }: UseTypeFormKeyboardProps) {
-  const { isDropdownOpen } = useTypeFormDropdown();
+  const { isOverlayOpen } = useTypeFormOverlay();
 
   const handleScaleSelection = useCallback(
     (num: number) => {
@@ -53,7 +52,6 @@ export function useTypeFormKeyboard({
     (letter: string) => {
       if (!currentQuestion) return;
 
-      // Check if question has options (choice or ranking questions)
       if (
         currentQuestion.type.name !== "singleChoice" &&
         currentQuestion.type.name !== "multipleChoice" &&
@@ -77,7 +75,6 @@ export function useTypeFormKeyboard({
             getQuestionTypeName(currentQuestion),
           );
         } else if (currentQuestion.type.name === "multipleChoice") {
-          // For multiple choice, toggle the selection
           const currentResponse = getCurrentResponse
             ? getCurrentResponse(currentQuestion.id)
             : [];
@@ -102,7 +99,8 @@ export function useTypeFormKeyboard({
 
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
-      // Don't handle if user is typing in an input
+      if (isOverlayOpen) return; // Master switch
+
       const target = event.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
@@ -112,7 +110,6 @@ export function useTypeFormKeyboard({
         return;
       }
 
-      // Prevent navigation on modifier + Enter combinations
       if (
         event.key === "Enter" &&
         (event.shiftKey || event.ctrlKey || event.altKey || event.metaKey)
@@ -124,24 +121,13 @@ export function useTypeFormKeyboard({
 
       switch (event.key) {
         case "Enter":
-          // Don't navigate if dropdown is open
-          if (!isDropdownOpen) {
+          if (isCurrentQuestionValid) {
             event.preventDefault();
             onNext();
           }
           break;
 
-        case "ArrowUp":
-        case "ArrowLeft":
-          event.preventDefault();
-          if (onPrevious) onPrevious();
-          break;
-
-        case "ArrowDown":
-        case "ArrowRight":
-          event.preventDefault();
-          onNext();
-          break;
+        // Arrow keys intentionally unbound for now; see LLD.
 
         case "?":
           event.preventDefault();
@@ -149,7 +135,6 @@ export function useTypeFormKeyboard({
           break;
 
         default:
-          // Handle number keys for rating/scale questions
           if (
             currentQuestion.type.name === "rating" ||
             currentQuestion.type.name === "linearScale"
@@ -161,7 +146,6 @@ export function useTypeFormKeyboard({
             }
           }
 
-          // Handle letter keys for choice questions
           if (
             currentQuestion.type.name === "singleChoice" ||
             currentQuestion.type.name === "multipleChoice"
@@ -178,11 +162,11 @@ export function useTypeFormKeyboard({
     [
       currentQuestion,
       onNext,
-      onPrevious,
       showHelp,
-      isDropdownOpen,
+      isOverlayOpen,
       handleChoiceSelection,
       handleScaleSelection,
+      isCurrentQuestionValid,
     ],
   );
 

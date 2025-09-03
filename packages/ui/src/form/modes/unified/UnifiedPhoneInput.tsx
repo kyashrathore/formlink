@@ -61,6 +61,8 @@ export function UnifiedPhoneInput({
   const [selectedISO2, setSelectedISO2] = useState<string | null>(
     country || defaultCountry || null,
   );
+  const [touched, setTouched] = useState(false);
+
   useEffect(() => {
     if (country) setSelectedISO2(country);
   }, [country]);
@@ -179,30 +181,47 @@ export function UnifiedPhoneInput({
     setSelectedISO2(iso2);
     onCountryChange?.(iso2);
     setCountryOpen(false);
+    // Reset touched state when country changes to avoid immediate red validation
+    setTouched(false);
+
     if (!value || value.trim() === "") {
       // Seed with dial code
       try {
-        const dial = `+${getCountryCallingCode(iso2)}`;
+        const dial = `+${getCountryCallingCode(iso2)} `;
         onChange(dial);
       } catch {
         onChange("+");
       }
     }
+
+    // Focus the phone input after country selection
+    setTimeout(() => {
+      const phoneInput = document.querySelector(
+        'input[type="tel"]',
+      ) as HTMLInputElement;
+      if (phoneInput && mode === "typeform") {
+        phoneInput.focus();
+        // Position cursor at end
+        phoneInput.setSelectionRange(
+          phoneInput.value.length,
+          phoneInput.value.length,
+        );
+      }
+    }, 100);
   };
 
   if (mode === "typeform") {
     return (
       <div className="w-full max-w-2xl">
-        <div className="flex items-center gap-2">
+        <div className="flex items-end border-0 border-b-2 border-border/30 focus-within:border-primary transition-colors duration-200">
           {showCountrySelector && (
             <Popover open={countryOpen} onOpenChange={setCountryOpen}>
               <PopoverTrigger
                 ref={triggerRef as any}
-                className="flex items-center gap-1 px-2 py-1 rounded-md border text-sm"
+                className="flex items-center gap-2 px-0 py-3 text-2xl md:text-3xl font-light bg-transparent border-0 hover:opacity-70 transition-opacity duration-200"
               >
-                <span className="text-lg">{selectedFlag}</span>
-                <span className="text-muted-foreground">{selectedDial}</span>
-                <ChevronDown size={14} className="opacity-60" />
+                <span className="text-2xl">{selectedFlag}</span>
+                <ChevronDown size={16} className="opacity-60" />
               </PopoverTrigger>
               <PopoverContent
                 className="p-0 box-border"
@@ -261,12 +280,12 @@ export function UnifiedPhoneInput({
             aria-label={ariaLabel}
             aria-describedby={ariaDescribedBy}
             className={cn(
-              "w-full text-lg md:text-xl lg:text-2xl font-medium",
-              "bg-transparent border-none outline-none",
-              "text-foreground placeholder:text-muted-foreground",
+              "w-full text-2xl md:text-3xl font-light",
+              "bg-transparent border-0 focus:outline-none",
+              "text-foreground placeholder:text-muted-foreground/50",
               "py-3 px-0",
               disabled && "opacity-50 cursor-not-allowed",
-              !isValid && value && "text-destructive",
+              !isValid && value && touched && "text-destructive",
             )}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey && onSubmit) {
@@ -275,19 +294,13 @@ export function UnifiedPhoneInput({
                 if (isValid) onSubmit();
               }
             }}
+            onBlur={() => setTouched(true)}
             placeholder={placeholder}
             autoFocus
             required={required}
             disabled={disabled}
           />
         </div>
-        {showKeyboardHints && (
-          <div className="mt-2 text-sm text-muted-foreground">
-            Press{" "}
-            <kbd className="px-1 py-0.5 text-xs border rounded">Enter ↵</kbd> to
-            continue
-          </div>
-        )}
       </div>
     );
   }
@@ -372,16 +385,20 @@ export function UnifiedPhoneInput({
             aria-describedby={ariaDescribedBy}
             className={cn(
               "w-full px-4 py-3 rounded-lg border-2 border-border bg-background text-foreground placeholder:text-muted-foreground transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:border-primary hover:border-border",
-              !isValid && value && "border-destructive focus:ring-destructive",
+              !isValid &&
+                value &&
+                touched &&
+                "border-destructive focus:ring-destructive",
               disabled && "opacity-50 cursor-not-allowed",
             )}
             placeholder={placeholder}
             required={required}
             disabled={disabled}
+            onBlur={() => setTouched(true)}
           />
         </div>
       </div>
-      {!isValid && value && (
+      {!isValid && value && touched && (
         <p className="text-sm text-destructive">Invalid phone number</p>
       )}
     </div>

@@ -138,19 +138,18 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
     setSelectedFile(file);
     onFileSelect?.([file]);
 
-    // TypeForm onChange expects single file
+    // The onChange is called to update the parent's state with the selected file.
+    // The actual upload and navigation is handled by the onFileUpload callback.
     if (file) {
       onChange?.(file);
     }
 
     try {
-      if (questionId) {
+      if (questionId && onFileUpload) {
         await (
           onFileUpload as (questionId: string, file: File) => Promise<void>
-        )?.(questionId, file);
+        )(questionId, file);
       }
-
-      // Don't auto-submit here, let the parent handle submission
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
       onFileSelect?.([]);

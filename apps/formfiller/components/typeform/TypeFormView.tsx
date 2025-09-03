@@ -7,10 +7,10 @@ import {
   CompletionScreen,
   FormModeProvider,
   IntroScreen,
-  TypeFormDropdownProvider,
+  TypeFormOverlayProvider,
 } from "@formlink/ui";
 import { AnimatePresence } from "motion/react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTypeFormKeyboard } from "./hooks/useTypeFormKeyboard";
 import { useTypeFormScroll } from "./hooks/useTypeFormScroll";
 import { useTypeFormSwipe } from "./hooks/useTypeFormSwipe";
@@ -20,6 +20,7 @@ import TypeFormNavigation from "./TypeFormNavigation";
 import TypeFormProgress from "./TypeFormProgress";
 import TypeFormQuestion from "./TypeFormQuestion";
 import TypeFormTransition from "./TypeFormTransition";
+import { validateTextValue } from "./utils/validation";
 
 interface TypeFormViewProps {
   formSchema: Form;
@@ -69,6 +70,14 @@ export default function TypeFormView({
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(-1); // -1 for intro screen
   const [showConfetti, setShowConfetti] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [lastAnsweredQ, setLastAnsweredQ] = useState<{
+    id: string;
+    value: QuestionResponse;
+  } | null>(null);
+
+  // Gate auto-advance: only after fresh interaction on this question
+  const activatedAtRef = useRef(0);
+  const lastInteractionAtRef = useRef(0);
 
   // Navigation history for proper backward navigation with AI branching
   const [navigationHistory, setNavigationHistory] = useState<number[]>([-1]);
@@ -112,6 +121,7 @@ export default function TypeFormView({
           setActiveQuestionIndex(nextIndex);
           // Add to navigation history for proper backward navigation
           setNavigationHistory((prev) => [...prev, nextIndex]);
+          activatedAtRef.current = Date.now();
           return true; // Successfully branched
         }
       } catch (error) {
@@ -124,60 +134,40 @@ export default function TypeFormView({
   );
 
   const isQuestionValid = useCallback(
-    (q: Question | null) => {
+    (q: Question | null, resp: QuestionResponse) => {
       if (!q) return false;
-      const resp = questionResponses[q.id];
 
       if (q.type.name === "text") {
         const v = typeof resp === "string" ? resp : "";
+        const format = (q.type as any).format;
         const validations = (q as any).validations || {};
-        if (validations.required?.value && v.trim() === "") return false;
-
-        const minL = validations.minLength?.value;
-        if (typeof minL === "number" && v.length < minL) return false;
-
-        const maxL = validations.maxLength?.value;
-        if (typeof maxL === "number" && v.length > maxL) return false;
-
-        const pattern = validations.pattern?.value;
-        if (pattern && v) {
-          try {
-            const re = new RegExp(pattern);
-            if (!re.test(v)) return false;
-          } catch {
-            // ignore invalid regex
-          }
-        }
-
-        return v.trim() !== "";
+        return validateTextValue(v, format, validations) === null;
       }
 
-      // For non-text types, require any non-null response
-      return resp != null;
+      // For non-text types, require any non-null/non-empty response
+      if (Array.isArray(resp)) {
+        return resp.length > 0;
+      }
+      return resp != null && resp !== "";
     },
     [questionResponses],
   );
 
-  // Track direction for next navigation
   const handleNextWithDirection = useCallback(async () => {
+    const currentQ = getCurrentQuestion(activeQuestionIndex);
+    const currentResponse = questionResponses[currentQ?.id || ""];
+    const valid = isQuestionValid(currentQ, currentResponse);
+
     setDirection(1); // Going forwards
-
-    const currentQuestion = getCurrentQuestion(activeQuestionIndex);
-
     // Block navigation only after intro (index >= 0)
-    if (activeQuestionIndex >= 0 && !isQuestionValid(currentQuestion)) {
+    if (activeQuestionIndex >= 0 && !valid) {
       return;
     }
 
     // Check if current question should trigger AI branching
-    if (
-      currentQuestion?.mightBranchOffNext &&
-      formSchema.settings?.journeyScript
-    ) {
-      const branchingSucceeded = await handleAIBranching(currentQuestion);
-      if (branchingSucceeded) {
-        return; // AI handled the navigation
-      }
+    if (currentQ?.mightBranchOffNext && formSchema.settings?.journeyScript) {
+      const branchingSucceeded = await handleAIBranching(currentQ);
+      if (branchingSucceeded) return; // AI handled the navigation
     }
 
     // Default navigation logic
@@ -186,6 +176,7 @@ export default function TypeFormView({
       setActiveQuestionIndex(nextIndex);
       // Add to navigation history for proper backward navigation
       setNavigationHistory((prev) => [...prev, nextIndex]);
+      activatedAtRef.current = Date.now();
     } else {
       // No more questions, submit form to API
       const success = await onSubmitForm();
@@ -203,16 +194,14 @@ export default function TypeFormView({
     formSchema,
     onNavigateNext,
     onSubmitForm,
+    isQuestionValid,
+    questionResponses,
   ]);
-
-  const handleNavigateToNextValidQuestion = useCallback(() => {
-    handleNextWithDirection();
-  }, [handleNextWithDirection]);
 
   useEffect(() => {
     if (activeQuestionIndex < 0 || isCompleted || !currentQuestion) return;
     if (currentQuestion && !shouldShowQuestion(currentQuestion)) {
-      handleNavigateToNextValidQuestion();
+      handleNextWithDirection();
     }
   }, [
     activeQuestionIndex,
@@ -220,90 +209,95 @@ export default function TypeFormView({
     currentQuestion,
     shouldShowQuestion,
     isCompleted,
-    handleNavigateToNextValidQuestion,
+    handleNextWithDirection,
   ]);
 
-  const handleSelectAndNavigate = (
+  const handleAnswerChange = (
     questionId: string,
     value: QuestionResponse,
     questionType: string,
   ) => {
-    // Call the business logic callback
     onAnswerChange(questionId, value, questionType);
+    setLastAnsweredQ({ id: questionId, value });
+    lastInteractionAtRef.current = Date.now();
+  };
 
-    // Auto-advance for single-selection question types
+  // Reactive auto-advance logic for all applicable inputs
+  useEffect(() => {
+    if (!lastAnsweredQ || !currentQuestion) return;
+
+    // Only auto-advance if the change was for the currently active question
+    if (lastAnsweredQ.id !== currentQuestion.id) return;
+
     const autoAdvanceTypes = [
       "singleChoice",
       "rating",
       "linearScale",
       "likertScale",
+      "fileUpload", // Re-added to the reactive flow
     ];
+    const questionType = getQuestionTypeName(currentQuestion);
 
-    if (autoAdvanceTypes.includes(questionType)) {
-      setTimeout(() => {
+    const isFreshInteraction =
+      lastInteractionAtRef.current > activatedAtRef.current;
+
+    if (
+      autoAdvanceTypes.includes(questionType) &&
+      isQuestionValid(currentQuestion, lastAnsweredQ.value) &&
+      isFreshInteraction
+    ) {
+      // Use a small timeout to allow the UI to update before navigating
+      const timer = setTimeout(() => {
         handleNextWithDirection();
-      }, 100); // Small delay for visual feedback
+      }, 150);
+      return () => clearTimeout(timer);
     }
-  };
+  }, [
+    lastAnsweredQ,
+    currentQuestion,
+    isQuestionValid,
+    handleNextWithDirection,
+  ]);
 
-  const handlePrevious = () => {
+  const handlePrevious = useCallback(() => {
+    // Prevent navigating back from the first question to the intro screen
+    if (activeQuestionIndex <= 0) return;
+
     if (navigationHistory.length > 1) {
       setDirection(-1); // Going backwards
-
-      // Get the previous question from navigation history
       const newHistory = [...navigationHistory];
-      newHistory.pop(); // Remove current question
+      newHistory.pop();
       const previousIndex = newHistory[newHistory.length - 1];
-
-      // Update state - only if previousIndex is valid
       if (previousIndex !== undefined) {
         setNavigationHistory(newHistory);
         setActiveQuestionIndex(previousIndex);
+        activatedAtRef.current = Date.now();
       }
     }
-  };
+  }, [activeQuestionIndex, navigationHistory]);
 
-  const isInteractiveQuestion =
-    !!currentQuestion &&
-    [
-      "ranking",
-      "likertScale",
-      "multipleChoice",
-      "address",
-      "fileUpload",
-    ].includes(getQuestionTypeName(currentQuestion));
-
-  // Setup keyboard navigation
   useTypeFormKeyboard({
     currentQuestion: currentQuestion,
-    onAnswer: handleSelectAndNavigate,
+    onAnswer: handleAnswerChange,
     onNext: handleNextWithDirection,
     onPrevious: handlePrevious,
     showHelp: () => setShowKeyboardHelp(true),
     getCurrentResponse: (questionId: string) =>
       questionResponses[questionId] ?? null,
+    isCurrentQuestionValid: isQuestionValid(
+      currentQuestion,
+      questionResponses[currentQuestion?.id || ""],
+    ),
   });
 
-  // Setup scroll navigation (desktop)
   useTypeFormScroll({
     onNext: handleNextWithDirection,
     onPrevious: handlePrevious,
-    enabled:
-      !isMobileView &&
-      activeQuestionIndex >= 0 &&
-      !isCompleted &&
-      !isInteractiveQuestion,
   });
 
-  // Setup swipe navigation (mobile)
   useTypeFormSwipe({
     onNext: handleNextWithDirection,
     onPrevious: handlePrevious,
-    enabled:
-      isMobileView &&
-      activeQuestionIndex >= 0 &&
-      !isCompleted &&
-      !isInteractiveQuestion,
   });
 
   const handleStartQuiz = () => {
@@ -315,7 +309,6 @@ export default function TypeFormView({
     await onRestart();
     setShowConfetti(false);
     setActiveQuestionIndex(-1);
-    // Reset navigation history
     setNavigationHistory([-1]);
   };
 
@@ -324,10 +317,10 @@ export default function TypeFormView({
     try {
       const url = await onFileUpload(questionId, file);
       if (url) {
-        handleNextWithDirection();
+        // The only job is to update state. The reactive useEffect will handle navigation.
+        handleAnswerChange(questionId, url, "fileUpload");
       }
     } catch (error) {
-      // Display error message to user
       const errorMessage =
         error instanceof Error ? error.message : "File upload failed";
       alert(`Upload Error: ${errorMessage}`);
@@ -353,7 +346,6 @@ export default function TypeFormView({
     }
 
     if (currentQuestion) {
-      // Derive selected country from prior answers (first text question with format 'country')
       let selectedCountryISO2: string | null = null;
       try {
         const countryQ = formSchema.questions.find(
@@ -376,7 +368,7 @@ export default function TypeFormView({
           <TypeFormQuestion
             question={currentQuestion}
             response={questionResponses[currentQuestion.id] ?? null}
-            onAnswer={handleSelectAndNavigate}
+            onAnswer={handleAnswerChange}
             onFileUpload={handleFileUploadWrapper}
             uploadedFile={uploadedFile}
             onFileSelect={setUploadedFile}
@@ -399,7 +391,7 @@ export default function TypeFormView({
       formSettings={{ defaultMode: "typeform" }}
       urlSearchParams={{}}
     >
-      <TypeFormDropdownProvider>
+      <TypeFormOverlayProvider>
         {activeQuestionIndex >= 0 && !isCompleted && (
           <TypeFormProgress
             progress={progress}
@@ -415,7 +407,10 @@ export default function TypeFormView({
               onPrevious={handlePrevious}
               onNext={handleNextWithDirection}
               canGoPrevious={activeQuestionIndex > 0}
-              canGoNext={isQuestionValid(currentQuestion)}
+              canGoNext={isQuestionValid(
+                currentQuestion,
+                questionResponses[currentQuestion?.id || ""],
+              )}
             />
           )}
           <KeyboardShortcutModal
@@ -423,7 +418,7 @@ export default function TypeFormView({
             onOpenChange={setShowKeyboardHelp}
           />
         </TypeFormLayout>
-      </TypeFormDropdownProvider>
+      </TypeFormOverlayProvider>
     </FormModeProvider>
   );
 }

@@ -361,4 +361,5 @@ export interface UseTypeFormKeyboardProps {
   onPrevious?: () => void;
   showHelp?: () => void;
   getCurrentResponse?: (questionId: string) => QuestionResponse;
+  isCurrentQuestionValid?: boolean;
 }

@@ -389,7 +389,7 @@ export function UnifiedRanking({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3 }}
-            className="flex items-center justify-center gap-2 text-sm text-muted-foreground pt-2"
+            className="flex items-center justify-start gap-2 text-sm text-muted-foreground pt-2"
           >
             Drag to reorder or use dropdowns to adjust ranking
             {mode === "chat" && hasInteracted && " • Press Enter to continue"}

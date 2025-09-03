@@ -72,7 +72,7 @@ export { default as OpenAIIcon } from "./icons/openai";
 
 // Form context
 export * from "./form/context/FormModeContext";
-export * from "./form/context/TypeFormDropdownContext";
+export * from "./form/context/TypeFormOverlayContext";
 
 // Generic types for decoupled usage - IMPORT THESE FOR TYPE SAFETY
 export * from "./types/generic";

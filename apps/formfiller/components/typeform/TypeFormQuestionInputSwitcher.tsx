@@ -71,6 +71,7 @@ export interface TypeFormQuestionInputSwitcherProps {
   onNext?: () => void;
   ariaDescribedBy?: string;
   countryISO2?: string | null;
+  isInvalid?: boolean;
 }
 
 /**
@@ -92,6 +93,7 @@ export default function TypeFormQuestionInputSwitcher(
     onNext,
     ariaDescribedBy,
     countryISO2,
+    isInvalid,
   } = props;
 
   const t = question.type.name as string;
@@ -157,6 +159,7 @@ export default function TypeFormQuestionInputSwitcher(
         pattern={(question as any).validations?.pattern?.value}
         ariaLabel={question.title}
         onValidate={undefined}
+        isInvalid={isInvalid}
       />
     );
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib";
+import { useEffect, useRef } from "react";
 
 export interface SingleOption {
   value: string;
@@ -34,6 +35,15 @@ export default function TypeFormSingleSelect({
   showKeyboardHints = true,
   className,
 }: TypeFormSingleSelectProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Ensure focus is maintained for keyboard interactions
+  useEffect(() => {
+    if (containerRef.current && !disabled) {
+      containerRef.current.focus();
+    }
+  }, [disabled]);
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     // Numeric shortcuts 1..9 map to options[0..8]
     if (e.key >= "1" && e.key <= "9") {
@@ -48,16 +58,15 @@ export default function TypeFormSingleSelect({
   const handleSelect = (val: string, isDisabled?: boolean) => {
     if (disabled || isDisabled) return;
     onChange(val);
-    if (onSubmit) {
-      // Small delay for UX parity with Typeform
-      setTimeout(() => onSubmit(), 250);
-    }
+    // REMOVED: No longer calls onSubmit directly.
+    // The parent component's useEffect will handle auto-advancing.
   };
 
   return (
     <div
+      ref={containerRef}
       className={cn(
-        "space-y-3 w-full max-w-2xl pointer-events-auto",
+        "space-y-3 w-full max-w-2xl pointer-events-auto outline-none",
         className,
       )}
       tabIndex={0}

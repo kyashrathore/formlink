@@ -152,12 +152,10 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
                 className={cn(
                   inputClass,
                   hasError
-                    ? "border-red-500 bg-red-50/50"
-                    : fieldValue
-                      ? "border-green-500 bg-green-50/30"
-                      : mode === "chat"
-                        ? "border-muted hover:border-muted-foreground/50"
-                        : "border-border hover:border-border-hover",
+                    ? "border-destructive bg-destructive/10"
+                    : mode === "chat"
+                      ? "border-muted hover:border-muted-foreground/50 focus:border-primary"
+                      : "border-border hover:border-border/80 focus:border-primary",
                   domProps.disabled && "opacity-50 cursor-not-allowed",
                 )}
               />

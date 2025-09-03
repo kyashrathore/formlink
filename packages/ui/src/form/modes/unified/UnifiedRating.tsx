@@ -36,8 +36,8 @@ export function UnifiedRating({
   const base = BaseRating({
     ...baseProps,
     max,
-    // Mode-specific behavior: typeform auto-submits, chat requires manual submit
-    autoSubmitOnChange: mode === "typeform",
+    // Mode-specific behavior: typeform auto-advance is now handled by the parent view.
+    autoSubmitOnChange: false,
     onSubmit,
   });
 

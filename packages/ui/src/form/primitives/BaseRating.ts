@@ -173,17 +173,20 @@ export function BaseRating(props: BaseRatingProps): BaseRatingReturn {
     (newValue: number) => {
       if (disabled) return;
 
-      // If clicking the same value and clear is allowed, clear the rating
+      // Determine the final value that will be set
+      let finalValue: number;
       if (allowClear && value === newValue) {
+        finalValue = 0;
         onChange(0);
       } else {
+        finalValue = newValue;
         onChange(newValue);
       }
 
       setIsTouched(true);
 
-      // Controlled by prop instead of hardcoded
-      if (autoSubmitOnChange !== false && onSubmit) {
+      // Auto-submit with the new value for immediate validation
+      if (autoSubmitOnChange !== false && onSubmit && finalValue > 0) {
         onSubmit();
       }
     },

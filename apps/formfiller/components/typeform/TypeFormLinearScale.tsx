@@ -1,8 +1,8 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
 import React, { useCallback } from "react";
-import { cn } from "@/lib/utils";
 
 export interface TypeFormLinearScaleProps {
   value: number | null;
@@ -53,11 +53,10 @@ export function TypeFormLinearScale({
   const handleValueChange = useCallback(
     (newValue: number) => {
       onChange(newValue);
-      if (onSubmit) {
-        onSubmit();
-      }
+      // REMOVED: No longer calls onSubmit directly.
+      // The parent component's useEffect will handle auto-advancing.
     },
-    [onChange, onSubmit],
+    [onChange],
   );
 
   const handleKeyDown = useCallback(
@@ -67,26 +66,6 @@ export function TypeFormLinearScale({
       let newValue: number | null = null;
 
       switch (e.key) {
-        case "ArrowLeft":
-        case "ArrowDown":
-          e.preventDefault();
-          if (value !== null && value > start) {
-            newValue = Math.max(start, value - step);
-          } else if (value === null) {
-            newValue = start;
-          }
-          break;
-
-        case "ArrowRight":
-        case "ArrowUp":
-          e.preventDefault();
-          if (value !== null && value < end) {
-            newValue = Math.min(end, value + step);
-          } else if (value === null) {
-            newValue = start;
-          }
-          break;
-
         case "Home":
           e.preventDefault();
           newValue = start;
@@ -136,7 +115,6 @@ export function TypeFormLinearScale({
       transition={{ duration: 0.2 }}
     >
       <div
-        className="relative"
         onKeyDown={handleKeyDown}
         tabIndex={0}
         role="slider"
@@ -147,13 +125,13 @@ export function TypeFormLinearScale({
         aria-valuenow={value || undefined}
         aria-disabled={disabled}
         className={cn(
-          "outline-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg",
+          "outline-none focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-4 rounded-xl",
           disabled && "opacity-50 cursor-not-allowed",
         )}
       >
         {/* Scale buttons with individual containers for precise label alignment */}
         <div className="py-4">
-          <div className="flex items-center justify-center gap-2 md:gap-3">
+          <div className="flex items-center justify-start gap-2 md:gap-3">
             {values.map((scaleValue, index) => {
               const isFirst = index === 0;
               const isLast = index === values.length - 1;
@@ -194,16 +172,20 @@ export function TypeFormLinearScale({
                     {scaleValue}
                   </button>
 
-                  {/* Label positioned directly under this specific button - THE KEY SOLUTION */}
+                  {/* Label positioned to align with button edges, not center */}
                   {(shouldShowStartLabel || shouldShowEndLabel) && (
-                    <div className="absolute top-full mt-3 text-xs text-muted-foreground text-center leading-tight">
+                    <div
+                      className={cn(
+                        "absolute top-full mt-3 text-xs text-muted-foreground leading-tight",
+                        shouldShowStartLabel && "left-0",
+                        shouldShowEndLabel && "right-0",
+                      )}
+                    >
                       {shouldShowStartLabel && (
-                        <div className="whitespace-nowrap px-1">
-                          {startLabel}
-                        </div>
+                        <div className="whitespace-nowrap">{startLabel}</div>
                       )}
                       {shouldShowEndLabel && (
-                        <div className="whitespace-nowrap px-1">{endLabel}</div>
+                        <div className="whitespace-nowrap">{endLabel}</div>
                       )}
                     </div>
                   )}
@@ -217,11 +199,10 @@ export function TypeFormLinearScale({
       {/* Keyboard hints */}
       {showKeyboardHints && (
         <div className="mt-4 text-sm text-muted-foreground">
-          Use <kbd className="px-1 py-0.5 text-xs border rounded">←</kbd>{" "}
-          <kbd className="px-1 py-0.5 text-xs border rounded">→</kbd> keys to
-          navigate, or{" "}
-          <kbd className="px-1 py-0.5 text-xs border rounded">1</kbd>-
-          {Math.min(values.length, 9)} for quick selection
+          Use <kbd className="px-1 py-0.5 text-xs border rounded">1</kbd>-
+          {Math.min(values.length, 9)} for quick selection, or{" "}
+          <kbd className="px-1 py-0.5 text-xs border rounded">Enter ↵</kbd> to
+          continue
         </div>
       )}
     </motion.div>
