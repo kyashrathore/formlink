@@ -36,6 +36,18 @@ export default function TypeFormLikert({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Numeric shortcuts 1..9 map to options[0..8]
+    if (e.key >= "1" && e.key <= "9") {
+      const index = parseInt(e.key, 10) - 1;
+      const label = options[index];
+      if (label && !disabled) {
+        e.preventDefault();
+        handleSelect(label);
+      }
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -44,6 +56,8 @@ export default function TypeFormLikert({
       )}
       role="listbox"
       aria-multiselectable={false}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >

@@ -34,6 +34,17 @@ export default function TypeFormSingleSelect({
   showKeyboardHints = true,
   className,
 }: TypeFormSingleSelectProps) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Numeric shortcuts 1..9 map to options[0..8]
+    if (e.key >= "1" && e.key <= "9") {
+      const index = parseInt(e.key, 10) - 1;
+      const opt = options[index];
+      if (opt && !opt.disabled && !disabled) {
+        e.preventDefault();
+        handleSelect(opt.value, opt.disabled);
+      }
+    }
+  };
   const handleSelect = (val: string, isDisabled?: boolean) => {
     if (disabled || isDisabled) return;
     onChange(val);
@@ -49,6 +60,8 @@ export default function TypeFormSingleSelect({
         "space-y-3 w-full max-w-2xl pointer-events-auto",
         className,
       )}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
       onMouseDown={(e) => e.stopPropagation()}
       onTouchStart={(e) => e.stopPropagation()}
     >

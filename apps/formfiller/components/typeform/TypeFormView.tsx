@@ -353,6 +353,21 @@ export default function TypeFormView({
     }
 
     if (currentQuestion) {
+      // Derive selected country from prior answers (first text question with format 'country')
+      let selectedCountryISO2: string | null = null;
+      try {
+        const countryQ = formSchema.questions.find(
+          (q) =>
+            (q.type as any).name === "text" &&
+            (q.type as any).format === "country",
+        );
+        if (countryQ) {
+          const ans = questionResponses[countryQ.id];
+          if (typeof ans === "string" && ans.length === 2) {
+            selectedCountryISO2 = ans.toUpperCase();
+          }
+        }
+      } catch {}
       return (
         <TypeFormTransition
           questionId={currentQuestion.id}
@@ -367,6 +382,7 @@ export default function TypeFormView({
             onFileSelect={setUploadedFile}
             onNext={handleNextWithDirection}
             questionNumber={activeQuestionIndex + 1}
+            countryISO2={selectedCountryISO2}
           />
         </TypeFormTransition>
       );

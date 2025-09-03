@@ -105,6 +105,8 @@ export { UnifiedLinearScale } from "./form/modes/unified/UnifiedLinearScale";
 export { UnifiedMultiSelect } from "./form/modes/unified/UnifiedMultiSelect";
 export { UnifiedRanking } from "./form/modes/unified/UnifiedRanking";
 export { UnifiedRating } from "./form/modes/unified/UnifiedRating";
+export { UnifiedPhoneInput } from "./form/modes/unified/UnifiedPhoneInput";
+export { UnifiedCountrySelect } from "./form/modes/unified/UnifiedCountrySelect";
 
 // Context provider for mode management
 export { FormModeProvider, useFormMode } from "./form/context/FormModeContext";

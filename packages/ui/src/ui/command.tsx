@@ -52,10 +52,10 @@ function CommandDialog({
   );
 }
 
-function CommandInput({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.Input>) {
+const CommandInput = React.forwardRef<
+  React.ElementRef<typeof CommandPrimitive.Input>,
+  React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
+>(function CommandInput({ className, ...props }, ref) {
   return (
     <div
       data-slot="command-input-wrapper"
@@ -63,6 +63,7 @@ function CommandInput({
     >
       <MagnifyingGlass className="size-4 shrink-0 opacity-50" />
       <CommandPrimitive.Input
+        ref={ref}
         data-slot="command-input"
         className={cn(
           "placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
@@ -72,14 +73,15 @@ function CommandInput({
       />
     </div>
   );
-}
+});
 
-function CommandList({
-  className,
-  ...props
-}: React.ComponentProps<typeof CommandPrimitive.List>) {
+const CommandList = React.forwardRef<
+  React.ElementRef<typeof CommandPrimitive.List>,
+  React.ComponentPropsWithoutRef<typeof CommandPrimitive.List>
+>(function CommandList({ className, ...props }, ref) {
   return (
     <CommandPrimitive.List
+      ref={ref}
       data-slot="command-list"
       className={cn(
         "max-h-[300px] scroll-py-1 overflow-x-hidden overflow-y-auto overscroll-behavior-contain",
@@ -88,7 +90,7 @@ function CommandList({
       {...props}
     />
   );
-}
+});
 
 function CommandEmpty({
   ...props

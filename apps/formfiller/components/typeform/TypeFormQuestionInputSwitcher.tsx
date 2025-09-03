@@ -4,9 +4,7 @@ import type { QuestionResponse } from "@/lib/types";
 import { Question } from "@formlink/schema";
 import {
   TypeFormTextInput,
-  UnifiedDatePicker,
   UnifiedFileUpload,
-  UnifiedLinearScale,
   UnifiedMultiSelect,
   UnifiedRating,
 } from "@formlink/ui";
@@ -14,6 +12,12 @@ import TypeFormAddress from "./TypeFormAddress";
 import TypeFormLikert from "./TypeFormLikert";
 import TypeFormRanking from "./TypeFormRanking";
 import TypeFormSingleSelect from "./TypeFormSingleSelect";
+// Use unified phone input with libphonenumber-js formatting/validation
+import { UnifiedPhoneInput } from "@formlink/ui";
+import { UnifiedCountrySelect } from "@formlink/ui";
+import { TypeFormLinearScale } from "./TypeFormLinearScale";
+import TypeFormDate from "./TypeFormDate";
+import { getPlaceholder } from "./utils/placeholders";
 
 // Local coercers (keep minimal and predictable)
 function toStringVal(v: QuestionResponse): string | null {
@@ -65,6 +69,8 @@ export interface TypeFormQuestionInputSwitcherProps {
   uploadedFile?: File | null;
   onFileSelect?: (file: File | null) => void;
   onNext?: () => void;
+  ariaDescribedBy?: string;
+  countryISO2?: string | null;
 }
 
 /**
@@ -84,6 +90,8 @@ export default function TypeFormQuestionInputSwitcher(
     uploadedFile,
     onFileSelect,
     onNext,
+    ariaDescribedBy,
+    countryISO2,
   } = props;
 
   const t = question.type.name as string;
@@ -93,16 +101,56 @@ export default function TypeFormQuestionInputSwitcher(
     const f = (question.type as any).format as string | undefined;
     const val = toStringVal(response);
 
-    // Temporary Phase 0 mapping:
-    // - tel: proper input type
-    // - country: fallback to text; will be replaced with CountrySelect in Phase 1
+    // Get the appropriate placeholder
+    const placeholder = getPlaceholder(
+      "text",
+      f,
+      (question as any).placeholder,
+    );
+
+    // Phase 1 specialized components for tel and country
+    if (f === "tel") {
+      return (
+        <UnifiedPhoneInput
+          mode="typeform"
+          value={val || ""}
+          onChange={(v: string) => onAnswer(v)}
+          onSubmit={onNext}
+          placeholder={placeholder}
+          required={Boolean((question as any).validations?.required?.value)}
+          ariaLabel={question.title}
+          ariaDescribedBy={ariaDescribedBy}
+          // Optional: align with any country default if available in schema
+          country={countryISO2 || (question as any).defaultCountry || undefined}
+          defaultCountry={(question as any).defaultCountry || undefined}
+        />
+      );
+    }
+
+    if (f === "country") {
+      return (
+        <UnifiedCountrySelect
+          mode="typeform"
+          value={val}
+          onChange={(v: string | null) => onAnswer(v || "")}
+          onSubmit={onNext}
+          placeholder={placeholder || "Select a country"}
+          required={Boolean((question as any).validations?.required?.value)}
+          ariaLabel={question.title}
+          ariaDescribedBy={ariaDescribedBy}
+          slim={false}
+        />
+      );
+    }
+
+    // All other text formats use TypeFormTextInput
     return (
       <TypeFormTextInput
         value={val}
         onChange={(v: string) => onAnswer(v)}
         onSubmit={onNext}
         type={f === "textarea" ? "text" : f || "text"}
-        placeholder={String((question as any).placeholder ?? "")}
+        placeholder={placeholder}
         required={Boolean((question as any).validations?.required?.value)}
         maxLength={(question as any).validations?.maxLength?.value}
         minLength={(question as any).validations?.minLength?.value}
@@ -183,10 +231,9 @@ export default function TypeFormQuestionInputSwitcher(
     const cfg = (question.type as any).config || {};
     const val = toNumberVal(response);
     return (
-      <UnifiedLinearScale
-        mode="typeform"
+      <TypeFormLinearScale
         value={val}
-        onChange={(n: number | null) => onAnswer(n as any)}
+        onChange={(n: number) => onAnswer(n as any)}
         onSubmit={onNext}
         config={{
           start: cfg.start ?? 1,
@@ -195,6 +242,9 @@ export default function TypeFormQuestionInputSwitcher(
           startLabel: cfg.startLabel,
           endLabel: cfg.endLabel,
         }}
+        required={Boolean((question as any).validations?.required?.value)}
+        ariaLabel={question.title}
+        ariaDescribedBy={ariaDescribedBy}
         showKeyboardHints
       />
     );
@@ -215,39 +265,18 @@ export default function TypeFormQuestionInputSwitcher(
     );
   }
 
-  // Date (Phase 0: single date via UnifiedDatePicker; dateRange deferred to Phase 1)
+  // Date (Phase 1: TypeFormDate wrapper for single and range)
   if (t === "date") {
     const format = (question.type as any).format as "date" | "dateRange";
-    if (format === "dateRange") {
-      // Temporary fallback: simple text input; will be replaced by TypeFormDate(range) in Phase 1
-      return (
-        <TypeFormTextInput
-          value={toStringVal(response)}
-          onChange={(v: string) => onAnswer(v)}
-          onSubmit={onNext}
-          type="text"
-          placeholder="YYYY-MM-DD to YYYY-MM-DD"
-          required={Boolean((question as any).validations?.required?.value)}
-          maxLength={undefined}
-          minLength={undefined}
-          pattern={undefined}
-          ariaLabel={question.title}
-          onValidate={undefined}
-        />
-      );
-    }
-    const dateVal = parseISODate(response);
     return (
-      <UnifiedDatePicker
-        mode="typeform"
-        value={dateVal}
-        onChange={(d: Date | null) =>
-          onAnswer(d ? d.toISOString().slice(0, 10) : "")
-        }
+      <TypeFormDate
+        value={toStringVal(response)}
+        onChange={(s: string) => onAnswer(s)}
         onSubmit={onNext}
-        className=""
-        minDate={undefined as unknown as Date}
-        maxDate={undefined as unknown as Date}
+        range={format === "dateRange"}
+        required={Boolean((question as any).validations?.required?.value)}
+        ariaLabel={question.title}
+        ariaDescribedBy={ariaDescribedBy}
       />
     );
   }

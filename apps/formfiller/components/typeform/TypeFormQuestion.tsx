@@ -24,6 +24,7 @@ interface TypeFormQuestionProps {
   onFileSelect?: (file: File | null) => void;
   onNext: () => void;
   questionNumber?: number;
+  countryISO2?: string | null;
 }
 
 export default function TypeFormQuestion({
@@ -35,6 +36,7 @@ export default function TypeFormQuestion({
   onFileSelect,
   onNext,
   questionNumber,
+  countryISO2,
 }: TypeFormQuestionProps) {
   const isMobile = useIsMobile();
   const [touched, setTouched] = useState(false);
@@ -258,11 +260,22 @@ export default function TypeFormQuestion({
               </div>
             )}
             <div className="space-y-2 flex-1">
-              <h2 className="text-lg md:text-2xl lg:text-3xl font-medium text-foreground">
+              <h2
+                className="text-lg md:text-2xl lg:text-3xl font-medium text-foreground"
+                id={`question-title-${question.id}`}
+              >
                 {question.title}
+                {(question as any).validations?.required?.value && (
+                  <span className="text-destructive ml-1">*</span>
+                )}
               </h2>
               {question.description && (
-                <p className="text-muted-foreground">{question.description}</p>
+                <p
+                  className="text-muted-foreground"
+                  id={`question-description-${question.id}`}
+                >
+                  {question.description}
+                </p>
               )}
             </div>
           </div>
@@ -283,8 +296,31 @@ export default function TypeFormQuestion({
               uploadedFile={uploadedFile}
               onFileSelect={onFileSelect}
               onNext={onNext}
+              countryISO2={countryISO2}
+              ariaDescribedBy={
+                [
+                  question.description
+                    ? `question-description-${question.id}`
+                    : null,
+                  errorMessage ? `question-error-${question.id}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
             />
           </div>
+
+          {/* Error region - aria-live for screen readers */}
+          {errorMessage && (
+            <div
+              id={`question-error-${question.id}`}
+              className="mt-2 text-sm text-destructive"
+              aria-live="polite"
+              role="alert"
+            >
+              {errorMessage}
+            </div>
+          )}
         </div>
 
         {/* Continue button always visible on desktop; disabled when invalid */}
