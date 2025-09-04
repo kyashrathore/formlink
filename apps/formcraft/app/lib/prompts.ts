@@ -768,6 +768,7 @@ The schema MUST strictly conform to the structure defined by \`@formlink/schema\
 - Question Text: "{{questionTitle}}" (This is the exact question to be asked)
 - Question Type: {{questionType}}
 - Question Position: {{questionOrder}} of {{totalQuestions}} (e.g., "Question 3 of 10")
+- Journey Script (markdown): "{{journeyScript}}" (may include a <branching-logic> section describing conditional flow)
 
 ## 🎯 YOUR MISSION
 
@@ -816,6 +817,7 @@ Transform the simple question text into a rich, thoughtful, and complete questio
 - **Determine if \`required\`**: Questions in quizzes and critical form fields should generally be required. Use your judgment based on the form's purpose.
 - **Add a \`description\`**: Add a helpful description if the \`questionTitle\` might be ambiguous.
 - **Include \`message\` strings**: Provide user-friendly messages for any \`validations\` you apply.
+- **Set \`mightBranchOffNext\`**: If, according to the provided Journey Script's <branching-logic> or your analysis of the intended flow, this question's answer can change which question/section appears next (i.e., conditional progression), set \`mightBranchOffNext: true\`. Otherwise omit the field or set it to false.
 
 **✅ VALIDATION CHECKLIST - Verify before generating:**
 
@@ -847,6 +849,7 @@ Transform the simple question text into a rich, thoughtful, and complete questio
 10. \`linearScaleConfig\`: (object, required if \`questionType\` is "linearScale").
 11. \`defaultValue\`: (optional) Can be string, number, array of strings, etc.
 12. \`id\`: (string) Generate an ID in the format q{questionOrder}_keyword1_keyword2 by extracting the most important keywords from the \`{{questionTitle}}\` (e.g., for question 3, 'What is your favorite color?' becomes 'q3_favorite_color').
+13. \`mightBranchOffNext\`: (optional boolean) Set to true only if this question participates in conditional branching as per the Journey Script.
 
 **Fields to OMIT:**
 - \`readableValidations\`, \`readableConditionalLogic\`, \`readableRankingConfig\`, \`readableRatingConfig\`, \`conditionalLogic\`.

@@ -1,22 +1,11 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import { Question } from "@formlink/schema";
+import { decideNextQuestion } from "./_shared";
 
-// Initialize OpenRouter provider
-const apiKey = process.env.OPENROUTER_API_KEY || "";
-if (!apiKey) {
-  console.warn("OPENROUTER_API_KEY not found in environment");
-}
-
-const openRouterProvider = createOpenRouter({
-  apiKey,
-});
-
-// Use a fast, reliable model for branching decisions
-const MODEL = openRouterProvider("google/gemini-2.5-flash");
+// Model provider configured in shared helper
 
 // Request schema
 const BranchingRequestSchema = z.object({
@@ -82,75 +71,20 @@ export async function POST(req: Request) {
     // Extract question IDs for validation
     const validQuestionIds = questions.map((q: Question) => q.id);
 
-    // Build context for AI (commented out to avoid unused variable warning)
-    // const context = {
-    //   journeyScript,
-    //   answerHistory,
-    //   validQuestionIds,
-    //   currentQuestionId,
-    //   questionsCount: questions.length,
-    // };
-
-    // Generate AI response
-    const { text: aiResponse } = await generateText({
-      model: MODEL,
-      system: BRANCHING_SYSTEM_PROMPT,
-      prompt: `
-JOURNEY SCRIPT:
-${journeyScript}
-
-CURRENT QUESTION ID: ${currentQuestionId}
-
-USER ANSWER HISTORY:
-${JSON.stringify(answerHistory, null, 2)}
-
-VALID QUESTION IDS:
-${validQuestionIds.join(", ")}
-
-INSTRUCTIONS:
-Based on the branching logic in the journey script and the user's answer history, determine the next question ID to show. The user just completed question "${currentQuestionId}".
-
-Return your response as valid JSON with the format:
-{"nextQuestionId": "question_id_here", "reasoning": "brief explanation"}
-`,
+    // Delegate to shared helper (includes linear fallback)
+    const nextQuestionId = await decideNextQuestion({
+      journeyScript,
+      answerHistory,
+      questions,
+      currentQuestionId,
     });
 
-    // Parse AI response
-    let branchingDecision;
-    try {
-      branchingDecision = JSON.parse(aiResponse);
-    } catch {
-      // Fallback: try to extract question ID from text
-      const questionIdMatch = aiResponse.match(/["']([^"']+)["']/);
-      if (
-        questionIdMatch &&
-        questionIdMatch[1] &&
-        validQuestionIds.includes(questionIdMatch[1])
-      ) {
-        branchingDecision = { nextQuestionId: questionIdMatch[1] };
-      } else {
-        throw new Error("Could not parse AI response");
-      }
-    }
-
-    // Validate AI response
-    const responseValidation =
-      BranchingResponseSchema.safeParse(branchingDecision);
-    if (!responseValidation.success) {
-      return NextResponse.json(
-        { error: "AI returned invalid response format" },
-        { status: 500 },
-      );
-    }
-
-    const { nextQuestionId, reasoningText } = responseValidation.data;
-
     // Validate question ID exists
-    if (!validQuestionIds.includes(nextQuestionId)) {
+    if (!nextQuestionId || !validQuestionIds.includes(nextQuestionId)) {
       return NextResponse.json(
         {
           error: "AI returned invalid question ID",
-          invalidId: nextQuestionId,
+          invalidId: nextQuestionId || null,
           validIds: validQuestionIds,
         },
         { status: 500 },
@@ -160,7 +94,7 @@ Return your response as valid JSON with the format:
     // Return successful response
     return NextResponse.json({
       nextQuestionId,
-      reasoningText,
+      reasoningText: undefined,
       success: true,
     });
   } catch (error) {

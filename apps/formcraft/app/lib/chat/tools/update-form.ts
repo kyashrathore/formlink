@@ -111,5 +111,8 @@ async function processFormUpdate(
     success,
     formId: targetFormId,
     message: success ? "Form updated successfully" : "Form update failed",
+    summary: success
+      ? { hint: "Open the editor to review changes", formId: targetFormId }
+      : undefined,
   }
 }

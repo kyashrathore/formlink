@@ -354,7 +354,11 @@ export default function ClassicFormView({
           )
           .reverse()[0];
 
-        if (lastAnsweredQuestion?.mightBranchOffNext) {
+        if (
+          lastAnsweredQuestion?.mightBranchOffNext &&
+          (formSchema.settings as any)?.branching?.enabled &&
+          (formSchema.settings as any)?.journeyScript
+        ) {
           const branchingSucceeded =
             await handleAIBranching(lastAnsweredQuestion);
           if (branchingSucceeded) {

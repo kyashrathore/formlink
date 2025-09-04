@@ -1,6 +1,5 @@
 "use client";
 
-import { useTypeFormOverlay } from "@formlink/ui";
 import { useCallback, useEffect } from "react";
 import {
   UseTypeFormKeyboardProps,
@@ -19,7 +18,7 @@ export function useTypeFormKeyboard({
   getCurrentResponse,
   isCurrentQuestionValid,
 }: UseTypeFormKeyboardProps) {
-  const { isOverlayOpen } = useTypeFormOverlay();
+  const isOverlayOpen = false;
 
   const handleScaleSelection = useCallback(
     (num: number) => {

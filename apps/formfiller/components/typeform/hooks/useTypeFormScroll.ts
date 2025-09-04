@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useTypeFormOverlay } from "@formlink/ui";
 
 interface UseTypeFormScrollProps {
   onNext: () => void;
@@ -14,7 +13,7 @@ export function useTypeFormScroll({
   onPrevious,
   enabled = true,
 }: UseTypeFormScrollProps) {
-  const { isOverlayOpen } = useTypeFormOverlay();
+  const isOverlayOpen = false;
   const lastScrollTime = useRef(0);
   const lastNavigationTime = useRef(0);
   const scrollAccumulator = useRef(0);

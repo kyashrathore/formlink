@@ -108,6 +108,7 @@ Post-implementation notes (navigation + auto-advance):
 - Back navigation: Always allowed; uses a navigation stack to respect AI branching and skips.
 - Scroll/swipe: Wheel delta with threshold + cooldown and swipe up/down are wired to next/previous and disabled when overlays are open.
 - Keyboard: Enter advances when valid; 0–9 map to rating/linear; A–Z map to choices. ArrowUp/ArrowDown are currently logged but not bound; either implement or update the help modal.
+ - Branching triggers: Typeform and Classic call the Branching API only when both are true: (settings.branching.enabled && settings.journeyScript present) AND the current question has mightBranchOffNext = true. Chat mode uses an updated assistant prompt to respect branching rules directly from FORM_CONTEXT.journeyScript and question.mightBranchOffNext.
 
 ### Phase 1 — Typeform wrappers (compose unified primitives, add Typeform chrome)
 

@@ -79,6 +79,7 @@ const UpdateQuestionActionSchema = z.object({
     .preprocess(
       (val) => val,
       z.union([
+        QuestionSchema.partial(),
         ChoiceQuestionSchema.partial(),
         RankingQuestionSchema.partial(),
         RatingQuestionSchema.partial(),

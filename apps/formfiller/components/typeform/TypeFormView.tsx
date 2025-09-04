@@ -3,12 +3,7 @@
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { QuestionResponse } from "@/lib/types";
 import { Form, getQuestionTypeName, Question } from "@formlink/schema";
-import {
-  CompletionScreen,
-  FormModeProvider,
-  IntroScreen,
-  TypeFormOverlayProvider,
-} from "@formlink/ui";
+import { CompletionScreen, FormModeProvider, IntroScreen } from "@formlink/ui";
 import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTypeFormKeyboard } from "./hooks/useTypeFormKeyboard";
@@ -155,7 +150,7 @@ export default function TypeFormView({
 
   const handleNextWithDirection = useCallback(async () => {
     const currentQ = getCurrentQuestion(activeQuestionIndex);
-    const currentResponse = questionResponses[currentQ?.id || ""];
+    const currentResponse = questionResponses[currentQ?.id || ""] ?? null;
     const valid = isQuestionValid(currentQ, currentResponse);
 
     setDirection(1); // Going forwards
@@ -165,7 +160,11 @@ export default function TypeFormView({
     }
 
     // Check if current question should trigger AI branching
-    if (currentQ?.mightBranchOffNext && formSchema.settings?.journeyScript) {
+    if (
+      currentQ?.mightBranchOffNext &&
+      formSchema.settings?.branching?.enabled &&
+      formSchema.settings?.journeyScript
+    ) {
       const branchingSucceeded = await handleAIBranching(currentQ);
       if (branchingSucceeded) return; // AI handled the navigation
     }
@@ -286,7 +285,7 @@ export default function TypeFormView({
       questionResponses[questionId] ?? null,
     isCurrentQuestionValid: isQuestionValid(
       currentQuestion,
-      questionResponses[currentQuestion?.id || ""],
+      (currentQuestion && questionResponses[currentQuestion.id]) ?? null,
     ),
   });
 
@@ -391,7 +390,6 @@ export default function TypeFormView({
       formSettings={{ defaultMode: "typeform" }}
       urlSearchParams={{}}
     >
-      <TypeFormOverlayProvider>
         {activeQuestionIndex >= 0 && !isCompleted && (
           <TypeFormProgress
             progress={progress}
@@ -418,7 +416,6 @@ export default function TypeFormView({
             onOpenChange={setShowKeyboardHelp}
           />
         </TypeFormLayout>
-      </TypeFormOverlayProvider>
     </FormModeProvider>
   );
 }

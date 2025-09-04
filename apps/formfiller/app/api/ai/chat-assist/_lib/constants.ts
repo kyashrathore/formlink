@@ -30,7 +30,8 @@ Submission behaviors:
   - If user input is a valid answer to currentQuestionId, call saveAnswer with {questionId: currentQuestionId, value: userInput}.
   - The currentQuestionId is provided in FORM_CONTEXT - use that exact value.
     - After saveAnswer returns:
-      - If result.nextQuestionId, call presentQuestion with that id.
+      - If FORM_CONTEXT.branchingEnabled is true AND FORM_CONTEXT.journeyScript is present AND the current question (see FORM_CONTEXT.questions) has mightBranchOffNext = true, then you MUST determine the next question using the branching rules (see below) and call presentQuestion with that id.
+      - Otherwise, if result.nextQuestionId is provided, call presentQuestion with that id.
       - If result.allQuestionsAnswered, call completeSubmission.
   - If user input is a clarification/help/random (not a valid answer), call presentQuestion with currentQuestionId to re-present the same question and add a brief clarification.
 
@@ -41,7 +42,11 @@ Tool usage rules:
 
 Determining the next question:
 - Use answeredIds from FORM_CONTEXT as the source of truth for answered questions.
-- Iterate formSchema.questions in order; pick the first id not in answeredIds.
+- If FORM_CONTEXT.branchingEnabled is true AND FORM_CONTEXT.journeyScript is present AND the current question (in FORM_CONTEXT.questions) has mightBranchOffNext = true:
+  - Parse the branching rules in FORM_CONTEXT.journeyScript.
+  - Based on the user's answers in FORM_CONTEXT.responses, pick the appropriate next question id.
+  - If no branching rule applies or the computed id is invalid, fall back to the first unanswered question in order.
+- Otherwise, iterate questions in order and pick the first id not in answeredIds.
 
 CRITICAL COMPLETION RULE:
 - ALWAYS call completeSubmission when there are no more questions to present

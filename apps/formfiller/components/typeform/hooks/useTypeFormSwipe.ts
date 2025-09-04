@@ -1,6 +1,5 @@
 "use client";
 
-import { useTypeFormOverlay } from "@formlink/ui";
 import { useEffect, useRef } from "react";
 
 interface UseTypeFormSwipeProps {
@@ -14,7 +13,7 @@ export function useTypeFormSwipe({
   onPrevious,
   enabled = true,
 }: UseTypeFormSwipeProps) {
-  const { isOverlayOpen } = useTypeFormOverlay();
+  const isOverlayOpen = false;
   const touchStartY = useRef<number | null>(null);
   const touchEndY = useRef<number | null>(null);
 

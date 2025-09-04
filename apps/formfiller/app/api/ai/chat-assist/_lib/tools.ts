@@ -148,27 +148,32 @@ export function createAITools(context: ChatContext) {
 
                 trackServerEvent("tool.save_answer.success", { questionId });
 
-                // Find the next unanswered question
+                // Determine next question: prefer branching when enabled
                 const updatedResponses = {
                   ...context.responses,
                   [effectiveQuestionId]: valueToPersist as QuestionResponse,
-                };
-                const nextQuestion = context.formSchema?.questions.find(
+                } as Record<string, QuestionResponse>;
+
+                // Let the assistant compute branching when needed via prompt.
+                // We only provide the next unanswered as a convenience fallback.
+                const next = context.formSchema?.questions.find(
                   (q: Question) =>
-                    !Object.prototype.hasOwnProperty.call(
-                      updatedResponses,
-                      q.id,
-                    ),
+                    !Object.prototype.hasOwnProperty.call(updatedResponses, q.id),
+                );
+                const nextQuestionId: string | null = next?.id || null;
+
+                const nextQuestion = context.formSchema?.questions.find(
+                  (q: Question) => q.id === nextQuestionId,
                 );
 
                 return {
                   saved: true,
                   questionId: effectiveQuestionId,
                   value: valueToPersist,
-                  nextQuestionId: nextQuestion?.id || null,
+                  nextQuestionId,
                   nextQuestionTitle: nextQuestion?.title || null,
-                  allQuestionsAnswered: !nextQuestion,
-                  message: `Answer saved for ${effectiveQuestionId}. ${nextQuestion ? `Next question is: ${nextQuestion.id}` : "All questions answered."}`,
+                  allQuestionsAnswered: !nextQuestionId,
+                  message: `Answer saved for ${effectiveQuestionId}. ${nextQuestionId ? `Next question is: ${nextQuestionId}` : "All questions answered."}`,
                 };
               }
 

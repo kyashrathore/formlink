@@ -399,12 +399,15 @@ export async function POST(req: Request) {
         answeredIds: Object.keys(effectiveResponses || {}),
         justSavedAnswer: justSavedAnswer ?? null,
         responses: effectiveResponses || {},
+        branchingEnabled: Boolean(formSchema.settings?.branching?.enabled),
+        journeyScript: String(formSchema.settings?.journeyScript || ""),
         questions: Array.isArray(formSchema?.questions)
           ? formSchema.questions.map((q: any) => ({
               id: q.id,
               title: q.title ?? null,
               type: q.type?.name ?? null,
               required: !!q.validations?.required,
+              mightBranchOffNext: Boolean(q.mightBranchOffNext),
             }))
           : [],
       };

@@ -13,8 +13,7 @@ import TypeFormLikert from "./TypeFormLikert";
 import TypeFormRanking from "./TypeFormRanking";
 import TypeFormSingleSelect from "./TypeFormSingleSelect";
 // Use unified phone input with libphonenumber-js formatting/validation
-import { UnifiedPhoneInput } from "@formlink/ui";
-import { UnifiedCountrySelect } from "@formlink/ui";
+// Temporarily avoid specialized phone/country inputs; use text input variants
 import { TypeFormLinearScale } from "./TypeFormLinearScale";
 import TypeFormDate from "./TypeFormDate";
 import { getPlaceholder } from "./utils/placeholders";
@@ -113,34 +112,28 @@ export default function TypeFormQuestionInputSwitcher(
     // Phase 1 specialized components for tel and country
     if (f === "tel") {
       return (
-        <UnifiedPhoneInput
-          mode="typeform"
-          value={val || ""}
-          onChange={(v: string) => onAnswer(v)}
+        <TypeFormTextInput
+          value={val}
+          onChange={(v) => onAnswer(v)}
           onSubmit={onNext}
+          type="tel"
           placeholder={placeholder}
           required={Boolean((question as any).validations?.required?.value)}
           ariaLabel={question.title}
-          ariaDescribedBy={ariaDescribedBy}
-          // Optional: align with any country default if available in schema
-          country={countryISO2 || (question as any).defaultCountry || undefined}
-          defaultCountry={(question as any).defaultCountry || undefined}
         />
       );
     }
 
     if (f === "country") {
       return (
-        <UnifiedCountrySelect
-          mode="typeform"
+        <TypeFormTextInput
           value={val}
-          onChange={(v: string | null) => onAnswer(v || "")}
+          onChange={(v) => onAnswer(v)}
           onSubmit={onNext}
-          placeholder={placeholder || "Select a country"}
+          type="text"
+          placeholder={placeholder || "Enter country"}
           required={Boolean((question as any).validations?.required?.value)}
           ariaLabel={question.title}
-          ariaDescribedBy={ariaDescribedBy}
-          slim={false}
         />
       );
     }
@@ -159,7 +152,6 @@ export default function TypeFormQuestionInputSwitcher(
         pattern={(question as any).validations?.pattern?.value}
         ariaLabel={question.title}
         onValidate={undefined}
-        isInvalid={isInvalid}
       />
     );
   }
