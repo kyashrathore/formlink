@@ -66,6 +66,19 @@ function FormPageContent({
     getProgress,
   } = useAppFormStore();
 
+  // Initialize wrapper to seed query params and testmode for Typeform/Classic
+  const handleInitialize = React.useCallback(
+    async (schema: Form, id?: string) => {
+      await initialize(
+        schema,
+        id,
+        (queryDataForForm as any) || {},
+        isTestSubmission,
+      );
+    },
+    [initialize, isTestSubmission, queryDataForForm],
+  );
+
   const handleStartQuiz = () => {
     // Business logic for starting quiz (if any additional logic needed)
   };
@@ -148,7 +161,7 @@ function FormPageContent({
         questionResponses={questionResponses}
         isCompleted={isCompleted}
         // Callbacks up: business actions
-        onInitialize={initialize}
+        onInitialize={handleInitialize}
         onStartQuiz={handleStartQuiz}
         onRestart={restart}
         onAnswerChange={handleAnswerChange}
@@ -172,7 +185,7 @@ function FormPageContent({
       questionResponses={questionResponses}
       isCompleted={isCompleted}
       // Callbacks up: business actions
-      onInitialize={initialize}
+      onInitialize={handleInitialize}
       onStartQuiz={handleStartQuiz}
       onRestart={restart}
       onAnswerChange={handleAnswerChange}

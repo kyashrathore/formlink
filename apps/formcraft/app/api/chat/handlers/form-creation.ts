@@ -62,9 +62,11 @@ export async function handleChatRequest(
     await chatDB.saveMessage(currentFormId, userId, lastUserMessage)
   }
 
+  let writerRef: any = null
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
       try {
+        writerRef = writer as any
         chatDB.writeStreamEvent(writer as any, "chat_initialized")
 
         const toolContext = {
@@ -129,7 +131,9 @@ export async function handleChatRequest(
           })
         }
       }
-      chatDB.writeStreamEvent((stream as any).writer, "chat_completed")
+      if (writerRef && typeof writerRef.write === "function") {
+        chatDB.writeStreamEvent(writerRef, "chat_completed")
+      }
     },
     onError: (error) => {
       logger.error("Error in chat stream:", { error })

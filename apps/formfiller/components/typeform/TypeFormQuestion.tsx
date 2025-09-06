@@ -6,7 +6,7 @@ import type { FileData, QuestionResponse } from "@/lib/types";
 import { fileDataToFile } from "@/lib/utils";
 import { Question, getQuestionTypeName } from "@formlink/schema";
 import { Button } from "@formlink/ui";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import TypeFormQuestionInputSwitcher from "./TypeFormQuestionInputSwitcher";
@@ -26,6 +26,7 @@ interface TypeFormQuestionProps {
   onNext: () => void;
   questionNumber?: number;
   countryISO2?: string | null;
+  isLoadingNext?: boolean;
 }
 
 export default function TypeFormQuestion({
@@ -38,6 +39,7 @@ export default function TypeFormQuestion({
   onNext,
   questionNumber,
   countryISO2,
+  isLoadingNext = false,
 }: TypeFormQuestionProps) {
   const isMobile = useIsMobile();
   const [touched, setTouched] = useState(false);
@@ -248,10 +250,13 @@ export default function TypeFormQuestion({
               variant="default"
               size="lg"
               className="group mr-4"
-              disabled={!isValid}
+              disabled={!isValid || isLoadingNext}
             >
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              <span>Continue</span>
+              {!isLoadingNext && (
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+              )}
+              {isLoadingNext && <Loader size="sm" className="ml-2" />}
             </Button>
             <div className="text-sm text-muted-foreground">
               press{" "}

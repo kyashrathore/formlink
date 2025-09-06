@@ -1,16 +1,22 @@
 "use client";
 
-import React from "react";
-import { Button } from "@formlink/ui";
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from "lucide-react";
-import { motion } from "motion/react";
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { Button } from "@formlink/ui";
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  Loader,
+} from "lucide-react";
+import { motion } from "motion/react";
 
 interface TypeFormNavigationProps {
   onPrevious?: () => void;
   onNext?: () => void;
   canGoPrevious?: boolean;
   canGoNext?: boolean;
+  isLoadingNext?: boolean;
 }
 
 export default function TypeFormNavigation({
@@ -18,6 +24,7 @@ export default function TypeFormNavigation({
   onNext,
   canGoPrevious = false,
   canGoNext = false,
+  isLoadingNext = false,
 }: TypeFormNavigationProps) {
   const isMobile = useIsMobile();
 
@@ -45,12 +52,15 @@ export default function TypeFormNavigation({
           {/* Large continue button taking remaining space */}
           <Button
             onClick={onNext}
-            disabled={!canGoNext}
+            disabled={!canGoNext || isLoadingNext}
             size="lg"
             className="flex-1 h-12 group"
           >
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <span>Continue</span>
+            {!isLoadingNext && (
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            )}
+            {isLoadingNext && <Loader size="sm" className="ml-2" />}
           </Button>
         </div>
       </motion.div>
@@ -79,7 +89,7 @@ export default function TypeFormNavigation({
         variant="outline"
         size="icon"
         onClick={onNext}
-        disabled={!canGoNext}
+        disabled={!canGoNext || isLoadingNext}
         className="h-12 w-12"
       >
         <ArrowDown className="h-5 w-5" />

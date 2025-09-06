@@ -16,6 +16,7 @@ import TypeFormProgress from "./TypeFormProgress";
 import TypeFormQuestion from "./TypeFormQuestion";
 import TypeFormTransition from "./TypeFormTransition";
 import { validateTextValue } from "./utils/validation";
+import { useRedirect } from "@/hooks/useRedirect";
 
 interface TypeFormViewProps {
   formSchema: Form;
@@ -60,6 +61,16 @@ export default function TypeFormView({
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [direction, setDirection] = useState(1);
   const [, setIsLoading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const navigatingRef = useRef(false);
+  const beginNav = () => {
+    navigatingRef.current = true;
+    setIsNavigating(true);
+  };
+  const endNav = () => {
+    navigatingRef.current = false;
+    setIsNavigating(false);
+  };
 
   // Local UI state (previously from useFormUIStore)
   const [activeQuestionIndex, setActiveQuestionIndex] = useState(-1); // -1 for intro screen
@@ -159,6 +170,10 @@ export default function TypeFormView({
       return;
     }
 
+    // Prevent duplicate navigations while in-flight
+    if (navigatingRef.current) return;
+    beginNav();
+
     // Check if current question should trigger AI branching
     if (
       currentQ?.mightBranchOffNext &&
@@ -166,7 +181,10 @@ export default function TypeFormView({
       formSchema.settings?.journeyScript
     ) {
       const branchingSucceeded = await handleAIBranching(currentQ);
-      if (branchingSucceeded) return; // AI handled the navigation
+      if (branchingSucceeded) {
+        endNav();
+        return; // AI handled the navigation
+      }
     }
 
     // Default navigation logic
@@ -176,6 +194,7 @@ export default function TypeFormView({
       // Add to navigation history for proper backward navigation
       setNavigationHistory((prev) => [...prev, nextIndex]);
       activatedAtRef.current = Date.now();
+      endNav();
     } else {
       // No more questions, submit form to API
       const success = await onSubmitForm();
@@ -185,6 +204,7 @@ export default function TypeFormView({
       } else {
         console.error("Failed to submit form");
       }
+      endNav();
     }
   }, [
     activeQuestionIndex,
@@ -301,7 +321,88 @@ export default function TypeFormView({
 
   const handleStartQuiz = () => {
     onStartQuiz();
-    handleNextWithDirection();
+    // Skip to next unanswered question for resume-friendly start
+    try {
+      const questions = formSchema?.questions || [];
+      const findIsAnswered = (q: Question, resp: QuestionResponse | null) => {
+        if (resp === null || typeof resp === "undefined") return false;
+        const t = (q.type as any).name as string;
+        switch (t) {
+          case "text":
+            return resp !== "";
+          case "multipleChoice":
+          case "ranking":
+            try {
+              if (Array.isArray(resp)) return resp.length > 0;
+              if (typeof resp === "string") {
+                const arr = JSON.parse(resp);
+                return Array.isArray(arr) && arr.length > 0;
+              }
+              return false;
+            } catch {
+              return false;
+            }
+          case "singleChoice":
+          case "likertScale":
+          case "date":
+            return resp !== "";
+          case "rating":
+          case "linearScale":
+            return resp !== null && typeof resp !== "undefined" && resp !== 0;
+          case "fileUpload":
+            return typeof resp === "string" && resp.length > 0;
+          case "address": {
+            let obj = resp as any;
+            if (typeof obj === "string") {
+              try {
+                obj = JSON.parse(obj);
+              } catch {
+                return false;
+              }
+            }
+            if (!obj || typeof obj !== "object") return false;
+            const required = [
+              "street1",
+              "city",
+              "stateProvince",
+              "postalCode",
+              "country",
+            ];
+            return required.every((k) => Boolean(obj[k]));
+          }
+          default:
+            return resp !== "";
+        }
+      };
+
+      let targetIndex = -1;
+      for (let i = 0; i < questions.length; i++) {
+        const q = questions[i]!;
+        const resp = questionResponses[q.id] ?? null;
+        if (!findIsAnswered(q, resp)) {
+          targetIndex = i;
+          break;
+        }
+      }
+
+      if (targetIndex >= 0) {
+        setActiveQuestionIndex(targetIndex);
+        setNavigationHistory([-1, targetIndex]);
+        activatedAtRef.current = Date.now();
+      } else {
+        // Everything answered, submit immediately
+        (async () => {
+          const ok = await onSubmitForm();
+          if (ok) {
+            setShowConfetti(true);
+            setActiveQuestionIndex(formSchema.questions.length);
+          }
+        })();
+      }
+    } catch {
+      // Fallback to normal next
+      handleNextWithDirection();
+    }
   };
 
   const handleRestart = async () => {
@@ -374,6 +475,7 @@ export default function TypeFormView({
             onNext={handleNextWithDirection}
             questionNumber={activeQuestionIndex + 1}
             countryISO2={selectedCountryISO2}
+            isLoadingNext={isNavigating}
           />
         </TypeFormTransition>
       );
@@ -384,38 +486,48 @@ export default function TypeFormView({
 
   const progress = getProgress(activeQuestionIndex);
 
+  // Redirect on submission (Typeform)
+  const redirectUrl =
+    typeof formSchema?.settings?.redirectOnSubmissionUrl === "string"
+      ? (formSchema.settings!.redirectOnSubmissionUrl as string)
+      : undefined;
+  useRedirect(!!isCompleted, redirectUrl);
+
   return (
     <FormModeProvider
       defaultMode="typeform"
       formSettings={{ defaultMode: "typeform" }}
       urlSearchParams={{}}
     >
-        {activeQuestionIndex >= 0 && !isCompleted && (
-          <TypeFormProgress
-            progress={progress}
-            current={activeQuestionIndex + 1}
-            total={formSchema.questions.length}
-          />
-        )}
-        <TypeFormLayout>
-          <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
+      {activeQuestionIndex >= 0 && !isCompleted && (
+        <TypeFormProgress
+          progress={progress}
+          current={activeQuestionIndex + 1}
+          total={formSchema.questions.length}
+        />
+      )}
+      <TypeFormLayout>
+        <AnimatePresence mode="wait">{renderContent()}</AnimatePresence>
 
-          {activeQuestionIndex >= 0 && !isCompleted && (
-            <TypeFormNavigation
-              onPrevious={handlePrevious}
-              onNext={handleNextWithDirection}
-              canGoPrevious={activeQuestionIndex > 0}
-              canGoNext={isQuestionValid(
+        {activeQuestionIndex >= 0 && !isCompleted && (
+          <TypeFormNavigation
+            onPrevious={handlePrevious}
+            onNext={handleNextWithDirection}
+            canGoPrevious={activeQuestionIndex > 0 && !isNavigating}
+            canGoNext={
+              isQuestionValid(
                 currentQuestion,
                 questionResponses[currentQuestion?.id || ""],
-              )}
-            />
-          )}
-          <KeyboardShortcutModal
-            open={showKeyboardHelp}
-            onOpenChange={setShowKeyboardHelp}
+              ) && !isNavigating
+            }
+            isLoadingNext={isNavigating}
           />
-        </TypeFormLayout>
+        )}
+        <KeyboardShortcutModal
+          open={showKeyboardHelp}
+          onOpenChange={setShowKeyboardHelp}
+        />
+      </TypeFormLayout>
     </FormModeProvider>
   );
 }

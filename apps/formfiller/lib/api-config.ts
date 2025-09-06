@@ -101,16 +101,68 @@ export const apiServices = {
     formId: string,
     payload: SaveAnswersRequest,
   ): Promise<SaveAnswersResponse> => {
+    // Transform legacy payload shape to server API contract
+    // Server expects: SaveAnswersRequestBody
+    const allResponses: Record<string, any> = Array.isArray(payload.answers)
+      ? payload.answers.reduce<Record<string, any>>((acc, cur) => {
+          if (cur && typeof cur.questionId === "string") {
+            acc[cur.questionId] = cur.value as any;
+          }
+          return acc;
+        }, {})
+      : {};
+
+    const body = {
+      submissionId: payload.submissionId,
+      formVersionId: payload.formVersionId,
+      submissionStatus: payload.status,
+      testmode: payload.isTestSubmission,
+      allResponses,
+    };
+
     const response = await fetch(apiConfig.getSaveAnswersUrl(formId), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
       throw new Error("Failed to save answers.");
     }
 
+    return response.json();
+  },
+
+  /**
+   * Save a single answer (partial save)
+   */
+  savePartialAnswer: async (
+    formId: string,
+    body: {
+      submissionId: string;
+      formVersionId: string;
+      questionId: string;
+      answerValue: any;
+      submissionStatus?: string; // defaults to in_progress
+      testmode?: boolean;
+    },
+  ): Promise<{ success: boolean; partial: boolean }> => {
+    const response = await fetch(apiConfig.getSaveAnswersUrl(formId), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        submissionId: body.submissionId,
+        formVersionId: body.formVersionId,
+        isPartial: true,
+        questionId: body.questionId,
+        answerValue: body.answerValue,
+        submissionStatus: body.submissionStatus ?? "in_progress",
+        testmode: body.testmode ?? false,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error("Failed to save partial answer.");
+    }
     return response.json();
   },
 };

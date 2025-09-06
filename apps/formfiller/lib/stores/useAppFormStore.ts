@@ -26,8 +26,24 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
   (set, get) => ({
     ...initialAppState,
 
-    initialize: async (schema: Form, id?: string) => {
-      const submissionId = uuidv4();
+    initialize: async (
+      schema: Form,
+      id?: string,
+      initialData?: Record<string, QuestionResponse>,
+      isTestSubmission?: boolean,
+    ) => {
+      const storageKey = id ? `formlink:typeform:${id}` : undefined;
+      let persisted: { submissionId?: string; questionResponses?: any } | null =
+        null;
+      try {
+        if (storageKey && typeof window !== "undefined") {
+          const raw = localStorage.getItem(storageKey);
+          if (raw) persisted = JSON.parse(raw);
+        }
+      } catch {}
+
+      const submissionId =
+        (persisted?.submissionId as string | undefined) || uuidv4();
       const allQuestions = getAllQuestions(schema);
 
       set({
@@ -35,24 +51,43 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
         formId: id,
         submissionId: submissionId,
         questions: allQuestions,
-        questionResponses: {},
+        questionResponses: {
+          ...(initialData || {}),
+          ...(persisted?.questionResponses || {}),
+        },
         isCompleted: false,
       });
 
-      // Create the submission record in the database
+      // Create or upsert the submission record in the database
       if (id) {
         try {
           await apiServices.saveAnswers(id, {
             submissionId: submissionId,
             answers: [],
             formVersionId: schema.version_id,
-            isTestSubmission: false,
+            isTestSubmission: !!isTestSubmission,
             status: "in_progress",
           });
         } catch (error) {
           console.error("Failed to create initial submission record:", error);
         }
       }
+
+      // Persist to localStorage for refresh resume
+      try {
+        if (storageKey && typeof window !== "undefined") {
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({
+              submissionId,
+              questionResponses: {
+                ...(initialData || {}),
+                ...(persisted?.questionResponses || {}),
+              },
+            }),
+          );
+        }
+      } catch {}
     },
 
     restart: async () => {
@@ -66,17 +101,64 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
 
       // Re-initialize with fresh data
       if (formSchema && formId) {
+        try {
+          if (typeof window !== "undefined") {
+            localStorage.removeItem(`formlink:typeform:${formId}`);
+          }
+        } catch {}
         await get().initialize(formSchema, formId);
       }
     },
 
     setQuestionResponse: (questionId: string, value: QuestionResponse) => {
-      set((state) => ({
-        questionResponses: {
+      set((state) => {
+        const updatedResponses = {
           ...state.questionResponses,
           [questionId]: value,
-        },
-      }));
+        };
+
+        // Persist updated responses to localStorage
+        try {
+          const storageKey = state.formId
+            ? `formlink:typeform:${state.formId}`
+            : undefined;
+          if (storageKey && typeof window !== "undefined") {
+            const raw = localStorage.getItem(storageKey);
+            const persisted = raw ? JSON.parse(raw) : {};
+            localStorage.setItem(
+              storageKey,
+              JSON.stringify({
+                submissionId: state.submissionId,
+                questionResponses: {
+                  ...(persisted?.questionResponses || {}),
+                  [questionId]: value,
+                },
+              }),
+            );
+          }
+        } catch {}
+
+        // Fire-and-forget partial save
+        try {
+          const formId = state.formId as string | undefined;
+          const submissionId = state.submissionId as string | undefined;
+          const versionId = state.formSchema?.version_id as string | undefined;
+          if (formId && submissionId && versionId) {
+            apiServices
+              .savePartialAnswer(formId, {
+                submissionId,
+                formVersionId: versionId,
+                questionId,
+                answerValue: value as any,
+                submissionStatus: "in_progress",
+                testmode: false,
+              })
+              .catch(() => {});
+          }
+        } catch {}
+
+        return { questionResponses: updatedResponses } as Partial<AppFormState>;
+      });
     },
 
     handleSingleChoiceChange: (questionId, value) => {
@@ -151,6 +233,13 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
         });
 
         set({ isCompleted: true });
+
+        // Clear persisted cache after completion
+        try {
+          if (typeof window !== "undefined" && formId) {
+            localStorage.removeItem(`formlink:typeform:${formId}`);
+          }
+        } catch {}
         return true;
       } catch (error) {
         console.error("Failed to submit form:", error);
