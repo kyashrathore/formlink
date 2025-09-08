@@ -15,6 +15,7 @@ type MessageUserProps = {
 export function MessageUser({ hasScrollAnchor, message }: MessageUserProps) {
   return (
     <MessageContainer
+      from="user"
       className={cn(
         "flex w-full max-w-3xl justify-end px-3 py-0.5 sm:px-4 md:px-6",
         hasScrollAnchor && "min-h-scroll-anchor",
@@ -40,7 +41,6 @@ export function MessageUser({ hasScrollAnchor, message }: MessageUserProps) {
                          prose-code:bg-background prose-code:text-sm
                          prose-pre:my-2 prose-pre:p-3
                          prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5"
-              markdown={true}
             >
               {(message as any).content || ""}
             </MessageContent>
@@ -64,7 +64,6 @@ export function MessageUser({ hasScrollAnchor, message }: MessageUserProps) {
                                prose-code:bg-background prose-code:text-sm
                                prose-pre:my-2 prose-pre:p-3
                                prose-ul:my-1 prose-ol:my-1 prose-li:my-0.5"
-                    markdown={true}
                   >
                     {part.text || ""}
                   </MessageContent>

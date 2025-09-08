@@ -9,9 +9,10 @@ import {
   UnifiedRating,
 } from "@formlink/ui";
 import TypeFormAddress from "./TypeFormAddress";
-import TypeFormLikert from "./TypeFormLikert";
+import { UnifiedLikert } from "@formlink/ui";
 import TypeFormRanking from "./TypeFormRanking";
-import TypeFormSingleSelect from "./TypeFormSingleSelect";
+import { UnifiedPhoneInput, UnifiedCountryList } from "@formlink/ui";
+import { useIsMobile } from "@/hooks/useIsMobile";
 // Use unified phone input with libphonenumber-js formatting/validation
 // Temporarily avoid specialized phone/country inputs; use text input variants
 import { TypeFormLinearScale } from "./TypeFormLinearScale";
@@ -96,6 +97,7 @@ export default function TypeFormQuestionInputSwitcher(
   } = props;
 
   const t = question.type.name as string;
+  const isMobile = useIsMobile();
 
   // Text questions with formats
   if (t === "text") {
@@ -112,28 +114,28 @@ export default function TypeFormQuestionInputSwitcher(
     // Phase 1 specialized components for tel and country
     if (f === "tel") {
       return (
-        <TypeFormTextInput
-          value={val}
-          onChange={(v) => onAnswer(v)}
+        <UnifiedPhoneInput
+          mode="typeform"
+          value={val || ""}
+          onChange={(v: string) => onAnswer(v)}
           onSubmit={onNext}
-          type="tel"
-          placeholder={placeholder}
           required={Boolean((question as any).validations?.required?.value)}
-          ariaLabel={question.title}
+          showCountrySelector
+          showFlag
         />
       );
     }
 
     if (f === "country") {
       return (
-        <TypeFormTextInput
+        <UnifiedCountryList
+          mode="typeform"
           value={val}
           onChange={(v) => onAnswer(v)}
           onSubmit={onNext}
-          type="text"
-          placeholder={placeholder || "Enter country"}
           required={Boolean((question as any).validations?.required?.value)}
-          ariaLabel={question.title}
+          className="w-full max-w-2xl"
+          density="comfy"
         />
       );
     }
@@ -164,18 +166,27 @@ export default function TypeFormQuestionInputSwitcher(
         label: string;
       }>) || [];
     const val = toStringVal(response);
+    // Use unified in-page list in all cases; enable search for large/mobile lists
+    const useListWithSearch = isMobile || options.length >= 6;
     return (
       <div
         className="relative z-10 pointer-events-auto"
         onMouseDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
       >
-        <TypeFormSingleSelect
+        <UnifiedMultiSelect
+          mode="typeform"
           options={options}
-          value={val}
-          onChange={(v: string) => onAnswer(v)}
+          value={val ? [val] : []}
+          maxSelections={1}
+          onChange={(arr: string[]) => {
+            const first = Array.isArray(arr) ? (arr[0] ?? "") : "";
+            onAnswer(first);
+          }}
           onSubmit={onNext}
-          required={Boolean((question as any).validations?.required?.value)}
+          density="comfy"
+          enableSearch={useListWithSearch}
+          searchableThreshold={6}
         />
       </div>
     );
@@ -187,6 +198,7 @@ export default function TypeFormQuestionInputSwitcher(
         label: string;
       }>) || [];
     const valArr = toStringArray(response);
+    const useListWithSearch = isMobile || options.length >= 6;
     return (
       <div
         className="relative z-10 pointer-events-auto"
@@ -199,6 +211,9 @@ export default function TypeFormQuestionInputSwitcher(
           value={valArr}
           onChange={(arr: string[]) => onAnswer(arr)}
           onSubmit={onNext}
+          density="comfy"
+          enableSearch={useListWithSearch}
+          searchableThreshold={6}
         />
       </div>
     );
@@ -214,6 +229,7 @@ export default function TypeFormQuestionInputSwitcher(
         value={val || 0}
         onChange={(n: number) => onAnswer(n as any)}
         onSubmit={onNext}
+        density="comfy"
         max={cfg.max ?? 5}
         className=""
         showKeyboardHints
@@ -250,13 +266,22 @@ export default function TypeFormQuestionInputSwitcher(
     const opts: string[] = (question.type as any).options || [];
     const val = toStringVal(response);
     return (
-      <TypeFormLikert
-        options={opts}
-        value={val}
-        onChange={(s: string) => onAnswer(s)}
-        onSubmit={onNext}
-        showKeyboardHints
-      />
+      <div
+        className="relative z-10 pointer-events-auto"
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+      >
+        <UnifiedLikert
+          mode="typeform"
+          options={opts}
+          value={val}
+          onChange={(s: string | null) => onAnswer(s || "")}
+          onSubmit={onNext}
+          density="comfy"
+          showKeyboardHints
+          debug
+        />
+      </div>
     );
   }
 
@@ -303,7 +328,7 @@ export default function TypeFormQuestionInputSwitcher(
     const val = (response ?? null) as any;
     return (
       <div
-        className="relative z-10 pointer-events-auto"
+        className="relative z-10 pointer-events-auto w-full max-w-2xl"
         onMouseDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
       >

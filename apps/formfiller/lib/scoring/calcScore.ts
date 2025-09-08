@@ -1,0 +1,89 @@
+import { Form } from "@formlink/schema";
+import { QuestionResponse } from "@/lib/types";
+
+export interface ScoreBreakdownItem {
+  questionId: string;
+  questionTitle: string;
+  earned: number;
+  possible: number;
+}
+
+export interface ScoreResult {
+  total: number;
+  possible: number;
+  percentage: number; // 0-100
+  breakdown: ScoreBreakdownItem[];
+}
+
+export function calcScore(
+  form: Form,
+  responses: Record<string, QuestionResponse>,
+): ScoreResult {
+  let total = 0;
+  let possible = 0;
+  const breakdown: ScoreBreakdownItem[] = [];
+
+  for (const q of form.questions) {
+    const t = (q.type as any).name as string;
+    const title = (q as any).label || q.title;
+    const resp = responses[q.id];
+    let earned = 0;
+    let maxForQ = 0;
+
+    if (t === "singleChoice") {
+      const options = ((q.type as any).options || []) as Array<{
+        value: string;
+        label: string;
+        score?: number;
+      }>;
+      // Max score among options (fallback 0)
+      maxForQ = options.reduce((m, o) => Math.max(m, o.score ?? 0), 0);
+      if (typeof resp === "string") {
+        const opt = options.find((o) => String(o.value) === String(resp));
+        earned = opt?.score ?? 0;
+      }
+    } else if (t === "multipleChoice") {
+      const options = ((q.type as any).options || []) as Array<{
+        value: string;
+        label: string;
+        score?: number;
+      }>;
+      // Sum of all positive option scores defines theoretical maximum
+      maxForQ = options.reduce((s, o) => s + Math.max(0, o.score ?? 0), 0);
+      const selected: string[] = Array.isArray(resp) ? (resp as string[]) : [];
+      earned = options
+        .filter((o) => selected.some((v) => String(v) === String(o.value)))
+        .reduce((s, o) => s + (o.score ?? 0), 0);
+    } else if (t === "rating" || t === "linearScale") {
+      // If author specified question-level score (e.g., correctness handled elsewhere), use it as max
+      // Otherwise do not contribute to score by default
+      const qScore = (q as any).score as number | undefined;
+      if (typeof qScore === "number") {
+        maxForQ = qScore;
+        // Earned only if answered (simple model). Advanced mapping can be added later.
+        earned = resp != null && resp !== "" ? qScore : 0;
+      }
+    } else {
+      // For other types, check if a default question-level score is defined
+      const qScore = (q as any).score as number | undefined;
+      if (typeof qScore === "number") {
+        maxForQ = qScore;
+        earned = resp != null && resp !== "" ? qScore : 0;
+      }
+    }
+
+    if (maxForQ > 0) {
+      total += earned;
+      possible += maxForQ;
+      breakdown.push({
+        questionId: q.id,
+        questionTitle: title,
+        earned,
+        possible: maxForQ,
+      });
+    }
+  }
+
+  const percentage = possible > 0 ? (total / possible) * 100 : 0;
+  return { total, possible, percentage, breakdown };
+}

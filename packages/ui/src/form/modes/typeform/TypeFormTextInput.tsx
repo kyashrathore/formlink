@@ -89,6 +89,7 @@ export function TypeFormTextInput({
         onKeyDown={handleKeyDown}
         className={cn(
           styles.input,
+          "h-[62px]",
           disabled && "opacity-50 cursor-not-allowed",
         )}
       />

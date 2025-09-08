@@ -34,7 +34,7 @@ export function TypeFormSelect(props: TypeFormSelectProps) {
   const processedOptions = base.options || [];
 
   const handleOptionClick = (value: string | number) => {
-    base.selectOption(value); // This will update the value but NOT call onSubmit
+    base.selectOption(String(value)); // This will update the value but NOT call onSubmit
 
     if (autoAdvance && onSubmit) {
       // Auto-advance after selection with animation delay

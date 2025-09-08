@@ -1,10 +1,11 @@
 "use client"
 
-import { Button, Card, Label, toast } from "@formlink/ui"
+import { Button, Label, toast } from "@formlink/ui"
 import { Wand2 } from "lucide-react"
 import React, { useCallback, useEffect, useState } from "react"
 import { useMobile } from "../../hooks/use-mobile"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
+import StructuredPromptEditor from "./StructuredPromptEditor"
 
 const DEFAULT_JOURNEY_TEMPLATE = `<form-journey>
 
@@ -117,14 +118,6 @@ const FormJourneyStep: React.FC<FormJourneyStepProps> = ({
     }
   }, [journeyScript, isModified, journeyScriptContent])
 
-  const handleContentChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setJourneyScriptContent(e.target.value)
-      setIsModified(true)
-    },
-    []
-  )
-
   const saveJourneyScript = useCallback(async () => {
     try {
       await updateSettingField("journeyScript", journeyScriptContent)
@@ -183,36 +176,22 @@ const FormJourneyStep: React.FC<FormJourneyStepProps> = ({
           </div>
         )}
       </div>
-      <Card className="p-4">
-        <div className="space-y-4">
-          <div>
-            <h3 className="mb-0 text-sm font-medium">
-              Form Journey & Psychological Strategy
-            </h3>
-            <p className="text-muted-foreground text-sm">
-              Define how your form should interact with users and maximize
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>Edit Journey Script</Label>
+          <StructuredPromptEditor
+            initialContent={journeyScriptContent}
+            height="400px"
+            onChange={(xml) => {
+              setJourneyScriptContent(xml)
+              setIsModified(true)
+            }}
+            description="   Define how your form should interact with users and maximize
               completion rates. This includes result page generation
-              instructions.
-            </p>
-          </div>
-          <div className="space-y-2">
-            <Label>Edit Journey Script</Label>
-            <textarea
-              value={journeyScriptContent}
-              onChange={handleContentChange}
-              placeholder="Start designing your form journey..."
-              className="bg-background h-[400px] w-full resize-none rounded-md border px-3 py-2 font-mono text-sm"
-            />
-            <div className="flex items-center justify-between">
-              <div className="text-muted-foreground text-sm">
-                {journeyScriptContent.length > 0 && (
-                  <span>{journeyScriptContent.split(" ").length} words</span>
-                )}
-              </div>
-            </div>
-          </div>
+              instructions."
+          />
         </div>
-      </Card>
+      </div>
     </div>
   )
 }

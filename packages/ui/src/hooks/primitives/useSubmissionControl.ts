@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { FormMode } from "../../primitives/types";
+import { FormMode } from "../../form/context/FormModeContext";
 
 interface UseSubmissionControlProps<T = unknown> {
   mode: FormMode;

@@ -6,7 +6,6 @@ import {
   LinearScaleConfig,
 } from "../../primitives/BaseLinearScale";
 import { cn } from "../../../lib/utils";
-import { useIsMobile } from "../../../hooks/ui/use-mobile";
 
 export type FormMode = "chat" | "typeform";
 
@@ -19,6 +18,9 @@ export interface UnifiedLinearScaleProps {
   disabled?: boolean;
   required?: boolean;
   showKeyboardHints?: boolean;
+  className?: string;
+  density?: "compact" | "comfy" | "spacious";
+  autoSubmitOnChange?: boolean;
 }
 
 export function UnifiedLinearScale({
@@ -30,12 +32,12 @@ export function UnifiedLinearScale({
   disabled = false,
   required = false,
   showKeyboardHints,
+  className,
+  density,
+  autoSubmitOnChange,
 }: UnifiedLinearScaleProps) {
-  const isMobile = useIsMobile();
-
-  // Set default showKeyboardHints based on mode - hide on mobile
-  const shouldShowKeyboardHints =
-    showKeyboardHints ?? (mode === "typeform" ? !isMobile : false);
+  const resolvedDensity = density ?? (mode === "chat" ? "compact" : "comfy");
+  const shouldShowKeyboardHints = showKeyboardHints ?? mode === "typeform";
 
   const {
     scaleValues,
@@ -51,15 +53,14 @@ export function UnifiedLinearScale({
     required,
     config,
     onSubmit,
-    // Mode-specific behavior: typeform auto-submits, chat requires manual submit
-    autoSubmitOnChange: mode === "typeform",
+    autoSubmitOnChange: autoSubmitOnChange ?? mode === "typeform",
   });
 
   const showError = isTouched && errors.length > 0;
 
-  // Chat mode: Handle container-level keyboard navigation
+  // Handle container-level keyboard navigation (unified)
   const handleContainerKeyDown = (e: React.KeyboardEvent) => {
-    if (disabled || mode !== "chat") return;
+    if (disabled) return;
 
     const currentIndex = value !== null ? scaleValues.indexOf(value) : -1;
     let newValue: number | null = null;
@@ -69,18 +70,18 @@ export function UnifiedLinearScale({
       case "ArrowUp":
         e.preventDefault();
         if (currentIndex > 0) {
-          newValue = scaleValues[currentIndex - 1];
+          newValue = scaleValues[currentIndex - 1] ?? null;
         } else if (currentIndex === -1 && scaleValues.length > 0) {
-          newValue = scaleValues[0];
+          newValue = scaleValues[0] ?? null;
         }
         break;
       case "ArrowRight":
       case "ArrowDown":
         e.preventDefault();
         if (currentIndex < scaleValues.length - 1 && currentIndex !== -1) {
-          newValue = scaleValues[currentIndex + 1];
+          newValue = scaleValues[currentIndex + 1] ?? null;
         } else if (currentIndex === -1 && scaleValues.length > 0) {
-          newValue = scaleValues[0];
+          newValue = scaleValues[0] ?? null;
         }
         break;
       default: {
@@ -99,56 +100,35 @@ export function UnifiedLinearScale({
     }
   };
 
-  // Mode-specific styling
-  const containerClass = mode === "chat" ? "space-y-4" : "w-full max-w-2xl";
-  const innerContainerClass =
-    mode === "chat" ? "flex flex-col gap-4" : "flex flex-col gap-6";
-  const buttonsContainerClass =
-    mode === "chat"
-      ? "flex gap-2 justify-center"
-      : isMobile
-        ? "flex gap-1 justify-start flex-wrap"
-        : "flex gap-3 justify-start";
-  const buttonClass =
-    mode === "chat"
-      ? cn(
-          "relative min-w-[48px] h-12 px-3 rounded-lg font-medium transition-all",
-          "border-2 border-border/50 bg-card/50",
-          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-          "flex items-center justify-center text-base",
-          "hover:border-primary/50 hover:bg-card/80",
-        )
-      : isMobile
-        ? cn(
-            "relative min-w-[36px] h-12 px-2 rounded-lg font-medium transition-all text-base",
-            "border-2 border-border/50 bg-card/50",
-            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            "flex items-center justify-center",
-            "hover:border-primary/50 hover:bg-card/80",
-          )
-        : cn(
-            "relative min-w-[64px] h-16 px-4 rounded-lg font-medium transition-all text-lg",
-            "border-2 border-border/50 bg-card/50",
-            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            "flex items-center justify-center",
-            "hover:border-primary/50 hover:bg-card/80",
-          );
+  // Unified styling driven by density
+  const containerClass = cn(
+    resolvedDensity === "compact"
+      ? "space-y-3"
+      : resolvedDensity === "comfy"
+        ? "space-y-4"
+        : "space-y-6",
+  );
+  const innerContainerClass = "flex flex-col gap-4";
+  const buttonsContainerClass = "flex gap-2 sm:gap-3 justify-start flex-wrap";
+  const buttonClass = cn(
+    "relative rounded-lg font-medium transition-all",
+    "border-2 border-border/50 bg-card/50",
+    "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+    "flex items-center justify-center",
+    "hover:border-primary/50 hover:bg-card/80",
+    resolvedDensity === "compact" && "min-w-[36px] h-10 px-2 text-base",
+    resolvedDensity === "comfy" && "min-w-[48px] h-12 px-3 text-base",
+    resolvedDensity === "spacious" && "min-w-[64px] h-16 px-4 text-lg",
+  );
   const labelsClass =
-    mode === "chat"
-      ? "flex justify-between text-sm text-muted-foreground px-2"
-      : "flex justify-between text-sm text-muted-foreground px-4";
-  const errorClass =
-    mode === "chat"
-      ? "text-sm text-destructive text-center"
-      : "text-sm text-destructive text-left mt-4";
+    "flex justify-between text-sm text-muted-foreground px-2 sm:px-4";
+  const errorClass = "text-sm text-destructive mt-2";
 
   return (
-    <div className={containerClass}>
+    <div className={cn(containerClass, className)}>
       <div
         {...containerProps}
-        onKeyDown={
-          mode === "chat" ? handleContainerKeyDown : containerProps.onKeyDown
-        }
+        onKeyDown={handleContainerKeyDown}
         className={innerContainerClass}
       >
         {/* Scale buttons */}

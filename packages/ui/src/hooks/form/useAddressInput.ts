@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { UseInputReturn } from "../base/types";
-import { UIAddressData } from "../types/generic";
+import { UseInputReturn } from "../../types/generic";
+import { UIAddressData } from "../../types/generic";
 
 interface UseAddressInputOptions {
   initialValue?: UIAddressData | null;

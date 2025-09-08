@@ -34,6 +34,7 @@ import DatePickerWrapper from "./DatePickerWrapper";
 import RankingInput from "./RankingInput";
 import RatingSlider from "./RatingSlider";
 import FileUploadInput from "./FileUploadInput";
+import { getPlaceholder } from "@/components/typeform/utils/placeholders";
 
 interface QuestionInputSwitcherProps {
   question: Question;
@@ -54,12 +55,46 @@ export default function QuestionInputSwitcher({
   onFileUpload,
   fieldProps,
 }: QuestionInputSwitcherProps) {
-  // Text Question (including number format)
+  // Text Question (including number, tel, and country formats)
   if (isTextQuestion(question)) {
     const format = question.type.format;
     const isLongText = format === "textarea";
     const isNumber = format === "number";
-    const placeholder = "";
+    const isTel = format === "tel";
+    const isCountry = format === "country";
+    const placeholder = getPlaceholder(
+      question.type.name,
+      question.type.format,
+      (question as any).placeholder,
+    );
+
+    // Phone number: simple shadcn input
+    if (isTel) {
+      return (
+        <Input
+          type="tel"
+          placeholder={"Enter phone number..."}
+          value={(value as string) || ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full"
+          {...fieldProps}
+        />
+      );
+    }
+
+    // Country: simple text input (ISO-2 or name per backend convention)
+    if (isCountry) {
+      return (
+        <Input
+          type="text"
+          placeholder={"Enter country"}
+          value={(value as string) || ""}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full"
+          {...fieldProps}
+        />
+      );
+    }
 
     if (isLongText) {
       return (
@@ -68,7 +103,7 @@ export default function QuestionInputSwitcher({
           value={(value as string) || ""}
           onChange={(e) => onChange(e.target.value)}
           {...fieldProps}
-          className="min-h-[120px]"
+          className="min-h-[120px] w-full"
         />
       );
     }
@@ -79,7 +114,7 @@ export default function QuestionInputSwitcher({
           type="text"
           inputMode="numeric"
           pattern="[0-9]*"
-          placeholder="Enter a number..."
+          placeholder={placeholder || "Enter a number..."}
           value={(value as string | number) || ""}
           onChange={(e) => {
             const val = e.target.value;
@@ -170,6 +205,7 @@ export default function QuestionInputSwitcher({
               e.preventDefault();
             }
           }}
+          className="w-full"
           {...fieldProps}
         />
       );
@@ -181,6 +217,7 @@ export default function QuestionInputSwitcher({
         placeholder={placeholder}
         value={(value as string) || ""}
         onChange={(e) => onChange(e.target.value)}
+        className="w-full"
         {...fieldProps}
       />
     );
@@ -198,7 +235,7 @@ export default function QuestionInputSwitcher({
           onValueChange={onChange}
           disabled={fieldProps?.disabled}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-full">
             <SelectValue placeholder="Select an option..." />
           </SelectTrigger>
           <SelectContent>
@@ -318,17 +355,17 @@ export default function QuestionInputSwitcher({
         value={(value as string) || ""}
         onValueChange={onChange}
         disabled={fieldProps?.disabled}
-        className="flex flex-wrap gap-4 justify-center"
+        className="flex flex-wrap gap-6 justify-start"
       >
         {options.map((option, index) => (
-          <div key={index} className="flex flex-col items-center space-y-2">
+          <div key={index} className="flex flex-col items-start">
+            <RadioGroupItem value={option} id={`${question.id}-${index}`} />
             <Label
               htmlFor={`${question.id}-${index}`}
-              className="text-sm font-normal text-center"
+              className="mt-2 text-sm font-normal text-left"
             >
               {option}
             </Label>
-            <RadioGroupItem value={option} id={`${question.id}-${index}`} />
           </div>
         ))}
       </RadioGroup>

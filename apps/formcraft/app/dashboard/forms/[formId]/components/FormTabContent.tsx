@@ -44,11 +44,9 @@ export default function FormTabContent({
   const { form: initialForm, isLoading } = useFormEditorStore()
   const { currentForm, isFormGenerating } = useFormGenerationStore()
   const form = currentForm || initialForm
-  const { editMode, toggleEditMode } = usePanelState()
+  const { editMode } = usePanelState()
   const [formMode, setFormMode] = useState<FormMode>("chat")
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop")
-
-  const isPreviewMode = !editMode
 
   if (isLoading || isFormGenerating) {
     return (
@@ -91,90 +89,8 @@ export default function FormTabContent({
 
   return (
     <div className="bg-background flex h-full flex-col overflow-auto">
-      <div
-        className={cn(
-          "border-border bg-background flex items-center justify-between border-b px-4",
-          isPreviewMode ? "py-0" : "py-1"
-        )}
-      >
-        <div className="flex items-center">
-          {hasFormContent && isPreviewMode && (
-            <FormModeControls
-              formMode={formMode}
-              onFormModeChange={setFormMode}
-            />
-          )}
-        </div>
-
-        <div className="flex items-center space-x-3">
-          {hasFormContent && isPreviewMode && (
-            <>
-              <PreviewControls
-                deviceMode={deviceMode}
-                onDeviceModeChange={setDeviceMode}
-              />
-              <div className="bg-border h-4 w-px" />
-            </>
-          )}
-
-          {hasFormContent && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleEditMode}
-              className="flex items-center space-x-1.5"
-            >
-              {isPreviewMode ? (
-                <>
-                  <Edit3 className="h-4 w-4" />
-                  <span>Edit</span>
-                </>
-              ) : (
-                <>
-                  <Eye className="h-4 w-4" />
-                  <span>Preview</span>
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
-
       <div className="relative flex-1">
-        <div
-          className={`absolute inset-0 z-10 ${isPreviewMode ? "block" : "hidden"}`}
-        >
-          <div className="h-full p-4">
-            {hasFormContent && form.short_id ? (
-              <FormPreviewWithDevices
-                form={form}
-                className="h-full"
-                showControls={false}
-                formMode={formMode}
-                onFormModeChange={setFormMode}
-                deviceMode={deviceMode}
-                onDeviceModeChange={setDeviceMode}
-                shadcnCSSData={shadcnCSSData}
-                onShadcnApplied={onShadcnApplied}
-              />
-            ) : hasFormContent ? (
-              <div className="flex h-full items-center justify-center">
-                <div className="text-muted-foreground text-center">
-                  <div className="mb-2 text-lg font-medium">
-                    Preview not available
-                  </div>
-                  <div className="text-sm">
-                    Form needs to be saved to enable preview
-                  </div>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </div>
-
-        <div
-          className={`absolute inset-0 ${!isPreviewMode ? "block" : "hidden"}`}
-        >
+        <div className="absolute inset-0 block">
           <div className="h-full p-4">
             <FormEditor user={mockUser} selectedTab="form" />
           </div>

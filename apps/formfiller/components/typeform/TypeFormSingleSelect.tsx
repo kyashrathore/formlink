@@ -58,8 +58,8 @@ export default function TypeFormSingleSelect({
   const handleSelect = (val: string, isDisabled?: boolean) => {
     if (disabled || isDisabled) return;
     onChange(val);
-    // REMOVED: No longer calls onSubmit directly.
-    // The parent component's useEffect will handle auto-advancing.
+    // Auto-advance for Typeform behavior if provided
+    onSubmit?.();
   };
 
   return (

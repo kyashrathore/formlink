@@ -23,6 +23,7 @@ export interface UnifiedDatePickerProps {
   minDate?: Date;
   maxDate?: Date;
   disabledDates?: Date[];
+  density?: "compact" | "comfy" | "spacious";
 }
 
 export function UnifiedDatePicker({
@@ -38,6 +39,7 @@ export function UnifiedDatePicker({
   minDate,
   maxDate,
   disabledDates = [],
+  density,
 }: UnifiedDatePickerProps) {
   const datePicker = BaseDatePicker({
     value,
@@ -74,8 +76,13 @@ export function UnifiedDatePicker({
   };
 
   // Unified styling for both modes
+  const resolvedDensity = density ?? (mode === "chat" ? "compact" : "comfy");
   const triggerClass = cn(
-    "w-full flex items-center justify-between px-3 py-2 border rounded-lg transition-all duration-200",
+    "w-full flex items-center justify-between border rounded-lg transition-all duration-200",
+    "h-[42px]",
+    resolvedDensity === "compact" && "px-3 py-2 text-sm",
+    resolvedDensity === "comfy" && "px-4 py-2 text-base",
+    resolvedDensity === "spacious" && "px-5 py-3 text-base",
     "text-base bg-background hover:bg-accent/50",
     "focus:outline-none focus:border-primary focus:ring-0",
     hasError ? "border-destructive" : "border-border hover:border-border/80",

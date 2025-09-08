@@ -167,6 +167,17 @@ export default function NavigationBar({
         </button>
 
         <button
+          onClick={() => setActiveMainTab("preview")}
+          className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            activeMainTab === "preview"
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground hover:bg-accent"
+          } `}
+        >
+          <span>Preview</span>
+        </button>
+
+        <button
           onClick={() => setActiveMainTab("responses")}
           className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             activeMainTab === "responses"

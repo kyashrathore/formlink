@@ -80,7 +80,13 @@ describe("UnifiedFormInput Basic Tests", () => {
       .spyOn(console, "error")
       .mockImplementation(() => {});
 
-    render(<UnifiedFormInput mode="chat" type="invalid-type" {...mockProps} />);
+    render(
+      <UnifiedFormInput
+        mode="chat"
+        type={"invalid-type" as any}
+        {...mockProps}
+      />,
+    );
 
     expect(screen.getByText(/Unsupported component/)).toBeInTheDocument();
     expect(consoleSpy).toHaveBeenCalledWith(

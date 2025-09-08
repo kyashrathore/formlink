@@ -36,6 +36,7 @@ export interface UnifiedRankingProps {
   disabled?: boolean;
   required?: boolean;
   showKeyboardHints?: boolean;
+  density?: "compact" | "comfy" | "spacious";
 }
 
 interface SortableItemProps {
@@ -47,6 +48,7 @@ interface SortableItemProps {
   onRankChange: (value: string, rank: number) => void;
   totalOptions: number;
   mode: FormMode;
+  density: "compact" | "comfy" | "spacious";
 }
 
 function SortableItem({
@@ -58,6 +60,7 @@ function SortableItem({
   onRankChange,
   totalOptions,
   mode,
+  density,
 }: SortableItemProps) {
   const {
     attributes,
@@ -77,11 +80,17 @@ function SortableItem({
   const containerClass =
     mode === "chat"
       ? cn(
-          "flex items-center gap-3 p-4 rounded-lg border-2 border-border/50 bg-card/50 backdrop-blur hover:border-primary/50 transition-all duration-200",
+          "flex items-center gap-3 rounded-lg border-2 border-border/50 bg-card/50 backdrop-blur hover:border-primary/50 transition-all duration-200",
+          density === "compact" && "p-3",
+          density === "comfy" && "p-4",
+          density === "spacious" && "p-5",
           isDragging && "opacity-50",
         )
       : cn(
-          "flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200",
+          "flex items-center gap-3 rounded-lg transition-all duration-200 min-h-[56px]",
+          density === "compact" && "px-3 py-2",
+          density === "comfy" && "px-4 py-3",
+          density === "spacious" && "px-5 py-4",
           "bg-muted/30 border border-border/50 hover:bg-muted/60 hover:border-border",
           isDragging && "opacity-50",
           disabled && "opacity-50 cursor-not-allowed",
@@ -109,9 +118,7 @@ function SortableItem({
           onChange={(e) => onRankChange(option.value, parseInt(e.target.value))}
           disabled={disabled}
           className={cn(
-            "appearance-none px-3 py-1 pr-8 rounded border bg-background text-sm transition-all duration-200",
-            "focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary",
-            "border-border text-foreground hover:border-primary/50",
+            "appearance-none px-3 py-1 pr-8 rounded border bg-background text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary border-border text-foreground hover:border-primary/50",
             disabled && "opacity-50 cursor-not-allowed",
           )}
           aria-label={`Rank for ${option.label}`}
@@ -165,6 +172,7 @@ export function UnifiedRanking({
   disabled = false,
   required = false,
   showKeyboardHints = true,
+  density = mode === "chat" ? "compact" : "comfy",
 }: UnifiedRankingProps) {
   // Track if user has made any changes (for chat mode continue button)
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -357,6 +365,7 @@ export function UnifiedRanking({
                   onRankChange={handleRankChange}
                   totalOptions={options.length}
                   mode={mode}
+                  density={density}
                 />
               );
             })}

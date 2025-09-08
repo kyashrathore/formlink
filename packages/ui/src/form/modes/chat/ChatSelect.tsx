@@ -43,7 +43,7 @@ export function ChatSelect(props: ChatSelectProps) {
   const handleOptionClick = (optionValue: string | number) => {
     // Use selectOption which will call onChange internally
     // Note: selectOption already calls onSubmit internally
-    base.selectOption(optionValue);
+    base.selectOption(String(optionValue));
   };
 
   return (

@@ -20,7 +20,8 @@ function PromptSuggestion({
   highlight,
   ...props
 }: PromptSuggestionProps) {
-  const isHighlightMode = highlight !== undefined && highlight.trim() !== "";
+  const highlightText = typeof highlight === "string" ? highlight : "";
+  const isHighlightMode = highlightText.trim() !== "";
   const content = typeof children === "string" ? children : "";
 
   if (!isHighlightMode) {
@@ -53,7 +54,7 @@ function PromptSuggestion({
     );
   }
 
-  const trimmedHighlight = highlight.trim();
+  const trimmedHighlight = highlightText.trim();
   const contentLower = content.toLowerCase();
   const highlightLower = trimmedHighlight.toLowerCase();
   const shouldHighlight = contentLower.includes(highlightLower);

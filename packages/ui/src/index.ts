@@ -105,8 +105,12 @@ export { UnifiedLinearScale } from "./form/modes/unified/UnifiedLinearScale";
 export { UnifiedMultiSelect } from "./form/modes/unified/UnifiedMultiSelect";
 export { UnifiedRanking } from "./form/modes/unified/UnifiedRanking";
 export { UnifiedRating } from "./form/modes/unified/UnifiedRating";
+export { UnifiedLikert } from "./form/modes/unified/UnifiedLikert";
 export { UnifiedPhoneInput } from "./form/modes/unified/UnifiedPhoneInput";
 export { UnifiedCountrySelect } from "./form/modes/unified/UnifiedCountrySelect";
+export { UnifiedDropdownSelect } from "./form/modes/unified/UnifiedDropdownSelect";
+export { UnifiedDropdownMultiSelect } from "./form/modes/unified/UnifiedDropdownMultiSelect";
+export { UnifiedCountryList } from "./form/modes/unified/UnifiedCountryList";
 
 // Context provider for mode management
 export { FormModeProvider, useFormMode } from "./form/context/FormModeContext";

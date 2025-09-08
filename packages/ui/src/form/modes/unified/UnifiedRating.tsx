@@ -2,7 +2,6 @@
 
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { useIsMobile } from "../../../hooks/ui/use-mobile";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
 import { BaseRating, type BaseRatingProps } from "../../primitives/BaseRating";
@@ -19,6 +18,7 @@ export interface UnifiedRatingProps extends BaseRatingProps {
   type?: "icon" | "numeric" | "emoji";
   icon?: string;
   showKeyboardHints?: boolean;
+  density?: "compact" | "comfy" | "spacious";
 }
 
 export function UnifiedRating({
@@ -30,9 +30,9 @@ export function UnifiedRating({
   onSubmit,
   type = "icon",
   showKeyboardHints = true,
+  density,
   ...baseProps
 }: UnifiedRatingProps) {
-  const isMobile = useIsMobile();
   const base = BaseRating({
     ...baseProps,
     max,
@@ -45,8 +45,8 @@ export function UnifiedRating({
 
   const handleRatingSelect = (rating: number) => {
     base.setRating(rating);
-    // In typeform mode, this will auto-submit due to autoSubmitOnChange: true
-    // In chat mode, user must click continue button
+    // In chat mode, immediately submit after selection if handler provided
+    if (mode === "chat" && onSubmit) onSubmit();
   };
 
   const handleContinue = () => {
@@ -54,6 +54,8 @@ export function UnifiedRating({
       onSubmit();
     }
   };
+
+  const resolvedDensity = density ?? (mode === "chat" ? "compact" : "spacious");
 
   const renderRatingContent = (index: number) => {
     const isActive = index < (base.value || 0);
@@ -96,11 +98,12 @@ export function UnifiedRating({
     }
 
     // Icon rendering (unified for both modes) - responsive sizing
-    const iconSize = isMobile
-      ? "w-5 h-5"
-      : mode === "chat"
-        ? "w-10 h-10"
-        : "w-12 h-12";
+    const iconSize =
+      resolvedDensity === "compact"
+        ? "w-8 h-8"
+        : resolvedDensity === "comfy"
+          ? "w-10 h-10"
+          : "w-12 h-12";
 
     // UNIFIED BEHAVIOR: Same color logic for both modes
     const colorClasses = cn(
@@ -113,7 +116,7 @@ export function UnifiedRating({
       viewBox: "0 0 24 24",
       fill: isActive ? "currentColor" : "none",
       stroke: "currentColor",
-      strokeWidth: isMobile ? "1" : "2",
+      strokeWidth: resolvedDensity === "compact" ? "1" : "2",
     };
 
     switch (iconType) {
@@ -170,7 +173,7 @@ export function UnifiedRating({
         className={cn("w-full max-w-2xl", className)}
         {...base.containerProps}
       >
-        <div className={cn("flex justify-start", isMobile ? "gap-2" : "gap-4")}>
+        <div className={cn("flex justify-start gap-2 sm:gap-4")}>
           {base.items.map((item, index) => {
             // Extract only the necessary ARIA attributes without changing the role
             const { "aria-checked": ariaChecked, "aria-label": ariaLabel } =
@@ -190,7 +193,7 @@ export function UnifiedRating({
                 tabIndex={base.value === item.value ? 0 : -1}
               >
                 {renderRatingContent(index)}
-                {showKeyboardHints && !isMobile && (
+                {showKeyboardHints && (
                   <kbd className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-muted-foreground">
                     {item.value}
                   </kbd>
@@ -214,12 +217,7 @@ export function UnifiedRating({
       {...filterRatingContainerProps(base.containerProps)}
       className={cn("focus:outline-none", className)}
     >
-      <div
-        className={cn(
-          "flex items-center justify-start",
-          isMobile ? "gap-2" : "gap-3",
-        )}
-      >
+      <div className={cn("flex items-center justify-start gap-2 sm:gap-3")}>
         {Array.from({ length: max }, (_, index) => (
           <motion.button
             key={index}
@@ -257,8 +255,8 @@ export function UnifiedRating({
         </div>
       )}
 
-      {/* Continue Button - Only show in chat mode after interaction */}
-      {onSubmit && base.value > 0 && (
+      {/* Continue Button - Typeform-only (chat auto-submits) */}
+      {mode === "typeform" && onSubmit && base.value > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

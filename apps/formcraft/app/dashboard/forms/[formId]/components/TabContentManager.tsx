@@ -3,6 +3,7 @@
 import { usePanelState } from "../hooks/usePanelState"
 import { useFormEditorStore } from "../stores/useFormEditorStore"
 import FormTabContent from "./FormTabContent"
+import PreviewTabContent from "./PreviewTabContent"
 import ResponsesTabContent from "./ResponsesTabContent"
 import SettingsTabContent from "./SettingsTabContent"
 import ShareTabContent from "./ShareTabContent"
@@ -35,6 +36,14 @@ export default function TabContentManager({
       case "form":
         return (
           <FormTabContent
+            formId={formId}
+            shadcnCSSData={shadcnCSSData}
+            onShadcnApplied={onShadcnApplied}
+          />
+        )
+      case "preview":
+        return (
+          <PreviewTabContent
             formId={formId}
             shadcnCSSData={shadcnCSSData}
             onShadcnApplied={onShadcnApplied}

@@ -23,6 +23,7 @@ type ConversationProps = {
     value: any,
     displayText: string,
   ) => Promise<void>;
+  introBlock?: React.ReactNode;
 };
 
 export function Conversation({
@@ -30,6 +31,7 @@ export function Conversation({
   status = "ready",
   handleFileUpload,
   onSubmitSelection,
+  introBlock,
 }: ConversationProps) {
   const initialMessageCount = useRef(messages.length);
 
@@ -42,6 +44,7 @@ export function Conversation({
   return (
     <AIConversation className="relative flex h-[calc(75vh)] w-full overflow-y-auto overflow-x-hidden">
       <ConversationContent className="flex w-full flex-col items-center">
+        {visibleMessages.length === 0 && status !== "streaming" && introBlock}
         {visibleMessages?.map((message, index) => {
           const isLast =
             index === visibleMessages.length - 1 && status !== "submitted";

@@ -34,6 +34,8 @@ export interface UnifiedFileUploadProps {
   uploadedFile?: File | null;
   ariaLabel?: string;
   ariaDescribedBy?: string;
+  density?: "compact" | "comfy" | "spacious";
+  variant?: "dropzone" | "list"; // Visual layout, derived from mode by default
 }
 
 export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
@@ -56,6 +58,8 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
     uploadedFile,
     ariaLabel = "Upload file",
     ariaDescribedBy,
+    density = mode === "chat" ? "compact" : "comfy",
+    variant,
   } = props;
 
   const [internalIsUploading, setInternalIsUploading] = useState(false);
@@ -106,7 +110,10 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
           if (mode === "typeform" && questionId) {
             // TypeForm expects questionId as first parameter
             await (
-              onFileUpload as (questionId: string, file: File) => Promise<void>
+              onFileUpload as unknown as (
+                questionId: string,
+                file: File,
+              ) => Promise<void>
             )(questionId, file);
           } else {
             await onFileUpload([file]);
@@ -147,7 +154,10 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
     try {
       if (questionId && onFileUpload) {
         await (
-          onFileUpload as (questionId: string, file: File) => Promise<void>
+          onFileUpload as unknown as (
+            questionId: string,
+            file: File,
+          ) => Promise<void>
         )(questionId, file);
       }
     } catch (err) {
@@ -234,7 +244,16 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
       )
     : undefined;
 
-  if (mode === "typeform") {
+  const resolvedVariant: "dropzone" | "list" =
+    variant || (mode === "typeform" ? "dropzone" : "list");
+
+  if (resolvedVariant === "dropzone") {
+    const minH =
+      density === "compact"
+        ? "min-h-36"
+        : density === "comfy"
+          ? "min-h-48"
+          : "min-h-60";
     // TypeForm layout
     return (
       <motion.div
@@ -251,7 +270,8 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
           disabled={disabled || isUploading}
           src={currentFile ? [currentFile] : undefined}
           className={cn(
-            "min-h-48 transition-all duration-300 border-2 border-border",
+            "transition-all duration-300 border-2 border-border",
+            minH,
             disabled && "opacity-50 cursor-not-allowed",
             "hover:border-primary hover:bg-accent/50",
           )}
@@ -380,7 +400,7 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
     );
   }
 
-  // Chat mode layout
+  // List mode layout (chat-like)
   if (!baseFileUpload) return null;
 
   const { isDragActive, inputProps, dropZoneProps, openFileDialog } =
@@ -407,7 +427,10 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
             }
           }}
           className={cn(
-            "block w-full p-8 border-2 border-dashed rounded-lg text-center cursor-pointer transition-all duration-300",
+            "block w-full border-2 border-dashed rounded-lg text-center cursor-pointer transition-all duration-300",
+            density === "compact" && "p-4",
+            density === "comfy" && "p-6",
+            density === "spacious" && "p-8",
             "hover:border-primary hover:bg-accent/50",
             isDragActive && "border-primary bg-accent/50",
             disabled && "opacity-50 cursor-not-allowed",

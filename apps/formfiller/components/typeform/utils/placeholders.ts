@@ -33,10 +33,12 @@ export function getPlaceholder(
   }
 
   if (type === "text" && format) {
-    return DEFAULT_PLACEHOLDERS[format] ?? DEFAULT_PLACEHOLDERS.text;
+    const placeholder = DEFAULT_PLACEHOLDERS[format];
+    return placeholder || "Type your answer";
   }
 
-  return DEFAULT_PLACEHOLDERS[type] ?? DEFAULT_PLACEHOLDERS.text;
+  const placeholder = DEFAULT_PLACEHOLDERS[type];
+  return placeholder || "Type your answer";
 }
 
 /**

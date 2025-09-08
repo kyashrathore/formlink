@@ -1,5 +1,20 @@
 import { useState, useCallback, useMemo } from "react";
-import { UseInputReturn } from "../base/types";
+
+export interface UseTextInputReturn {
+  value: string;
+  setValue: (value: string) => void;
+  errors: string[];
+  validate: () => boolean;
+  isValid: boolean;
+  clearErrors: () => void;
+  handlers: {
+    onChange: (
+      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    ) => void;
+    onBlur: () => void;
+    onFocus: () => void;
+  };
+}
 
 /**
  * Configuration options for the useTextInput hook
@@ -51,7 +66,7 @@ interface UseTextInputOptions {
  */
 export function useTextInput(
   options: UseTextInputOptions = {},
-): UseInputReturn<string> {
+): UseTextInputReturn {
   const {
     initialValue = "",
     required = false,

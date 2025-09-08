@@ -7,25 +7,25 @@ import OpenAI from "@/icons/openai";
 import { mistral } from "@ai-sdk/mistral";
 import { openai } from "@ai-sdk/openai";
 import {
-  Brain,
-  ChalkboardTeacher,
-  ChatTeardropText,
-  Code,
-  CookingPot,
-  Heartbeat,
-  Lightbulb,
+  // Brain, // TODO: Check if available in current phosphor-icons version
+  // ChalkboardTeacher,
+  // ChatTeardropText,
+  // Code,
+  // CookingPot,
+  // Heartbeat,
+  // Lightbulb, // TODO: Check if available in current phosphor-icons version
   MagnifyingGlass,
-  Notepad,
-  PaintBrush,
-  PenNib,
-  CrownSimple,
-  CalendarDot,
-  LinkedinLogo,
+  // Notepad, // TODO: Check if available in current phosphor-icons version
+  // PaintBrush, // TODO: Check if available in current phosphor-icons version
+  // PenNib,
+  // CrownSimple,
+  // CalendarDot,
+  // LinkedinLogo,
   List,
-  Book,
+  // Book,
   Star,
-  Sparkle,
-  AddressBookTabs,
+  // Sparkle, // TODO: Check if available in current phosphor-icons version
+  // AddressBookTabs,
 } from "@phosphor-icons/react/dist/ssr";
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5;

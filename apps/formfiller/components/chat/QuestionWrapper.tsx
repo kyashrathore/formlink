@@ -1,7 +1,8 @@
 import type { FileData, QuestionResponse } from "@/lib/types";
 import { fileDataToFile } from "@/lib/utils";
 import { AddressData, Question } from "@formlink/schema";
-import { InputContainer } from "@formlink/ui";
+// Replace generic registry-based InputContainer with explicit Chat switcher
+import ChatQuestionInputSwitcher from "./ChatQuestionInputSwitcher";
 import React from "react";
 import { useChatStore } from "./store/useChatStore";
 
@@ -182,6 +183,23 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
   const question = formSchema?.questions.find((q) => q.id === questionId);
   const response = currentInputs[questionId];
 
+  // Local preview state to keep the input visible briefly after selection
+  const [isPreviewing, setIsPreviewing] = React.useState(false);
+  const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const requestPreview = React.useCallback((ms: number) => {
+    if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    setIsPreviewing(true);
+    previewTimerRef.current = setTimeout(() => setIsPreviewing(false), ms);
+  }, []);
+  React.useEffect(
+    () => () => {
+      if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
+    },
+    [],
+  );
+
   if (!question) return null;
 
   // For multi-select: need special handling because values can be selected before submission
@@ -192,6 +210,11 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
 
   // For ranking: need special handling because ranking in progress doesn't mean submission
   const isRanking = (question.type as any).name === "ranking";
+
+  // For tel (phone): do not hide input just because a partial value exists (e.g., after selecting country)
+  const isTel =
+    (question.type as any).name === "text" &&
+    (question.type as any).format === "tel";
 
   // For file upload: need special handling because file selection doesn't mean submission
   const isFileUpload = (question.type as any).name === "fileUpload";
@@ -220,13 +243,16 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
   const isFileUploadSubmitted =
     isFileUpload && response && currentQuestionId !== questionId;
 
+  // A tel input is considered "submitted" only when it's not the current question
+  const isTelSubmitted = isTel && response && currentQuestionId !== questionId;
+
   // Hide input if:
   // - For address: has been explicitly submitted (not just filled)
   // - For multi-select: has been submitted (not just selected)
   // - For ranking: has been explicitly submitted (not just ranked)
   // - For file upload: has been explicitly submitted (not just selected)
   // - For other types: has any response
-  const shouldHideInput =
+  const baseShouldHideInput =
     response &&
     (isAddress
       ? isAddressSubmitted
@@ -236,7 +262,10 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
           ? isRankingSubmitted
           : isFileUpload
             ? isFileUploadSubmitted
-            : true);
+            : isTel
+              ? isTelSubmitted
+              : true);
+  const shouldHideInput = baseShouldHideInput && !isPreviewing;
 
   if (shouldHideInput) {
     if (variant === "user") {
@@ -278,50 +307,33 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
       : (response ?? null);
 
     return (
-      <InputContainer
-        currentQuestion={question}
-        currentResponse={currentResponseValue}
-        handleSelect={(qId: string, value: QuestionResponse) => {
-          // For multipleChoice, the value should already be the complete array
-          // For other types, just set the value directly
-          setCurrentInput(qId, value);
-
-          // For single select and other types, trigger submission immediately
-          // Multi-select, address, ranking, and file upload will trigger via onNext when Continue is clicked
-          if (
-            (question.type as any).name !== "multipleChoice" &&
-            (question.type as any).name !== "address" &&
-            (question.type as any).name !== "ranking" &&
-            (question.type as any).name !== "fileUpload" &&
-            value &&
-            onSubmitSelection
-          ) {
-            const formattedResponse = formatResponse(question, value);
-            onSubmitSelection(qId, value, formattedResponse);
-          }
-        }}
-        handleFileUpload={handleFileUpload}
-        isUploading={formDisplayState === "uploading_file"}
-        uploadedFile={responseAsFile}
-        onFileSelect={(file: File | null) => {
-          // Chat mode: Trigger upload flow instead of storing File directly
-          if (file && handleFileUpload) {
-            handleFileUpload(question.id, file);
-          } else {
-            setCurrentInput(question.id, null);
-          }
-        }}
-        onNext={() => {
-          // Get the current value from the store, not the stale closure value
-          const currentValue =
-            useChatStore.getState().currentInputs[question.id];
-
-          if (currentValue && onSubmitSelection) {
-            const formattedResponse = formatResponse(question, currentValue);
-            onSubmitSelection(question.id, currentValue, formattedResponse);
-          }
-        }}
-      />
+      <div className="mt-2 sm:mt-3">
+        <ChatQuestionInputSwitcher
+          question={question}
+          response={currentResponseValue}
+          onAnswer={(value: QuestionResponse) => {
+            setCurrentInput(question.id, value);
+          }}
+          onPreviewSelection={requestPreview}
+          onNext={() => {
+            const currentValue =
+              useChatStore.getState().currentInputs[question.id];
+            if (currentValue && onSubmitSelection) {
+              const formattedResponse = formatResponse(question, currentValue);
+              onSubmitSelection(question.id, currentValue, formattedResponse);
+            }
+          }}
+          onFileUpload={handleFileUpload}
+          uploadedFile={responseAsFile}
+          onFileSelect={(file: File | null) => {
+            if (file && handleFileUpload) {
+              handleFileUpload(question.id, file);
+            } else {
+              setCurrentInput(question.id, null);
+            }
+          }}
+        />
+      </div>
     );
   }
 

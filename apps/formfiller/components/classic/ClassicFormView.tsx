@@ -4,9 +4,12 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import type { QuestionResponse } from "@/lib/types";
 import type { Form as FormSchema, Question } from "@formlink/schema";
 import { Button, CompletionScreen, Form as UIForm } from "@formlink/ui";
+import { calcScore } from "@/lib/scoring/calcScore";
+import { useResultPage } from "@/hooks/useResultPage";
+import ReactMarkdown from "react-markdown";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import ClassicFormField from "./ClassicFormField";
@@ -37,8 +40,6 @@ interface ClassicFormViewProps {
 
 interface ClassicFormState {
   currentPage: number;
-  revealedQuestions: Set<string>;
-  isProgressive: boolean;
   showIntro: boolean;
 }
 
@@ -52,21 +53,23 @@ export default function ClassicFormView({
   onRestart,
   onAnswerChange,
   onFileUpload,
-  onNavigateNext,
-  onMarkCompleted,
   onSubmitForm,
   shouldShowQuestion,
-  getCurrentQuestion,
   getProgress,
 }: ClassicFormViewProps) {
   const isMobileView = useIsMobile();
+  // Stable hook order: compute result state irrespective of completion
+  const result = useResultPage(
+    isCompleted,
+    formSchema as any,
+    questionResponses as any,
+  );
   const [showConfetti, setShowConfetti] = useState(false);
 
   // Classic Mode UI state
   const [formState, setFormState] = useState<ClassicFormState>({
     currentPage: 1,
-    revealedQuestions: new Set(),
-    isProgressive: formSchema.settings?.branching?.enabled ?? false,
+    // Classic mode: strictly page-based, no progressive/branching
     showIntro: false, // Classic mode doesn't need intro screen
   });
 
@@ -90,9 +93,9 @@ export default function ClassicFormView({
   const formSchema_zod = useMemo(() => {
     const schemaFields: Record<string, z.ZodTypeAny> = {};
 
+    // Classic mode validates based on question type only;
+    // visibility is controlled purely by page layout (no progressive reveal).
     for (const question of safeQuestions) {
-      if (!shouldShowQuestion(question)) continue;
-
       const questionId = question.id;
 
       // Base validation setup based on question type
@@ -203,7 +206,7 @@ export default function ClassicFormView({
     }
 
     return z.object(schemaFields);
-  }, [formSchema.questions, shouldShowQuestion]);
+  }, [formSchema.questions]);
 
   // Initialize react-hook-form
   const form = useForm({
@@ -212,31 +215,22 @@ export default function ClassicFormView({
     mode: "onChange",
   });
 
-  // Initialize form on mount (Classic mode starts immediately)
+  // Keep latest callbacks in refs to avoid effect loops from identity changes
+  const initRef = useRef(onInitialize);
+  const startRef = useRef(onStartQuiz);
   useEffect(() => {
-    if (formSchema) {
-      onInitialize(formSchema, formId);
-      onStartQuiz(); // Start immediately in classic mode
+    initRef.current = onInitialize;
+    startRef.current = onStartQuiz;
+  }, [onInitialize, onStartQuiz]);
 
-      // Set initial revealed questions for progressive mode
-      if (formState.isProgressive) {
-        const firstQuestion = safeQuestions.find(shouldShowQuestion);
-        if (firstQuestion) {
-          setFormState((prev) => ({
-            ...prev,
-            revealedQuestions: new Set([firstQuestion.id]),
-          }));
-        }
-      } else {
-        // In non-progressive mode, reveal all questions on the current page
-        const questionsOnPage = getQuestionsForPage(formState.currentPage);
-        setFormState((prev) => ({
-          ...prev,
-          revealedQuestions: new Set(questionsOnPage.map((q) => q.id)),
-        }));
-      }
+  // Initialize form (Classic mode starts immediately) when form identity changes
+  useEffect(() => {
+    if (formSchema?.id) {
+      initRef.current(formSchema, formId);
+      startRef.current();
     }
-  }, [formSchema, formId, onInitialize, shouldShowQuestion]);
+    // Only depend on identifiers, not callback identities
+  }, [formSchema?.id, formId]);
 
   // Sync form values with business state
   useEffect(() => {
@@ -248,86 +242,29 @@ export default function ClassicFormView({
   // Get questions for a specific page
   const getQuestionsForPage = useCallback(
     (page: number): Question[] => {
-      return safeQuestions.filter(
-        (q) =>
-          shouldShowQuestion(q) && (q.page === page || (!q.page && page === 1)),
-      );
+      // Classic mode: show all questions assigned to the page, ignoring conditional logic
+      return safeQuestions.filter((q) => {
+        const qPage = (q as any).page ?? (q as any).styling?.page ?? 1;
+        return qPage === page || (!qPage && page === 1);
+      });
     },
-    [formSchema.questions, shouldShowQuestion],
+    [safeQuestions],
   );
 
   // Calculate total number of pages
   const totalPages = useMemo(() => {
     const pagesWithQuestions = new Set<number>();
     safeQuestions.forEach((q) => {
-      if (shouldShowQuestion(q)) {
-        pagesWithQuestions.add(q.page || 1);
-      }
+      const qPage = (q as any).page ?? (q as any).styling?.page ?? 1;
+      pagesWithQuestions.add(qPage || 1);
     });
     return Math.max(...Array.from(pagesWithQuestions), 1);
-  }, [safeQuestions, shouldShowQuestion]);
+  }, [safeQuestions]);
 
   // Get all visible questions (considering progressive reveal)
   const visibleQuestions = useMemo(() => {
-    if (formState.isProgressive) {
-      return safeQuestions.filter(
-        (q) => shouldShowQuestion(q) && formState.revealedQuestions.has(q.id),
-      );
-    } else {
-      return getQuestionsForPage(formState.currentPage);
-    }
-  }, [
-    formSchema.questions,
-    shouldShowQuestion,
-    formState,
-    getQuestionsForPage,
-  ]);
-
-  // Handle AI branching for progressive reveal
-  const handleAIBranching = useCallback(
-    async (currentQuestion: Question) => {
-      try {
-        const response = await fetch("/api/ai/branching", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            journeyScript: formSchema.settings?.journeyScript || "",
-            answerHistory: questionResponses,
-            questions: safeQuestions,
-            currentQuestionId: currentQuestion.id,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Branching API failed");
-        }
-
-        const { nextQuestionId } = await response.json();
-
-        if (nextQuestionId) {
-          const nextQuestion = safeQuestions.find(
-            (q) => q.id === nextQuestionId,
-          );
-          if (nextQuestion && shouldShowQuestion(nextQuestion)) {
-            // Reveal the next question
-            setFormState((prev) => ({
-              ...prev,
-              revealedQuestions: new Set([
-                ...prev.revealedQuestions,
-                nextQuestionId,
-              ]),
-            }));
-            return true;
-          }
-        }
-      } catch (error) {
-        console.error("AI branching failed:", error);
-      }
-
-      return false;
-    },
-    [formSchema, questionResponses, shouldShowQuestion],
-  );
+    return getQuestionsForPage(formState.currentPage);
+  }, [formSchema.questions, formState, getQuestionsForPage]);
 
   // Handle form submission
   const onSubmit = useCallback(
@@ -342,54 +279,6 @@ export default function ClassicFormView({
         }
       });
 
-      // Check if we need to reveal more questions (progressive mode)
-      if (formState.isProgressive) {
-        // Find the last answered question that might branch
-        const lastAnsweredQuestion = visibleQuestions
-          .filter(
-            (q) =>
-              data[q.id] !== undefined &&
-              data[q.id] !== null &&
-              data[q.id] !== "",
-          )
-          .reverse()[0];
-
-        if (
-          lastAnsweredQuestion?.mightBranchOffNext &&
-          (formSchema.settings as any)?.branching?.enabled &&
-          (formSchema.settings as any)?.journeyScript
-        ) {
-          const branchingSucceeded =
-            await handleAIBranching(lastAnsweredQuestion);
-          if (branchingSucceeded) {
-            return; // New question revealed, don't proceed to completion
-          }
-        }
-
-        // Check if there are more questions to reveal
-        const unansweredQuestions = safeQuestions.filter(
-          (q) =>
-            shouldShowQuestion(q) &&
-            !formState.revealedQuestions.has(q.id) &&
-            !q.conditionalLogic, // Skip conditional questions for now
-        );
-
-        if (unansweredQuestions.length > 0) {
-          // Reveal next question
-          const nextQuestion = unansweredQuestions[0];
-          if (nextQuestion) {
-            setFormState((prev) => ({
-              ...prev,
-              revealedQuestions: new Set([
-                ...prev.revealedQuestions,
-                nextQuestion.id,
-              ]),
-            }));
-            return;
-          }
-        }
-      }
-
       // Form is complete - submit to API
       const success = await onSubmitForm();
       if (success) {
@@ -402,9 +291,7 @@ export default function ClassicFormView({
       formSchema,
       onAnswerChange,
       onSubmitForm,
-      formState,
       visibleQuestions,
-      handleAIBranching,
       shouldShowQuestion,
     ],
   );
@@ -425,15 +312,9 @@ export default function ClassicFormView({
   const handleNextPage = useCallback(() => {
     if (formState.currentPage < totalPages) {
       const nextPage = formState.currentPage + 1;
-      const questionsOnNextPage = getQuestionsForPage(nextPage);
-
       setFormState((prev) => ({
         ...prev,
         currentPage: nextPage,
-        revealedQuestions: new Set([
-          ...prev.revealedQuestions,
-          ...questionsOnNextPage.map((q) => q.id),
-        ]),
       }));
     }
   }, [formState.currentPage, totalPages, getQuestionsForPage]);
@@ -457,8 +338,6 @@ export default function ClassicFormView({
     setShowConfetti(false);
     setFormState({
       currentPage: 1,
-      revealedQuestions: new Set(),
-      isProgressive: formSchema.settings?.branching?.enabled ?? false,
       showIntro: false,
     });
     form.reset();
@@ -471,29 +350,55 @@ export default function ClassicFormView({
 
   // Render completion screen
   if (isCompleted) {
+    const { total, possible, percentage } = calcScore(
+      formSchema,
+      questionResponses,
+    );
+    const hasScore = possible > 0;
+    const result = useResultPage(true, formSchema as any, questionResponses);
     return (
       <CompletionScreen
         isMobileView={isMobileView}
         showConfetti={showConfetti}
         onRestart={handleRestart}
-      />
+        title={hasScore ? "Quiz Completed!" : undefined}
+        message={
+          hasScore
+            ? "Here is your score summary."
+            : "Thank you for completing the form."
+        }
+      >
+        {hasScore && (
+          <div className="flex flex-col items-center gap-2">
+            <div className="text-3xl font-semibold">
+              {total} / {possible}
+            </div>
+            <div className="text-muted-foreground">
+              {percentage.toFixed(0)}%
+            </div>
+          </div>
+        )}
+        {result.markdown && (
+          <div className="mt-6 text-left max-w-2xl mx-auto prose prose-sm dark:prose-invert">
+            <ReactMarkdown>{result.markdown}</ReactMarkdown>
+          </div>
+        )}
+      </CompletionScreen>
     );
   }
 
   try {
     return (
       <UIForm {...(form as any)}>
-        <div className="classic-form-container max-w-4xl mx-auto p-6">
+        <div className="classic-form-container max-w-3xl mx-auto p-6">
           {/* Progress Bar */}
-          {(totalPages > 1 || formState.isProgressive) && (
+          {totalPages > 1 && (
             <div className="mb-8">
               <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
                 <div
                   className="bg-primary h-full rounded-full transition-all duration-500 ease-out"
                   style={{
-                    width: formState.isProgressive
-                      ? `${Math.max(5, (formState.revealedQuestions.size / safeQuestions.filter(shouldShowQuestion).length) * 100)}%`
-                      : `${Math.max(5, (formState.currentPage / totalPages) * 100)}%`,
+                    width: `${Math.max(5, (formState.currentPage / totalPages) * 100)}%`,
                   }}
                 />
               </div>
@@ -506,7 +411,7 @@ export default function ClassicFormView({
               <h1 className="text-3xl font-bold mb-3">{formSchema.title}</h1>
             )}
             {formSchema.description && (
-              <p className="text-lg text-muted-foreground">
+              <p className="text-lg text-muted-foreground max-w-[70ch]">
                 {formSchema.description}
               </p>
             )}
@@ -516,7 +421,11 @@ export default function ClassicFormView({
             <AnimatePresence mode="wait">
               {visibleQuestions.map((question) => {
                 // Default to full width (12 columns) if no colSpan specified
-                const colSpan = question.styling?.colSpan || 12;
+                const colSpan =
+                  (question as any).styling?.colSpan ??
+                  (question as any).colSpan ??
+                  (question as any).colspan ??
+                  12;
                 // On mobile, all questions take full width
                 const colSpanClass = isMobileView
                   ? "col-span-1"
@@ -570,7 +479,7 @@ export default function ClassicFormView({
           {/* Navigation and Submit Buttons */}
           <div className="mt-8 flex justify-between items-center">
             <div className="flex gap-2">
-              {formState.currentPage > 1 && !formState.isProgressive && (
+              {formState.currentPage > 1 && (
                 <Button
                   type="button"
                   onClick={handlePreviousPage}
@@ -583,11 +492,17 @@ export default function ClassicFormView({
             </div>
 
             <div className="flex gap-2">
-              {!formState.isProgressive &&
-              formState.currentPage < totalPages ? (
+              {formState.currentPage < totalPages ? (
                 <Button
                   type="button"
-                  onClick={handleNextPage}
+                  onClick={async () => {
+                    // Validate only current page fields before moving forward
+                    const ok = await form.trigger(
+                      visibleQuestions.map((q) => q.id as any) as any,
+                      { shouldFocus: true } as any,
+                    );
+                    if (ok) handleNextPage();
+                  }}
                   size="lg"
                   className="min-w-32"
                 >
@@ -603,11 +518,7 @@ export default function ClassicFormView({
                   size="lg"
                   className="min-w-32"
                 >
-                  {formState.isProgressive &&
-                  formState.revealedQuestions.size <
-                    formSchema.questions.filter(shouldShowQuestion).length
-                    ? "Continue"
-                    : "Submit"}
+                  Submit
                 </Button>
               )}
             </div>

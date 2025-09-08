@@ -5,7 +5,7 @@ import { cn } from "../../../lib/utils";
 // ChatInputContainer deleted - this component may need refactoring
 import type { BaseTextInputProps } from "../../primitives/BaseTextInput";
 
-interface ChatTextInputImprovedProps extends BaseTextInputProps {
+export interface ChatTextInputImprovedProps extends BaseTextInputProps {
   label?: string;
   description?: string;
   className?: string;

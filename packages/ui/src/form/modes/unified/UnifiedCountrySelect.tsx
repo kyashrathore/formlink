@@ -4,6 +4,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BaseSelect } from "../../primitives/BaseSelect";
 import { cn } from "../../../lib/utils";
 import { getCountries, getCountryCallingCode } from "libphonenumber-js";
+// Ensure full metadata to avoid truncated country lists in some bundles
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import fullMetadata from "libphonenumber-js/metadata.max.json";
 import type { Option } from "../../primitives/types";
 import { ChevronDown, Globe, Check } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
@@ -51,6 +55,9 @@ export interface UnifiedCountrySelectProps {
   ariaLabel?: string;
   ariaDescribedBy?: string;
   slim?: boolean;
+  className?: string;
+  density?: "compact" | "comfy" | "spacious";
+  triggerClassName?: string;
 }
 
 export function UnifiedCountrySelect({
@@ -65,6 +72,9 @@ export function UnifiedCountrySelect({
   ariaLabel,
   ariaDescribedBy,
   slim = false,
+  className,
+  density,
+  triggerClassName,
 }: UnifiedCountrySelectProps) {
   const options: Option[] = useMemo(() => {
     return countryList.map((country) => ({
@@ -106,16 +116,26 @@ export function UnifiedCountrySelect({
     return () => ro.disconnect();
   }, []);
 
+  const sizeClasses =
+    density === "compact"
+      ? "h-10 text-sm"
+      : density === "comfy"
+        ? "h-11 text-base"
+        : "h-12 text-base"; // spacious default
+
   const triggerClasses = cn(
-    "flex h-10 w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background",
+    "flex w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 shadow-sm ring-offset-background",
     "placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
+    sizeClasses,
     slim && "w-24",
-    mode === "typeform" && "h-12 text-base",
+    triggerClassName,
   );
 
   const triggerContent = selected ? (
     <div className="flex items-center flex-grow w-0 gap-2 overflow-hidden">
-      <span className="shrink-0 text-lg">{selected.flag}</span>
+      <span className="inline-flex items-center justify-center w-5 h-5 shrink-0 overflow-hidden rounded-full text-base leading-none">
+        {selected.flag}
+      </span>
       {!slim && (
         <span className="overflow-hidden text-ellipsis whitespace-nowrap">
           {selected.name}
@@ -127,7 +147,7 @@ export function UnifiedCountrySelect({
   );
 
   return (
-    <div className={cn(mode === "typeform" ? "w-full max-w-2xl" : "w-full")}>
+    <div className={cn("w-full", className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
           ref={triggerRef}
@@ -169,8 +189,10 @@ export function UnifiedCountrySelect({
                     }}
                     className="flex items-center w-full gap-2"
                   >
-                    <div className="flex flex-grow w-0 space-x-2 overflow-hidden">
-                      <span className="text-lg">{country.flag}</span>
+                    <div className="flex flex-grow w-0 items-center space-x-2 overflow-hidden">
+                      <span className="inline-flex items-center justify-center w-5 h-5 shrink-0 overflow-hidden rounded-full text-base leading-none">
+                        {country.flag}
+                      </span>
                       <span className="overflow-hidden text-ellipsis whitespace-nowrap">
                         {country.name}
                       </span>

@@ -9,7 +9,7 @@ interface PanelState {
 
   panelState: "expanded" | "collapsed" | "hidden"
 
-  activeMainTab: "form" | "responses" | "share" | "settings"
+  activeMainTab: "form" | "preview" | "responses" | "share" | "settings"
   activeChatTab: "chat" | "design"
 
   previewMode: "chat" | "conversation"
@@ -18,7 +18,9 @@ interface PanelState {
   isFloating: boolean
   floatingPosition: { x: number; y: number }
 
-  setActiveMainTab: (tab: "form" | "responses" | "share" | "settings") => void
+  setActiveMainTab: (
+    tab: "form" | "preview" | "responses" | "share" | "settings"
+  ) => void
   setActiveChatTab: (tab: "chat" | "design") => void
   setPanelWidth: (width: number) => void
   setIsResizing: (isResizing: boolean) => void
@@ -45,45 +47,13 @@ export const usePanelState = create<PanelState>()(
       floatingPosition: { x: 50, y: 50 },
 
       setActiveMainTab: (tab) => {
-        const { isFloating } = get()
+        // Do not auto-collapse or change edit/preview when switching main tabs
         set({ activeMainTab: tab })
-
-        if (isFloating) {
-          switch (tab) {
-            case "form":
-              set({ panelState: "hidden" })
-              break
-            case "responses":
-            case "share":
-            case "settings":
-              set({
-                isFloating: false,
-                panelState: "collapsed",
-              })
-              break
-          }
-        } else {
-          switch (tab) {
-            case "form":
-              set({ panelState: "expanded" })
-              break
-            case "responses":
-            case "share":
-            case "settings":
-              set({ panelState: "collapsed" })
-              break
-          }
-        }
       },
 
       setActiveChatTab: (tab) => {
+        // Decouple left panel (chat/design) from right panel edit/preview state
         set({ activeChatTab: tab })
-
-        if (tab === "design") {
-          set({ editMode: false })
-        } else if (tab === "chat") {
-          set({ editMode: true })
-        }
       },
 
       setPanelWidth: (width) => {
@@ -99,7 +69,7 @@ export const usePanelState = create<PanelState>()(
         const { isFloating, activeMainTab } = get()
 
         if (!isFloating) {
-          if (activeMainTab === "form") {
+          if (activeMainTab === "form" || activeMainTab === "preview") {
             set({
               isFloating: true,
               panelState: "hidden",
@@ -114,15 +84,10 @@ export const usePanelState = create<PanelState>()(
         } else {
           let newPanelState: "expanded" | "collapsed" | "hidden" = "expanded"
 
-          switch (activeMainTab) {
-            case "form":
-              newPanelState = "expanded"
-              break
-            case "responses":
-            case "share":
-            case "settings":
-              newPanelState = "collapsed"
-              break
+          if (activeMainTab === "form" || activeMainTab === "preview") {
+            newPanelState = "expanded"
+          } else {
+            newPanelState = "collapsed"
           }
 
           set({

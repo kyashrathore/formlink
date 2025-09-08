@@ -13,7 +13,6 @@ export function useTypeFormKeyboard({
   currentQuestion,
   onAnswer,
   onNext,
-  onPrevious,
   showHelp,
   getCurrentResponse,
   isCurrentQuestionValid,

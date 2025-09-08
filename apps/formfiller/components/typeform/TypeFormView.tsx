@@ -4,6 +4,9 @@ import { useIsMobile } from "@/hooks/useIsMobile";
 import type { QuestionResponse } from "@/lib/types";
 import { Form, getQuestionTypeName, Question } from "@formlink/schema";
 import { CompletionScreen, FormModeProvider, IntroScreen } from "@formlink/ui";
+import { calcScore } from "@/lib/scoring/calcScore";
+import { useResultPage } from "@/hooks/useResultPage";
+import ReactMarkdown from "react-markdown";
 import { AnimatePresence } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTypeFormKeyboard } from "./hooks/useTypeFormKeyboard";
@@ -58,6 +61,8 @@ export default function TypeFormView({
   getProgress,
 }: TypeFormViewProps) {
   const isMobileView = useIsMobile();
+  // Always compute result page state in a stable hook order
+  const resultPage = useResultPage(isCompleted, formSchema, questionResponses);
   const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
   const [direction, setDirection] = useState(1);
   const [, setIsLoading] = useState(false);
@@ -282,18 +287,44 @@ export default function TypeFormView({
     // Prevent navigating back from the first question to the intro screen
     if (activeQuestionIndex <= 0) return;
 
+    setDirection(-1); // Going backwards
+
+    // If history has a valid previous index (not intro), use it
     if (navigationHistory.length > 1) {
-      setDirection(-1); // Going backwards
-      const newHistory = [...navigationHistory];
-      newHistory.pop();
-      const previousIndex = newHistory[newHistory.length - 1];
-      if (previousIndex !== undefined) {
+      const prevFromHistory = navigationHistory[navigationHistory.length - 2];
+      if (typeof prevFromHistory === "number" && prevFromHistory >= 0) {
+        const newHistory = [...navigationHistory];
+        newHistory.pop();
         setNavigationHistory(newHistory);
-        setActiveQuestionIndex(previousIndex);
+        setActiveQuestionIndex(prevFromHistory);
         activatedAtRef.current = Date.now();
+        return;
       }
     }
-  }, [activeQuestionIndex, navigationHistory]);
+
+    // Fallback (resume case): walk backwards to the previous visible question
+    try {
+      const questions = formSchema?.questions || [];
+      let i = activeQuestionIndex - 1;
+      while (i >= 0) {
+        const q = questions[i];
+        if (q && shouldShowQuestion(q)) break;
+        i--;
+      }
+      if (i >= 0) {
+        setActiveQuestionIndex(i);
+        activatedAtRef.current = Date.now();
+        // Keep history as-is for resume (so additional back presses continue fallback)
+      }
+    } catch {
+      // noop on failure
+    }
+  }, [
+    activeQuestionIndex,
+    navigationHistory,
+    formSchema?.questions,
+    shouldShowQuestion,
+  ]);
 
   useTypeFormKeyboard({
     currentQuestion: currentQuestion,
@@ -436,12 +467,39 @@ export default function TypeFormView({
     }
 
     if (isCompleted) {
+      const { total, possible, percentage } = calcScore(
+        formSchema,
+        questionResponses,
+      );
+      const hasScore = possible > 0;
       return (
         <CompletionScreen
           isMobileView={isMobileView}
           showConfetti={showConfetti}
           onRestart={handleRestart}
-        />
+          title={hasScore ? "Quiz Completed!" : undefined}
+          message={
+            hasScore
+              ? "Here is your score summary."
+              : "Thank you for completing the form."
+          }
+        >
+          {hasScore && (
+            <div className="flex flex-col items-center gap-2">
+              <div className="text-3xl font-semibold">
+                {total} / {possible}
+              </div>
+              <div className="text-muted-foreground">
+                {percentage.toFixed(0)}%
+              </div>
+            </div>
+          )}
+          {resultPage.markdown && (
+            <div className="mt-6 text-left max-w-2xl mx-auto prose prose-sm dark:prose-invert">
+              <ReactMarkdown>{resultPage.markdown}</ReactMarkdown>
+            </div>
+          )}
+        </CompletionScreen>
       );
     }
 
@@ -514,12 +572,15 @@ export default function TypeFormView({
             onPrevious={handlePrevious}
             onNext={handleNextWithDirection}
             canGoPrevious={activeQuestionIndex > 0 && !isNavigating}
-            canGoNext={
-              isQuestionValid(
-                currentQuestion,
-                questionResponses[currentQuestion?.id || ""],
-              ) && !isNavigating
-            }
+            canGoNext={Boolean(
+              currentQuestion &&
+                questionResponses[currentQuestion.id] &&
+                isQuestionValid(
+                  currentQuestion,
+                  questionResponses[currentQuestion.id]!,
+                ) &&
+                !isNavigating,
+            )}
             isLoadingNext={isNavigating}
           />
         )}

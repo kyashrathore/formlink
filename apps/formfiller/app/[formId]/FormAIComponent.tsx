@@ -202,6 +202,48 @@ export default function FormAIComponent({
   const chatResult = chat;
   const { messages, setMessages, sendMessage, status } = chatResult;
 
+  // Inject a one-time welcome assistant message when no history is present
+  const hasWelcomeInjectedRef = useRef(false);
+  useEffect(() => {
+    if (isLoading) return;
+    if (hasWelcomeInjectedRef.current) return;
+    const noHistory = (chatHistoryMessages?.length ?? 0) === 0;
+    if (noHistory && messages.length === 0) {
+      const title = formSchema?.title || "Welcome";
+      const desc =
+        typeof formSchema?.description === "string"
+          ? formSchema.description
+          : "";
+      const endings = [
+        "Shall we begin?",
+        "Are you ready to get started?",
+        "Ready to begin?",
+        "Shall we get started?",
+        "Let's begin!",
+      ];
+      const ending = endings[Math.floor(Math.random() * endings.length)];
+      const base = desc
+        ? `Hello! Welcome to ${title}. ${desc}`
+        : `Hello! Welcome to ${title}.`;
+      const text = `${base} ${ending}`;
+      const welcomeMsg: any = {
+        id: "welcome",
+        role: "assistant",
+        parts: [{ type: "text", text }],
+      };
+      setMessages([welcomeMsg]);
+      setChatHistoryMessages([welcomeMsg]);
+      hasWelcomeInjectedRef.current = true;
+    }
+  }, [
+    isLoading,
+    chatHistoryMessages,
+    messages.length,
+    setMessages,
+    setChatHistoryMessages,
+    formSchema,
+  ]);
+
   // Direct selection submission helper
   async function submitSelection(
     questionId: string,
@@ -225,12 +267,25 @@ export default function FormAIComponent({
       isTestSubmission,
     };
 
-    // 3) guarded send
-    setFormDisplayState("chatting_ai_loading");
-    await sendMessage(
-      { parts: [{ type: "text", text: displayText }] }, // chat-visible text
-      { body },
-    );
+    // 3) guarded send with small delay for UX parity
+    await new Promise<void>((resolve, reject) => {
+      const DELAY_MS = 250;
+      setTimeout(() => {
+        try {
+          setFormDisplayState("chatting_ai_loading");
+          Promise.resolve(
+            sendMessage(
+              { parts: [{ type: "text", text: displayText }] },
+              { body },
+            ),
+          )
+            .then(() => resolve())
+            .catch(reject);
+        } catch (err) {
+          reject(err as any);
+        }
+      }, DELAY_MS);
+    });
   }
 
   useEffect(() => {
@@ -255,8 +310,12 @@ export default function FormAIComponent({
 
     setErrorMessage(null);
 
+    // Capture and clear immediately for snappy UX
+    const userText = input;
+    setInput("");
+
     const body = {
-      userInput: input,
+      userInput: userText,
       submissionBehavior: "manualUnclear" as const,
       currentQuestionId: store.currentQuestionId ?? null, // do not guess from parts
       formSchema,
@@ -267,8 +326,16 @@ export default function FormAIComponent({
     };
 
     setFormDisplayState("chatting_ai_loading");
-    await sendMessage({ parts: [{ type: "text", text: input }] }, { body });
-    setInput("");
+    try {
+      await sendMessage(
+        { parts: [{ type: "text", text: userText }] },
+        { body },
+      );
+    } catch (err) {
+      // Restore input on failure so the user can retry/edit
+      setInput(userText);
+      throw err;
+    }
   }
 
   // File upload handler that calls submitSelection directly
@@ -369,43 +436,14 @@ export default function FormAIComponent({
 
   // Track if we've sent the initial message
   const hasInitiatedRef = useRef(false);
+  const hasStartedRef = useRef(false);
 
-  // One-shot kickoff/resume after isLoading
+  // One-shot kickoff/resume after isLoading (no auto-start message)
   useEffect(() => {
-    if (isLoading || !sendMessage) return;
+    if (isLoading) return;
     if (!store.submissionId) return;
 
     const hasHistory = (chatHistoryMessages?.length ?? 0) > 0;
-
-    if (
-      !hasInitiatedRef.current &&
-      !hasHistory &&
-      (formDisplayState === "idle" || formDisplayState === "chatting_ai_ready")
-    ) {
-      // auto-start
-      hasInitiatedRef.current = true;
-      const submissionBody = {
-        userInput: "Start the form",
-        submissionBehavior: "auto" as const,
-        currentQuestionId: null,
-        formSchema,
-        responses: {},
-        submissionId: store.submissionId,
-        userId: null,
-        isTestSubmission,
-      };
-
-      setFormDisplayState("chatting_ai_loading");
-      sendMessage(
-        { parts: [{ type: "text", text: "Start the form" }] },
-        { body: submissionBody },
-      ).catch((error) => {
-        console.error("Failed to send auto-start message:", error);
-        setFormDisplayState("idle");
-        hasInitiatedRef.current = false;
-      });
-      return;
-    }
 
     if (
       !hasInitiatedRef.current &&
@@ -413,54 +451,61 @@ export default function FormAIComponent({
       currentQuestionId &&
       formDisplayState === "idle"
     ) {
-      // resume
+      // resume without synthetic message
       hasInitiatedRef.current = true;
-      const resumeBody = {
-        userInput: "Continue where we left off",
-        submissionBehavior: "auto" as const,
-        currentQuestionId,
-        formSchema,
-        responses: currentInputs,
-        submissionId: store.submissionId,
-        userId: null,
-        isTestSubmission,
-      };
-
-      setFormDisplayState("chatting_ai_loading");
-      sendMessage(
-        { parts: [{ type: "text", text: "Continue where we left off" }] },
-        { body: resumeBody },
-      ).catch((error) => {
-        console.error("Failed to send resume message:", error);
-        setFormDisplayState("idle");
-        hasInitiatedRef.current = false;
-      });
+      setFormDisplayState("chatting_ai_ready");
     }
   }, [
     isLoading,
-    sendMessage,
     store.submissionId,
     formDisplayState,
     currentQuestionId,
     chatHistoryMessages,
-    currentInputs,
-    formSchema,
-    isTestSubmission,
     setFormDisplayState,
   ]);
 
-  // Calculate isChatActive - show chat interface when:
-  // 1. We have chat history OR
-  // 2. We're in a chatting state (ready or loading) OR
-  // 3. History is still loading (to prevent flicker)
-  const isChatActive =
-    isLoading || // Show chat UI while loading history
-    chatHistoryMessages.length > 0 ||
-    messages.length > 0 ||
-    formDisplayState === "chatting_ai_ready" ||
-    formDisplayState === "chatting_ai_loading" ||
-    formDisplayState === "completed" ||
-    formDisplayState === "saved";
+  // Explicit chat start handler: trigger backend but hide the synthetic user message
+  const handleChatStart = async () => {
+    if (!sendMessage || !store.submissionId) return;
+    hasStartedRef.current = true;
+    hasInitiatedRef.current = true;
+    const submissionBody = {
+      userInput: "Start the form",
+      submissionBehavior: "auto" as const,
+      currentQuestionId: null,
+      formSchema,
+      responses: {},
+      submissionId: store.submissionId,
+      userId: null,
+      isTestSubmission,
+    };
+    setFormDisplayState("chatting_ai_loading");
+    try {
+      await sendMessage(
+        { parts: [{ type: "text", text: "Start the form" }] },
+        { body: submissionBody },
+      );
+      // Hide the user message we just added so it doesn't show up in chat
+      setMessages((prev) => {
+        const arr = [...prev];
+        for (let i = arr.length - 1; i >= 0; i--) {
+          if ((arr[i] as any).role === "user") {
+            (arr[i] as any).hidden = true;
+            break;
+          }
+        }
+        return arr;
+      });
+    } catch (error) {
+      console.error("Failed to start chat:", error);
+      setFormDisplayState("idle");
+      hasInitiatedRef.current = false;
+    }
+  };
+
+  // Calculate isChatActive (avoid auto-activating during initial loading)
+  const hasHistory = chatHistoryMessages.length > 0 || messages.length > 0;
+  const isChatActive = true; // Always render chat
 
   if (!store.submissionId) {
     return (
@@ -507,15 +552,7 @@ export default function FormAIComponent({
         </Alert>
       )}
       <AnimatePresence>
-        {!isChatActive ? (
-          <div key="loading-screen" className="h-full">
-            <div className="flex flex-col items-center justify-center h-full p-4 text-center lg:max-w-3xl md:max-w-3xl mx-auto">
-              <div className="text-muted-foreground">
-                {isLoading ? "Loading chat history..." : "Initializing chat..."}
-              </div>
-            </div>
-          </div>
-        ) : (
+        {
           <div key="chat-interface">
             <div className="relative flex flex-col h-full w-full overflow-hidden">
               <div className="overflow-hidden">
@@ -569,7 +606,7 @@ export default function FormAIComponent({
               </AnimatePresence>
             </div>
           </div>
-        )}
+        }
       </AnimatePresence>
     </div>
   );

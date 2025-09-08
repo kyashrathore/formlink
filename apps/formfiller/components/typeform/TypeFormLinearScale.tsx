@@ -92,7 +92,10 @@ export function TypeFormLinearScale({
             // Map number keys to scale values when reasonable
             if (values.length <= 10) {
               const targetIndex = numKey === 0 ? 9 : numKey - 1;
-              if (targetIndex < values.length) {
+              if (
+                targetIndex < values.length &&
+                values[targetIndex] !== undefined
+              ) {
                 newValue = values[targetIndex];
               }
             }

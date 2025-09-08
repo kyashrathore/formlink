@@ -10,6 +10,10 @@ import {
   getCountries,
   getCountryCallingCode,
 } from "libphonenumber-js";
+// Ensure full metadata for complete country list and dial codes
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import fullMetadata from "libphonenumber-js/metadata.max.json";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
 import {
   Command,
@@ -39,6 +43,7 @@ export interface UnifiedPhoneInputProps {
   onCountryChange?: (iso2: string | null) => void;
   showFlag?: boolean;
   showCountrySelector?: boolean;
+  showContinueButton?: boolean;
 }
 
 export function UnifiedPhoneInput({
@@ -57,6 +62,7 @@ export function UnifiedPhoneInput({
   onCountryChange,
   showFlag = mode === "typeform",
   showCountrySelector = mode === "typeform",
+  showContinueButton = mode === "chat",
 }: UnifiedPhoneInputProps) {
   const [selectedISO2, setSelectedISO2] = useState<string | null>(
     country || defaultCountry || null,
@@ -81,9 +87,15 @@ export function UnifiedPhoneInput({
     try {
       // If value includes a leading +, use international parsing; else region-based
       if (!value || value.trim() === "") return !required;
-      if (value.trim().startsWith("+")) return isValidPhoneNumber(value as any);
-      if (region) return isValidPhoneNumber(value as any, region as any);
-      return isValidPhoneNumber(value as any);
+      if (value.trim().startsWith("+"))
+        return isValidPhoneNumber(value as any, fullMetadata as any);
+      if (region)
+        return isValidPhoneNumber(
+          value as any,
+          region as any,
+          fullMetadata as any,
+        );
+      return isValidPhoneNumber(value as any, fullMetadata as any);
     } catch {
       return false;
     }
@@ -135,9 +147,10 @@ export function UnifiedPhoneInput({
         // If using libphonenumber-js metadata availability is limited here; we can safely prepend '+' if missing
         const initial = "+";
         onChange(initial);
-      } catch {}
+      } catch {
+        // Default formatting failed, ignore
+      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultCountry]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -158,7 +171,7 @@ export function UnifiedPhoneInput({
     onCountryChange?.(iso2);
   };
 
-  const countries = useMemo(() => getCountries(), []);
+  const countries = useMemo(() => getCountries(fullMetadata as any), []);
   const getFlagFromISO2 = (iso?: string | null) =>
     iso
       ? String.fromCodePoint(
@@ -171,7 +184,9 @@ export function UnifiedPhoneInput({
   const selectedFlag = getFlagFromISO2(selectedISO2 || flagISO2);
   const selectedDial = useMemo(() => {
     try {
-      return selectedISO2 ? `+${getCountryCallingCode(selectedISO2)}` : "+";
+      return selectedISO2
+        ? `+${getCountryCallingCode(selectedISO2, fullMetadata as any)}`
+        : "+";
     } catch {
       return "+";
     }
@@ -213,12 +228,12 @@ export function UnifiedPhoneInput({
   if (mode === "typeform") {
     return (
       <div className="w-full max-w-2xl">
-        <div className="flex items-end border-0 border-b-2 border-border/30 focus-within:border-primary transition-colors duration-200">
+        <div className="flex items-center h-[60px] border-0 border-b-2 border-border/30 focus-within:border-primary transition-colors duration-200">
           {showCountrySelector && (
             <Popover open={countryOpen} onOpenChange={setCountryOpen}>
               <PopoverTrigger
                 ref={triggerRef as any}
-                className="flex items-center gap-2 px-0 py-3 text-2xl md:text-3xl font-light bg-transparent border-0 hover:opacity-70 transition-opacity duration-200"
+                className="flex items-center gap-2 px-0 h-full text-2xl md:text-3xl font-light bg-transparent border-0 hover:opacity-70 transition-opacity duration-200"
               >
                 <span className="text-2xl">{selectedFlag}</span>
                 <ChevronDown size={16} className="opacity-60" />
@@ -253,7 +268,7 @@ export function UnifiedPhoneInput({
                         return (
                           <CommandItem
                             key={code}
-                            value={`${name} ${code} +${getCountryCallingCode(code)}`}
+                            value={`${name} ${code} +${getCountryCallingCode(code, fullMetadata as any)}`}
                             onSelect={() => handleSelectCountry(code)}
                             className="flex items-center gap-2"
                           >
@@ -262,7 +277,8 @@ export function UnifiedPhoneInput({
                             </span>
                             <span className="flex-1">{name}</span>
                             <span className="text-xs text-muted-foreground">
-                              +{getCountryCallingCode(code)}
+                              +
+                              {getCountryCallingCode(code, fullMetadata as any)}
                             </span>
                           </CommandItem>
                         );
@@ -280,10 +296,10 @@ export function UnifiedPhoneInput({
             aria-label={ariaLabel}
             aria-describedby={ariaDescribedBy}
             className={cn(
-              "w-full text-2xl md:text-3xl font-light",
+              "w-full text-2xl md:text-3xl font-light h-full",
               "bg-transparent border-0 focus:outline-none",
               "text-foreground placeholder:text-muted-foreground/50",
-              "py-3 px-0",
+              "px-0",
               disabled && "opacity-50 cursor-not-allowed",
               !isValid && value && touched && "text-destructive",
             )}
@@ -357,7 +373,7 @@ export function UnifiedPhoneInput({
                         return (
                           <CommandItem
                             key={code}
-                            value={`${name} ${code} +${getCountryCallingCode(code)}`}
+                            value={`${name} ${code} +${getCountryCallingCode(code, fullMetadata as any)}`}
                             onSelect={() => handleSelectCountry(code)}
                             className="flex items-center gap-2"
                           >
@@ -366,7 +382,8 @@ export function UnifiedPhoneInput({
                             </span>
                             <span className="flex-1">{name}</span>
                             <span className="text-xs text-muted-foreground">
-                              +{getCountryCallingCode(code)}
+                              +
+                              {getCountryCallingCode(code, fullMetadata as any)}
                             </span>
                           </CommandItem>
                         );
@@ -398,9 +415,20 @@ export function UnifiedPhoneInput({
           />
         </div>
       </div>
-      {!isValid && value && touched && (
-        <p className="text-sm text-destructive">Invalid phone number</p>
-      )}
+      <div className="mt-2 flex items-center justify-between">
+        {!isValid && value && touched && (
+          <p className="text-sm text-destructive">Invalid phone number</p>
+        )}
+        {showContinueButton && onSubmit && isValid && (
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground hover:opacity-90"
+            onClick={() => onSubmit?.()}
+          >
+            Continue
+          </button>
+        )}
+      </div>
     </div>
   );
 }

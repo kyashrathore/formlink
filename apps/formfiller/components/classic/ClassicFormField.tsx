@@ -25,22 +25,21 @@ export default function ClassicFormField({
   value,
   onChange,
   onFileUpload,
-  errors,
 }: ClassicFormFieldProps) {
   return (
     <FormField
       name={question.id}
       render={({ field }) => (
-        <FormItem className="space-y-3">
+        <FormItem className="gap-3">
           <FormLabel className="text-base font-medium">
-            {question.label || question.title}
+            {question.label}
             {question.validations?.required?.value && (
               <span className="text-destructive ml-1">*</span>
             )}
           </FormLabel>
 
           {question.description && (
-            <FormDescription className="text-sm text-muted-foreground">
+            <FormDescription className="text-sm text-muted-foreground max-w-[65ch]">
               {question.description}
             </FormDescription>
           )}

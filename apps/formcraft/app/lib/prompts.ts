@@ -70,6 +70,7 @@ Your primary task is to analyze the user's request and generate a single, valid 
 - \`id\`: Unique, readable string ID, preferably with the format \`q_<topic>_<purpose>\` (e.g., \`q_feedback_taste\`).
 - \`questionNo\`: Determine an appropriate number based on the sequence of any provided \`existingQuestions\` or suggest \`1\` if none exist.
 - \`title\`: The main text of the question, derived from the user's request.
+- \`label\`: ALWAYS include a short label suitable for Classic mode. If the user does not specify a label, set it equal to \`title\`.
 - \`type.name\`: Select the most appropriate value from the allowed set ("multipleChoice", "singleChoice", "text", "date", "rating", "address", "ranking", "fileUpload", "linearScale", "likertScale").
 - \`display\`: This is a mandatory object.
   - \`inputType\`: **Mandatory within \`display\`**. Select a compatible \`InputType\` from \`InputTypeEnumSchema\` that matches the \`type.name\`. Refer to the \`QuestionSchema\`'s internal logic (like the \`allowedInputTypesMap\` in the \`superRefine\`) for valid combinations. Pay attention to suggestions based on the number of options (e.g., dropdown/multiSelectDropdown for >4 options, radio/checkbox for <4 options).
@@ -115,6 +116,12 @@ Your primary task is to analyze the user's request and generate a single, valid 
 - \`readableRatingConfig\`: Optional human-readable string explaining the rating scale. Include if \`ratingConfig\` is present (e.g., \`"Rate from 1 (Low) to 5 (High)"\`). Omit this field if the question is not a rating type or has no rating config.
 - \`readableLinearScaleConfig\`: Optional human-readable string explaining linear scale instructions. Include if \`linearScaleConfig\` is present (e.g., \`"Scale from 1 (Strongly Disagree) to 7 (Strongly Agree)"\`). Omit this field if the question is not a linear scale type or has no linear scale config.
 - \`readableRankingConfig\`: Optional human-readable string explaining ranking rules. Include if \`rankingConfig\` is present (e.g., \`"Rank items from 1 (most preferred) to 5 (least preferred)"\`). Omit this field if the question is not a ranking type or has no ranking config.
+
+**Classic Layout Requirements (Always Include):**
+
+- \`page\`: Assign a page number (start at 1). Keep the form split into steps by placing ~2–4 questions per page; keep related fields together. Prefer ≤5 total pages unless explicitly asked for a long form.
+- \`styling.colSpan\`: 12-column grid width. Default 12. Use 6 when pairing two related fields in one row; use 4 only for three compact fields per row. Ensure each row on a page sums to ≤12.
+ - Large components guidance: address, ranking, likert, and file upload should generally use colSpan 12 and be placed alone or with at most one small field on their page.
 
 **Input:** You will receive a request from the user describing the desired question. This input may also include an array of \`existingQuestions\` (formatted according to \`QuestionSchema\`) to provide context for \`questionNo\` and avoid unintended duplication.
 
@@ -283,8 +290,21 @@ Your primary task is to analyze the provided topic **if and only if** the reques
     - \`id\`: Unique, readable string ID, preferably with the format \`q_<topic>_<purpose>\` (e.g., \`q_feedback_taste\`).
     - \`questionNo\`: Assign a sequential, positive integer number (\`1\`, \`2\`, \`3\`, ...) corresponding to the question's order within the form.
     - \`title\`: A clear, concise question for the end user.
-    - \`description\`: Optional, but helpful. Add where context would improve user understanding.
+    - \`label\`: ALWAYS include. Short, UI-friendly label text. If the user hasn’t specified a label explicitly, set \`label\` to the same text as \`title\`.
+    - \`description\`: Optional and concise (one sentence max). Add only where context helps.
     - \`questionType\`: Must be one of the valid \`QuestionTypeEnumSchema\` values.
+    - **Classic Layout fields (MANDATORY):**
+      - \`page\`: Assign questions to pages to create a stepped form experience. Start at 1. Aim for ~2–4 questions per page (keep related questions together). Avoid more than ~5 pages unless the user explicitly requests a long form.
+      - \`styling.colSpan\`: 12-column grid width for Classic mode. Defaults to 12. Use 6 when placing two related fields on the same row (e.g., first/last name, city/state). Use 4 only for three compact fields in one row. Do not exceed total 12 in a row per page.
+        - Examples: email = 12; phone = 6 when paired; firstName/lastName = 6 + 6; city/state/postal = 4 + 4 + 4.
+
+    - **Component sizing guidance (very important for pagination):**
+      - Address block (type.name = "address"): This renders as multiple sub-fields. Treat as a large component; set \`styling.colSpan = 12\` and typically place it alone on a page or with at most one small companion field.
+      - Ranking (type.name = "ranking"): Takes significant vertical space. Prefer \`styling.colSpan = 12\` and ideally keep it alone on its page or paired with just one small question.
+      - Likert scale (type.name = "likertScale"): Wide matrix-like component. Use \`styling.colSpan = 12\`; limit other questions on the same page to avoid crowding.
+      - File upload: Use \`styling.colSpan = 12\` and limit neighbors.
+      - Linear scale / Rating: These can share a page with others; use 12 or 6 depending on layout, but ensure page density stays comfortable (2–4 items).
+
     - **Type-specific configuration (MANDATORY where applicable, based on \`questionType\`):**
       - If \`questionType\` is \`"singleChoice"\` or \`"multipleChoice"\`:
         - Provide at least 2 \`options\`, each with \`{ value, label }\`.
@@ -643,7 +663,7 @@ For the user input: "{{userInput}}"
 
 Generate a JSON object with this structure:
 
-\`\`\`json
+\`\`\`
 {
   "title": "Clear, Compelling Form Title",
   "description": "Value-focused description (1-2 sentences)",
@@ -659,9 +679,9 @@ Generate a JSON object with this structure:
 
 ## 🎭 JOURNEY SCRIPT TEMPLATE
 
-The \`journeyScript\` field should contain markdown following this structure:
+The "journeyScript" field should contain markdown following this structure:
 
-\`\`\`markdown
+\`\`\`
 <form-journey>
 
 <strategy>
@@ -718,6 +738,18 @@ Example: Before asking for email after travel preferences, share: "Based on your
 1. **Be Specific**: Reference the actual form's purpose, not generic advice
 2. **Stay Flexible**: Provide guidance, not rigid scripts
 3. **Focus on Value**: Every element should benefit the user
+4. **XML + Markdown Rules (Important)**:
+   - The journey script MUST be a single valid XML document with a "<form-journey>" root and only the specified child tags (e.g., "<strategy>", "<value-exchange-strategy>", "<branching-logic>", "<result-generation>").
+   - The content inside each tag must be a single well‑formatted Markdown block (headings, paragraphs, lists, code fences allowed). Do not create nested XML tags inside these sections and do not split content across multiple sibling text nodes.
+   - Use the literal sequence "\\n" between Markdown paragraphs and list items. Avoid leading indentation that would unintentionally create code blocks.
+   - Do not include raw "<" or "&" characters that would break XML. If absolutely necessary within Markdown, use HTML entities ("&lt;", "&amp;").
+   - The JSON field "journeyScript" must contain ONLY the XML string (no surrounding Markdown code fences such as a triple-backtick "markdown" fence), and no explanatory text.
+   - Keep lists properly formatted (e.g., lines starting with "- " or "1. ") and ensure headings use "##" and below inside sections.
+   - Markdown formatting tips for best rendering:
+     - Put a blank line before a list and between distinct paragraphs.
+     - Keep each "Label: Value" on its own line.
+     - For nested bullets, indent two spaces before the child "- ".
+     - Use headings starting at level 2 ("## ...").
 4. **Natural Language**: Write as you'd explain to a colleague
 5. **Actionable**: Give the AI clear direction without micromanaging
 
@@ -831,6 +863,7 @@ Transform the simple question text into a rich, thoughtful, and complete questio
 **Key Fields to Generate (based on \`QuestionSchema\`):**
 
 1.  \`title\`: (string) **MUST BE** the exact \`{{questionTitle}}\`.
+1.a \`label\`: (string) **ALWAYS INCLUDE**. If the user has not specified a separate label, set this equal to \`title\`.
 2.  \`description\`: (optional string) Add if clarification is needed.
 3.  \`score\`: (optional number) The score for answering the question correctly. Essential for quizzes.
 4.  \`questionType\`: (string enum) **MUST BE** \`{{questionType}}\`.
@@ -850,6 +883,8 @@ Transform the simple question text into a rich, thoughtful, and complete questio
 11. \`defaultValue\`: (optional) Can be string, number, array of strings, etc.
 12. \`id\`: (string) Generate an ID in the format q{questionOrder}_keyword1_keyword2 by extracting the most important keywords from the \`{{questionTitle}}\` (e.g., for question 3, 'What is your favorite color?' becomes 'q3_favorite_color').
 13. \`mightBranchOffNext\`: (optional boolean) Set to true only if this question participates in conditional branching as per the Journey Script.
+14. \`page\`: (number) Assign a page number starting from 1. Default heuristic: 3 questions per page (use \`Math.floor(questionOrder/3)+1\`). Adjust if explicit layout is stated in context.
+15. \`styling\`: (object) Always include with at least { "colSpan": 12 }. Use 6 when pairing two related fields in one row; use 4 for three compact fields.
 
 **Fields to OMIT:**
 - \`readableValidations\`, \`readableConditionalLogic\`, \`readableRankingConfig\`, \`readableRatingConfig\`, \`conditionalLogic\`.

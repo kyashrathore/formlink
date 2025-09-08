@@ -70,6 +70,7 @@ Your primary task is to analyze the user's request and generate a single, valid 
 - \`id\`: Unique, readable string ID, preferably with the format \`q_<topic>_<purpose>\` (e.g., \`q_feedback_taste\`).
 - \`questionNo\`: Determine an appropriate number based on the sequence of any provided \`existingQuestions\` or suggest \`1\` if none exist.
 - \`title\`: The main text of the question, derived from the user's request.
+- \`label\`: ALWAYS include a short UI label. If the user doesn’t provide a separate label, set it equal to \`title\`.
 - \`questionType\`: Select the most appropriate type from \`QuestionTypeEnumSchema\` ("multipleChoice", "singleChoice", "text", "date", "rating", "address", "ranking", "fileUpload", "linearScale", "likertScale").
 - \`display\`: This is a mandatory object.
   - \`inputType\`: **Mandatory within \`display\`**. Select a compatible \`InputType\` from \`InputTypeEnumSchema\` that matches the \`questionType\`. Refer to the \`QuestionSchema\`'s internal logic (like the \`allowedInputTypesMap\` in the \`superRefine\`) for valid combinations. Pay attention to suggestions based on the number of options (e.g., dropdown/multiSelectDropdown for >4 options, radio/checkbox for <4 options).
@@ -114,6 +115,12 @@ Your primary task is to analyze the user's request and generate a single, valid 
 - \`readableRatingConfig\`: Optional human-readable string explaining the rating scale. Include if \`ratingConfig\` is present (e.g., \`"Rate from 1 (Low) to 5 (High)"\`). Omit this field if the question is not a rating type or has no rating config.
 - \`readableLinearScaleConfig\`: Optional human-readable string explaining linear scale instructions. Include if \`linearScaleConfig\` is present (e.g., \`"Scale from 1 (Strongly Disagree) to 7 (Strongly Agree)"\`). Omit this field if the question is not a linear scale type or has no linear scale config.
 - \`readableRankingConfig\`: Optional human-readable string explaining ranking rules. Include if \`rankingConfig\` is present (e.g., \`"Rank items from 1 (most preferred) to 5 (least preferred)"\`). Omit this field if the question is not a ranking type or has no ranking config.
+
+**Classic Layout Requirements (Always Include):**
+
+- \`page\`: Page number starting from 1. Keep ~2–4 questions per page to create a stepped experience; group related fields. Prefer ≤5 pages unless requested otherwise.
+- \`styling.colSpan\`: 12-column grid width. Default 12. Use 6 when two related fields share a row; use 4 only when three compact fields share a row (row total ≤12).
+ - Large components guidance: address, ranking, likert, and file upload should typically span colSpan 12 and occupy a page alone or with a single small neighbor to avoid crowding.
 
 **Input:** You will receive a request from the user describing the desired question. This input may also include an array of \`existingQuestions\` (formatted according to \`QuestionSchema\`) to provide context for \`questionNo\` and avoid unintended duplication.
 
@@ -282,8 +289,21 @@ Your primary task is to analyze the provided topic **if and only if** the reques
     - \`id\`: Unique, readable string ID, preferably with the format \`q_<topic>_<purpose>\` (e.g., \`q_feedback_taste\`).
     - \`questionNo\`: Assign a sequential, positive integer number (\`1\`, \`2\`, \`3\`, ...) corresponding to the question's order within the form.
     - \`title\`: A clear, concise question for the end user.
-    - \`description\`: Optional, but helpful. Add where context would improve user understanding.
+    - \`label\`: ALWAYS include. Short, UI-friendly label. If not provided by the user, set it equal to \`title\`.
+    - \`description\`: Optional and concise (one sentence max) to aid understanding.
     - \`questionType\`: Must be one of the valid \`QuestionTypeEnumSchema\` values.
+    - **Classic Layout fields (MANDATORY):**
+      - \`page\`: Assign a page number starting at 1. Target ~2–4 questions per page to create steps; keep related fields grouped. Prefer ≤5 total pages unless the user requests a longer flow.
+      - \`styling.colSpan\`: 12-column grid width. Default 12. Use 6 when two related fields share a row; use 4 only when three compact fields share a row. Ensure each row sums to ≤12.
+        - Examples: firstName/lastName = 6 + 6; city/state/postal = 4 + 4 + 4; email = 12; phone paired = 6.
+
+    - **Component sizing guidance:**
+      - Address (type.name = "address"): Multi-field block. Set colSpan 12 and usually keep alone on a page (or with a single small field).
+      - Ranking (type.name = "ranking"): High vertical space. Use colSpan 12; prefer it alone on its page or with one small neighbor.
+      - Likert (type.name = "likertScale"): Wide; use colSpan 12 and limit page neighbors.
+      - File upload: Use colSpan 12 and keep page lightly populated.
+      - Linear scale / Rating: Can share a page; choose 12 or 6 depending on grouping while keeping 2–4 items per page overall.
+
     - **Type-specific configuration (MANDATORY where applicable, based on \`questionType\`):**
       - If \`questionType\` is \`"singleChoice"\` or \`"multipleChoice"\`:
         - Provide at least 2 \`options\`, each with \`{ value, label }\`.
@@ -830,6 +850,7 @@ Transform the simple question text into a rich, thoughtful, and complete questio
 **Key Fields to Generate (based on \`QuestionSchema\`):**
 
 1.  \`title\`: (string) **MUST BE** the exact \`{{questionTitle}}\`.
+1.a \`label\`: (string) **ALWAYS INCLUDE**. If a distinct label isn’t provided, set it equal to \`title\`.
 2.  \`description\`: (optional string) Add if clarification is needed.
 3.  \`score\`: (optional number) The score for answering the question correctly. Essential for quizzes.
 4.  \`questionType\`: (string enum) **MUST BE** \`{{questionType}}\`.
@@ -849,6 +870,8 @@ Transform the simple question text into a rich, thoughtful, and complete questio
 11. \`defaultValue\`: (optional) Can be string, number, array of strings, etc.
 12. \`id\`: (string) Generate an ID in the format q{questionOrder}_keyword1_keyword2 by extracting the most important keywords from the \`{{questionTitle}}\` (e.g., for question 3, 'What is your favorite color?' becomes 'q3_favorite_color').
 13. \`mightBranchOffNext\`: (optional boolean) Set to true only if this question participates in conditional branching as per the Journey Script.
+14. \`page\`: (number) Assign a page number starting from 1. Default heuristic: 3 questions per page (\`Math.floor(questionOrder/3)+1\`).
+15. \`styling\`: (object) Always include with { "colSpan": 12 } unless a grid pairing is required; use 6 for two-in-row, 4 for three-in-row.
 
 **Fields to OMIT:**
 - \`readableValidations\`, \`readableConditionalLogic\`, \`readableRankingConfig\`, \`readableRatingConfig\`, \`conditionalLogic\`.

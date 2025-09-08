@@ -51,14 +51,11 @@ export default function FormPreviewWithDevices({
   return (
     <div className={`flex h-full w-full flex-col ${className}`}>
       {showControls && (
-        <div className="mb-4 flex items-center justify-between">
-          {}
+        <div className="flex items-center justify-between">
           <FormModeControls
             formMode={formMode}
             onFormModeChange={setFormMode}
           />
-
-          {}
           <PreviewControls
             deviceMode={deviceMode}
             onDeviceModeChange={setDeviceMode}

@@ -9,6 +9,9 @@ import { UnifiedMultiSelect } from "../modes/unified/UnifiedMultiSelect";
 import { UnifiedAddressInput } from "../modes/unified/UnifiedAddressInput";
 import { UnifiedDatePicker } from "../modes/unified/UnifiedDatePicker";
 import { UnifiedFileUpload } from "../modes/unified/UnifiedFileUpload";
+import { UnifiedLikert } from "../modes/unified/UnifiedLikert";
+import { UnifiedCountrySelect } from "../modes/unified/UnifiedCountrySelect";
+import { UnifiedPhoneInput } from "../modes/unified/UnifiedPhoneInput";
 
 // Import mode-specific components
 import { ChatTextInput } from "../modes/chat/ChatTextInput";
@@ -101,6 +104,31 @@ const unifiedTransformer = (
 });
 
 /**
+ * Single-select transformer to use UnifiedMultiSelect for both modes
+ * - Wrap scalar value into array
+ * - Unwrap onChange back to scalar
+ * - Enforce maxSelections=1
+ */
+const singleSelectTransformer = (
+  props: any,
+  _type: FormInputType,
+  mode: FormInputMode,
+) => {
+  const wrappedValue = props?.value ? [props.value] : [];
+  const onChange = (vals: any[]) => {
+    const first = Array.isArray(vals) ? (vals[0] ?? null) : null;
+    props.onChange?.(first);
+  };
+  return {
+    ...props,
+    mode,
+    value: wrappedValue,
+    onChange,
+    maxSelections: 1,
+  };
+};
+
+/**
  * Linear scale transformer - creates config object from individual props
  */
 const linearScaleTransformer = (
@@ -168,11 +196,10 @@ export const componentRegistry: Record<FormInputType, ComponentRegistryEntry> =
       transformProps: textInputTransformer,
     },
 
-    // Select components - mode-specific
+    // Single select - unified via UnifiedMultiSelect with maxSelections=1
     select: {
-      chatComponent: ChatSelect,
-      typeformComponent: TypeFormSelect,
-      transformProps: identityTransformer,
+      unifiedComponent: UnifiedMultiSelect,
+      transformProps: singleSelectTransformer,
     },
 
     // Unified components - handle mode internally
@@ -215,18 +242,16 @@ export const componentRegistry: Record<FormInputType, ComponentRegistryEntry> =
 
     // Fallback mappings (as per current implementation)
     phone: {
-      chatComponent: ChatTextInput,
-      typeformComponent: TypeFormTextInput,
-      transformProps: textInputTransformer,
+      unifiedComponent: UnifiedPhoneInput,
+      transformProps: unifiedTransformer,
     },
     country: {
-      chatComponent: ChatSelect,
-      typeformComponent: TypeFormSelect,
-      transformProps: identityTransformer,
+      unifiedComponent: UnifiedCountrySelect,
+      transformProps: unifiedTransformer,
     },
     "likert-scale": {
-      unifiedComponent: UnifiedLinearScale,
-      transformProps: linearScaleTransformer,
+      unifiedComponent: UnifiedLikert,
+      transformProps: unifiedTransformer,
     },
   };
 

@@ -18,6 +18,7 @@ export interface UnifiedAddressInputProps {
   requiredFields?: (keyof AddressData)[];
   autoFocus?: boolean;
   className?: string;
+  density?: "compact" | "comfy" | "spacious";
 }
 
 // Grid layout configuration for fields
@@ -47,6 +48,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
     ],
     autoFocus = true,
     className,
+    density,
   } = props;
 
   // Use BaseAddress primitive for all field state management and validation
@@ -102,21 +104,35 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
   };
 
   // Mode-specific styling
+  const resolvedDensity = density ?? (mode === "chat" ? "compact" : "comfy");
   const containerClass =
-    mode === "chat" ? "w-full space-y-6" : "w-full space-y-4";
-
-  const inputClass =
     mode === "chat"
-      ? cn(
-          "w-full px-4 py-3 border-2 rounded-lg transition-all duration-200",
-          "text-lg placeholder:text-muted-foreground/50",
-          "focus:outline-none focus:border-primary focus:ring-0",
-        )
-      : cn(
-          "w-full px-3 py-2 border rounded-lg transition-all duration-200",
-          "text-base placeholder:text-muted-foreground/50",
-          "focus:outline-none focus:border-primary focus:ring-0",
-        );
+      ? resolvedDensity === "compact"
+        ? "w-full space-y-4"
+        : resolvedDensity === "comfy"
+          ? "w-full space-y-6"
+          : "w-full space-y-8"
+      : resolvedDensity === "compact"
+        ? "w-full space-y-3"
+        : resolvedDensity === "comfy"
+          ? "w-full space-y-4"
+          : "w-full space-y-6";
+
+  const inputClass = cn(
+    "w-full transition-all duration-200 focus:outline-none focus:border-primary focus:ring-0",
+    mode === "chat"
+      ? resolvedDensity === "compact"
+        ? "px-3 py-2 text-base border-2 rounded-lg"
+        : resolvedDensity === "comfy"
+          ? "px-4 py-3 text-lg border-2 rounded-lg"
+          : "px-5 py-3 text-lg border-2 rounded-lg"
+      : resolvedDensity === "compact"
+        ? "px-2.5 py-1.5 text-sm border rounded-lg"
+        : resolvedDensity === "comfy"
+          ? "px-3 py-2 text-base border rounded-lg"
+          : "px-4 py-3 text-base border rounded-lg",
+    "placeholder:text-muted-foreground/50",
+  );
 
   return (
     <div className={cn(containerClass, className)}>

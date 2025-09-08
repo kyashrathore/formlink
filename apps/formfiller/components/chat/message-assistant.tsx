@@ -1,3 +1,4 @@
+import React from "react";
 import { UIMessage as MessageType } from "@ai-sdk/react";
 import { Message, MessageContent, Response } from "@formlink/ui/ai-elements";
 import { cn } from "@formlink/ui/lib/utils";
@@ -57,6 +58,24 @@ export function MessageAssistant({
                   components={
                     {
                       ...components,
+                      p: ({ children, ...props }: any) => {
+                        // Check if paragraph contains form components that should not be wrapped in <p>
+                        const hasFormComponent = React.Children.toArray(
+                          children,
+                        ).some(
+                          (child: any) =>
+                            child?.type?.displayName === "QuestionWrapper" ||
+                            child?.props?.qId !== undefined ||
+                            (typeof child === "object" &&
+                              child?.props &&
+                              "qId" in child.props),
+                        );
+
+                        if (hasFormComponent) {
+                          return <div {...props}>{children}</div>;
+                        }
+                        return <p {...props}>{children}</p>;
+                      },
                       PresentQuestionInputComponent: ({
                         qId,
                       }: {

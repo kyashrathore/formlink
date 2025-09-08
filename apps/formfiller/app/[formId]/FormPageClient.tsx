@@ -69,12 +69,7 @@ function FormPageContent({
   // Initialize wrapper to seed query params and testmode for Typeform/Classic
   const handleInitialize = React.useCallback(
     async (schema: Form, id?: string) => {
-      await initialize(
-        schema,
-        id,
-        (queryDataForForm as any) || {},
-        isTestSubmission,
-      );
+      await initialize(schema, id);
     },
     [initialize, isTestSubmission, queryDataForForm],
   );
@@ -112,8 +107,13 @@ function FormPageContent({
         break;
       case "rating":
       case "linearScale":
-      case "likertScale":
         if (typeof value === "number") {
+          setQuestionResponse(questionId, value);
+        }
+        break;
+      case "likertScale":
+        // Likert scale uses labeled options (strings)
+        if (typeof value === "string") {
           setQuestionResponse(questionId, value);
         }
         break;

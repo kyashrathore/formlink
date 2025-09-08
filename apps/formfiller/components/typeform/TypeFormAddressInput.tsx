@@ -123,6 +123,7 @@ export function TypeFormAddressInput(props: TypeFormAddressInputProps) {
                 }}
                 className={cn(
                   inputClass,
+                  "h-[42px]",
                   hasError
                     ? "border-destructive bg-destructive/10"
                     : "border-border hover:border-border/80 focus:border-primary",

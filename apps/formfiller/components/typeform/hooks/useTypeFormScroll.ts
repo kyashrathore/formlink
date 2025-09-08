@@ -26,7 +26,18 @@ export function useTypeFormScroll({
       // Master switch: Do not navigate if an overlay is open
       if (isOverlayOpen) return;
 
-      // Prevent default page scroll
+      // If the wheel event originated inside an element that opts into native scrolling,
+      // do not hijack it for navigation.
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        target.closest &&
+        target.closest('[data-allow-scroll="true"], [data-allow-scroll]')
+      ) {
+        return; // allow native scroll
+      }
+
+      // Prevent default page scroll (we're handling navigation)
       e.preventDefault();
 
       const now = Date.now();

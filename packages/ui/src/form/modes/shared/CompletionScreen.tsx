@@ -12,6 +12,9 @@ export interface CompletionScreenProps {
   showConfetti: boolean;
   onRestart: () => void;
   className?: string;
+  title?: string;
+  message?: string;
+  children?: React.ReactNode;
 }
 
 export function CompletionScreen({
@@ -19,6 +22,9 @@ export function CompletionScreen({
   showConfetti,
   onRestart,
   className,
+  title,
+  message,
+  children,
 }: CompletionScreenProps) {
   const { mode } = useFormMode();
   const isTypeform = mode === "typeform";
@@ -35,7 +41,7 @@ export function CompletionScreen({
       {showConfetti && <ConfettiElements />}
       <div className="space-y-4 text-center z-10">
         <h2 className={cn("font-bold", isMobileView ? "text-xl" : "text-2xl")}>
-          Form Completed!
+          {title || "Form Completed!"}
         </h2>
         <div className="flex justify-center mb-4">
           <Award
@@ -46,9 +52,14 @@ export function CompletionScreen({
           />
         </div>
         <p className="text-muted-foreground">
-          Thank you for completing the form. Your responses have been submitted
-          successfully.
+          {message ||
+            "Thank you for completing the form. Your responses have been submitted successfully."}
         </p>
+        {children && (
+          <div className={cn("mt-4", isMobileView ? "text-sm" : "text-base")}>
+            {children}
+          </div>
+        )}
       </div>
       <Button
         onClick={onRestart}

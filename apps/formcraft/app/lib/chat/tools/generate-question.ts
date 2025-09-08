@@ -221,6 +221,30 @@ Notes:
       generatedQuestion.submissionBehavior = behavior
     }
 
+    // Ensure label exists (use title if missing)
+    if (
+      !generatedQuestion.label &&
+      typeof generatedQuestion.title === "string"
+    ) {
+      generatedQuestion.label = generatedQuestion.title
+    }
+
+    // Ensure styling.colSpan exists (12 default)
+    if (
+      !generatedQuestion.styling ||
+      typeof generatedQuestion.styling !== "object"
+    ) {
+      generatedQuestion.styling = { colSpan: 12 }
+    } else if (typeof generatedQuestion.styling.colSpan !== "number") {
+      generatedQuestion.styling.colSpan = 12
+    }
+
+    // Assign page based on question order if not provided (approx. 3 per page)
+    if (typeof generatedQuestion.page !== "number") {
+      const page = Math.floor(order / 3) + 1
+      generatedQuestion.page = page
+    }
+
     dataStream.write({
       type: "data-agent_event",
       data: createAgentEvent(

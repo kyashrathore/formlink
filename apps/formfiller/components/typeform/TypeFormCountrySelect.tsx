@@ -127,7 +127,7 @@ export function TypeFormCountrySelect({
 
       case "Enter":
         e.preventDefault();
-        if (isOpen && focusedIndex >= 0) {
+        if (isOpen && focusedIndex >= 0 && filteredCountries[focusedIndex]) {
           handleCountrySelect(filteredCountries[focusedIndex].code);
         } else if (onSubmit && (!required || value)) {
           onSubmit();

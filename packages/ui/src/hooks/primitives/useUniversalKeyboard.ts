@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useTypeFormDropdown } from "../../form/context/TypeFormDropdownContext";
+// import { useTypeFormDropdown } from "../../form/context/TypeFormDropdownContext";
 
 /**
  * Configuration for keyboard navigation behavior
@@ -94,7 +94,9 @@ export function useUniversalKeyboard<T>({
   isActive = true,
   autoFocus = false,
 }: UseUniversalKeyboardParams<T>) {
-  const { isDropdownOpen, setDropdownOpen } = useTypeFormDropdown();
+  // TODO: Implement TypeFormDropdownContext
+  const isDropdownOpen = false;
+  const setDropdownOpen = (_open: boolean) => {};
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const activeOptions = options.filter((opt) => !opt.disabled);

@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { UseInputReturn } from "../base/types";
-import { UIOption } from "../types/generic";
+import { UseInputReturn } from "../../types/generic";
+import { UIOption } from "../../types/generic";
 
 interface UseSelectInputOptions {
   initialValue?: string | null;

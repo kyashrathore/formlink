@@ -7,6 +7,7 @@ import { motion } from "motion/react";
 export function MessageLoading() {
   return (
     <Message
+      from="assistant"
       className={cn(
         "group flex w-full max-w-3xl items-start gap-4 px-3 py-1.5 sm:px-4 md:px-6",
       )}

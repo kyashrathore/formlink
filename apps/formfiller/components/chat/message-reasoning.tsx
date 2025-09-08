@@ -48,7 +48,7 @@ export function MessageReasoning({
           data-testid="message-reasoning"
           className="pl-4 text-zinc-600 dark:text-zinc-400 border-l flex flex-col gap-4 mt-2 mb-1"
         >
-          <MessageContent markdown={true}>{reasoningText || ""}</MessageContent>
+          <MessageContent>{reasoningText || ""}</MessageContent>
         </div>
       )}
     </div>
