@@ -1,6 +1,6 @@
 "use client"
 
-import { Button, Label, toast } from "@formlink/ui"
+import { Button } from "@formlink/ui"
 import { Wand2 } from "lucide-react"
 import React, { useCallback, useEffect, useState } from "react"
 import { useMobile } from "../../hooks/use-mobile"
@@ -92,11 +92,11 @@ const FormJourneyStep: React.FC<FormJourneyStepProps> = ({
   const [journeyScriptContent, setJourneyScriptContent] =
     useState<string>(getInitialContent())
 
-  const [isModified, setIsModified] = useState<boolean>(false)
+  // No local save button; we mark the form dirty via store updates
 
   useEffect(() => {
     setJourneyScriptContent(getInitialContent())
-    setIsModified(false)
+    // reset when switching forms
   }, [form?.id])
 
   useEffect(() => {
@@ -111,29 +111,11 @@ const FormJourneyStep: React.FC<FormJourneyStepProps> = ({
         content = content.replace(/\n/g, "\n").replace(/\"/g, '"')
       }
 
-      if (!isModified || isFirstContentArrival) {
+      if (isFirstContentArrival) {
         setJourneyScriptContent(content)
-        setIsModified(false)
       }
     }
-  }, [journeyScript, isModified, journeyScriptContent])
-
-  const saveJourneyScript = useCallback(async () => {
-    try {
-      await updateSettingField("journeyScript", journeyScriptContent)
-      setIsModified(false)
-      toast({
-        title: "Form journey saved successfully",
-        status: "success",
-      })
-    } catch (error) {
-      console.error("Error saving journey script:", error)
-      toast({
-        title: "Failed to save form journey",
-        status: "error",
-      })
-    }
-  }, [journeyScriptContent, updateSettingField])
+  }, [journeyScript, journeyScriptContent])
 
   const loadTemplate = useCallback(() => {
     const confirmLoad = window.confirm(
@@ -141,7 +123,7 @@ const FormJourneyStep: React.FC<FormJourneyStepProps> = ({
     )
     if (confirmLoad) {
       setJourneyScriptContent(DEFAULT_JOURNEY_TEMPLATE)
-      setIsModified(true)
+      updateSettingField("journeyScript", DEFAULT_JOURNEY_TEMPLATE)
     }
   }, [])
 
@@ -166,27 +148,19 @@ const FormJourneyStep: React.FC<FormJourneyStepProps> = ({
                 Load Template
               </Button>
             )}
-            <Button
-              size="sm"
-              onClick={saveJourneyScript}
-              disabled={!isModified}
-            >
-              Save Journey
-            </Button>
           </div>
         )}
       </div>
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label>Edit Journey Script</Label>
           <StructuredPromptEditor
             initialContent={journeyScriptContent}
             height="400px"
             onChange={(xml) => {
               setJourneyScriptContent(xml)
-              setIsModified(true)
+              updateSettingField("journeyScript", xml)
             }}
-            description="   Define how your form should interact with users and maximize
+            description="Define how your form should interact with users and maximize
               completion rates. This includes result page generation
               instructions."
           />

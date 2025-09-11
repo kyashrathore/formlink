@@ -4,7 +4,7 @@ import { toast } from "@formlink/ui"
 import { useMutation } from "@tanstack/react-query"
 import { Check, Loader2, X } from "lucide-react"
 import type { ReactNode } from "react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { usePanelState } from "../hooks/usePanelState"
 import { selectIsDirty, useFormEditorStore } from "../stores/useFormEditorStore"
 
@@ -23,6 +23,7 @@ export default function NavigationBar({
 }: NavigationBarProps) {
   const { activeMainTab, setActiveMainTab } = usePanelState()
   const [saveState, setSaveState] = useState<ButtonState>("normal")
+  const [lastSaveWasAuto, setLastSaveWasAuto] = useState<boolean>(false)
   const [publishState, setPublishState] = useState<ButtonState>("normal")
 
   const formFromStore = useFormEditorStore((state) => state.form)
@@ -94,6 +95,7 @@ export default function NavigationBar({
 
   const handleSave = async () => {
     setSaveState("loading")
+    setLastSaveWasAuto(false)
     if (formFromStore) {
       updateFormMutation.mutate(formFromStore)
     } else {
@@ -106,6 +108,36 @@ export default function NavigationBar({
     setPublishState("loading")
     publishFormMutation.mutate()
   }
+
+  // Autosave: save dirty form every 8s and on window blur/visibility change
+  const lastAutosaveRef = useRef<number>(0)
+  useEffect(() => {
+    const tick = () => {
+      const now = Date.now()
+      if (
+        isDirty &&
+        !updateFormMutation.isPending &&
+        formFromStore &&
+        now - lastAutosaveRef.current > 4000 // min 4s between saves
+      ) {
+        lastAutosaveRef.current = now
+        setLastSaveWasAuto(true)
+        updateFormMutation.mutate(formFromStore)
+      }
+    }
+    const i = window.setInterval(tick, 8000)
+    const onBlur = () => tick()
+    const onVisibilityChange = () => {
+      if (document.hidden) tick()
+    }
+    window.addEventListener("blur", onBlur)
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    return () => {
+      window.clearInterval(i)
+      window.removeEventListener("blur", onBlur)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
+  }, [isDirty, updateFormMutation.isPending, formFromStore])
 
   const getButtonContent = (
     state: ButtonState,
@@ -144,9 +176,11 @@ export default function NavigationBar({
       case "loading":
         return `${baseStyles} opacity-75 cursor-not-allowed`
       case "success":
-        return `${baseStyles} bg-green-500 hover:bg-green-600 border-green-500`
+        // Subtle themed feedback using ring tokens; no custom greens
+        return `${baseStyles} ring-2 ring-ring/40`
       case "error":
-        return `${baseStyles} bg-red-500 hover:bg-red-600 border-red-500`
+        // Use destructive ring from theme instead of custom reds
+        return `${baseStyles} ring-2 ring-destructive/40`
       default:
         return baseStyles
     }
@@ -214,33 +248,50 @@ export default function NavigationBar({
         </button>
       </div>
 
-      <div className="flex space-x-2">
-        <button
-          onClick={handleSave}
-          disabled={
-            saveState === "loading" ||
-            updateFormMutation.isPending ||
-            !formFromStore
-          }
-          className={getButtonStyles(
-            saveState,
-            "text-muted-foreground bg-background border-border hover:bg-accent flex items-center space-x-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
-          )}
-        >
-          {getButtonContent(
-            saveState,
-            <>
-              {updateFormMutation.isPending ? "Saving..." : "Save Form"}
-              {isDirty && !updateFormMutation.isPending && (
-                <span
-                  className="ml-2 inline-block h-2 w-2 rounded-full bg-blue-500"
-                  title="You have unsaved changes"
-                ></span>
-              )}
-            </>,
-            "Saving..."
-          )}
-        </button>
+      <div className="flex items-center space-x-2">
+        {!isDirty && !updateFormMutation.isPending ? (
+          <div
+            className="text-muted-foreground bg-background border-border flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm"
+            aria-live="polite"
+            title={lastSaveWasAuto ? "Autosaved" : "Saved"}
+          >
+            <Check className="h-4 w-4" />
+            {lastSaveWasAuto ? "Autosaved" : "Saved"}
+          </div>
+        ) : (
+          <button
+            onClick={handleSave}
+            disabled={
+              saveState === "loading" ||
+              updateFormMutation.isPending ||
+              !formFromStore
+            }
+            className={getButtonStyles(
+              saveState,
+              "text-muted-foreground bg-background border-border hover:bg-accent flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors"
+            )}
+          >
+            {getButtonContent(
+              saveState,
+              <>
+                {updateFormMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>Save Form</>
+                )}
+                {isDirty && !updateFormMutation.isPending && (
+                  <span
+                    className="ml-1 inline-block h-2 w-2 rounded-full bg-blue-500"
+                    title="You have unsaved changes"
+                  ></span>
+                )}
+              </>,
+              "Saving..."
+            )}
+          </button>
+        )}
 
         <button
           onClick={handlePublish}
@@ -253,7 +304,13 @@ export default function NavigationBar({
           {getButtonContent(
             publishState,
             <>
-              {publishFormMutation.isPending ? "Publishing..." : "Publish Form"}
+              {publishFormMutation.isPending ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Publishing...
+                </>
+              ) : (
+                <>Publish Form</>
+              )}
             </>,
             "Publishing..."
           )}

@@ -11,6 +11,7 @@ import { User } from "@formlink/db"
 import { Form, Question } from "@formlink/schema"
 import { Loader2 } from "lucide-react"
 import React from "react"
+import { useWarnIfUnsavedChanges } from "../../hooks/useWarnIfUnsavedChanges"
 import FormDetailsStep from "./FormDetailsStep"
 import FormJourneyStep from "./FormJourneyStep"
 import QuestionsStep from "./QuestionsStep"
@@ -26,6 +27,8 @@ type FormEditorProps = {
 }
 
 const FormEditor: React.FC<FormEditorProps> = ({ user, selectedTab }) => {
+  // Warn on browser refresh/close if form has unsaved changes
+  useWarnIfUnsavedChanges()
   const { updateFormField, form } = useFormEditorStore()
 
   // Selectors for AI generation state
