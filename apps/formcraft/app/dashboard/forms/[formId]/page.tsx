@@ -90,8 +90,8 @@ function TestUIPageContent() {
   } | null>(null)
 
   const handleShadcnCSSApply = useCallback((cssText: string) => {
-    setShadcnStatus({ loading: true })
-
+    // Optimistically mark not loading so the editor buttons don't get stuck
+    setShadcnStatus({ loading: false })
     setShadcnCSSData({
       cssText,
       version: Date.now(),

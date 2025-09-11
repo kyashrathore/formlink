@@ -255,3 +255,16 @@ export type QuestionMapper<TQuestion> = SchemaToUIMapper<TQuestion, UIQuestion>;
 export type FormMapper<TForm> = SchemaToUIMapper<TForm, UIForm>;
 export type AddressMapper<TAddress> = SchemaToUIMapper<TAddress, UIAddressData>;
 export type OptionMapper<TOption> = SchemaToUIMapper<TOption, UIOption>;
+
+// ============================================================================
+// Hook Return Types
+// ============================================================================
+
+export interface UseInputReturn<T = unknown> {
+  value: T;
+  setValue: (value: T) => void;
+  error?: string;
+  isDirty: boolean;
+  isValid: boolean;
+  reset: () => void;
+}

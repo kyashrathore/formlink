@@ -1,17 +1,9 @@
 "use client"
 
-import { Button } from "@formlink/ui"
-import { Edit3, Eye, FileText, Loader2 } from "lucide-react"
-import { useState } from "react"
-import { usePanelState } from "../hooks/usePanelState"
-import { cn } from "../lib"
+import { FileText } from "lucide-react"
 import { useFormEditorStore } from "../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../stores/useFormGenerationStore"
-import { DeviceMode } from "./form/DevicePreviewFrame"
 import FormEditor from "./form/FormEditor"
-import FormModeControls, { FormMode } from "./form/FormModeControls"
-import FormPreviewWithDevices from "./form/FormPreviewWithDevices"
-import PreviewControls from "./form/PreviewControls"
 import { MetadataShimmer, QuestionsShimmer } from "./form/shimmers/FormShimmers"
 
 const mockUser = {
@@ -22,31 +14,10 @@ const mockUser = {
   created_at: "",
 }
 
-interface FormTabContentProps {
-  formId: string
-  shadcnCSSData?: {
-    cssText: string
-    version: number
-  }
-  onShadcnApplied?: (result: {
-    success: boolean
-    error?: string
-    appliedRootVariables: string[]
-    appliedDarkVariables: string[]
-    warnings: string[]
-  }) => void
-}
-
-export default function FormTabContent({
-  shadcnCSSData,
-  onShadcnApplied,
-}: FormTabContentProps) {
+export default function FormTabContent() {
   const { form: initialForm, isLoading } = useFormEditorStore()
   const { currentForm, isFormGenerating } = useFormGenerationStore()
   const form = currentForm || initialForm
-  const { editMode } = usePanelState()
-  const [formMode, setFormMode] = useState<FormMode>("chat")
-  const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop")
 
   if (isLoading || isFormGenerating) {
     return (

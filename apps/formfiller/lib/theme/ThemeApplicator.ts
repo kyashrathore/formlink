@@ -3,7 +3,11 @@
  * Applies shadcn/ui CSS variables directly from tweakcn.com
  */
 
-import { CSSVariableParser, type CSSParseResult } from "./CSSVariableParser";
+import {
+  CSSVariableParser,
+  type CSSParseResult,
+  type ParsedCSSVariables,
+} from "./CSSVariableParser";
 
 export interface ShadcnVariableResult {
   success: boolean;
@@ -14,6 +18,7 @@ export interface ShadcnVariableResult {
 }
 
 export class ThemeApplicator {
+  private lastParsed: ParsedCSSVariables | null = null;
   /**
    * Remove all applied theme properties
    */
@@ -54,11 +59,9 @@ export class ThemeApplicator {
       // Clear existing shadcn variables first
       this.clearShadcnVariables(root);
 
-      // Apply :root variables
-      Object.entries(parseResult.variables.root).forEach(([name, value]) => {
-        root.style.setProperty(name, value);
-        result.appliedRootVariables.push(name);
-      });
+      // Apply :root variables via a dedicated <style> tag (not inline),
+      // so that .dark class rules can correctly override on toggle.
+      this.applyRootVariables(parseResult.variables.root, result);
 
       // Apply .dark variables by adding them to the root with [data-theme="dark"] scope
       // We'll apply them as CSS-in-JS since we can't add CSS rules directly
@@ -66,6 +69,12 @@ export class ThemeApplicator {
       if (Object.keys(darkVariables).length > 0) {
         this.applyDarkModeVariables(darkVariables, result);
       }
+
+      // Remember parsed variables for inline sync on mode toggle
+      this.lastParsed = parseResult.variables;
+
+      // Immediately sync inline custom properties for current mode to avoid stale values
+      this.syncInlineForCurrentMode();
 
       // Set metadata to track what was applied
       root.setAttribute("data-shadcn-theme-applied", "true");
@@ -85,6 +94,43 @@ export class ThemeApplicator {
     }
 
     return result;
+  }
+
+  /**
+   * Recompute inline CSS variables based on current mode (light/dark).
+   * Ensures instant correctness after toggling classes without reload.
+   */
+  syncInlineForCurrentMode(): void {
+    if (!this.lastParsed) return;
+    const root = document.documentElement;
+    let isDark = root.classList.contains("dark");
+    if (!isDark && !root.classList.contains("light")) {
+      try {
+        isDark =
+          typeof window !== "undefined" &&
+          !!window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+      } catch {}
+    }
+
+    // Merge root with dark overrides when dark
+    const merged: Record<string, string> = { ...this.lastParsed.root };
+    if (isDark) {
+      for (const [k, v] of Object.entries(this.lastParsed.dark)) merged[k] = v;
+    }
+
+    // Apply inline style overrides for all known vars
+    for (const [k, v] of Object.entries(merged)) {
+      root.style.setProperty(k, v);
+    }
+
+    // Clear any vars that exist only in the opposite mode to avoid residue
+    const toMaybeClear = isDark
+      ? Object.keys(this.lastParsed.root)
+      : Object.keys(this.lastParsed.dark);
+    for (const k of toMaybeClear) {
+      if (!(k in merged)) root.style.removeProperty(k);
+    }
   }
 
   /**
@@ -133,68 +179,51 @@ export class ThemeApplicator {
   }
 
   /**
+   * Apply light (:root) variables using a style element
+   */
+  private applyRootVariables(
+    rootVariables: Record<string, string>,
+    result: ShadcnVariableResult,
+  ): void {
+    let rootStyleElement = document.getElementById(
+      "shadcn-root-variables",
+    ) as HTMLStyleElement;
+
+    if (!rootStyleElement) {
+      rootStyleElement = document.createElement("style");
+      rootStyleElement.id = "shadcn-root-variables";
+      document.head.appendChild(rootStyleElement);
+    }
+
+    const cssVars = Object.entries(rootVariables)
+      .map(([name, value]) => `  ${name}: ${value};`)
+      .join("\n");
+
+    rootStyleElement.textContent = `:root {\n${cssVars}\n}`;
+    result.appliedRootVariables = Object.keys(rootVariables);
+  }
+
+  /**
    * Clear previously applied shadcn variables
    */
   private clearShadcnVariables(root: HTMLElement): void {
-    // List of common shadcn variables to remove
-    const shadcnVariables = [
-      "--background",
-      "--foreground",
-      "--card",
-      "--card-foreground",
-      "--popover",
-      "--popover-foreground",
-      "--primary",
-      "--primary-foreground",
-      "--secondary",
-      "--secondary-foreground",
-      "--muted",
-      "--muted-foreground",
-      "--accent",
-      "--accent-foreground",
-      "--destructive",
-      "--destructive-foreground",
-      "--border",
-      "--input",
-      "--ring",
-      "--chart-1",
-      "--chart-2",
-      "--chart-3",
-      "--chart-4",
-      "--chart-5",
-      "--sidebar",
-      "--sidebar-foreground",
-      "--sidebar-primary",
-      "--sidebar-primary-foreground",
-      "--sidebar-accent",
-      "--sidebar-accent-foreground",
-      "--sidebar-border",
-      "--sidebar-ring",
-      "--font-sans",
-      "--font-serif",
-      "--font-mono",
-      "--radius",
-      "--shadow-2xs",
-      "--shadow-xs",
-      "--shadow-sm",
-      "--shadow",
-      "--shadow-md",
-      "--shadow-lg",
-      "--shadow-xl",
-      "--shadow-2xl",
-      "--tracking-normal",
-      "--spacing",
-    ];
-
-    // Remove each variable
-    shadcnVariables.forEach((variable) => {
-      root.style.removeProperty(variable);
-    });
-
-    // Remove dark mode style element
+    // Remove style elements we inject for root/dark variables
+    const rootStyleElement = document.getElementById("shadcn-root-variables");
+    if (rootStyleElement) {
+      rootStyleElement.remove();
+    }
     const darkStyleElement = document.getElementById("shadcn-dark-variables");
     if (darkStyleElement) {
       darkStyleElement.remove();
+    }
+
+    // Clear inline variable overrides from previous application
+    if (this.lastParsed) {
+      const allKeys = new Set([
+        ...Object.keys(this.lastParsed.root),
+        ...Object.keys(this.lastParsed.dark),
+      ]);
+      for (const k of allKeys) root.style.removeProperty(k);
     }
 
     // Remove metadata

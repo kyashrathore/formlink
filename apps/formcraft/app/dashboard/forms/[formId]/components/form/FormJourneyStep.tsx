@@ -83,6 +83,14 @@ const FormJourneyStep: React.FC<FormJourneyStepProps> = ({
         }
       }
 
+      // If the journeyScript arrived as a JSON-quoted string, strip the wrapping quotes
+      if (
+        (content.startsWith('"') && content.endsWith('"')) ||
+        (content.startsWith("'") && content.endsWith("'"))
+      ) {
+        content = content.slice(1, -1)
+      }
+
       return content
     }
 

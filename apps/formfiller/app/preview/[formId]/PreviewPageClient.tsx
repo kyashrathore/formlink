@@ -47,7 +47,11 @@ interface ShadcnCSSAppliedMessage {
 type IncomingMessage =
   | FormUpdateMessage
   | FormModeUpdateMessage
-  | FormShadcnCSSUpdateMessage;
+  | FormShadcnCSSUpdateMessage
+  | {
+      type: "FORMCRAFT_THEME_MODE_UPDATE";
+      payload: { mode: "light" | "dark" | "system"; timestamp: number };
+    };
 
 interface PreviewPageClientProps {
   formSchema: Form;
@@ -75,7 +79,7 @@ function getAllowedOrigins(): string[] {
   }
 
   // Production fallback - should be configured via environment variables
-  return ["https://app.formcraft.com", "https://formcraft.com"];
+  return ["https://formlink.ai"];
 }
 
 function validateOrigin(origin: string): boolean {
@@ -100,10 +104,18 @@ export default function PreviewPageClient({
   );
   const hasNotifiedReady = useRef(false);
   const themeApplicator = useRef(new ThemeApplicator());
+  const lastCssRef = useRef<string | null>(null);
 
   // Send ready message to parent when component mounts
   useEffect(() => {
     if (!hasNotifiedReady.current && typeof window !== "undefined") {
+      console.info("[Formlink][PreviewFrame] mount", {
+        formId: initialFormSchema.id,
+        hasOverrides: Boolean(initialFormSchema.settings?.theme_overrides),
+        shadcnLength:
+          (initialFormSchema.settings?.theme_overrides as any)?.shadcn_css
+            ?.length || 0,
+      });
       const readyMessage: PreviewReadyMessage = {
         type: "FORMFILLER_PREVIEW_READY",
         formId: initialFormSchema.id,
@@ -114,8 +126,8 @@ export default function PreviewPageClient({
         // Send to parent with specific origin for security
         const parentOrigin =
           window.location.hostname === "localhost"
-            ? "http://localhost:3000" // FormCraft dev server
-            : "https://formlink.ai"; // Production FormCraft
+            ? "http://localhost:3000" // Dev server
+            : "https://formlink.ai"; // Production Formlink
         window.parent.postMessage(readyMessage, parentOrigin);
         hasNotifiedReady.current = true;
       }
@@ -149,8 +161,8 @@ export default function PreviewPageClient({
         };
         const parentOrigin =
           window.location.hostname === "localhost"
-            ? "http://localhost:3000" // FormCraft dev server
-            : "https://formlink.ai"; // Production FormCraft
+            ? "http://localhost:3000" // Dev server
+            : "https://formlink.ai"; // Production Formlink
         window.parent.postMessage(message, parentOrigin);
       }
     },
@@ -161,6 +173,7 @@ export default function PreviewPageClient({
   const applyShadcnCSS = useCallback(
     (cssText: string) => {
       try {
+        lastCssRef.current = cssText;
         const result = themeApplicator.current.applyShadcnVariables(cssText);
 
         if (result.success) {
@@ -227,8 +240,29 @@ export default function PreviewPageClient({
           break;
 
         case "FORMCRAFT_SHADCN_CSS_UPDATE":
+          console.info("[Formlink][PreviewFrame] css update received", {
+            length: payload.cssText?.length || 0,
+          });
           applyShadcnCSS(payload.cssText);
           break;
+
+        case "FORMCRAFT_THEME_MODE_UPDATE": {
+          const next = payload.mode;
+          console.info("[Formlink][PreviewFrame] theme mode update", {
+            mode: next,
+          });
+          const root = document.documentElement;
+          root.classList.remove("light", "dark");
+          if (next === "dark") root.classList.add("dark");
+          if (next === "light") root.classList.add("light");
+          // system = remove both classes; CSS defaults should apply
+          // Update inline variables to match the new mode immediately
+          try {
+            themeApplicator.current.syncInlineForCurrentMode();
+            void document.documentElement.offsetHeight;
+          } catch {}
+          break;
+        }
 
         default:
         // Unknown message type - silently ignore

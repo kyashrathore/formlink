@@ -41,7 +41,7 @@ export const ChatTemplateShowcase: Story = {
           <ChatSelect
             options={options}
             value={single}
-            onChange={(v) => setSingle(v)}
+            onChange={(v) => setSingle(v ?? "")}
             onSubmit={() => console.log("selected", single)}
           />
           <UnifiedMultiSelect

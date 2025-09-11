@@ -53,7 +53,7 @@ export default function ShadcnCSSPanel({
 
   return (
     <div className={className}>
-      <CardContent className="space-y-4">
+      <CardContent className="-p-0 space-y-4">
         <div className="space-y-2">
           <Label htmlFor="shadcn-css" className="text-sm font-semibold">
             ShadcnUI CSS Variables

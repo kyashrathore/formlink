@@ -7,6 +7,7 @@ import {
   SaveAnswersRequest,
   SaveAnswersResponse,
   UploadResponse,
+  QuestionResponse,
 } from "./types";
 
 /**
@@ -103,10 +104,12 @@ export const apiServices = {
   ): Promise<SaveAnswersResponse> => {
     // Transform legacy payload shape to server API contract
     // Server expects: SaveAnswersRequestBody
-    const allResponses: Record<string, any> = Array.isArray(payload.answers)
-      ? payload.answers.reduce<Record<string, any>>((acc, cur) => {
+    const allResponses: Record<string, QuestionResponse> = Array.isArray(
+      payload.answers,
+    )
+      ? payload.answers.reduce<Record<string, QuestionResponse>>((acc, cur) => {
           if (cur && typeof cur.questionId === "string") {
-            acc[cur.questionId] = cur.value as any;
+            acc[cur.questionId] = cur.value;
           }
           return acc;
         }, {})
@@ -142,7 +145,7 @@ export const apiServices = {
       submissionId: string;
       formVersionId: string;
       questionId: string;
-      answerValue: any;
+      answerValue: QuestionResponse;
       submissionStatus?: string; // defaults to in_progress
       testmode?: boolean;
     },

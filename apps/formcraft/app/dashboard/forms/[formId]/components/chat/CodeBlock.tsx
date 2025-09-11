@@ -1,9 +1,14 @@
 "use client"
 
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@formlink/ui"
+import { Check, Copy, Maximize2 } from "lucide-react"
 import { useState } from "react"
-import { Button } from "@formlink/ui"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@formlink/ui"
-import { Copy, Maximize2, Check } from "lucide-react"
 import { cn } from "../../lib"
 
 interface CodeBlockProps {
@@ -28,8 +33,8 @@ export function CodeBlock({ code, language, className }: CodeBlockProps) {
     <>
       <div className={cn("group relative", className)}>
         {/* Header with language and buttons */}
-        <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2">
-          <span className="text-xs font-medium text-muted-foreground">
+        <div className="bg-muted/30 flex items-center justify-between border-b px-4 py-2">
+          <span className="text-muted-foreground text-xs font-medium">
             {language || "text"}
           </span>
           <div className="flex gap-1">
@@ -47,7 +52,7 @@ export function CodeBlock({ code, language, className }: CodeBlockProps) {
             </Button>
             <Button
               variant="ghost"
-              size="sm" 
+              size="sm"
               className="h-6 px-2 opacity-0 transition-opacity group-hover:opacity-100"
               onClick={() => setFullscreenOpen(true)}
             >
@@ -70,8 +75,8 @@ export function CodeBlock({ code, language, className }: CodeBlockProps) {
 
       {/* Fullscreen Dialog */}
       <Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
-        <DialogContent className="max-w-6xl h-[90vh] p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+        <DialogContent className="h-[90vh] max-w-6xl p-0">
+          <DialogHeader className="border-b px-6 pt-6 pb-4">
             <DialogTitle className="flex items-center justify-between">
               <span>{language || "Code"} Preview</span>
               <Button
@@ -89,7 +94,7 @@ export function CodeBlock({ code, language, className }: CodeBlockProps) {
               </Button>
             </DialogTitle>
           </DialogHeader>
-          <div className="px-6 pb-6 h-full overflow-auto">
+          <div className="h-full overflow-auto px-6 pb-6">
             {isMermaid ? (
               <MermaidDiagram code={code} />
             ) : (
@@ -110,8 +115,8 @@ function MermaidDiagram({ code }: { code: string }) {
   // Install: pnpm add mermaid
   // Then use mermaid.render() or similar
   return (
-    <div className="border rounded-lg p-4 bg-muted/20">
-      <div className="text-sm text-muted-foreground mb-2">
+    <div className="bg-muted/20 rounded-lg border p-4">
+      <div className="text-muted-foreground mb-2 text-sm">
         Mermaid diagram (render implementation needed)
       </div>
       <pre className="text-xs opacity-60">{code}</pre>

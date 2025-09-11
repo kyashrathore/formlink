@@ -65,7 +65,7 @@ function JsonLd({
     },
     publisher: {
       "@type": "Organization",
-      name: "Formcraft",
+      name: "Formlink",
       logo: {
         "@type": "ImageObject",
         url: `${siteUrl}/formlink-logo.png`,

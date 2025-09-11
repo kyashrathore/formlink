@@ -209,7 +209,7 @@ async function updateFormWithNewVersion(
 export async function finalizeForm(
   params: FinalizeFormParams
 ): Promise<FormFinalizationResult> {
-  const { formId, userId, formContent, dataStream } = params
+  const { formId, userId, formContent } = params
 
   try {
     // Progress handled by workflow - removed raw stream write

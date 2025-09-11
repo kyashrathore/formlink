@@ -37,7 +37,7 @@ expect.extend(mockToMatchImageSnapshot);
 configure({ testIdAttribute: "data-testid" });
 
 // Mock global objects
-global.TextEncoder = TextEncoder;
+global.TextEncoder = TextEncoder as any;
 global.TextDecoder = TextDecoder as any;
 
 // Mock window.matchMedia

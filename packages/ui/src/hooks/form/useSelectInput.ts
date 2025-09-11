@@ -9,9 +9,20 @@ interface UseSelectInputOptions {
   multiple?: boolean;
 }
 
+type UseSelectReturn = UseInputReturn<string | null> & {
+  validate: () => boolean;
+  clearErrors: () => void;
+  handlers: {
+    onKeyPress: (key: string) => boolean;
+    setSearchQuery: (q: string) => void;
+    filteredOptions: UIOption[];
+  };
+  errors: string[];
+};
+
 export function useSelectInput(
   options: UseSelectInputOptions,
-): UseInputReturn<string | null> {
+): UseSelectReturn {
   const {
     initialValue = null,
     required = false,
@@ -121,13 +132,16 @@ export function useSelectInput(
   return {
     value,
     setValue: handleChange,
-    errors,
-    validate,
+    error: errors.length > 0 ? errors[0] : undefined,
+    isDirty: value !== initialValue,
     isValid: errors.length === 0,
+    reset: () => setValue(initialValue || null),
+    validate,
     clearErrors,
     handlers: {
       ...handlers,
       filteredOptions,
-    } as any,
+    },
+    errors,
   };
 }

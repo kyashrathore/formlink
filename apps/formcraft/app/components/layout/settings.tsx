@@ -51,7 +51,7 @@ export function Settings({ user, trigger }: SettingsProps) {
     return (
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>{trigger || defaultTrigger}</DrawerTrigger>
-        <DrawerContent>
+        <DrawerContent className="z-[70]">
           <SettingsContent isDrawer onClose={handleClose} user={user} />
         </DrawerContent>
       </Drawer>
@@ -61,7 +61,7 @@ export function Settings({ user, trigger }: SettingsProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
-      <DialogContent className="gap-0 p-0 sm:max-w-xl">
+      <DialogContent className="z-[70] gap-0 p-0 sm:max-w-xl">
         <DialogHeader className="border-border border-b px-6 py-4">
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>

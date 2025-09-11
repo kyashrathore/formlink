@@ -10,14 +10,14 @@ interface UseSubmissionControlProps<T = unknown> {
   debounceDelay?: number;
 }
 
-interface UseSubmissionControlReturn<T = any> {
+interface UseSubmissionControlReturn<T = unknown> {
   isSubmitting: boolean;
   error: Error | null;
   handleSubmit: () => Promise<void>;
   retry: () => Promise<void>;
 }
 
-export function useSubmissionControl<T = any>({
+export function useSubmissionControl<T = unknown>({
   mode,
   value,
   isValid,

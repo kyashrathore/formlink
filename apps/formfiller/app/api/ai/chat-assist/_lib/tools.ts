@@ -158,7 +158,10 @@ export function createAITools(context: ChatContext) {
                 // We only provide the next unanswered as a convenience fallback.
                 const next = context.formSchema?.questions.find(
                   (q: Question) =>
-                    !Object.prototype.hasOwnProperty.call(updatedResponses, q.id),
+                    !Object.prototype.hasOwnProperty.call(
+                      updatedResponses,
+                      q.id,
+                    ),
                 );
                 const nextQuestionId: string | null = next?.id || null;
 

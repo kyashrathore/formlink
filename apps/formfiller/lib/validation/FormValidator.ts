@@ -253,7 +253,7 @@ export class FormValidator {
       "country",
     ];
     const missingFields = requiredFields.filter(
-      (field) => !(input as any)[field],
+      (field) => !(input as Record<string, unknown>)[field],
     );
 
     if (question.validations?.required && missingFields.length > 0) {

@@ -1,5 +1,5 @@
 1. a button to toggle chat panel
-2. should be able to add mode and theme in form settings default to dark mode
+2. should be able to add theme mode in form settings default to dark mode
 3. formcraft, formfiller are just internal app names, project is called formlink we are using formcraft at some places should be remvoved.
 4. preview mode in formcraft app and in preview in embeded in share tab should respect theme selected in formcraft
 5. linear setting min is set to 0 it should always start from 1
@@ -14,5 +14,6 @@
 14. Response table component - c. with every question also have a type icon, a fixed max width for column, trucate values inside those
 15. Response table component - d. create filters, keep livemode as default selected to hide all test mode, also have completed, in prgoress
 16. Response table component - 2. show a funnel component to show how much form user generally fills and where drop off.
-17. Response table component - 2. show a funnel component to show how much form user generally fills and where drop off.
+17. Response table component - 2. keep
 18. Response table component - create a add filtered view button tabbed view to create a new table with natural language - top 100 applicates, or applicates with q_id>100 so on.
+19. Response table component - view level action - on every submission, batched, scheduled, or manual trigger - via aci.md, setup connection

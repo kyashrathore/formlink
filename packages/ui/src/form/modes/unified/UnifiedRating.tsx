@@ -255,25 +255,7 @@ export function UnifiedRating({
         </div>
       )}
 
-      {/* Continue Button - Typeform-only (chat auto-submits) */}
-      {mode === "typeform" && onSubmit && base.value > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="flex items-center justify-start mt-6"
-        >
-          <Button
-            onClick={handleContinue}
-            disabled={baseProps.disabled}
-            size="lg"
-            className="group"
-          >
-            Continue
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Button>
-        </motion.div>
-      )}
+      {/* Continue button is only relevant in Typeform layout; omitted here */}
     </div>
   );
 }

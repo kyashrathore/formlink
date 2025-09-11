@@ -150,8 +150,8 @@ export default function TypeFormView({
 
       if (q.type.name === "text") {
         const v = typeof resp === "string" ? resp : "";
-        const format = (q.type as any).format;
-        const validations = (q as any).validations || {};
+        const format = (q.type as unknown as { format?: string }).format;
+        const validations = (q as { validations?: unknown }).validations ?? {};
         return validateTextValue(v, format, validations) === null;
       }
 
@@ -357,7 +357,7 @@ export default function TypeFormView({
       const questions = formSchema?.questions || [];
       const findIsAnswered = (q: Question, resp: QuestionResponse | null) => {
         if (resp === null || typeof resp === "undefined") return false;
-        const t = (q.type as any).name as string;
+        const t = q.type.name;
         switch (t) {
           case "text":
             return resp !== "";
@@ -508,8 +508,8 @@ export default function TypeFormView({
       try {
         const countryQ = formSchema.questions.find(
           (q) =>
-            (q.type as any).name === "text" &&
-            (q.type as any).format === "country",
+            q.type.name === "text" &&
+            (q.type as unknown as { format?: string }).format === "country",
         );
         if (countryQ) {
           const ans = questionResponses[countryQ.id];

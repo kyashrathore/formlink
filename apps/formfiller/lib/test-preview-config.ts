@@ -19,7 +19,6 @@ export function testPreviewConfiguration() {
   // Test origin validation
   const testOrigins = [
     "http://localhost:3000",
-    "https://app.formcraft.com",
     "https://formlink.ai",
     "https://malicious-site.com", // Should be rejected
   ];
@@ -37,9 +36,8 @@ export function testPreviewConfiguration() {
       origin.includes("localhost"),
     );
   } else {
-    configurationValid = allowedOrigins.some(
-      (origin) =>
-        origin.includes("formcraft.com") || origin.includes("formlink.ai"),
+    configurationValid = allowedOrigins.some((origin) =>
+      origin.includes("formlink.ai"),
     );
   }
 

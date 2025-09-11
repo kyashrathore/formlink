@@ -247,6 +247,7 @@ export interface FormIntegrations {
 
 export interface ThemeOverrides {
   shadcn_css?: string;
+  theme_mode?: "light" | "dark" | "system";
 }
 
 export interface FormSettings {

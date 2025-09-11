@@ -6,7 +6,11 @@ import {
   Option,
 } from "./types";
 
-export interface BaseSelectProps<T = string> extends BasePrimitiveProps<T> {
+export interface BaseSelectProps<T = string>
+  extends Omit<BasePrimitiveProps<T>, "value" | "onChange"> {
+  value: T | null;
+  onChange: (value: T | null) => void;
+  onValidate?: (value: T | null) => ValidationError[];
   /**
    * Available options
    */
@@ -58,7 +62,8 @@ export interface BaseSelectProps<T = string> extends BasePrimitiveProps<T> {
   autoSubmitOnChange?: boolean;
 }
 
-export interface BaseSelectReturn<T = string> extends BasePrimitiveReturn<T> {
+export interface BaseSelectReturn<T = string>
+  extends BasePrimitiveReturn<T | null> {
   /**
    * Current highlighted index
    */
@@ -369,14 +374,14 @@ export function BaseSelect<T = string>(
   );
 
   const clear = useCallback(() => {
-    onChange(null as any);
+    onChange(null);
     setErrors([]);
     setIsTouched(false);
     close();
   }, [onChange, close]);
 
   const reset = useCallback(() => {
-    onChange(null as any);
+    onChange(null);
     setErrors([]);
     setIsTouched(false);
     setHighlightedIndex(-1);

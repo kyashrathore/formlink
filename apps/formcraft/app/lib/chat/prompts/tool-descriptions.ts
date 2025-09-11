@@ -6,7 +6,7 @@ export const TOOL_DESCRIPTIONS = {
     "Update an existing form's title, description, or questions. Use this ONLY when the form already has content to modify. Do not use for empty forms.",
 
   queryDocs:
-    "Answer questions about FormCraft features, capabilities, and best practices. Use this when users ask about how FormCraft works.",
+    "Answer questions about FormLink features, capabilities, and best practices. Use this when users ask about how FormLink works.",
 
   showConfigButton:
     "Display configuration options for integrations like Slack, webhooks, or email notifications. Use this when users want to set up integrations.",

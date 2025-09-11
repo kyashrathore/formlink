@@ -34,13 +34,7 @@ export default function TabContentManager({
   const renderContent = () => {
     switch (activeMainTab) {
       case "form":
-        return (
-          <FormTabContent
-            formId={formId}
-            shadcnCSSData={shadcnCSSData}
-            onShadcnApplied={onShadcnApplied}
-          />
-        )
+        return <FormTabContent />
       case "preview":
         return (
           <PreviewTabContent
@@ -63,13 +57,7 @@ export default function TabContentManager({
       case "settings":
         return <SettingsTabContent formId={formId} />
       default:
-        return (
-          <FormTabContent
-            formId={formId}
-            shadcnCSSData={shadcnCSSData}
-            onShadcnApplied={onShadcnApplied}
-          />
-        )
+        return <FormTabContent />
     }
   }
 

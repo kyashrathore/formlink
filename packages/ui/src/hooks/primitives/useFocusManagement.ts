@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback, useState, RefObject } from "react";
-import { FormMode } from "../form/context/FormModeContext";
+import { FormMode } from "../../form/context/FormModeContext";
 
 interface UseFocusManagementOptions {
   mode: FormMode;
@@ -54,7 +54,7 @@ export function useFocusManagement(
     trapFocus = mode === "typeform",
     restoreFocus = false,
     scrollToError = false,
-    keepFocusOnInteraction = mode === "ai",
+    keepFocusOnInteraction = mode === "chat",
     announceChanges = false,
     trackHistory = false,
     customTabOrder = [],
@@ -135,7 +135,8 @@ export function useFocusManagement(
       }
 
       event.preventDefault();
-      focusable[nextIndex].focus();
+      const nextEl = focusable[nextIndex];
+      if (nextEl) nextEl.focus();
     },
     [trapFocus, containerRef],
   );
@@ -289,10 +290,10 @@ export function useFocusManagement(
   useEffect(() => {
     if (trapFocus && containerRef?.current) {
       const container = containerRef.current;
-      container.addEventListener("keydown", handleKeyDown as any);
+      container.addEventListener("keydown", handleKeyDown);
 
       return () => {
-        container.removeEventListener("keydown", handleKeyDown as any);
+        container.removeEventListener("keydown", handleKeyDown);
       };
     }
   }, [trapFocus, containerRef, handleKeyDown]);

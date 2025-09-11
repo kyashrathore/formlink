@@ -119,7 +119,7 @@ export const ToolContent = ({ className, ...props }: ToolContentProps) => (
 );
 
 export type ToolInputProps = ComponentProps<"div"> & {
-  input: any;
+  input: unknown;
 };
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
@@ -137,6 +137,10 @@ export type ToolOutputProps = ComponentProps<"div"> & {
   output: ReactNode;
   errorText?: string;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
 export const ToolOutput = ({
   className,
@@ -163,11 +167,13 @@ export const ToolOutput = ({
         {output &&
           (typeof output === "string"
             ? output
-            : typeof output === "object"
+            : isRecord(output)
               ? // Try to extract a readable message from common response formats
-                (output as any)?.message ||
-                (output as any)?.summary ||
-                JSON.stringify(output, null, 2)
+                typeof output.message === "string"
+                ? output.message
+                : typeof output.summary === "string"
+                  ? output.summary
+                  : JSON.stringify(output, null, 2)
               : String(output))}
       </div>
     </div>

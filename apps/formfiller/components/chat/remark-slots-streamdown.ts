@@ -4,8 +4,9 @@ import { visit } from "unist-util-visit";
 // We intentionally avoid importing 'mdast' types to keep this file zero-dep.
 // Minimal shapes for our use.
 type MdastText = { type: "text"; value: string };
-type MdastParent = { children: any[] };
-type MdastRoot = any;
+type MdastNode = { type: string; [key: string]: unknown };
+type MdastParent = { children: MdastNode[] };
+type MdastRoot = MdastNode;
 
 // Regex to find ::ComponentName props::
 const SLOT_REGEX = /::([A-Z][A-Za-z0-9]*)\s*(.*?)::/g;
@@ -16,7 +17,7 @@ const PROP_REGEX = /([a-zA-Z_][a-zA-Z0-9_]*)=(?:"([^"]*)"|'([^']*)'|(\S+))/g;
 export function remarkSlots() {
   return (tree: MdastRoot) => {
     visit(
-      tree as any,
+      tree as unknown as MdastNode,
       "text",
       (
         node: MdastText,
@@ -26,7 +27,7 @@ export function remarkSlots() {
         if (!parent || typeof index !== "number") return;
 
         const value = node.value || "";
-        const children: any[] = [];
+        const children: MdastNode[] = [];
         let lastIndex = 0;
 
         for (const match of value.matchAll(SLOT_REGEX)) {

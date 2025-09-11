@@ -70,7 +70,7 @@ Your primary task is to analyze the user's request and generate a single, valid 
 - \`id\`: Unique, readable string ID, preferably with the format \`q_<topic>_<purpose>\` (e.g., \`q_feedback_taste\`).
 - \`questionNo\`: Determine an appropriate number based on the sequence of any provided \`existingQuestions\` or suggest \`1\` if none exist.
 - \`title\`: The main text of the question, derived from the user's request.
-- \`label\`: ALWAYS include a short label suitable for Classic mode. If the user does not specify a label, set it equal to \`title\`.
+- \`label\`: ALWAYS include a short label (1-2 words) suitable for Classic mode field labels. Extract the key concept from the question (e.g., "Name", "Email", "Phone", "Signature", "Rating").
 - \`type.name\`: Select the most appropriate value from the allowed set ("multipleChoice", "singleChoice", "text", "date", "rating", "address", "ranking", "fileUpload", "linearScale", "likertScale").
 - \`display\`: This is a mandatory object.
   - \`inputType\`: **Mandatory within \`display\`**. Select a compatible \`InputType\` from \`InputTypeEnumSchema\` that matches the \`type.name\`. Refer to the \`QuestionSchema\`'s internal logic (like the \`allowedInputTypesMap\` in the \`superRefine\`) for valid combinations. Pay attention to suggestions based on the number of options (e.g., dropdown/multiSelectDropdown for >4 options, radio/checkbox for <4 options).
@@ -85,9 +85,10 @@ Your primary task is to analyze the user's request and generate a single, valid 
       - \`address\`: \`"addressBlock"\`
       - \`ranking\`: \`"rankOrder"\`
       - \`fileUpload\`: \`"file"\`
+      - \`signature\`: \`"signature"\`
   - \`showTitle\`: boolean (defaults to true if not specified, but best to include).
   - \`showDescription\`: boolean (defaults to true if not specified, but best to include).
-- \`submissionBehavior\`: **Mandatory**. Determine the appropriate behavior based on the chosen \`inputType\`. Refer to the \`QuestionSchema\`'s internal logic (like the \`expectedBehavior\` map in the \`superRefine\`). Common examples: "autoAnswer" for radio, dropdown, date, rating, linearScale, likertScale, file; "manualAnswer" for checkbox, multiSelectDropdown, addressBlock, rankOrder; "manualUnclear" for text, textarea, email, url, tel, number, password.
+- \`submissionBehavior\`: **Mandatory**. Determine the appropriate behavior based on the chosen \`inputType\`. Refer to the \`QuestionSchema\`'s internal logic (like the \`expectedBehavior\` map in the \`superRefine\`). Common examples: "autoAnswer" for radio, dropdown, date, rating, linearScale, likertScale, file; "manualAnswer" for checkbox, multiSelectDropdown, addressBlock, rankOrder, signature; "manualUnclear" for text, textarea, email, url, tel, number, password.
 
 **Type-specific Fields (on \`type\` object):**
 
@@ -282,7 +283,7 @@ Your primary task is to analyze the provided topic **if and only if** the reques
 
     - Generate **5 to 8 questions** that align logically with the topic and collectively provide comprehensive coverage.
     - Use varied and appropriate \`questionType\` values:
-      \`multipleChoice\`, \`singleChoice\`, \`text\`, \`date\`, \`rating\`, \`address\`, \`ranking\`, \`fileUpload\`, \`linearScale\`, \`likertScale\`.
+      \`multipleChoice\`, \`singleChoice\`, \`text\`, \`date\`, \`rating\`, \`address\`, \`ranking\`, \`fileUpload\`, \`linearScale\`, \`likertScale\`, \`signature\`.
 
 3.  **For Each Question, Populate the Entire \`QuestionSchema\` Object:**
 
@@ -290,7 +291,7 @@ Your primary task is to analyze the provided topic **if and only if** the reques
     - \`id\`: Unique, readable string ID, preferably with the format \`q_<topic>_<purpose>\` (e.g., \`q_feedback_taste\`).
     - \`questionNo\`: Assign a sequential, positive integer number (\`1\`, \`2\`, \`3\`, ...) corresponding to the question's order within the form.
     - \`title\`: A clear, concise question for the end user.
-    - \`label\`: ALWAYS include. Short, UI-friendly label text. If the user hasn’t specified a label explicitly, set \`label\` to the same text as \`title\`.
+    - \`label\`: ALWAYS include. Short, UI-friendly label text (1-2 words) for Classic mode field labels. Extract the key concept from the \`title\` or question purpose (e.g., "Name", "Email", "Rating", "Signature", "Address").
     - \`description\`: Optional and concise (one sentence max). Add only where context helps.
     - \`questionType\`: Must be one of the valid \`QuestionTypeEnumSchema\` values.
     - **Classic Layout fields (MANDATORY):**
@@ -344,6 +345,7 @@ Your primary task is to analyze the provided topic **if and only if** the reques
         - \`address\`: Use \`"addressBlock"\`.
         - \`ranking\`: Use \`"rankOrder"\`.
         - \`fileUpload\`: Use \`"file"\`.
+        - \`signature\`: Use \`"signature"\`.
       - \`layout\`: Choose \`"vertical"\` or \`"horizontal"\`. (Often omitted, defaults may apply).
       - \`showTitle\`: Usually \`true\`.
       - \`showDescription\`: Match if \`description\` is present.
@@ -355,7 +357,7 @@ Your primary task is to analyze the provided topic **if and only if** the reques
     - \`defaultValue\`: Provide a logical default (if any), otherwise \`null\`. Ensure the type matches the \`questionType\` (e.g., use \`AddressSchema\` format for address questions).
     - \`submissionBehavior\`: **MANDATORY. Must align strictly with the chosen \`display.inputType\` as defined in the schema's refinement logic:**
       - \`"autoAnswer"\`: Use for \`radio\`, \`dropdown\`, \`date\`, \`dateRange\`, \`star\`, \`linearScale\`, \`likertScale\`, \`file\`.
-      - \`"manualAnswer"\`: Use for \`checkbox\`, \`multiSelectDropdown\`, \`addressBlock\`, \`rankOrder\`.
+      - \`"manualAnswer"\`: Use for \`checkbox\`, \`multiSelectDropdown\`, \`addressBlock\`, \`rankOrder\`, \`signature\`.
       - \`"manualUnclear"\`: Use for \`email\`, \`url\`, \`number\`, \`tel\`, \`textarea\`, \`text\`, \`password\`.
     - **Human-readable fields (MANDATORY - must accurately reflect the configuration):**
       - \`readableRatingConfig\`: String describing rating instructions if \`ratingConfig\` is present (e.g., \`"Rate from 1 (Low) to 5 (High)"\`). Omit this field if the question is not a rating type or has no rating config.
@@ -739,12 +741,16 @@ Example: Before asking for email after travel preferences, share: "Based on your
 2. **Stay Flexible**: Provide guidance, not rigid scripts
 3. **Focus on Value**: Every element should benefit the user
 4. **XML + Markdown Rules (Important)**:
-   - The journey script MUST be a single valid XML document with a "<form-journey>" root and only the specified child tags (e.g., "<strategy>", "<value-exchange-strategy>", "<branching-logic>", "<result-generation>").
-   - The content inside each tag must be a single well‑formatted Markdown block (headings, paragraphs, lists, code fences allowed). Do not create nested XML tags inside these sections and do not split content across multiple sibling text nodes.
-   - Use the literal sequence "\\n" between Markdown paragraphs and list items. Avoid leading indentation that would unintentionally create code blocks.
-   - Do not include raw "<" or "&" characters that would break XML. If absolutely necessary within Markdown, use HTML entities ("&lt;", "&amp;").
-   - The JSON field "journeyScript" must contain ONLY the XML string (no surrounding Markdown code fences such as a triple-backtick "markdown" fence), and no explanatory text.
-   - Keep lists properly formatted (e.g., lines starting with "- " or "1. ") and ensure headings use "##" and below inside sections.
+   - The journey script MUST be a single well‑formed XML document with a &lt;form-journey&gt; root and only these child tags: &lt;strategy&gt;, &lt;value-exchange-strategy&gt;, &lt;branching-logic&gt;, &lt;result-generation&gt;.
+   - Inside each tag, write one continuous Markdown block (headings, paragraphs, lists, code fences allowed). Do NOT add additional XML tags inside these sections and do NOT split content across multiple sibling text nodes.
+   - Newlines: prefer actual newlines; alternatively you may emit the literal sequence \`\\n\` between paragraphs/list items. Avoid leading indentation that would unintentionally create code blocks.
+   - Escaping: In text content, escape XML‑sensitive characters. Use ONLY these predefined entities: \`&amp;\` for \`&\`, \`&lt;\` for \`<\`, \`&gt;\` for \`>\`, \`&quot;\` for \`"\`, \`&apos;\` for \`'\`. Do not output bare \`&\` or undefined entities.
+     - Wrong: \`Commitment & Consistency\` → causes \`xmlParseEntityRef: no name\`.
+     - Right: \`Commitment &amp; Consistency\`.
+     - If you must show literal angle brackets inside Markdown (e.g., examples), escape them: \`&lt;like this&gt;\`.
+   - Output format: The JSON field \`journeyScript\` must contain ONLY the raw XML string — no surrounding quotes beyond normal JSON string quoting, no backticks, and no fenced code blocks.
+   - Keep lists properly formatted (lines starting with \`- \` or \`1. \`) and ensure headings use \`##\` and below inside sections.
+   - Final validation: ensure the result is a single well‑formed XML document (no leading/trailing characters outside the root; no stray \`&\`).
    - Markdown formatting tips for best rendering:
      - Put a blank line before a list and between distinct paragraphs.
      - Keep each "Label: Value" on its own line.
@@ -863,11 +869,11 @@ Transform the simple question text into a rich, thoughtful, and complete questio
 **Key Fields to Generate (based on \`QuestionSchema\`):**
 
 1.  \`title\`: (string) **MUST BE** the exact \`{{questionTitle}}\`.
-1.a \`label\`: (string) **ALWAYS INCLUDE**. If the user has not specified a separate label, set this equal to \`title\`.
+1.a \`label\`: (string) **ALWAYS INCLUDE**. Short field label (1-2 words) for Classic mode. Extract key concept from the question (e.g., "Name", "Email", "Signature", "Rating").
 2.  \`description\`: (optional string) Add if clarification is needed.
 3.  \`score\`: (optional number) The score for answering the question correctly. Essential for quizzes.
 4.  \`questionType\`: (string enum) **MUST BE** \`{{questionType}}\`.
-    Valid values: "multipleChoice", "singleChoice", "text", "date", "rating", "address", "ranking", "fileUpload", "linearScale", "likertScale"
+    Valid values: "multipleChoice", "singleChoice", "text", "date", "rating", "address", "ranking", "fileUpload", "linearScale", "likertScale", "signature"
 5.  \`options\`: (array of objects, required for choice-based types) Each object must have \`value\` (string) and \`label\` (string).
     - **For Quizzes, it must also include \`score\` (number).**
       Example (Quiz): \`[{ "value": "opt1", "label": "Correct Answer", "score": 10 }, { "value": "opt2", "label": "Wrong Answer", "score": 0 }]\`
@@ -875,7 +881,7 @@ Transform the simple question text into a rich, thoughtful, and complete questio
     - \`inputType\`: (string enum) Choose based on \`questionType\` and number of options.
 7.  \`submissionBehavior\`: (string enum, required) Choose based on \`inputType\`.
     - \`autoAnswer\`: For inputs like \`radio\`, \`dropdown\`, \`date\`, \`star\`.
-    - \`manualAnswer\`: For inputs like \`checkbox\`, \`multiSelectDropdown\`, \`rankOrder\`.
+    - \`manualAnswer\`: For inputs like \`checkbox\`, \`multiSelectDropdown\`, \`rankOrder\`, \`signature\`.
     - \`manualUnclear\`: For text-based inputs like \`email\`, \`text\`, \`textarea\`.
 8.  \`validations\`: (optional object) e.g., \`required\`, \`minLength\`, \`maxLength\`, \`pattern\`, \`maxSelections\`.
 9.  \`ratingConfig\`: (object, required if \`questionType\` is "rating").

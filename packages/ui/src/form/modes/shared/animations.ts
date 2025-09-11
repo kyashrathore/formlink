@@ -1,13 +1,9 @@
-import { Variants } from "motion/react";
+import type { Variants, AnimationProps } from "motion/react";
 
-export interface AnimationConfig {
-  initial?: any;
-  animate?: any;
-  exit?: any;
-  transition?: any;
-  whileHover?: any;
-  whileTap?: any;
-}
+export type AnimationConfig = Pick<
+  AnimationProps,
+  "initial" | "animate" | "exit" | "transition" | "whileHover" | "whileTap"
+>;
 
 // TypeForm-style staggered animations for options
 export function getTypeFormAnimations(

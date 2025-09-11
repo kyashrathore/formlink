@@ -1,16 +1,16 @@
 "use client";
 
 import { useIsMobile } from "@/hooks/useIsMobile";
+import { useResultPage } from "@/hooks/useResultPage";
+import { calcScore } from "@/lib/scoring/calcScore";
 import type { QuestionResponse } from "@/lib/types";
 import type { Form as FormSchema, Question } from "@formlink/schema";
 import { Button, CompletionScreen, Form as UIForm } from "@formlink/ui";
-import { calcScore } from "@/lib/scoring/calcScore";
-import { useResultPage } from "@/hooks/useResultPage";
-import ReactMarkdown from "react-markdown";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import ReactMarkdown from "react-markdown";
 import { z } from "zod";
 import ClassicFormField from "./ClassicFormField";
 
@@ -328,11 +328,6 @@ export default function ClassicFormView({
     }
   }, [formState.currentPage]);
 
-  const handleStartQuiz = () => {
-    onStartQuiz();
-    // Classic mode doesn't have intro, so just call the callback
-  };
-
   const handleRestart = async () => {
     await onRestart();
     setShowConfetti(false);
@@ -355,7 +350,6 @@ export default function ClassicFormView({
       questionResponses,
     );
     const hasScore = possible > 0;
-    const result = useResultPage(true, formSchema as any, questionResponses);
     return (
       <CompletionScreen
         isMobileView={isMobileView}

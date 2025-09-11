@@ -92,7 +92,7 @@ export default function FormPreview({
 
   const stablePreviewUrl = useMemo(() => {
     const previewBasePath = getFormFillerPreviewBasePath()
-    const finalUrl = `${previewBasePath}/${stableFormId}`
+    const finalUrl = `${previewBasePath}/${stableFormId}?formlinkai_draft=true`
     return finalUrl
   }, [stableFormId])
 
@@ -232,13 +232,34 @@ export default function FormPreview({
     [getPreviewUrl]
   )
 
+  // Send theme mode update to iframe (real-time preview)
+  const sendThemeModeUpdate = useCallback(
+    (mode: "light" | "dark" | "system") => {
+      if (!iframeRef.current?.contentWindow || !isReadyRef.current) {
+        return
+      }
+
+      const message = {
+        type: "FORMCRAFT_THEME_MODE_UPDATE" as const,
+        payload: { mode, timestamp: Date.now() },
+      }
+      try {
+        const targetOrigin = new URL(getPreviewUrl()).origin
+        iframeRef.current.contentWindow.postMessage(message, targetOrigin)
+      } catch (error) {
+        console.error("Failed to send theme mode update:", error)
+      }
+    },
+    [getPreviewUrl]
+  )
+
   const handleMessage = useCallback(
     (event: MessageEvent) => {
       const expectedOrigin = new URL(getPreviewUrl()).origin
 
       if (event.origin !== expectedOrigin) {
         console.warn(
-          "FormCraft: Received message from untrusted origin:",
+          "Formlink: Received message from untrusted origin:",
           event.origin,
           "expected:",
           expectedOrigin
@@ -339,6 +360,32 @@ export default function FormPreview({
     const cleanup = initializePreview()
     return cleanup
   }, [retryCount])
+
+  // Listen for theme mode updates from DesignPanel and forward to iframe
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as {
+        mode: "light" | "dark" | "system"
+      }
+      if (!detail?.mode) return
+      sendThemeModeUpdate(detail.mode)
+    }
+    window.addEventListener("FORMLINK_THEME_MODE_UPDATE", handler as any)
+    return () =>
+      window.removeEventListener("FORMLINK_THEME_MODE_UPDATE", handler as any)
+  }, [sendThemeModeUpdate])
+
+  // Listen for shadcn CSS updates from DesignPanel and forward to iframe
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { cssText: string }
+      if (!detail?.cssText) return
+      sendShadcnCSSUpdate(detail.cssText)
+    }
+    window.addEventListener("FORMLINK_SHADCN_CSS_UPDATE", handler as any)
+    return () =>
+      window.removeEventListener("FORMLINK_SHADCN_CSS_UPDATE", handler as any)
+  }, [sendShadcnCSSUpdate])
 
   useEffect(() => {
     if (isReadyRef.current && !gateChatPreview) {

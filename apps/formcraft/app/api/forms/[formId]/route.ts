@@ -34,7 +34,9 @@ async function getFormSchemaById(
 ): Promise<Form | null> {
   const { data: formData, error: formError } = await supabase
     .from("forms")
-    .select("current_published_version_id,short_id, current_draft_version_id")
+    .select(
+      "current_published_version_id,short_id, current_draft_version_id, brand_id"
+    )
     .eq("id", formId)
     .single()
 
@@ -65,13 +67,69 @@ async function getFormSchemaById(
 
   try {
     const v = versionData
+    // Compute effective theme: single source (form > brand > none)
+    const brandToShadcn = (
+      brandTheme: any
+    ): { css?: string; mode?: "light" | "dark" | "system" } => {
+      if (!brandTheme) return {}
+      const css =
+        (typeof brandTheme.shadcn_css === "string" &&
+          brandTheme.shadcn_css.trim()) ||
+        (typeof brandTheme.shadcnCss === "string" &&
+          brandTheme.shadcnCss.trim()) ||
+        (typeof brandTheme.css === "string" && brandTheme.css.trim()) ||
+        undefined
+      const mode = (brandTheme.theme_mode || brandTheme.themeMode) as any
+      return { css, mode }
+    }
+
+    const overrides = (v as any)?.settings?.theme_overrides
+    let effectiveThemeOverrides:
+      | { shadcn_css?: string; theme_mode?: "light" | "dark" | "system" }
+      | undefined
+    const hasFormCss = Boolean(
+      overrides?.shadcn_css && overrides.shadcn_css.trim()
+    )
+    const hasFormMode = Boolean(overrides?.theme_mode)
+    if (hasFormCss || hasFormMode) {
+      effectiveThemeOverrides = {
+        ...(hasFormCss ? { shadcn_css: overrides!.shadcn_css } : {}),
+        ...(hasFormMode ? { theme_mode: overrides!.theme_mode } : {}),
+      }
+    } else {
+      const brandId = (formData as any)?.brand_id as string | null
+      if (brandId) {
+        try {
+          const { data: brand } = await supabase
+            .from("brands")
+            .select("theme")
+            .eq("brand_id", brandId)
+            .single()
+          const norm = brandToShadcn((brand as any)?.theme || {})
+          const hasBrandCss = Boolean(norm.css && norm.css.length)
+          const hasBrandMode = Boolean(norm.mode)
+          if (hasBrandCss || hasBrandMode) {
+            effectiveThemeOverrides = {
+              ...(hasBrandCss ? { shadcn_css: norm.css } : {}),
+              ...(hasBrandMode ? { theme_mode: norm.mode as any } : {}),
+            }
+          }
+        } catch {}
+      }
+    }
+
     const formSchemaResult: Form = {
       id: formId,
       version_id: v.version_id,
       title: v.title,
       description: v.description,
       questions: v.questions,
-      settings: v.settings,
+      settings: {
+        ...(v.settings as any),
+        ...(effectiveThemeOverrides
+          ? { theme_overrides: effectiveThemeOverrides }
+          : {}),
+      } as any,
       current_published_version_id: formData.current_published_version_id,
       current_draft_version_id: formData.current_draft_version_id,
       short_id: formData.short_id,
@@ -367,8 +425,26 @@ export async function PATCH(
       .single()
 
     if (versionError) {
+      console.error("[Formlink][API][PATCH] update failed", {
+        targetVersionId,
+        targetStatus,
+        error: versionError.message,
+      })
       return NextResponse.json({ error: versionError.message }, { status: 500 })
     }
+
+    try {
+      console.info("[Formlink][API][PATCH] update success", {
+        updatedVersionId: versionData?.version_id,
+        status: versionData?.status,
+        hasSettings: Boolean((versionData as any)?.settings),
+        hasOverrides: Boolean((versionData as any)?.settings?.theme_overrides),
+        cssLen:
+          ((versionData as any)?.settings?.theme_overrides?.shadcn_css || "")
+            .length || 0,
+        mode: (versionData as any)?.settings?.theme_overrides?.theme_mode,
+      })
+    } catch {}
 
     return NextResponse.json(versionData)
   } catch {
@@ -459,6 +535,17 @@ export async function GET(
         { status: 404 }
       )
     }
+
+    try {
+      const eff = (formSchema.settings as any)?.theme_overrides || {}
+      console.info("[Formlink][API][GET]/api/forms/:id returning", {
+        formId,
+        versionId: formSchema.version_id,
+        hasOverrides: Boolean(eff),
+        cssLen: (eff.shadcn_css || "").length || 0,
+        mode: eff.theme_mode || null,
+      })
+    } catch {}
 
     return NextResponse.json(formSchema)
   } catch (error) {

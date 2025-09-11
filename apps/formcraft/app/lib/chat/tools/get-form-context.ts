@@ -65,7 +65,6 @@ export function getFormContextTool(context: ChatToolContext) {
             ...contextData,
             settings: contextData.settings as Record<string, unknown>,
           },
-          message: `Form '${contextData.title}' with ${contextData.questions.length} questions loaded`,
         }
       } catch (error) {
         const errorMessage =

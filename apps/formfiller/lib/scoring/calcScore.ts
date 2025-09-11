@@ -1,5 +1,11 @@
-import { Form } from "@formlink/schema";
 import { QuestionResponse } from "@/lib/types";
+import {
+  Form,
+  getOptions,
+  isChoiceQuestion,
+  isLinearScaleQuestion,
+  isRatingQuestion,
+} from "@formlink/schema";
 
 export interface ScoreBreakdownItem {
   questionId: string;
@@ -24,40 +30,39 @@ export function calcScore(
   const breakdown: ScoreBreakdownItem[] = [];
 
   for (const q of form.questions) {
-    const t = (q.type as any).name as string;
-    const title = (q as any).label || q.title;
+    const title = (q as { label?: string }).label || q.title;
     const resp = responses[q.id];
     let earned = 0;
     let maxForQ = 0;
 
-    if (t === "singleChoice") {
-      const options = ((q.type as any).options || []) as Array<{
-        value: string;
-        label: string;
-        score?: number;
-      }>;
+    if (isChoiceQuestion(q) && q.type.name === "singleChoice") {
+      const options = (getOptions(q) || []).map((o) => ({
+        value: o.value,
+        label: o.label,
+        score: (o as { score?: number }).score,
+      }));
       // Max score among options (fallback 0)
       maxForQ = options.reduce((m, o) => Math.max(m, o.score ?? 0), 0);
       if (typeof resp === "string") {
         const opt = options.find((o) => String(o.value) === String(resp));
         earned = opt?.score ?? 0;
       }
-    } else if (t === "multipleChoice") {
-      const options = ((q.type as any).options || []) as Array<{
-        value: string;
-        label: string;
-        score?: number;
-      }>;
+    } else if (isChoiceQuestion(q) && q.type.name === "multipleChoice") {
+      const options = (getOptions(q) || []).map((o) => ({
+        value: o.value,
+        label: o.label,
+        score: (o as { score?: number }).score,
+      }));
       // Sum of all positive option scores defines theoretical maximum
       maxForQ = options.reduce((s, o) => s + Math.max(0, o.score ?? 0), 0);
       const selected: string[] = Array.isArray(resp) ? (resp as string[]) : [];
       earned = options
         .filter((o) => selected.some((v) => String(v) === String(o.value)))
         .reduce((s, o) => s + (o.score ?? 0), 0);
-    } else if (t === "rating" || t === "linearScale") {
+    } else if (isRatingQuestion(q) || isLinearScaleQuestion(q)) {
       // If author specified question-level score (e.g., correctness handled elsewhere), use it as max
       // Otherwise do not contribute to score by default
-      const qScore = (q as any).score as number | undefined;
+      const qScore = (q as { score?: number }).score;
       if (typeof qScore === "number") {
         maxForQ = qScore;
         // Earned only if answered (simple model). Advanced mapping can be added later.
@@ -65,7 +70,7 @@ export function calcScore(
       }
     } else {
       // For other types, check if a default question-level score is defined
-      const qScore = (q as any).score as number | undefined;
+      const qScore = (q as { score?: number }).score;
       if (typeof qScore === "number") {
         maxForQ = qScore;
         earned = resp != null && resp !== "" ? qScore : 0;

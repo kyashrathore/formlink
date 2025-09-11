@@ -7,7 +7,6 @@ import {
   ToggleGroupItem,
 } from "@formlink/ui"
 import { Copy } from "lucide-react"
-import { useTheme } from "next-themes"
 import { useState } from "react"
 import { EmbedCodeParts, EmbedType, getEmbedCode } from "../../lib/embed/utils"
 import { useFormPageContext } from "../../stores/formPageContext"
@@ -28,8 +27,6 @@ export default function ShareTabContent({
   formId: string
   shortId?: string
 }) {
-  const { systemTheme, theme } = useTheme()
-  const appliedTheme = theme === "system" ? systemTheme : theme
   const { embedType, setEmbedType } = useFormPageContext()
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle")
 

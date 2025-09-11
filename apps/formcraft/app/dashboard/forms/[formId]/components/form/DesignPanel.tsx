@@ -1,5 +1,6 @@
 "use client"
 
+import { parseShadcnCSS } from "@/lib/theme/parseShadcn"
 import { useEffect, useState } from "react"
 import ShadcnCSSPanel from "./ShadcnCSSPanel"
 
@@ -48,8 +49,13 @@ export default function DesignPanel({
   shadcnStatus = { loading: false },
   className = "",
 }: DesignPanelProps) {
+  const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
   const [savedTheme, setSavedTheme] = useState<string | null>(null)
   const [themeLoading, setThemeLoading] = useState(true)
+  const [themeMode, setThemeMode] = useState<"system" | "light" | "dark">(
+    "dark"
+  )
+  const [savingMode, setSavingMode] = useState(false)
 
   useEffect(() => {
     const loadSavedTheme = async () => {
@@ -67,6 +73,10 @@ export default function DesignPanel({
           } else {
             setSavedTheme(null)
           }
+
+          const mode =
+            form.settings?.theme_overrides?.theme_mode || ("dark" as const)
+          setThemeMode(mode)
         } else {
           setSavedTheme(null)
         }
@@ -89,25 +99,38 @@ export default function DesignPanel({
       return
     }
 
+    // Parse and canonicalize before applying/saving to ensure SSR stability
+    const parsed = parseShadcnCSS(cssText)
+
     if (onShadcnCSSApply) {
-      onShadcnCSSApply(cssText)
+      onShadcnCSSApply(parsed.css)
+    }
+    // Fire live-update event so preview forwards CSS immediately (even when not on Preview tab)
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("FORMLINK_SHADCN_CSS_UPDATE", {
+          detail: { cssText: parsed.css },
+        })
+      )
     }
 
     try {
       const currentFormResponse = await fetch(`/api/forms/${formId}`)
-      let currentSettings = {}
+      let currentSettings: any = {}
       if (currentFormResponse.ok) {
         const currentForm = await currentFormResponse.json()
         currentSettings = currentForm.settings || {}
       }
 
+      const overrides = {
+        ...(currentSettings.theme_overrides || {}),
+        shadcn_css: parsed.css,
+        updated_at: new Date().toISOString(),
+      }
       const themeData = {
         settings: {
           ...currentSettings,
-          theme_overrides: {
-            shadcn_css: cssText,
-            updated_at: new Date().toISOString(),
-          },
+          theme_overrides: overrides,
         },
       }
 
@@ -126,6 +149,9 @@ export default function DesignPanel({
           statusText: response.statusText,
           error: errorData,
         })
+      } else {
+        // Keep local state in sync so the textarea shows the last saved theme
+        setSavedTheme(parsed.css)
       }
     } catch (error) {
       console.error("Error saving theme to form:", error)
@@ -140,16 +166,84 @@ export default function DesignPanel({
       return
     }
 
-    setSavedTheme(cssText)
+    const parsed = parseShadcnCSS(cssText)
+    setSavedTheme(parsed.css)
 
     if (onShadcnCSSApply) {
-      onShadcnCSSApply(cssText)
+      onShadcnCSSApply(parsed.css)
     }
   }
 
   return (
     <div className={` ${className}`}>
-      {}
+      {/* Theme mode toggle */}
+      <div className="mb-6">
+        <div className="mb-2">
+          <h3 className="text-sm font-medium">Theme Mode</h3>
+          <p className="text-muted-foreground text-xs">
+            Control light/dark mode for this form’s preview and share embeds.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {(["system", "light", "dark"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              className={`rounded-md border px-3 py-1.5 text-sm ${
+                themeMode === m
+                  ? "border-primary ring-primary/30 ring-2"
+                  : "border-border"
+              } disabled:opacity-50`}
+              disabled={savingMode}
+              onClick={async () => {
+                if (themeMode === m) return
+                setThemeMode(m)
+                setSavingMode(true)
+                try {
+                  const currentFormResponse = await fetch(
+                    `/api/forms/${formId}`
+                  )
+                  let currentSettings: any = {}
+                  if (currentFormResponse.ok) {
+                    const currentForm = await currentFormResponse.json()
+                    currentSettings = currentForm.settings || {}
+                  }
+                  const nextOverrides = {
+                    ...(currentSettings.theme_overrides || {}),
+                    theme_mode: m,
+                    updated_at: new Date().toISOString(),
+                  }
+                  const nextSettings = {
+                    ...currentSettings,
+                    theme_overrides: nextOverrides,
+                  }
+                  await fetch(`/api/forms/${formId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ settings: nextSettings }),
+                  })
+                  // Notify preview to update immediately
+                  if (typeof window !== "undefined") {
+                    window.dispatchEvent(
+                      new CustomEvent("FORMLINK_THEME_MODE_UPDATE", {
+                        detail: { mode: m },
+                      })
+                    )
+                  }
+                } catch (e) {
+                  console.error("Failed to save theme mode:", e)
+                } finally {
+                  setSavingMode(false)
+                }
+              }}
+            >
+              {capitalize(m)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Shadcn CSS overrides */}
       <ShadcnCSSPanel
         onSaveTheme={handleSaveTheme}
         onSaveAsBrand={handleSaveAsBrandTheme}

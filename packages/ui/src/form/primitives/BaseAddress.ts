@@ -457,7 +457,7 @@ export function BaseAddress(props: BaseAddressProps): BaseAddressReturn {
   );
 
   // Generate field props for each address field
-  const fieldProps: Record<keyof AddressData, AddressFieldProps> = {} as any;
+  const fieldProps = {} as Record<keyof AddressData, AddressFieldProps>;
 
   (Object.keys(defaultFieldConfig) as Array<keyof AddressData>).forEach(
     (field) => {

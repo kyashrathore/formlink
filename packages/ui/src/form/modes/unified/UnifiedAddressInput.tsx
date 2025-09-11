@@ -11,7 +11,7 @@ export type FormMode = "chat" | "typeform";
 export interface UnifiedAddressInputProps {
   mode: FormMode;
   value?: AddressData | null;
-  onChange: (value: AddressData) => void;
+  onChange: (value: AddressData | null) => void;
   onSubmit?: () => void;
   disabled?: boolean;
   required?: boolean;
@@ -54,7 +54,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
   // Use BaseAddress primitive for all field state management and validation
   const addressPrimitive = BaseAddress({
     value,
-    onChange: onChange as any,
+    onChange,
     disabled,
     required,
     requiredFields,
@@ -89,8 +89,8 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
         const nextField = fieldOrder[currentIndex + 1];
         if (nextField) {
           const nextInput = document.querySelector(
-            `input[id="${(fieldProps[nextField] as any).id}"]`,
-          ) as HTMLInputElement;
+            `input[id="${fieldProps[nextField].domProps.id}"]`,
+          ) as HTMLInputElement | null;
           if (nextInput) {
             nextInput.focus();
           }

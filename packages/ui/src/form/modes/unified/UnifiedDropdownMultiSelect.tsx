@@ -70,10 +70,11 @@ export function UnifiedDropdownMultiSelect<T = string>({
     if (!opt) return;
     const valStr = String(opt.value);
     const isSelected = stringValues.has(valStr);
+    const current = (value ?? []) as string[];
     const newValues = isSelected
-      ? (value || []).filter((v) => String(v) !== valStr)
-      : [...((value || []) as any[]), opt.value as any];
-    onChange(newValues as T[]);
+      ? current.filter((v) => v !== valStr)
+      : [...current, valStr];
+    onChange(newValues as unknown as T[]);
   };
 
   return (
@@ -86,7 +87,7 @@ export function UnifiedDropdownMultiSelect<T = string>({
       <Combobox data={data} type="option">
         <ComboboxTrigger
           className={cn(
-            mode === "typeform" ? "min-h-12 py-2 text-base" : "h-10 text-sm",
+            mode === "typeform" ? "h-16 text-base" : "h-10 text-sm",
             "w-full justify-between",
           )}
           onClick={(e) => {
@@ -127,7 +128,7 @@ export function UnifiedDropdownMultiSelect<T = string>({
           )}
         </ComboboxTrigger>
         <ComboboxContent>
-          <ComboboxInput />
+          <ComboboxInput className="h-10" />
           <ComboboxList>
             <ComboboxEmpty>No options found.</ComboboxEmpty>
             <ComboboxGroup>

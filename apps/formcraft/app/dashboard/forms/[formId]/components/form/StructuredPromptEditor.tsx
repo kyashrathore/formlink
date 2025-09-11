@@ -33,6 +33,10 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
   const textAreaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({})
   const viewRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
+  // Convert bare '&' in text to '&amp;' while leaving valid entities intact
+  const sanitizeBareAmpersands = (s: string) =>
+    typeof s === "string" ? s.replace(/&(?!#?[a-zA-Z0-9]+;)/g, "&amp;") : s
+
   const dedentText = (text: string) => {
     const normalized = text.replace(/\r\n?/g, "\n")
     // Trim a single leading and trailing newline to avoid accidental code blocks
@@ -63,7 +67,7 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
   // Minimal remark plugin to treat single newlines as <br/>
   // (avoids needing the external 'remark-breaks' package)
   const remarkHardBreaks = () => (tree: any) => {
-    const visit = (node: any, parent: any) => {
+    const visit = (node: any, _parent?: any) => {
       if (!node) return
       if (Array.isArray(node.children)) {
         // Iterate over a copy, since we'll splice
@@ -77,7 +81,7 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
           ) {
             const parts = child.value.split("\n")
             const next: any[] = []
-            parts.forEach((part, idx) => {
+            parts.forEach((part: string, idx: number) => {
               if (idx > 0) next.push({ type: "break" })
               if (part.length) next.push({ type: "text", value: part })
             })
@@ -89,7 +93,7 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
         }
       }
     }
-    visit(tree, null)
+    visit(tree)
     return tree
   }
 
@@ -98,10 +102,11 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
   const debounceRef = useRef<number | null>(null)
 
   const handleCodeChange = (value: string) => {
-    setRawXml(value)
+    const sanitized = sanitizeBareAmpersands(value)
+    setRawXml(sanitized)
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
     debounceRef.current = window.setTimeout(() => {
-      const res = XMLValidator.validate(value)
+      const res = XMLValidator.validate(sanitized)
       if (res !== true) {
         const msg =
           typeof res === "object" && (res as any).err
@@ -112,9 +117,9 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
       }
       setCodeError(null)
       try {
-        const parsed = parseXmlToNodes(value)
+        const parsed = parseXmlToNodes(sanitized)
         setNodes(parsed)
-        onChange && onChange(value)
+        onChange?.(sanitized)
       } catch (e) {
         setCodeError("Failed to parse XML")
       }
@@ -133,6 +138,12 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
     }
 
     const doc = parser.parseFromString(xmlString || "<root></root>", "text/xml")
+    if (hasParserError(doc)) {
+      // Try to extract a readable message from the browser's parsererror markup
+      const errNode = doc.getElementsByTagName("parsererror")[0]
+      const errText = errNode?.textContent || "Invalid XML"
+      throw new Error(errText)
+    }
 
     const convertDomToNode = (element: Element, path = ""): any => {
       const children: any[] = []
@@ -239,10 +250,29 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
   useEffect(() => {
     const sampleXml =
       initialContent ||
-      `<config>\n  <api-settings>\n    <endpoint>https://api.example.com</endpoint>\n    <timeout>30000</timeout>\n    <retry-attempts>3</retry-attempts>\n  </api-settings>\n  <features>\n    <authentication>Enable OAuth2 authentication with refresh token support</authentication>\n    <caching>Implement Redis caching for frequently accessed endpoints</caching>\n    <logging>Verbose logging for debugging and monitoring</logging>\n  </features>\n</config>`
+      `<config>
+  <api-settings>
+    <endpoint>https://api.example.com</endpoint>
+    <timeout>30000</timeout>
+    <retry-attempts>3</retry-attempts>
+  </api-settings>
+  <features>
+    <authentication>Enable OAuth2 authentication with refresh token support</authentication>
+    <caching>Implement Redis caching for frequently accessed endpoints</caching>
+    <logging>Verbose logging for debugging and monitoring</logging>
+  </features>
+</config>`
 
-    setRawXml(sampleXml)
-    setNodes(parseXmlToNodes(sampleXml))
+    // Do NOT escape here — we want valid XML for parsing and validation
+    const sanitized = sanitizeBareAmpersands(sampleXml)
+    setRawXml(sanitized)
+    try {
+      setNodes(parseXmlToNodes(sanitized))
+      setCodeError(null)
+    } catch (e: any) {
+      setCodeError(e?.message || "Invalid XML")
+      setNodes([])
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialContent])
 
@@ -519,7 +549,7 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
               placeholder="Enter XML content..."
             />
           )}
-          {viewMode === "code" && codeError && (
+          {codeError && (
             <div className="absolute right-3 bottom-3 left-3 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-600">
               {codeError}
             </div>

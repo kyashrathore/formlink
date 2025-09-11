@@ -17,7 +17,7 @@ interface ClassicFormFieldProps {
   value: QuestionResponse;
   onChange: (value: QuestionResponse) => void;
   onFileUpload?: (file: File) => Promise<string | null>;
-  errors?: any;
+  errors?: string[] | Record<string, string> | undefined;
 }
 
 export default function ClassicFormField({
@@ -29,7 +29,16 @@ export default function ClassicFormField({
   return (
     <FormField
       name={question.id}
-      render={({ field }) => (
+      render={({
+        field,
+      }: {
+        field: {
+          name: string;
+          onChange: (v: unknown) => void;
+          onBlur: () => void;
+          disabled?: boolean;
+        };
+      }) => (
         <FormItem className="gap-3">
           <FormLabel className="text-base font-medium">
             {question.label}

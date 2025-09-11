@@ -33,8 +33,10 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
       isTestSubmission?: boolean,
     ) => {
       const storageKey = id ? `formlink:typeform:${id}` : undefined;
-      let persisted: { submissionId?: string; questionResponses?: any } | null =
-        null;
+      let persisted: {
+        submissionId?: string;
+        questionResponses?: Record<string, QuestionResponse>;
+      } | null = null;
       try {
         if (storageKey && typeof window !== "undefined") {
           const raw = localStorage.getItem(storageKey);
@@ -149,7 +151,7 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
                 submissionId,
                 formVersionId: versionId,
                 questionId,
-                answerValue: value as any,
+                answerValue: value,
                 submissionStatus: "in_progress",
                 testmode: false,
               })
@@ -257,22 +259,13 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
         return null;
       }
 
+      const inferredExt = file.type?.split("/")?.[1] || "bin";
       const safeFile =
-        !file || !(file as any).name || (file as any).name === ""
-          ? new File(
-              [file],
-              `upload-${Date.now()}.${
-                (((file as any)?.type as string | undefined)?.split(
-                  "/",
-                )?.[1] as string | undefined) || "bin"
-              }`,
-              {
-                type:
-                  ((file as any)?.type as string | undefined as string) ||
-                  "application/octet-stream",
-                lastModified: Date.now(),
-              },
-            )
+        !file || !file.name
+          ? new File([file], `upload-${Date.now()}.${inferredExt}`, {
+              type: file.type || "application/octet-stream",
+              lastModified: Date.now(),
+            })
           : file;
 
       const formData = new FormData();

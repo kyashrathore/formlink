@@ -95,30 +95,29 @@ export class CSSVariableParser {
   ): Record<string, string> {
     const variables: Record<string, string> = {};
 
-    // Create regex to match the selector and its content
+    // Match ALL occurrences of the selector, not just the first.
+    // This respects source order: later matches overwrite earlier ones.
     const selectorRegex = new RegExp(
       `${this.escapeRegex(selector)}\\s*\\{([^}]*?)\\}`,
       "gis",
     );
 
-    const match = selectorRegex.exec(cssText);
-    if (!match || !match[1]) {
-      return variables;
-    }
+    let selectorMatch: RegExpExecArray | null;
+    while ((selectorMatch = selectorRegex.exec(cssText)) !== null) {
+      const selectorContent = selectorMatch[1] || "";
 
-    const selectorContent = match[1];
+      // Extract CSS custom properties (--variable-name: value;)
+      const variableRegex = /--([\w-]+)\s*:\s*([^;]+);?/g;
+      let variableMatch: RegExpExecArray | null;
 
-    // Extract CSS custom properties (--variable-name: value;)
-    const variableRegex = /--([\w-]+)\s*:\s*([^;]+);?/g;
-    let variableMatch;
+      while ((variableMatch = variableRegex.exec(selectorContent)) !== null) {
+        const varName = `--${(variableMatch[1] || "").trim()}`;
+        const varValue = (variableMatch[2] || "").trim();
 
-    while ((variableMatch = variableRegex.exec(selectorContent)) !== null) {
-      const varName = `--${variableMatch[1]?.trim() || ""}`;
-      const varValue = variableMatch[2]?.trim() || "";
-
-      // Validate variable value
-      if (this.isValidCSSValue(varValue)) {
-        variables[varName] = varValue;
+        if (this.isValidCSSValue(varValue)) {
+          // Later declarations overwrite earlier ones
+          variables[varName] = varValue;
+        }
       }
     }
 

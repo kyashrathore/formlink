@@ -37,7 +37,7 @@ export function UnifiedLikert({
 }: UnifiedLikertProps) {
   const select = BaseSelect<string>({
     options: options.map((o) => ({ value: o, label: o })),
-    value: value || "",
+    value: value,
     onChange,
     disabled,
     required,
@@ -79,8 +79,8 @@ export function UnifiedLikert({
         <div
           {...containerProps}
           className="space-y-3"
-          onMouseDown={(e) => {
-            containerProps.onMouseDown?.(e as any);
+          onMouseDown={(e: React.MouseEvent<HTMLDivElement>) => {
+            containerProps.onMouseDown?.(e);
             if (dbg) {
               try {
                 console.debug(
@@ -93,60 +93,72 @@ export function UnifiedLikert({
             }
           }}
         >
-          {select.options.map((opt, index) => (
-            <motion.button
-              key={opt.value}
-              type="button"
-              {...opt.props}
-              {...getTypeFormAnimations(index)}
-              className={cn(
-                "w-full text-left rounded-lg border transition-all duration-200 min-h-[52px] flex items-center",
-                padding,
-                opt.isSelected
-                  ? "bg-primary/10 border-2 border-primary"
-                  : "bg-muted/30 border border-border/50 hover:bg-muted/60 hover:border-border",
-                disabled && "opacity-50 cursor-not-allowed",
-              )}
-              onClick={(_e) => {
-                if (disabled) return;
-                try {
-                  if (dbg) {
-                    console.debug("[UnifiedLikert][typeform] click option", {
-                      index,
-                      value: opt.value,
-                      before: select.value,
-                    });
-                  }
-                  select.selectByIndex(index);
-                  if (dbg) {
-                    setTimeout(() => {
-                      try {
-                        console.debug(
-                          "[UnifiedLikert][typeform] after select",
-                          {
-                            value: select.value,
-                          },
-                        );
-                      } catch {
-                        // Debug logging failed, ignore
-                      }
-                    }, 0);
-                  }
-                } catch {
-                  // Debug logging failed, ignore
-                }
-              }}
-            >
-              <span
+          {select.options.map((opt, index) => {
+            const p = (opt.props ||
+              {}) as React.ButtonHTMLAttributes<HTMLButtonElement>;
+            const safeProps = {
+              id: p.id,
+              role: p.role,
+              "aria-selected": p["aria-selected"],
+              "aria-disabled": p["aria-disabled"],
+              tabIndex: p.tabIndex,
+              onMouseEnter: p.onMouseEnter,
+            } as const;
+            return (
+              <motion.button
+                key={opt.value}
+                type="button"
+                {...safeProps}
+                {...getTypeFormAnimations(index)}
                 className={cn(
-                  "block",
-                  opt.isSelected ? "font-medium" : undefined,
+                  "w-full text-left rounded-lg border transition-all duration-200 min-h-[52px] flex items-center",
+                  padding,
+                  opt.isSelected
+                    ? "bg-primary/10 border-2 border-primary"
+                    : "bg-muted/30 border border-border/50 hover:bg-muted/60 hover:border-border",
+                  disabled && "opacity-50 cursor-not-allowed",
                 )}
+                onClick={(_e) => {
+                  if (disabled) return;
+                  try {
+                    if (dbg) {
+                      console.debug("[UnifiedLikert][typeform] click option", {
+                        index,
+                        value: opt.value,
+                        before: select.value,
+                      });
+                    }
+                    select.selectByIndex(index);
+                    if (dbg) {
+                      setTimeout(() => {
+                        try {
+                          console.debug(
+                            "[UnifiedLikert][typeform] after select",
+                            {
+                              value: select.value,
+                            },
+                          );
+                        } catch {
+                          // Debug logging failed, ignore
+                        }
+                      }, 0);
+                    }
+                  } catch {
+                    // Debug logging failed, ignore
+                  }
+                }}
               >
-                {opt.label}
-              </span>
-            </motion.button>
-          ))}
+                <span
+                  className={cn(
+                    "block",
+                    opt.isSelected ? "font-medium" : undefined,
+                  )}
+                >
+                  {opt.label}
+                </span>
+              </motion.button>
+            );
+          })}
         </div>
         {showKeyboardHints && !disabled && (
           <div className="text-sm text-muted-foreground">
@@ -175,40 +187,52 @@ export function UnifiedLikert({
       className={cn("space-y-2", className)}
       data-ul-mode="chat"
     >
-      {select.options.map((opt, index) => (
-        <motion.button
-          key={opt.value}
-          type="button"
-          {...opt.props}
-          {...getChatAnimations(index)}
-          className={cn(
-            "w-full text-left rounded-lg border-2 transition-all duration-200",
-            padding,
-            opt.isSelected
-              ? "bg-primary/10 border-primary"
-              : "border-border/50 bg-card hover:border-primary/50 hover:bg-muted/50",
-            opt.isHighlighted && !opt.isSelected && "border-primary",
-            disabled && "opacity-50 cursor-not-allowed",
-          )}
-          onClick={(_e) => {
-            if (disabled) return;
-            try {
-              select.selectByIndex(index);
-            } catch {
-              // Debug logging failed, ignore
-            }
-          }}
-        >
-          <span
+      {select.options.map((opt, index) => {
+        const p = (opt.props ||
+          {}) as React.ButtonHTMLAttributes<HTMLButtonElement>;
+        const safeProps = {
+          id: p.id,
+          role: p.role,
+          "aria-selected": p["aria-selected"],
+          "aria-disabled": p["aria-disabled"],
+          tabIndex: p.tabIndex,
+          onMouseEnter: p.onMouseEnter,
+        } as const;
+        return (
+          <motion.button
+            key={opt.value}
+            type="button"
+            {...safeProps}
+            {...getChatAnimations(index)}
             className={cn(
-              "block text-sm",
-              opt.isSelected ? "font-medium" : undefined,
+              "w-full text-left rounded-lg border-2 transition-all duration-200",
+              padding,
+              opt.isSelected
+                ? "bg-primary/10 border-primary"
+                : "border-border/50 bg-card hover:border-primary/50 hover:bg-muted/50",
+              opt.isHighlighted && !opt.isSelected && "border-primary",
+              disabled && "opacity-50 cursor-not-allowed",
             )}
+            onClick={(_e) => {
+              if (disabled) return;
+              try {
+                select.selectByIndex(index);
+              } catch {
+                // Debug logging failed, ignore
+              }
+            }}
           >
-            {opt.label}
-          </span>
-        </motion.button>
-      ))}
+            <span
+              className={cn(
+                "block text-sm",
+                opt.isSelected ? "font-medium" : undefined,
+              )}
+            >
+              {opt.label}
+            </span>
+          </motion.button>
+        );
+      })}
       {showError && (
         <p className="text-sm text-destructive">{select.errors[0]?.message}</p>
       )}

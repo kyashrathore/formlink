@@ -50,7 +50,7 @@ export default function RootLayout({
         <PostHogProviderWrapper>
           <ThemeProvider
             attribute="class"
-            defaultTheme="light"
+            defaultTheme="dark"
             disableTransitionOnChange
           >
             <ReactQueryClientProvider>

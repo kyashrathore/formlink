@@ -79,7 +79,7 @@ export function UnifiedDatePicker({
   const resolvedDensity = density ?? (mode === "chat" ? "compact" : "comfy");
   const triggerClass = cn(
     "w-full flex items-center justify-between border rounded-lg transition-all duration-200",
-    "h-[42px]",
+    mode === "typeform" ? "h-16" : "h-11",
     resolvedDensity === "compact" && "px-3 py-2 text-sm",
     resolvedDensity === "comfy" && "px-4 py-2 text-base",
     resolvedDensity === "spacious" && "px-5 py-3 text-base",

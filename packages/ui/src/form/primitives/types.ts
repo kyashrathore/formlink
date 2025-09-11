@@ -7,7 +7,7 @@ export interface ValidationError {
   message: string;
 }
 
-export interface BasePrimitiveProps<T = any> {
+export interface BasePrimitiveProps<T = unknown> {
   /**
    * The current value of the input
    */
@@ -72,7 +72,7 @@ export interface Option<T = string> {
   group?: string;
 }
 
-export interface BasePrimitiveReturn<T = any> {
+export interface BasePrimitiveReturn<T = unknown> {
   /**
    * Current value
    */

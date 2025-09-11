@@ -92,10 +92,7 @@ export * from "./hooks/ui/useTheme";
 // Unified Component Architecture Exports - PRIMARY INTERFACE
 
 // Main unified form input components (USE THESE BY DEFAULT)
-export {
-  FormInput,
-  UnifiedFormInput,
-} from "./form/modes/unified/UnifiedFormInput";
+// Note: UnifiedFormInput was removed as it used the registry system
 
 // Individual unified components (for advanced usage)
 export { UnifiedAddressInput } from "./form/modes/unified/UnifiedAddressInput";
@@ -111,12 +108,10 @@ export { UnifiedCountrySelect } from "./form/modes/unified/UnifiedCountrySelect"
 export { UnifiedDropdownSelect } from "./form/modes/unified/UnifiedDropdownSelect";
 export { UnifiedDropdownMultiSelect } from "./form/modes/unified/UnifiedDropdownMultiSelect";
 export { UnifiedCountryList } from "./form/modes/unified/UnifiedCountryList";
+export { UnifiedSignature } from "./form/modes/unified/UnifiedSignature";
 
 // Context provider for mode management
 export { FormModeProvider, useFormMode } from "./form/context/FormModeContext";
-
-// Main input container that routes to appropriate mode
-export { InputContainer } from "./form/InputContainer";
 
 // Base primitives - these provide the core logic
 export * from "./form/primitives";

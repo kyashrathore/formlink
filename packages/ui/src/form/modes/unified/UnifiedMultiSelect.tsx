@@ -48,8 +48,6 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
   const base = BaseMultiSelect<string>({
     enableShortcuts: true,
     enableArrowNavigation: true,
-    // Mode-specific behavior: typeform auto-submits, chat requires manual submit
-    autoSubmitOnChange: mode === "typeform",
     ...baseProps,
     value: baseProps.value || [],
   });

@@ -26,11 +26,7 @@ export function getAllowedPreviewOrigins(): string[] {
   }
 
   // Production fallback - should be configured via environment variables
-  return [
-    "https://app.formcraft.com",
-    "https://formcraft.com",
-    "https://formlink.ai",
-  ];
+  return ["https://formlink.ai"];
 }
 
 /**

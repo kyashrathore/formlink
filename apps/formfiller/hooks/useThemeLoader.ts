@@ -42,11 +42,7 @@ export function useThemeLoader(formSchema: Form): ThemeLoaderResult {
 
         // Extract theme from form settings
         const settings = formSchema.settings as FormSettings;
-        const themeMode = (settings?.theme_overrides as any)?.theme_mode as
-          | "light"
-          | "dark"
-          | "system"
-          | undefined;
+        const themeMode = settings?.theme_overrides?.theme_mode;
         // Apply theme mode (default to dark per product requirement)
         const root = document.documentElement;
         const desired = themeMode ?? "dark";

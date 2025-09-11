@@ -308,7 +308,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                   variant="outline"
                   size="sm"
                   className="text-sm"
-                  highlight={false}
+                  highlight=""
                 >
                   {prompt}
                 </PromptSuggestion>

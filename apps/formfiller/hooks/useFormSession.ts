@@ -1,7 +1,8 @@
 import { Form } from "@formlink/schema";
 import { useEffect, useState } from "react";
+import type { UIMessage as MessageType } from "@ai-sdk/react";
 import { useChatStore } from "../components/chat/store/useChatStore";
-import type { QuestionResponse } from "../lib/types";
+import type { QuestionResponse, FormWithVersions } from "../lib/types";
 
 // Utility: get persisted submissionId safely even if hydration timing varies
 function getPersistedSubmissionIdFallback(): string | null {
@@ -42,10 +43,9 @@ export function useFormSession({
         store.submissionId ?? getPersistedSubmissionIdFallback();
 
       // 2) Initialize form in store (keeps existing logic & UUID generation)
+      const v = formSchema as FormWithVersions;
       const versionToUse =
-        (formSchema as any).current_published_version_id ||
-        (formSchema as any).current_draft_version_id ||
-        "";
+        v.current_published_version_id || v.current_draft_version_id || "";
       await store.initializeForm(
         formSchema,
         formId,
@@ -56,15 +56,21 @@ export function useFormSession({
       );
 
       // 3) Fetch chat history if we have IDs
-      let history = {
-        messages: [],
-        responses: {},
-        submissionStatus: undefined as string | undefined,
-      };
+      let history: {
+        messages: Array<{
+          id?: string;
+          role: string;
+          parts?: Array<{ type: string; text?: string }>;
+          content?: string;
+          createdAt?: string | number | Date;
+        }>;
+        responses: Record<string, QuestionResponse>;
+        submissionStatus?: string;
+      } = { messages: [], responses: {}, submissionStatus: undefined };
       const sid =
-        (typeof (useChatStore as any).getState === "function"
-          ? useChatStore.getState().submissionId
-          : store.submissionId) ?? submissionId;
+        useChatStore.getState().submissionId ??
+        store.submissionId ??
+        submissionId;
       if (sid && formId) {
         try {
           const res = await fetch(
@@ -72,14 +78,25 @@ export function useFormSession({
           );
           if (res.ok) {
             const data = await res.json();
-            history.messages = (data?.messages ?? []).map((m: any) => ({
-              id: m.id,
-              role: m.role,
-              parts:
-                m.parts ||
-                (m.content ? [{ text: m.content, type: "text" }] : []),
-              createdAt: m.createdAt ? new Date(m.createdAt) : undefined,
-            }));
+            history.messages = (data?.messages ?? []).map(
+              (
+                m: {
+                  id?: string;
+                  role: string;
+                  parts?: Array<{ type: string; text?: string }>;
+                  content?: string;
+                  createdAt?: string;
+                },
+                idx: number,
+              ) => ({
+                id: m.id ?? `${Date.now()}-${idx}`,
+                role: m.role,
+                parts:
+                  m.parts ||
+                  (m.content ? [{ text: m.content, type: "text" }] : []),
+                createdAt: m.createdAt ? new Date(m.createdAt) : undefined,
+              }),
+            );
             history.responses = data?.responses ?? {};
             history.submissionStatus = data?.submissionStatus;
           }
@@ -91,9 +108,10 @@ export function useFormSession({
       if (cancelled) return;
 
       // 4) Hydrate store from history to compute currentQuestionId and set ready state
+      // hydrate expects compatible structures; pass as-is
       store.hydrateFromHistory(
-        history.messages as any,
-        history.responses as any,
+        history.messages as unknown as MessageType[],
+        history.responses,
         formSchema,
       );
 

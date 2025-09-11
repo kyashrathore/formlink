@@ -68,7 +68,7 @@ export function TypeFormLikert(props: TypeFormLikertProps) {
           <motion.button
             key={option.value}
             type="button"
-            {...(getTypeFormAnimations(index) as any)}
+            {...getTypeFormAnimations(index)}
             className={cn(
               "w-full text-left px-4 py-3 rounded-lg border transition-all duration-200",
               option.isSelected

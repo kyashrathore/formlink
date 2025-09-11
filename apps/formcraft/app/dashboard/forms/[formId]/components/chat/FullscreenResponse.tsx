@@ -1,10 +1,15 @@
 "use client"
 
-import { useState } from "react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@formlink/ui"
-import { Button } from "@formlink/ui"
-import { Maximize2 } from "lucide-react"
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@formlink/ui"
 import { Response } from "@formlink/ui/ai-elements"
+import { Maximize2 } from "lucide-react"
+import { useState } from "react"
 
 interface FullscreenResponseProps {
   content: string
@@ -12,7 +17,11 @@ interface FullscreenResponseProps {
   className?: string
 }
 
-export function FullscreenResponse({ content, title = "Preview", className }: FullscreenResponseProps) {
+export function FullscreenResponse({
+  content,
+  title = "Preview",
+  className,
+}: FullscreenResponseProps) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -30,11 +39,11 @@ export function FullscreenResponse({ content, title = "Preview", className }: Fu
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-6xl h-[80vh] p-0">
+        <DialogContent className="h-[80vh] max-w-6xl p-0">
           <DialogHeader className="px-6 pt-6">
             <DialogTitle>{title}</DialogTitle>
           </DialogHeader>
-          <div className="px-6 pb-6 h-full overflow-auto">
+          <div className="h-full overflow-auto px-6 pb-6">
             <Response>{content}</Response>
           </div>
         </DialogContent>
@@ -42,4 +51,3 @@ export function FullscreenResponse({ content, title = "Preview", className }: Fu
     </div>
   )
 }
-

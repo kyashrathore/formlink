@@ -6,6 +6,7 @@ import {
   LinearScaleConfig,
 } from "../../primitives/BaseLinearScale";
 import { cn } from "../../../lib/utils";
+import { useIsMobile } from "../../../hooks/ui/use-mobile";
 
 export type FormMode = "chat" | "typeform";
 
@@ -36,6 +37,7 @@ export function UnifiedLinearScale({
   density,
   autoSubmitOnChange,
 }: UnifiedLinearScaleProps) {
+  const isMobile = useIsMobile();
   const resolvedDensity = density ?? (mode === "chat" ? "compact" : "comfy");
   const shouldShowKeyboardHints = showKeyboardHints ?? mode === "typeform";
 
@@ -112,13 +114,22 @@ export function UnifiedLinearScale({
   const buttonsContainerClass = "flex gap-2 sm:gap-3 justify-start flex-wrap";
   const buttonClass = cn(
     "relative rounded-lg font-medium transition-all",
-    "border-2 border-border/50 bg-card/50",
+    // Use single border to avoid apparent double border with focus ring
+    "border border-border/50 bg-card/50",
     "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
     "flex items-center justify-center",
     "hover:border-primary/50 hover:bg-card/80",
-    resolvedDensity === "compact" && "min-w-[36px] h-10 px-2 text-base",
-    resolvedDensity === "comfy" && "min-w-[48px] h-12 px-3 text-base",
-    resolvedDensity === "spacious" && "min-w-[64px] h-16 px-4 text-lg",
+  );
+
+  // Mode-specific height for visual consistency with TypeForm text inputs (~62px)
+  const buttonSizeClass = cn(
+    mode === "typeform"
+      ? "min-w-[56px] h-14 px-4 text-base"
+      : resolvedDensity === "compact"
+        ? "min-w-[36px] h-10 px-2 text-base"
+        : resolvedDensity === "comfy"
+          ? "min-w-[48px] h-12 px-3 text-base"
+          : "min-w-[64px] h-16 px-4 text-lg",
   );
   const labelsClass =
     "flex justify-between text-sm text-muted-foreground px-2 sm:px-4";
@@ -139,6 +150,7 @@ export function UnifiedLinearScale({
               {...getOptionProps(scaleValue)}
               className={cn(
                 buttonClass,
+                buttonSizeClass,
                 isSelected(scaleValue) &&
                   "border-primary bg-primary/10 hover:bg-primary/15",
                 disabled &&

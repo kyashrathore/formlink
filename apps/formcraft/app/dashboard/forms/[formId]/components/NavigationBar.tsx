@@ -7,6 +7,7 @@ import type { ReactNode } from "react"
 import { useEffect, useRef, useState } from "react"
 import { usePanelState } from "../hooks/usePanelState"
 import { selectIsDirty, useFormEditorStore } from "../stores/useFormEditorStore"
+import { useFormGenerationStore } from "../stores/useFormGenerationStore"
 
 type ButtonState = "normal" | "loading" | "success" | "error"
 
@@ -30,6 +31,9 @@ export default function NavigationBar({
   const isDirty = useFormEditorStore(selectIsDirty)
   const updateSnapshot = useFormEditorStore((state) => state.updateSnapshot)
   const hasShortId = Boolean(formFromStore?.short_id)
+  const isFormGenerating = useFormGenerationStore(
+    (state) => state.isFormGenerating
+  )
 
   const updateFormMutation = useMutation({
     mutationFn: async (updates: unknown) => {
@@ -109,7 +113,7 @@ export default function NavigationBar({
     publishFormMutation.mutate()
   }
 
-  // Autosave: save dirty form every 8s and on window blur/visibility change
+  // Autosave: save dirty form every 8s and on window blur/visibility change (disabled during form generation)
   const lastAutosaveRef = useRef<number>(0)
   useEffect(() => {
     const tick = () => {
@@ -117,6 +121,7 @@ export default function NavigationBar({
       if (
         isDirty &&
         !updateFormMutation.isPending &&
+        !isFormGenerating &&
         formFromStore &&
         now - lastAutosaveRef.current > 4000 // min 4s between saves
       ) {
@@ -137,7 +142,7 @@ export default function NavigationBar({
       window.removeEventListener("blur", onBlur)
       document.removeEventListener("visibilitychange", onVisibilityChange)
     }
-  }, [isDirty, updateFormMutation.isPending, formFromStore])
+  }, [isDirty, updateFormMutation.isPending, isFormGenerating, formFromStore])
 
   const getButtonContent = (
     state: ButtonState,

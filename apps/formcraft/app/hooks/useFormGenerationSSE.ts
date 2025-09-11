@@ -5,7 +5,6 @@
 "use client"
 
 import { formGenerationAnalytics } from "@/app/lib/analytics/form-generation-analytics"
-import { isFeatureEnabled } from "@/app/lib/feature-flags"
 import { FormGenerationEventHandler } from "@/app/lib/handlers/FormGenerationEventHandler"
 import { SSEConnection } from "@/app/lib/sse/SSEConnection"
 import { useFormGenerationStore } from "@/app/stores/formGenerationStore"

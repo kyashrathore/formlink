@@ -5,6 +5,7 @@ import { cn } from "@formlink/ui/lib/utils";
 import { useQuestionRenderer } from "./hooks/useQuestionRenderer";
 import { QuestionWrapper } from "./QuestionWrapper";
 import { remarkSlots } from "./remark-slots-streamdown";
+import type { MessagePart } from "@/lib/types";
 
 type MessageAssistantProps = {
   message: MessageType;
@@ -13,7 +14,7 @@ type MessageAssistantProps = {
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
   onSubmitSelection?: (
     questionId: string,
-    value: any,
+    value: unknown,
     displayText: string,
   ) => Promise<void>;
 };
@@ -44,8 +45,12 @@ export function MessageAssistant({
     >
       <MessageContent className="bg-transparent">
         {parts
-          ?.filter((part: any) => part.type !== "reasoning")
-          ?.map((part: any, index: number) => {
+          ?.filter((part) =>
+            typeof part === "object" && part !== null && "type" in part
+              ? (part as { type: string }).type !== "reasoning"
+              : false,
+          )
+          ?.map((part, index: number) => {
             const { type } = part;
             const key = `part-${index}`;
 
@@ -58,17 +63,21 @@ export function MessageAssistant({
                   components={
                     {
                       ...components,
-                      p: ({ children, ...props }: any) => {
+                      p: ({
+                        children,
+                        ...props
+                      }: React.HTMLAttributes<HTMLParagraphElement>) => {
                         // Check if paragraph contains form components that should not be wrapped in <p>
                         const hasFormComponent = React.Children.toArray(
                           children,
                         ).some(
-                          (child: any) =>
-                            child?.type?.displayName === "QuestionWrapper" ||
-                            child?.props?.qId !== undefined ||
-                            (typeof child === "object" &&
-                              child?.props &&
-                              "qId" in child.props),
+                          (child) =>
+                            // Heuristic markers
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            (child as any)?.type?.displayName ===
+                              "QuestionWrapper" ||
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            (child as any)?.props?.qId !== undefined,
                         );
 
                         if (hasFormComponent) {

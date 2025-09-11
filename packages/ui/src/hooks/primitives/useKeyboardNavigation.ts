@@ -71,6 +71,8 @@ export interface UseKeyboardNavigationReturn<T> {
   getOptionProps: (index: number) => React.HTMLAttributes<HTMLElement>;
   /** Current announcement for screen readers */
   announcement: string;
+  /** Ref for the container element */
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -160,24 +162,27 @@ export function useKeyboardNavigation<T>({
   const findNextIndex = useCallback(
     (currentIndex: number, direction: "up" | "down"): number => {
       const currentActiveIdx = activeIndices.indexOf(currentIndex);
-      if (currentActiveIdx === -1) return activeIndices[0] || 0;
+      if (currentActiveIdx === -1) {
+        return activeIndices[0] ?? 0;
+      }
 
       let nextActiveIdx: number;
       if (direction === "down") {
         nextActiveIdx = currentActiveIdx + 1;
         if (nextActiveIdx >= activeIndices.length) {
-          return wrapAround ? activeIndices[0] : currentIndex;
+          return wrapAround ? (activeIndices[0] ?? currentIndex) : currentIndex;
         }
       } else {
         nextActiveIdx = currentActiveIdx - 1;
         if (nextActiveIdx < 0) {
           return wrapAround
-            ? activeIndices[activeIndices.length - 1]
+            ? (activeIndices[activeIndices.length - 1] ?? currentIndex)
             : currentIndex;
         }
       }
 
-      return activeIndices[nextActiveIdx];
+      const nextIndex = activeIndices[nextActiveIdx];
+      return typeof nextIndex === "number" ? nextIndex : currentIndex;
     },
     [activeIndices, wrapAround],
   );
@@ -213,7 +218,7 @@ export function useKeyboardNavigation<T>({
           option.label.toLowerCase().startsWith(normalizedLetter),
       );
 
-      return index !== -1 ? { option: options[index], index } : undefined;
+      return index !== -1 ? { option: options[index]!, index } : undefined;
     },
     [options],
   );
@@ -243,12 +248,12 @@ export function useKeyboardNavigation<T>({
 
         case "Home":
           event.preventDefault();
-          setHighlightedIndex(activeIndices[0] || 0);
+          setHighlightedIndex(activeIndices[0] ?? 0);
           break;
 
         case "End":
           event.preventDefault();
-          setHighlightedIndex(activeIndices[activeIndices.length - 1] || 0);
+          setHighlightedIndex(activeIndices[activeIndices.length - 1] ?? 0);
           break;
 
         case "Enter":
@@ -277,7 +282,9 @@ export function useKeyboardNavigation<T>({
               const newIndex = findNextIndex(highlightedIndex, "up");
               if (newIndex === highlightedIndex) {
                 // We're at the beginning, wrap to end
-                setHighlightedIndex(activeIndices[activeIndices.length - 1]);
+                setHighlightedIndex(
+                  activeIndices[activeIndices.length - 1] ?? highlightedIndex,
+                );
               } else {
                 setHighlightedIndex(newIndex);
               }
@@ -286,7 +293,7 @@ export function useKeyboardNavigation<T>({
               const newIndex = findNextIndex(highlightedIndex, "down");
               if (newIndex === highlightedIndex) {
                 // We're at the end, wrap to beginning
-                setHighlightedIndex(activeIndices[0]);
+                setHighlightedIndex(activeIndices[0] ?? highlightedIndex);
               } else {
                 setHighlightedIndex(newIndex);
               }
@@ -373,14 +380,13 @@ export function useKeyboardNavigation<T>({
   const getContainerProps =
     useCallback((): React.HTMLAttributes<HTMLElement> => {
       return {
-        ref: containerRef as any,
         role: "listbox",
         "aria-label": ariaLabel,
         "aria-activedescendant": options[highlightedIndex]?.value
-          ? `option-${options[highlightedIndex].value}`
+          ? `option-${String(options[highlightedIndex].value)}`
           : undefined,
         tabIndex: isActive ? 0 : -1,
-        onKeyDown: handleKeyDown as any,
+        onKeyDown: (e) => handleKeyDown(e),
       };
     }, [ariaLabel, options, highlightedIndex, isActive, handleKeyDown]);
 
@@ -390,8 +396,12 @@ export function useKeyboardNavigation<T>({
       const option = options[index];
       const isHighlighted = index === highlightedIndex;
 
+      if (!option) {
+        return { role: "option", tabIndex: -1 };
+      }
+
       return {
-        id: `option-${option.value}`,
+        id: `option-${String(option.value)}`,
         role: "option",
         "aria-selected": isHighlighted,
         "aria-disabled": option.disabled,
@@ -413,5 +423,6 @@ export function useKeyboardNavigation<T>({
     getContainerProps,
     getOptionProps,
     announcement,
+    containerRef,
   };
 }

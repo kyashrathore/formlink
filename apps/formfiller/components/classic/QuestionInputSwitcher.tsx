@@ -75,7 +75,9 @@ export default function QuestionInputSwitcher({
           type="tel"
           placeholder={"Enter phone number..."}
           value={(value as string) || ""}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            onChange(e.target.value)
+          }
           className="w-full"
           {...fieldProps}
         />
@@ -89,7 +91,9 @@ export default function QuestionInputSwitcher({
           type="text"
           placeholder={"Enter country"}
           value={(value as string) || ""}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            onChange(e.target.value)
+          }
           className="w-full"
           {...fieldProps}
         />
@@ -101,7 +105,9 @@ export default function QuestionInputSwitcher({
         <Textarea
           placeholder={placeholder}
           value={(value as string) || ""}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+            onChange(e.target.value)
+          }
           {...fieldProps}
           className="min-h-[120px] w-full"
         />
@@ -116,7 +122,7 @@ export default function QuestionInputSwitcher({
           pattern="[0-9]*"
           placeholder={placeholder || "Enter a number..."}
           value={(value as string | number) || ""}
-          onChange={(e) => {
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
             const val = e.target.value;
             // Only allow numeric characters, optional decimal point, and optional minus sign
             const sanitized = val.replace(/[^0-9.-]/g, "");
@@ -150,7 +156,7 @@ export default function QuestionInputSwitcher({
 
             onChange(numVal);
           }}
-          onKeyDown={(e) => {
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
             // Allow backspace, delete, tab, escape, enter, arrows
             const allowedKeys = [
               "Backspace",
@@ -216,7 +222,9 @@ export default function QuestionInputSwitcher({
         type="text"
         placeholder={placeholder}
         value={(value as string) || ""}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+          onChange(e.target.value)
+        }
         className="w-full"
         {...fieldProps}
       />
@@ -287,7 +295,7 @@ export default function QuestionInputSwitcher({
             <Checkbox
               id={`${question.id}-${option.value}`}
               checked={selectedValues.includes(option.value)}
-              onCheckedChange={(checked) => {
+              onCheckedChange={(checked: boolean) => {
                 if (checked) {
                   onChange([...selectedValues, option.value]);
                 } else {

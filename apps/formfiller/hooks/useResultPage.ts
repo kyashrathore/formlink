@@ -21,7 +21,12 @@ export function useResultPage(
   });
 
   const hasPrompt = useMemo(() => {
-    return Boolean((form as any)?.settings?.resultPageGenerationPrompt);
+    const settings = (form as unknown as { settings?: unknown })?.settings;
+    const prompt =
+      typeof settings === "object" && settings
+        ? (settings as Record<string, unknown>)["resultPageGenerationPrompt"]
+        : undefined;
+    return typeof prompt === "string" && prompt.trim().length > 0;
   }, [form]);
 
   useEffect(() => {

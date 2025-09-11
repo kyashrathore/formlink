@@ -31,11 +31,15 @@ function FormPageContent({
   React.useEffect(() => {
     if (!themeLoader.isLoading) {
       if (themeLoader.themeApplied) {
+        console.info("[Formlink][FormPageClient] theme applied", {
+          formId: formSchema.id,
+          vars: themeLoader.appliedVariables.length,
+        });
       } else if (themeLoader.error) {
-        console.error(
-          `Form ${formSchema.id}: Theme loading failed:`,
-          themeLoader.error,
-        );
+        console.error("[Formlink][FormPageClient] theme load failed", {
+          formId: formSchema.id,
+          error: themeLoader.error,
+        });
       } else {
       }
     }

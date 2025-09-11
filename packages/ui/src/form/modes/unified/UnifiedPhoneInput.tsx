@@ -10,10 +10,7 @@ import {
   getCountries,
   getCountryCallingCode,
 } from "libphonenumber-js";
-// Ensure full metadata for complete country list and dial codes
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-import fullMetadata from "libphonenumber-js/metadata.max.json";
+import type { CountryCode } from "libphonenumber-js";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
 import {
   Command,
@@ -38,9 +35,9 @@ export interface UnifiedPhoneInputProps {
   ariaLabel?: string;
   ariaDescribedBy?: string;
   showKeyboardHints?: boolean;
-  country?: string | null; // ISO 3166-1 alpha-2 (e.g., 'US'). If not provided, use international formatting
-  defaultCountry?: string; // Pre-seed with this region's dial code when empty
-  onCountryChange?: (iso2: string | null) => void;
+  country?: CountryCode | null; // ISO 3166-1 alpha-2
+  defaultCountry?: CountryCode; // Pre-seed with this region's dial code when empty
+  onCountryChange?: (iso2: CountryCode | null) => void;
   showFlag?: boolean;
   showCountrySelector?: boolean;
   showContinueButton?: boolean;
@@ -64,7 +61,7 @@ export function UnifiedPhoneInput({
   showCountrySelector = mode === "typeform",
   showContinueButton = mode === "chat",
 }: UnifiedPhoneInputProps) {
-  const [selectedISO2, setSelectedISO2] = useState<string | null>(
+  const [selectedISO2, setSelectedISO2] = useState<CountryCode | null>(
     country || defaultCountry || null,
   );
   const [touched, setTouched] = useState(false);
@@ -73,12 +70,12 @@ export function UnifiedPhoneInput({
     if (country) setSelectedISO2(country);
   }, [country]);
 
-  const region = useMemo(() => {
+  const region: CountryCode | undefined = useMemo(() => {
     return (
       selectedISO2 ||
       country ||
       defaultCountry ||
-      (mode === "typeform" ? "US" : undefined)
+      (mode === "typeform" ? ("US" as CountryCode) : undefined)
     );
   }, [selectedISO2, country, defaultCountry, mode]);
 
@@ -87,21 +84,15 @@ export function UnifiedPhoneInput({
     try {
       // If value includes a leading +, use international parsing; else region-based
       if (!value || value.trim() === "") return !required;
-      if (value.trim().startsWith("+"))
-        return isValidPhoneNumber(value as any, fullMetadata as any);
-      if (region)
-        return isValidPhoneNumber(
-          value as any,
-          region as any,
-          fullMetadata as any,
-        );
-      return isValidPhoneNumber(value as any, fullMetadata as any);
+      if (value.trim().startsWith("+")) return isValidPhoneNumber(value);
+      if (region) return isValidPhoneNumber(value, region);
+      return isValidPhoneNumber(value);
     } catch {
       return false;
     }
   }, [value, required, region]);
 
-  const [flagISO2, setFlagISO2] = useState<string | null>(null);
+  const [flagISO2, setFlagISO2] = useState<CountryCode | null>(null);
   const [countryOpen, setCountryOpen] = useState(false);
   const commandInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -160,19 +151,19 @@ export function UnifiedPhoneInput({
       raw = raw.startsWith("00") ? "+" + raw.slice(2) : "+" + raw;
     }
 
-    const formatter = region ? new AsYouType(region as any) : new AsYouType();
+    const formatter = region ? new AsYouType(region) : new AsYouType();
     const formatted = formatter.input(raw);
     onChange(formatted);
 
     // Infer country from formatted number and update flag/callback
-    const parsed = parsePhoneNumberFromString(formatted as any, region as any);
-    const iso2 = parsed?.country || null;
+    const parsed = parsePhoneNumberFromString(formatted, region);
+    const iso2 = (parsed?.country as CountryCode | undefined) ?? null;
     setFlagISO2(iso2);
     onCountryChange?.(iso2);
   };
 
-  const countries = useMemo(() => getCountries(fullMetadata as any), []);
-  const getFlagFromISO2 = (iso?: string | null) =>
+  const countries = useMemo(() => getCountries(), []);
+  const getFlagFromISO2 = (iso?: CountryCode | null) =>
     iso
       ? String.fromCodePoint(
           ...(iso || "")
@@ -184,15 +175,13 @@ export function UnifiedPhoneInput({
   const selectedFlag = getFlagFromISO2(selectedISO2 || flagISO2);
   const selectedDial = useMemo(() => {
     try {
-      return selectedISO2
-        ? `+${getCountryCallingCode(selectedISO2, fullMetadata as any)}`
-        : "+";
+      return selectedISO2 ? `+${getCountryCallingCode(selectedISO2)}` : "+";
     } catch {
       return "+";
     }
   }, [selectedISO2]);
 
-  const handleSelectCountry = (iso2: string) => {
+  const handleSelectCountry = (iso2: CountryCode) => {
     setSelectedISO2(iso2);
     onCountryChange?.(iso2);
     setCountryOpen(false);
@@ -228,11 +217,11 @@ export function UnifiedPhoneInput({
   if (mode === "typeform") {
     return (
       <div className="w-full max-w-2xl">
-        <div className="flex items-center h-[60px] border-0 border-b-2 border-border/30 focus-within:border-primary transition-colors duration-200">
+        <div className="flex items-center h-16 border-0 border-b-2 border-border/30 focus-within:border-primary transition-colors duration-200">
           {showCountrySelector && (
             <Popover open={countryOpen} onOpenChange={setCountryOpen}>
               <PopoverTrigger
-                ref={triggerRef as any}
+                ref={triggerRef}
                 className="flex items-center gap-2 px-0 h-full text-2xl md:text-3xl font-light bg-transparent border-0 hover:opacity-70 transition-opacity duration-200"
               >
                 <span className="text-2xl">{selectedFlag}</span>
@@ -247,12 +236,12 @@ export function UnifiedPhoneInput({
                 }}
               >
                 <Command>
-                  <CommandList ref={listRef as any}>
+                  <CommandList ref={listRef}>
                     <div className="sticky top-0 z-10 bg-popover">
                       <CommandInput
-                        ref={commandInputRef as any}
+                        ref={commandInputRef}
                         placeholder="Search country..."
-                        onChange={() => {
+                        onValueChange={() => {
                           if (listRef.current) listRef.current.scrollTop = 0;
                           requestAnimationFrame(scrollSelectedIntoView);
                         }}
@@ -268,7 +257,7 @@ export function UnifiedPhoneInput({
                         return (
                           <CommandItem
                             key={code}
-                            value={`${name} ${code} +${getCountryCallingCode(code, fullMetadata as any)}`}
+                            value={`${name} ${code} +${getCountryCallingCode(code)}`}
                             onSelect={() => handleSelectCountry(code)}
                             className="flex items-center gap-2"
                           >
@@ -277,8 +266,7 @@ export function UnifiedPhoneInput({
                             </span>
                             <span className="flex-1">{name}</span>
                             <span className="text-xs text-muted-foreground">
-                              +
-                              {getCountryCallingCode(code, fullMetadata as any)}
+                              +{getCountryCallingCode(code)}
                             </span>
                           </CommandItem>
                         );
@@ -336,7 +324,7 @@ export function UnifiedPhoneInput({
           {showCountrySelector && (
             <Popover open={countryOpen} onOpenChange={setCountryOpen}>
               <PopoverTrigger
-                ref={triggerRef as any}
+                ref={triggerRef}
                 className="flex items-center gap-1 px-2 py-1 rounded-md border text-sm"
               >
                 <span className="text-base">{selectedFlag}</span>
@@ -352,12 +340,12 @@ export function UnifiedPhoneInput({
                 }}
               >
                 <Command>
-                  <CommandList ref={listRef as any}>
+                  <CommandList ref={listRef}>
                     <div className="sticky top-0 z-10 bg-popover">
                       <CommandInput
-                        ref={commandInputRef as any}
+                        ref={commandInputRef}
                         placeholder="Search country..."
-                        onChange={() => {
+                        onValueChange={() => {
                           if (listRef.current) listRef.current.scrollTop = 0;
                           requestAnimationFrame(scrollSelectedIntoView);
                         }}
@@ -373,7 +361,7 @@ export function UnifiedPhoneInput({
                         return (
                           <CommandItem
                             key={code}
-                            value={`${name} ${code} +${getCountryCallingCode(code, fullMetadata as any)}`}
+                            value={`${name} ${code} +${getCountryCallingCode(code)}`}
                             onSelect={() => handleSelectCountry(code)}
                             className="flex items-center gap-2"
                           >
@@ -382,8 +370,7 @@ export function UnifiedPhoneInput({
                             </span>
                             <span className="flex-1">{name}</span>
                             <span className="text-xs text-muted-foreground">
-                              +
-                              {getCountryCallingCode(code, fullMetadata as any)}
+                              +{getCountryCallingCode(code)}
                             </span>
                           </CommandItem>
                         );

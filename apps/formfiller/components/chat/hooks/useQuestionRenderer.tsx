@@ -1,6 +1,7 @@
 import React, { ComponentProps } from "react";
 import { Element } from "hast";
 import { QuestionWrapper } from "../QuestionWrapper";
+import type { QuestionResponse } from "@/lib/types";
 
 export const useQuestionRenderer = (
   messageId: string,
@@ -9,7 +10,7 @@ export const useQuestionRenderer = (
   handleFileUpload?: (questionId: string, file: File) => Promise<void>,
   onSubmitSelection?: (
     questionId: string,
-    value: any,
+    value: QuestionResponse,
     displayText: string,
   ) => Promise<void>,
 ) => {

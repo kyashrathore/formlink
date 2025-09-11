@@ -140,7 +140,7 @@ export const UpdateFormSchema = z.object({
 export const QueryDocsSchema = z.object({
   query: z
     .string()
-    .describe("User's question about FormCraft features or documentation"),
+    .describe("User's question about FormLink features or documentation"),
   context: z.string().optional().describe("Additional context for the query"),
 })
 

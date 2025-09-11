@@ -80,9 +80,23 @@ export function BaseLinearScale(
   const [isTouched, setIsTouched] = useState(false);
   const [focusedValue, setFocusedValue] = useState<number | null>(null);
 
+  // Normalize config: enforce min start = 1, positive step, end >= start
+  const normalizedStart = Math.max(
+    1,
+    Math.floor(Number.isFinite(config.start) ? config.start : 1),
+  );
+  const normalizedStep = Math.max(
+    1,
+    Math.floor(Number.isFinite(config.step) ? config.step : 1),
+  );
+  const normalizedEnd = Math.max(
+    normalizedStart,
+    Math.floor(Number.isFinite(config.end) ? config.end : normalizedStart),
+  );
+
   // Generate scale values
   const scaleValues: number[] = [];
-  for (let i = config.start; i <= config.end; i += config.step) {
+  for (let i = normalizedStart; i <= normalizedEnd; i += normalizedStep) {
     scaleValues.push(i);
   }
 
@@ -208,7 +222,7 @@ export function BaseLinearScale(
             : -1,
         role: "radio",
         "aria-checked": isCurrentlySelected,
-        "aria-label": `${optionValue}${optionValue === config.start && config.startLabel ? ` (${config.startLabel})` : ""}${optionValue === config.end && config.endLabel ? ` (${config.endLabel})` : ""}`,
+        "aria-label": `${optionValue}${optionValue === normalizedStart && config.startLabel ? ` (${config.startLabel})` : ""}${optionValue === normalizedEnd && config.endLabel ? ` (${config.endLabel})` : ""}`,
         "aria-disabled": disabled,
       };
     },

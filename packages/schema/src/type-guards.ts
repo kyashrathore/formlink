@@ -9,6 +9,7 @@ import type {
   AddressQuestion,
   LinearScaleQuestion,
   LikertScaleQuestion,
+  SignatureQuestion,
 } from "./question-types";
 
 /**
@@ -87,6 +88,12 @@ export function isLikertScaleQuestion(
   question: Question,
 ): question is Question & { type: LikertScaleQuestion } {
   return question.type.name === "likertScale";
+}
+
+export function isSignatureQuestion(
+  question: Question,
+): question is Question & { type: SignatureQuestion } {
+  return question.type.name === "signature";
 }
 
 /**

@@ -117,14 +117,16 @@ export function UnifiedCountrySelect({
   }, []);
 
   const sizeClasses =
-    density === "compact"
-      ? "h-10 text-sm"
-      : density === "comfy"
-        ? "h-11 text-base"
-        : "h-12 text-base"; // spacious default
+    mode === "typeform"
+      ? "h-16 text-base"
+      : density === "compact"
+        ? "h-10 text-sm"
+        : density === "comfy"
+          ? "h-11 text-base"
+          : "h-12 text-base"; // spacious default
 
   const triggerClasses = cn(
-    "flex w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 py-2 shadow-sm ring-offset-background",
+    "flex w-full items-center justify-between whitespace-nowrap rounded-md border border-input bg-transparent px-3 shadow-sm ring-offset-background",
     "placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1",
     sizeClasses,
     slim && "w-24",

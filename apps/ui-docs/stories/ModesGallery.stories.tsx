@@ -14,7 +14,6 @@ import {
   UnifiedRanking,
 } from "@formlink/ui";
 import { UnifiedLikert, TypeFormTextInput } from "@formlink/ui";
-import { ChatTextInputImproved } from "@formlink/ui";
 
 const meta: Meta = {
   title: "Form/Modes Gallery",

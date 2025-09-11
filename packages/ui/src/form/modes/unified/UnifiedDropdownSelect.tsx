@@ -67,32 +67,31 @@ export function UnifiedDropdownSelect<T = string>({
         className,
       )}
     >
-      <Combobox
-        data={data}
-        type="option"
-        value={currentLabel}
-        onValueChange={(v) => {
-          // v is the label string; map back to option value
-          const found = options.find((o) => o.label === v);
-          onChange((found ? found.value : null) as any as T | null);
-          onSubmit?.();
-        }}
-      >
+      <Combobox data={data} type="option" value={currentLabel}>
         <ComboboxTrigger
           className={cn(
-            mode === "typeform" ? "h-12 text-base" : "h-10 text-sm",
+            mode === "typeform" ? "h-16 text-base" : "h-10 text-sm",
             "w-full justify-between",
           )}
         >
           {currentLabel || placeholder}
         </ComboboxTrigger>
         <ComboboxContent>
-          <ComboboxInput />
+          <ComboboxInput className="h-10" />
           <ComboboxList>
             <ComboboxEmpty>No options found.</ComboboxEmpty>
             <ComboboxGroup>
               {data.map((item) => (
-                <ComboboxItem key={item.value} value={item.label}>
+                <ComboboxItem
+                  key={item.value}
+                  value={item.label}
+                  // Submit only when a concrete item is selected
+                  onSelect={() => {
+                    const found = options.find((o) => o.label === item.label);
+                    onChange(found ? (found.value as T) : null);
+                    onSubmit?.();
+                  }}
+                >
                   {item.label}
                 </ComboboxItem>
               ))}

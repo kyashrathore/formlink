@@ -84,6 +84,10 @@ export const LikertScaleQuestionSchema = z.object({
   options: z.array(z.string()),
 });
 
+export const SignatureQuestionSchema = z.object({
+  name: z.literal("signature"),
+});
+
 // For backward compatibility, create a SimpleQuestionSchema that maps to TextQuestionSchema
 export const SimpleQuestionSchema = TextQuestionSchema;
 
@@ -97,4 +101,5 @@ export type FileUploadQuestion = z.infer<typeof FileUploadQuestionSchema>;
 export type AddressQuestion = z.infer<typeof AddressQuestionSchema>;
 export type LinearScaleQuestion = z.infer<typeof LinearScaleQuestionSchema>;
 export type LikertScaleQuestion = z.infer<typeof LikertScaleQuestionSchema>;
+export type SignatureQuestion = z.infer<typeof SignatureQuestionSchema>;
 export type SimpleQuestion = z.infer<typeof SimpleQuestionSchema>;

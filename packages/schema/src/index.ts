@@ -9,6 +9,7 @@ import {
   AddressQuestionSchema,
   LinearScaleQuestionSchema,
   LikertScaleQuestionSchema,
+  SignatureQuestionSchema,
   SimpleQuestionSchema,
 } from "./question-types";
 
@@ -103,6 +104,7 @@ const QuestionTypeSchema = z.discriminatedUnion("name", [
   AddressQuestionSchema,
   LinearScaleQuestionSchema,
   LikertScaleQuestionSchema,
+  SignatureQuestionSchema,
 ]);
 
 export const AddressSchema = z.object({
@@ -208,6 +210,13 @@ export const SettingsSchema = z.object({
       webhookUrl: z.string().optional(),
     })
     .optional(),
+  theme_overrides: z
+    .object({
+      shadcn_css: z.string().optional(),
+      theme_mode: z.enum(["light", "dark", "system"]).optional(),
+      updated_at: z.string().optional(),
+    })
+    .optional(),
   branching: z
     .object({
       enabled: z.boolean().optional().default(false),
@@ -260,6 +269,7 @@ export {
   AddressQuestionSchema,
   LinearScaleQuestionSchema,
   LikertScaleQuestionSchema,
+  SignatureQuestionSchema,
   SimpleQuestionSchema,
 } from "./question-types";
 

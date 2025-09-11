@@ -10,7 +10,11 @@ import {
   DropzoneContent,
   DropzoneEmptyState,
 } from "../../../ui/kibo-ui/dropzone";
-import { BaseFileUpload, FileInfo } from "../../primitives/BaseFileUpload";
+import {
+  BaseFileUpload,
+  type BaseFileUploadReturn,
+  type FileInfo,
+} from "../../primitives/BaseFileUpload";
 
 export type FormMode = "chat" | "typeform";
 
@@ -168,7 +172,7 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
   };
 
   // Use BaseFileUpload hook for Chat mode only (preserve TypeForm behavior)
-  const baseFileUpload =
+  const baseFileUpload: BaseFileUploadReturn | null =
     mode === "chat"
       ? BaseFileUpload({
           value: fileInfos,
@@ -180,7 +184,7 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
 
             // Call appropriate onChange handler
             if (maxFiles === 1 && files.length > 0) {
-              onChange?.(files[0]);
+              onChange?.(files[0]!);
             } else if (files.length > 0) {
               onChange?.(files);
             } else {
@@ -221,16 +225,16 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
   );
 
   // Get current files for display (mode-specific)
-  const currentFiles = mode === "chat" ? baseFileUpload?.value || [] : [];
+  const currentFiles = mode === "chat" ? (baseFileUpload?.value ?? []) : [];
   const currentFile = mode === "typeform" ? selectedFile || uploadedFile : null;
 
   // Combine errors from BaseFileUpload and upload errors (mode-specific)
   const displayError =
-    uploadError ||
-    (mode === "chat" &&
-    baseFileUpload?.errors &&
-    baseFileUpload.errors.length > 0
-      ? baseFileUpload.errors[0].message
+    uploadError ??
+    (mode === "chat"
+      ? baseFileUpload?.errors && baseFileUpload.errors.length > 0
+        ? (baseFileUpload.errors[0]?.message ?? null)
+        : null
       : null);
 
   // TypeForm specific accepted types

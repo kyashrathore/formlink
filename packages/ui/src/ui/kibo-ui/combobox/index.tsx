@@ -190,8 +190,9 @@ export const ComboboxInput = ({
   value: controlledValue,
   defaultValue,
   onValueChange: controlledOnValueChange,
+  className,
   ...props
-}: ComboboxInputProps) => {
+}: ComboboxInputProps & { className?: string }) => {
   const { type, inputValue, setInputValue } = useContext(ComboboxContext);
 
   const [value, onValueChange] = useControllableState({
@@ -210,6 +211,7 @@ export const ComboboxInput = ({
       onValueChange={onValueChange}
       placeholder={`Search ${type}...`}
       value={value}
+      className={className}
       {...props}
     />
   );

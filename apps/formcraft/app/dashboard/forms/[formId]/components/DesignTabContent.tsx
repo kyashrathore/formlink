@@ -22,7 +22,7 @@ export default function DesignTabContent({
 }: DesignTabContentProps) {
   return (
     <div className="bg-card h-full overflow-y-auto">
-      <div>
+      <div className="px-6 py-4">
         <DesignPanel
           formId={formId}
           onShadcnCSSApply={onShadcnCSSApply}

@@ -1,22 +1,27 @@
 // Temporary accessibility fixes for base primitives
 // TODO: These should be fixed in the base primitives themselves
 
-export function filterMultiSelectContainerProps(props: any) {
-  const { "aria-multiselectable": _, ...filtered } = props;
-  // Add aria-label if missing
-  if (!filtered["aria-label"]) {
-    filtered["aria-label"] = "Select options";
+import type React from "react";
+
+export function filterMultiSelectContainerProps(
+  props: React.HTMLAttributes<HTMLElement>,
+): React.HTMLAttributes<HTMLElement> {
+  const { "aria-multiselectable": _omitted, ...filtered } = props || {};
+  if (!("aria-label" in filtered)) {
+    (filtered as Record<string, unknown>)["aria-label"] = "Select options";
   }
   return filtered;
 }
 
-export function filterRatingContainerProps(props: any) {
+export function filterRatingContainerProps(
+  props: React.HTMLAttributes<HTMLElement>,
+): React.HTMLAttributes<HTMLElement> {
   const {
-    "aria-valuemin": _,
-    "aria-valuemax": __,
-    "aria-valuenow": ___,
-    "aria-valuetext": ____,
+    "aria-valuemin": _min,
+    "aria-valuemax": _max,
+    "aria-valuenow": _now,
+    "aria-valuetext": _text,
     ...filtered
-  } = props;
+  } = props || {};
   return filtered;
 }

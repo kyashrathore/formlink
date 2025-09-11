@@ -1,11 +1,9 @@
 import { useState, useCallback, useMemo } from "react";
+import { UseInputReturn } from "../../types/generic";
 
-export interface UseTextInputReturn {
-  value: string;
-  setValue: (value: string) => void;
+export interface UseTextInputReturn extends UseInputReturn<string> {
   errors: string[];
   validate: () => boolean;
-  isValid: boolean;
   clearErrors: () => void;
   handlers: {
     onChange: (
@@ -137,6 +135,11 @@ export function useTextInput(
   }, []);
 
   const handlers = {
+    onChange: (
+      e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    ) => {
+      handleChange(e.target.value);
+    },
     onBlur: () => {
       if (!touched) {
         setTouched(true);
@@ -151,10 +154,13 @@ export function useTextInput(
   return {
     value,
     setValue: handleChange,
-    errors,
-    validate,
+    error: errors.length > 0 ? errors[0] : undefined,
+    isDirty: value !== initialValue,
     isValid: errors.length === 0,
+    reset: () => setValue(initialValue || ""),
+    validate,
     clearErrors,
     handlers,
+    errors,
   };
 }

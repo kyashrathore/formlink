@@ -26,7 +26,7 @@ const formatResponse = (
 ): string => {
   if (!response) return "";
 
-  switch ((question.type as any).name) {
+  switch (question.type.name) {
     case "singleChoice":
     case "multipleChoice": {
       // Handle both single value and array of values
@@ -154,6 +154,11 @@ const formatResponse = (
       return String(response);
     }
 
+    case "signature": {
+      // For signature, show a confirmation message instead of the signature data
+      return response ? "Signature provided" : "";
+    }
+
     case "text":
     default: {
       // For text and other types, show as-is but truncate if too long
@@ -165,20 +170,14 @@ const formatResponse = (
 
 export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
   questionId,
-  messageId,
   isLast,
   variant,
   handleFileUpload,
   onSubmitSelection,
 }) => {
   const store = useChatStore();
-  const {
-    formSchema,
-    currentInputs,
-    setCurrentInput,
-    formDisplayState,
-    currentQuestionId,
-  } = store;
+  const { formSchema, currentInputs, setCurrentInput, currentQuestionId } =
+    store;
 
   const question = formSchema?.questions.find((q) => q.id === questionId);
   const response = currentInputs[questionId];
@@ -203,21 +202,21 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
   if (!question) return null;
 
   // For multi-select: need special handling because values can be selected before submission
-  const isMultiSelect = (question.type as any).name === "multipleChoice";
+  const isMultiSelect = question.type.name === "multipleChoice";
 
   // For address: need special handling because partial data doesn't mean submission
-  const isAddress = (question.type as any).name === "address";
+  const isAddress = question.type.name === "address";
 
   // For ranking: need special handling because ranking in progress doesn't mean submission
-  const isRanking = (question.type as any).name === "ranking";
+  const isRanking = question.type.name === "ranking";
 
   // For tel (phone): do not hide input just because a partial value exists (e.g., after selecting country)
   const isTel =
-    (question.type as any).name === "text" &&
-    (question.type as any).format === "tel";
+    question.type.name === "text" &&
+    (question.type as unknown as { format?: string }).format === "tel";
 
   // For file upload: need special handling because file selection doesn't mean submission
-  const isFileUpload = (question.type as any).name === "fileUpload";
+  const isFileUpload = question.type.name === "fileUpload";
 
   // A multi-select is considered "submitted" when:
   // 1. It has a response AND
@@ -301,8 +300,8 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
               : null;
 
     // For non-file question types, pass the response directly (not responseAsFile which is for files)
-    const isFileType = (question.type as any).name === "fileUpload";
-    const currentResponseValue: any = isFileType
+    const isFileType = question.type.name === "fileUpload";
+    const currentResponseValue: QuestionResponse = isFileType
       ? responseAsFile
       : (response ?? null);
 

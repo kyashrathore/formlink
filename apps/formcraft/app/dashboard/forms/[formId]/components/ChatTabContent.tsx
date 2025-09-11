@@ -15,10 +15,14 @@ export default function ChatTabContent({
   const initialPrompt = useFormGenerationStore((state) => state.initialPrompt)
 
   return (
-    <ChatPanel
-      formId={formId}
-      userId={userId || undefined}
-      initialMessage={initialPrompt || undefined}
-    />
+    <div className="flex h-full flex-col">
+      <div className="min-h-0 flex-1">
+        <ChatPanel
+          formId={formId}
+          userId={userId || undefined}
+          initialMessage={initialPrompt || undefined}
+        />
+      </div>
+    </div>
   )
 }

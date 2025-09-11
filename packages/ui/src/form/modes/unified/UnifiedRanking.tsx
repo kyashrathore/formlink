@@ -55,7 +55,7 @@ function SortableItem({
   id,
   option,
   rank,
-  _index,
+  index,
   disabled,
   onRankChange,
   totalOptions,

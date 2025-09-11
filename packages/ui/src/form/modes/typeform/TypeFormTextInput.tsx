@@ -82,14 +82,14 @@ export function TypeFormTextInput({
   return (
     <motion.div
       className={cn(styles.container, "w-full max-w-2xl")}
-      {...(getTypeFormAnimations(0, true) as any)} // Disable hover scale for text input
+      {...getTypeFormAnimations(0, true)} // Disable hover scale for text input
     >
       <input
         {...base.inputProps}
         onKeyDown={handleKeyDown}
         className={cn(
           styles.input,
-          "h-[62px]",
+          "h-16",
           disabled && "opacity-50 cursor-not-allowed",
         )}
       />

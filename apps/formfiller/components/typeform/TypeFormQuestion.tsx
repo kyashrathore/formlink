@@ -48,9 +48,11 @@ export default function TypeFormQuestion({
   const hasResponse = (() => {
     if (response === null || response === undefined) return false;
 
-    switch ((question.type as any).name) {
+    switch (question.type.name) {
       case "text":
-        if ((question.type as any).format === "number") {
+        if (
+          (question.type as unknown as { format?: string }).format === "number"
+        ) {
           return response !== "" && response !== null && response !== undefined;
         }
         return response !== "";
@@ -96,7 +98,7 @@ export default function TypeFormQuestion({
           "country",
         ];
         for (const field of requiredFields) {
-          if (!(addressResponse as any)[field]) {
+          if (!(addressResponse as Record<string, unknown>)[field]) {
             return false;
           }
         }
@@ -110,10 +112,11 @@ export default function TypeFormQuestion({
   })();
 
   const isValid = (() => {
-    if ((question.type as any).name === "text") {
+    if (question.type.name === "text") {
       const v = typeof response === "string" ? response : "";
-      const format = (question.type as any).format;
-      const validations = (question as any).validations || {};
+      const format = (question.type as unknown as { format?: string }).format;
+      const validations =
+        (question as { validations?: unknown }).validations || {};
       return validateTextValue(v, format, validations) === null;
     }
     return hasResponse;
@@ -122,10 +125,11 @@ export default function TypeFormQuestion({
   const errorMessage = (() => {
     if (!touched) return null;
 
-    if ((question.type as any).name === "text") {
+    if (question.type.name === "text") {
       const v = typeof response === "string" ? response : "";
-      const format = (question.type as any).format;
-      const validations = (question as any).validations || {};
+      const format = (question.type as unknown as { format?: string }).format;
+      const validations =
+        (question as { validations?: unknown }).validations || {};
       return validateTextValue(v, format, validations);
     }
     return null;
@@ -145,12 +149,12 @@ export default function TypeFormQuestion({
   };
 
   // Normalize response for UI components
-  const normalizedResponse =
+  const normalizedResponse: QuestionResponse =
     response instanceof File
       ? response
       : response && typeof response === "object" && "filename" in response
         ? fileDataToFile(response as FileData)
-        : (response as any);
+        : (response ?? null);
 
   return (
     <div className="flex-1 flex">
@@ -180,7 +184,7 @@ export default function TypeFormQuestion({
                 id={`question-title-${question.id}`}
               >
                 {question.title}
-                {(question as any).validations?.required?.value && (
+                {question.validations?.required?.value && (
                   <span className="text-destructive ml-1">*</span>
                 )}
               </h2>
@@ -201,7 +205,7 @@ export default function TypeFormQuestion({
           <div className="w-full">
             <TypeFormQuestionInputSwitcher
               question={question}
-              response={normalizedResponse as any}
+              response={normalizedResponse}
               onAnswer={(value) => {
                 onAnswer(question.id, value, getQuestionTypeName(question));
               }}

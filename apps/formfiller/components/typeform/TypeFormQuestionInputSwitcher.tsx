@@ -7,6 +7,7 @@ import {
   UnifiedFileUpload,
   UnifiedMultiSelect,
   UnifiedRating,
+  UnifiedSignature,
 } from "@formlink/ui";
 import TypeFormAddress from "./TypeFormAddress";
 import { UnifiedLikert } from "@formlink/ui";
@@ -96,19 +97,26 @@ export default function TypeFormQuestionInputSwitcher(
     isInvalid,
   } = props;
 
-  const t = question.type.name as string;
+  const typeObj = question.type as unknown as {
+    name?: string;
+    format?: string;
+    display?: string;
+    options?: Array<{ value: string; label: string }>;
+    config?: Record<string, unknown>;
+  };
+  const t = typeObj.name ?? "";
   const isMobile = useIsMobile();
 
   // Text questions with formats
   if (t === "text") {
-    const f = (question.type as any).format as string | undefined;
+    const f = typeObj.format;
     const val = toStringVal(response);
 
     // Get the appropriate placeholder
     const placeholder = getPlaceholder(
       "text",
       f,
-      (question as any).placeholder,
+      (question as { placeholder?: string }).placeholder,
     );
 
     // Phase 1 specialized components for tel and country
@@ -117,9 +125,9 @@ export default function TypeFormQuestionInputSwitcher(
         <UnifiedPhoneInput
           mode="typeform"
           value={val || ""}
-          onChange={(v: string) => onAnswer(v)}
+          onChange={(v: string | null) => onAnswer(v)}
           onSubmit={onNext}
-          required={Boolean((question as any).validations?.required?.value)}
+          required={Boolean(question.validations?.required?.value)}
           showCountrySelector
           showFlag
         />
@@ -131,9 +139,9 @@ export default function TypeFormQuestionInputSwitcher(
         <UnifiedCountryList
           mode="typeform"
           value={val}
-          onChange={(v) => onAnswer(v)}
+          onChange={(v: string | null) => onAnswer(v)}
           onSubmit={onNext}
-          required={Boolean((question as any).validations?.required?.value)}
+          required={Boolean(question.validations?.required?.value)}
           className="w-full max-w-2xl"
           density="comfy"
         />
@@ -148,10 +156,10 @@ export default function TypeFormQuestionInputSwitcher(
         onSubmit={onNext}
         type={f === "textarea" ? "text" : f || "text"}
         placeholder={placeholder}
-        required={Boolean((question as any).validations?.required?.value)}
-        maxLength={(question as any).validations?.maxLength?.value}
-        minLength={(question as any).validations?.minLength?.value}
-        pattern={(question as any).validations?.pattern?.value}
+        required={Boolean(question.validations?.required?.value)}
+        maxLength={question.validations?.maxLength?.value as number | undefined}
+        minLength={question.validations?.minLength?.value as number | undefined}
+        pattern={question.validations?.pattern?.value as string | undefined}
         ariaLabel={question.title}
         onValidate={undefined}
       />
@@ -160,11 +168,7 @@ export default function TypeFormQuestionInputSwitcher(
 
   // Choice questions
   if (t === "singleChoice") {
-    const options =
-      ((question.type as any).options as Array<{
-        value: string;
-        label: string;
-      }>) || [];
+    const options = typeObj.options || [];
     const val = toStringVal(response);
     // Use unified in-page list in all cases; enable search for large/mobile lists
     const useListWithSearch = isMobile || options.length >= 6;
@@ -192,11 +196,7 @@ export default function TypeFormQuestionInputSwitcher(
     );
   }
   if (t === "multipleChoice") {
-    const options =
-      ((question.type as any).options as Array<{
-        value: string;
-        label: string;
-      }>) || [];
+    const options = typeObj.options || [];
     const valArr = toStringArray(response);
     const useListWithSearch = isMobile || options.length >= 6;
     return (
@@ -221,16 +221,16 @@ export default function TypeFormQuestionInputSwitcher(
 
   // Rating
   if (t === "rating") {
-    const cfg = (question.type as any).config || {};
+    const cfg = (typeObj.config as Record<string, unknown>) || {};
     const val = toNumberVal(response);
     return (
       <UnifiedRating
         mode="typeform"
         value={val || 0}
-        onChange={(n: number) => onAnswer(n as any)}
+        onChange={(n: number) => onAnswer(n)}
         onSubmit={onNext}
         density="comfy"
-        max={cfg.max ?? 5}
+        max={(cfg.max as number | undefined) ?? 5}
         className=""
         showKeyboardHints
       />
@@ -239,21 +239,21 @@ export default function TypeFormQuestionInputSwitcher(
 
   // Linear scale
   if (t === "linearScale") {
-    const cfg = (question.type as any).config || {};
+    const cfg = (typeObj.config as Record<string, unknown>) || {};
     const val = toNumberVal(response);
     return (
       <TypeFormLinearScale
         value={val}
-        onChange={(n: number) => onAnswer(n as any)}
+        onChange={(n: number) => onAnswer(n)}
         onSubmit={onNext}
         config={{
-          start: cfg.start ?? 1,
-          end: cfg.end ?? 5,
-          step: cfg.step ?? 1,
-          startLabel: cfg.startLabel,
-          endLabel: cfg.endLabel,
+          start: (cfg.start as number | undefined) ?? 1,
+          end: (cfg.end as number | undefined) ?? 5,
+          step: (cfg.step as number | undefined) ?? 1,
+          startLabel: cfg.startLabel as string | undefined,
+          endLabel: cfg.endLabel as string | undefined,
         }}
-        required={Boolean((question as any).validations?.required?.value)}
+        required={Boolean(question.validations?.required?.value)}
         ariaLabel={question.title}
         ariaDescribedBy={ariaDescribedBy}
         showKeyboardHints
@@ -263,7 +263,7 @@ export default function TypeFormQuestionInputSwitcher(
 
   // Likert (labels, not numbers)
   if (t === "likertScale") {
-    const opts: string[] = (question.type as any).options || [];
+    const opts: string[] = (typeObj.options || []).map((o) => o.label);
     const val = toStringVal(response);
     return (
       <div
@@ -287,14 +287,14 @@ export default function TypeFormQuestionInputSwitcher(
 
   // Date (Phase 1: TypeFormDate wrapper for single and range)
   if (t === "date") {
-    const format = (question.type as any).format as "date" | "dateRange";
+    const format = typeObj.format as "date" | "dateRange" | undefined;
     return (
       <TypeFormDate
         value={toStringVal(response)}
         onChange={(s: string) => onAnswer(s)}
         onSubmit={onNext}
         range={format === "dateRange"}
-        required={Boolean((question as any).validations?.required?.value)}
+        required={Boolean(question.validations?.required?.value)}
         ariaLabel={question.title}
         ariaDescribedBy={ariaDescribedBy}
       />
@@ -303,29 +303,70 @@ export default function TypeFormQuestionInputSwitcher(
 
   // File upload (use UnifiedFileUpload with Typeform mode)
   if (t === "fileUpload") {
-    const v = (question as any).validations || {};
+    const v = question.validations || {};
     return (
       <UnifiedFileUpload
         mode="typeform"
         value={null}
-        onChange={(file: File | File[] | null) => onAnswer(file as any)}
-        onFileUpload={onFileUpload as any}
+        onChange={(file: File | File[] | null) => {
+          const first = Array.isArray(file) ? (file[0] ?? null) : file;
+          onAnswer(first);
+        }}
+        onFileUpload={(files) =>
+          onFileUpload
+            ? onFileUpload(question.id, files[0]!)
+            : Promise.resolve()
+        }
         onSubmit={onNext}
         questionId={question.id}
         uploadedFile={uploadedFile || null}
         onFileSelect={(files: File[] | undefined) =>
           onFileSelect?.(files?.[0] || null)
         }
-        allowedFileTypes={v.allowedTypes?.value}
-        maxFiles={v.maxFiles?.value ?? 1}
-        maxSize={v.maxSize?.value}
+        allowedFileTypes={v.allowedTypes?.value as string[] | undefined}
+        maxFiles={(v.maxFiles?.value as number | undefined) ?? 1}
+        maxSize={v.maxSize?.value as number | undefined}
       />
     );
   }
 
   // Address
   if (t === "address") {
-    const val = (response ?? null) as any;
+    const valRaw = (response ?? null) as unknown;
+    const toAddress = (
+      v: QuestionResponse,
+    ): {
+      street1?: string;
+      street2?: string;
+      city?: string;
+      stateProvince?: string;
+      postalCode?: string;
+      country?: string;
+    } | null => {
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        const obj = v as Record<string, unknown>;
+        const out: Record<string, string> = {};
+        const keys = [
+          "street1",
+          "street2",
+          "city",
+          "stateProvince",
+          "postalCode",
+          "country",
+        ] as const;
+        let hasAny = false;
+        for (const k of keys) {
+          const vv = obj[k];
+          if (typeof vv === "string") {
+            out[k] = vv;
+            hasAny = true;
+          }
+        }
+        return hasAny ? (out as any) : null;
+      }
+      return null;
+    };
+    const val = toAddress(valRaw as any);
     return (
       <div
         className="relative z-10 pointer-events-auto w-full max-w-2xl"
@@ -334,9 +375,9 @@ export default function TypeFormQuestionInputSwitcher(
       >
         <TypeFormAddress
           value={val}
-          onCompleteChange={(addr: any) => onAnswer(addr as any)}
+          onCompleteChange={(addr) => onAnswer(addr)}
           onSubmit={onNext}
-          required={Boolean((question as any).validations?.required?.value)}
+          required={Boolean(question.validations?.required?.value)}
         />
       </div>
     );
@@ -344,11 +385,7 @@ export default function TypeFormQuestionInputSwitcher(
 
   // Ranking
   if (t === "ranking") {
-    const options =
-      ((question.type as any).options as Array<{
-        value: string;
-        label: string;
-      }>) || [];
+    const options = typeObj.options || [];
     const val = toStringArray(response);
     return (
       <div
@@ -367,6 +404,18 @@ export default function TypeFormQuestionInputSwitcher(
     );
   }
 
+  // Signature
+  if (t === "signature") {
+    return (
+      <UnifiedSignature
+        mode="typeform"
+        value={toStringVal(response) || ""}
+        onChange={(signature: string | null) => onAnswer(signature)}
+        onSubmit={onNext}
+      />
+    );
+  }
+
   // Fallback to text
   return (
     <TypeFormTextInput
@@ -374,11 +423,13 @@ export default function TypeFormQuestionInputSwitcher(
       onChange={(v: string) => onAnswer(v)}
       onSubmit={onNext}
       type="text"
-      placeholder={String((question as any).placeholder ?? "")}
-      required={Boolean((question as any).validations?.required?.value)}
-      maxLength={(question as any).validations?.maxLength?.value}
-      minLength={(question as any).validations?.minLength?.value}
-      pattern={(question as any).validations?.pattern?.value}
+      placeholder={String(
+        (question as { placeholder?: string }).placeholder ?? "",
+      )}
+      required={Boolean(question.validations?.required?.value)}
+      maxLength={question.validations?.maxLength?.value as number | undefined}
+      minLength={question.validations?.minLength?.value as number | undefined}
+      pattern={question.validations?.pattern?.value as string | undefined}
       ariaLabel={question.title}
       onValidate={undefined}
     />

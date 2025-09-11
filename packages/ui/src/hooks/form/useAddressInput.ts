@@ -8,9 +8,20 @@ interface UseAddressInputOptions {
   requiredFields?: (keyof UIAddressData)[];
 }
 
+type UseAddressReturn = UseInputReturn<UIAddressData | null> & {
+  validate: () => boolean;
+  clearErrors: () => void;
+  handlers: {
+    updateField: (field: keyof UIAddressData, value: string) => void;
+    isComplete: () => boolean;
+    fieldTouched: Record<string, boolean>;
+  };
+  errors: string[];
+};
+
 export function useAddressInput(
   options: UseAddressInputOptions = {},
-): UseInputReturn<UIAddressData | null> {
+): UseAddressReturn {
   const {
     initialValue = null,
     required = false,
@@ -118,10 +129,13 @@ export function useAddressInput(
   return {
     value,
     setValue: handleChange,
-    errors,
-    validate,
+    error: errors.length > 0 ? errors[0] : undefined,
+    isDirty: true, // Address inputs are always considered dirty when used
     isValid: errors.length === 0,
+    reset: () => setValue(null),
+    validate,
     clearErrors,
-    handlers: handlers as Record<string, unknown>,
+    handlers,
+    errors,
   };
 }

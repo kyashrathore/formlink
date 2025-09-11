@@ -17,11 +17,6 @@ interface QuestionWrapperProps {
 // This is a placeholder that will be replaced with actual form question rendering logic
 export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
   questionId,
-  messageId,
-  isLast,
-  variant,
-  handleFileUpload,
-  onSubmitSelection,
 }) => {
   // For now, just render a placeholder
   // This will be replaced with actual question rendering logic from formcraft's context

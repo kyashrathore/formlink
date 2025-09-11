@@ -31,7 +31,7 @@ export interface UseFormValueReturn<T> {
   reset: (newValue?: T) => void;
 }
 
-export function useFormValue<T = any>({
+export function useFormValue<T = unknown>({
   value: externalValue,
   onChange,
   validation,
@@ -80,7 +80,7 @@ export function useFormValue<T = any>({
             (Array.isArray(value) && value.length === 0) ||
             (typeof value === "object" &&
               !Array.isArray(value) &&
-              Object.keys(value as any).length === 0);
+              Object.keys(value as Record<string, unknown>).length === 0);
 
           if (isEmpty) {
             errors.push("This field is required");

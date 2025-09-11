@@ -45,8 +45,8 @@ export default function TypeFormRanking({
   return (
     <UnifiedRanking
       mode="typeform"
-      options={options as any}
-      value={local as any}
+      options={options}
+      value={local}
       onChange={handleChange}
       onSubmit={onSubmit}
     />

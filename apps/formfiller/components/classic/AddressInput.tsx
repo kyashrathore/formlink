@@ -74,7 +74,9 @@ export default function AddressInput({
               id={`address-${field}`}
               type="text"
               value={addressValue[fieldKey] || ""}
-              onChange={(e) => handleFieldChange(fieldKey, e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                handleFieldChange(fieldKey, e.target.value)
+              }
               placeholder={fieldPlaceholders[fieldKey]}
               disabled={disabled}
               className={
@@ -108,7 +110,9 @@ export default function AddressInput({
                 id="address-city"
                 type="text"
                 value={addressValue.city || ""}
-                onChange={(e) => handleFieldChange("city", e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  handleFieldChange("city", e.target.value)
+                }
                 placeholder={fieldPlaceholders.city}
                 disabled={disabled}
               />
@@ -126,7 +130,7 @@ export default function AddressInput({
                 id="address-stateProvince"
                 type="text"
                 value={addressValue.stateProvince || ""}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   handleFieldChange("stateProvince", e.target.value)
                 }
                 placeholder={fieldPlaceholders.stateProvince}
@@ -146,7 +150,7 @@ export default function AddressInput({
                 id="address-postalCode"
                 type="text"
                 value={addressValue.postalCode || ""}
-                onChange={(e) =>
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                   handleFieldChange("postalCode", e.target.value)
                 }
                 placeholder={fieldPlaceholders.postalCode}

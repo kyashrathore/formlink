@@ -6,7 +6,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@formlink/ui"
-import type React from "react"
 import { useEffect } from "react"
 import { generateFilterFieldsFromForm } from "../../lib/responses/generateFilterFieldsFromForm"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
@@ -20,7 +19,7 @@ import { useDataTableStore } from "./dataTableStore"
 
 const submissionFilters = ["status", "testmode"]
 export function DataTableFilterControls() {
-  const { filterFields, setFilterFields, table } = useDataTableStore()
+  const { filterFields, setFilterFields } = useDataTableStore()
   const { form } = useFormEditorStore()
 
   useEffect(() => {

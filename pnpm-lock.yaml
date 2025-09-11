@@ -130,7 +130,7 @@ importers:
         version: 1.2.3(@types/react-dom@19.1.7(@types/react@19.1.11))(@types/react@19.1.11)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       "@supabase/supabase-js":
         specifier: ^2.55.0
-        version: 2.57.2
+        version: 2.57.4
       "@tanstack/react-query":
         specifier: ^5.74.3
         version: 5.85.5(react@19.1.1)
@@ -389,13 +389,16 @@ importers:
         version: 1.2.8(@types/react-dom@19.1.7(@types/react@19.1.11))(@types/react@19.1.11)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       "@supabase/ssr":
         specifier: ^0.5.2
-        version: 0.5.2(@supabase/supabase-js@2.57.2)
+        version: 0.5.2(@supabase/supabase-js@2.57.4)
       "@types/hast":
         specifier: ^3.0.4
         version: 3.0.4
       "@types/react-beautiful-dnd":
         specifier: ^13.1.8
         version: 13.1.8
+      "@types/react-signature-canvas":
+        specifier: ^1.0.7
+        version: 1.0.7
       "@types/uuid":
         specifier: ^10.0.0
         version: 10.0.0
@@ -453,6 +456,9 @@ importers:
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.1.11)(react@19.1.1)
+      react-signature-canvas:
+        specifier: 1.1.0-alpha.2
+        version: 1.1.0-alpha.2(@types/prop-types@15.7.15)(@types/react@19.1.11)(prop-types@15.8.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       tailwind-merge:
         specifier: ^3.2.0
         version: 3.3.1
@@ -547,10 +553,10 @@ importers:
     dependencies:
       "@supabase/ssr":
         specifier: latest
-        version: 0.7.0(@supabase/supabase-js@2.57.2)
+        version: 0.7.0(@supabase/supabase-js@2.57.4)
       "@supabase/supabase-js":
         specifier: latest
-        version: 2.57.2
+        version: 2.57.4
     devDependencies:
       "@formlink/eslint-config":
         specifier: workspace:*
@@ -732,6 +738,9 @@ importers:
       "@tailwindcss/typography":
         specifier: ^0.5.16
         version: 0.5.16(tailwindcss@4.1.12)
+      "@types/react-signature-canvas":
+        specifier: ^1.0.7
+        version: 1.0.7
       ai:
         specifier: ^4.3.19
         version: 4.3.19(react@19.1.1)(zod@3.25.76)
@@ -777,6 +786,9 @@ importers:
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.1.11)(react@19.1.1)
+      react-signature-canvas:
+        specifier: 1.1.0-alpha.2
+        version: 1.1.0-alpha.2(@types/prop-types@15.7.15)(@types/react@19.1.11)(prop-types@15.8.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       react-syntax-highlighter:
         specifier: ^15.6.6
         version: 15.6.6(react@19.1.1)
@@ -5000,10 +5012,10 @@ packages:
         integrity: sha512-mMIQHBRc+SKpZFRB2qtupuzulaUhFYupNyxqDj5Jp/LyPvcWvjaJzZzObv6URtL/O6lPxkanASnotGtNpS3H2Q==,
       }
 
-  "@supabase/functions-js@2.4.5":
+  "@supabase/functions-js@2.4.6":
     resolution:
       {
-        integrity: sha512-v5GSqb9zbosquTo6gBwIiq7W9eQ7rE5QazsK/ezNiQXdCbY+bH8D9qEaBIkhVvX4ZRW5rP03gEfw5yw9tiq4EQ==,
+        integrity: sha512-bhjZ7rmxAibjgmzTmQBxJU6ZIBCCJTc3Uwgvdi4FewueUTAGO5hxZT1Sj6tiD+0dSXf9XI87BDdJrg12z8Uaew==,
       }
 
   "@supabase/node-fetch@2.6.15":
@@ -5013,10 +5025,10 @@ packages:
       }
     engines: { node: 4.x || >=6.0.0 }
 
-  "@supabase/postgrest-js@1.21.3":
+  "@supabase/postgrest-js@1.21.4":
     resolution:
       {
-        integrity: sha512-rg3DmmZQKEVCreXq6Am29hMVe1CzemXyIWVYyyua69y6XubfP+DzGfLxME/1uvdgwqdoaPbtjBDpEBhqxq1ZwA==,
+        integrity: sha512-TxZCIjxk6/dP9abAi89VQbWWMBbybpGWyvmIzTd79OeravM13OjR/YEYeyUOPcM1C3QyvXkvPZhUfItvmhY1IQ==,
       }
 
   "@supabase/realtime-js@2.15.5":
@@ -5041,16 +5053,16 @@ packages:
     peerDependencies:
       "@supabase/supabase-js": ^2.43.4
 
-  "@supabase/storage-js@2.10.4":
+  "@supabase/storage-js@2.12.1":
     resolution:
       {
-        integrity: sha512-cvL02GarJVFcNoWe36VBybQqTVRq6wQSOCvTS64C+eyuxOruFIm1utZAY0xi2qKtHJO3EjKaj8iWJKySusDmAQ==,
+        integrity: sha512-QWg3HV6Db2J81VQx0PqLq0JDBn4Q8B1FYn1kYcbla8+d5WDmTdwwMr+EJAxNOSs9W4mhKMv+EYCpCrTFlTj4VQ==,
       }
 
-  "@supabase/supabase-js@2.57.2":
+  "@supabase/supabase-js@2.57.4":
     resolution:
       {
-        integrity: sha512-MxaZqZKUPK1ExzOilgSZqCPCxVPjevUrh6bcWz1SrDZexFc9VJ2cJbVP1EG1hKQx/bfLdTUjIZMoIrYpYqAPYw==,
+        integrity: sha512-LcbTzFhHYdwfQ7TRPfol0z04rLEyHabpGYANME6wkQ/kLtKNmI+Vy+WEM8HxeOZAtByUFxoUTTLwhXmrh+CcVw==,
       }
 
   "@swc/helpers@0.5.15":
@@ -5759,6 +5771,12 @@ packages:
         integrity: sha512-GdFaVjEbYv4Fthm2ZLvj1VSCedV7TqE5y1kNwnjSdBOTXuRSgowux6J8TAct15T3CKBr63UMk+2CO7ilRhyrAQ==,
       }
 
+  "@types/react-signature-canvas@1.0.7":
+    resolution:
+      {
+        integrity: sha512-0ulzaUvcIQ0HdNB5fHj+KE7ztWhlhYRsi65TdPIRj/t+FD5Rr8NJKBv4/xLViz7HsUh/tgqsoyKeARrm9+gPIg==,
+      }
+
   "@types/react-syntax-highlighter@15.5.13":
     resolution:
       {
@@ -5787,6 +5805,12 @@ packages:
     resolution:
       {
         integrity: sha512-k107IF4+Xr7UHjwDc7Cfd6PRQfbdkiRabXGRjo07b4WyPahFBZCZ1sE+BNxYIJPPg73UkfOsVOLwqVc/6ETrIA==,
+      }
+
+  "@types/signature_pad@2.3.6":
+    resolution:
+      {
+        integrity: sha512-v3j92gCQJoxomHhd+yaG4Vsf8tRS/XbzWKqDv85UsqjMGy4zhokuwKe4b6vhbgncKkh+thF+gpz6+fypTtnFqQ==,
       }
 
   "@types/stack-utils@2.0.3":
@@ -12969,6 +12993,23 @@ packages:
       "@types/react":
         optional: true
 
+  react-signature-canvas@1.1.0-alpha.2:
+    resolution:
+      {
+        integrity: sha512-tKUNk3Gmh04Ug4K8p5g8Is08BFUKvbXxi0PyetQ/f8OgCBzcx4vqNf9+OArY/TdNdfHtswXQNRwZD6tyELjkjQ==,
+      }
+    peerDependencies:
+      "@types/prop-types": ^15.7.3
+      "@types/react": 0.14 - 19
+      prop-types: ^15.5.8
+      react: 0.14 - 19
+      react-dom: 0.14 - 19
+    peerDependenciesMeta:
+      "@types/prop-types":
+        optional: true
+      "@types/react":
+        optional: true
+
   react-style-singleton@2.2.3:
     resolution:
       {
@@ -13598,6 +13639,12 @@ packages:
         integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==,
       }
     engines: { node: ">=14" }
+
+  signature_pad@2.3.2:
+    resolution:
+      {
+        integrity: sha512-peYXLxOsIY6MES2TrRLDiNg2T++8gGbpP2yaC+6Ohtxr+a2dzoaqWosWDY9sWqTAAk6E/TyQO+LJw9zQwyu5kA==,
+      }
 
   simple-swizzle@0.2.2:
     resolution:
@@ -14292,6 +14339,12 @@ packages:
         integrity: sha512-L0Orpi8qGpRG//Nd+H90vFB+3iHnue1zSSGmNOOCh1GLJ7rUKVwV2HvijphGQS2UmhUZewS9VgvxYIdgr+fG1A==,
       }
     hasBin: true
+
+  trim-canvas@0.1.2:
+    resolution:
+      {
+        integrity: sha512-nd4Ga3iLFV94mdhW9JFMLpQbHUyCQuhFOD71PEAt1NjtMD5wbZctzhX8c3agHNybMR5zXD1XTGoIEWk995E6pQ==,
+      }
 
   trim-lines@3.0.1:
     resolution:
@@ -18592,7 +18645,7 @@ snapshots:
     dependencies:
       "@supabase/node-fetch": 2.6.15
 
-  "@supabase/functions-js@2.4.5":
+  "@supabase/functions-js@2.4.6":
     dependencies:
       "@supabase/node-fetch": 2.6.15
 
@@ -18600,7 +18653,7 @@ snapshots:
     dependencies:
       whatwg-url: 5.0.0
 
-  "@supabase/postgrest-js@1.21.3":
+  "@supabase/postgrest-js@1.21.4":
     dependencies:
       "@supabase/node-fetch": 2.6.15
 
@@ -18614,29 +18667,29 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  "@supabase/ssr@0.5.2(@supabase/supabase-js@2.57.2)":
+  "@supabase/ssr@0.5.2(@supabase/supabase-js@2.57.4)":
     dependencies:
-      "@supabase/supabase-js": 2.57.2
+      "@supabase/supabase-js": 2.57.4
       "@types/cookie": 0.6.0
       cookie: 0.7.2
 
-  "@supabase/ssr@0.7.0(@supabase/supabase-js@2.57.2)":
+  "@supabase/ssr@0.7.0(@supabase/supabase-js@2.57.4)":
     dependencies:
-      "@supabase/supabase-js": 2.57.2
+      "@supabase/supabase-js": 2.57.4
       cookie: 1.0.2
 
-  "@supabase/storage-js@2.10.4":
+  "@supabase/storage-js@2.12.1":
     dependencies:
       "@supabase/node-fetch": 2.6.15
 
-  "@supabase/supabase-js@2.57.2":
+  "@supabase/supabase-js@2.57.4":
     dependencies:
       "@supabase/auth-js": 2.71.1
-      "@supabase/functions-js": 2.4.5
+      "@supabase/functions-js": 2.4.6
       "@supabase/node-fetch": 2.6.15
-      "@supabase/postgrest-js": 1.21.3
+      "@supabase/postgrest-js": 1.21.4
       "@supabase/realtime-js": 2.15.5
-      "@supabase/storage-js": 2.10.4
+      "@supabase/storage-js": 2.12.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -19075,6 +19128,11 @@ snapshots:
       hoist-non-react-statics: 3.3.2
       redux: 4.2.1
 
+  "@types/react-signature-canvas@1.0.7":
+    dependencies:
+      "@types/react": 19.1.11
+      "@types/signature_pad": 2.3.6
+
   "@types/react-syntax-highlighter@15.5.13":
     dependencies:
       "@types/react": 19.1.11
@@ -19091,6 +19149,8 @@ snapshots:
   "@types/resolve@1.20.6": {}
 
   "@types/semver@7.7.0": {}
+
+  "@types/signature_pad@2.3.6": {}
 
   "@types/stack-utils@2.0.3": {}
 
@@ -20872,7 +20932,7 @@ snapshots:
       "@typescript-eslint/parser": 8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2)
       eslint: 9.34.0(jiti@2.5.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.34.0(jiti@2.5.1))
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@9.34.0(jiti@2.5.1))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.34.0(jiti@2.5.1))
       eslint-plugin-react: 7.37.5(eslint@9.34.0(jiti@2.5.1))
@@ -20892,7 +20952,7 @@ snapshots:
       "@typescript-eslint/parser": 8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2)
       eslint: 9.34.0(jiti@2.5.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.34.0(jiti@2.5.1))
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-typescript@3.10.1)(eslint@9.34.0(jiti@2.5.1))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.34.0(jiti@2.5.1))
       eslint-plugin-react: 7.37.5(eslint@9.34.0(jiti@2.5.1))
@@ -20916,7 +20976,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1)):
+  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.34.0(jiti@2.5.1)):
     dependencies:
       "@nolyfill/is-core-module": 1.0.39
       debug: 4.4.1
@@ -20931,14 +20991,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1)):
+  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       "@typescript-eslint/parser": 8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2)
       eslint: 9.34.0(jiti@2.5.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.34.0(jiti@2.5.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -20953,7 +21013,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.34.0(jiti@2.5.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1))
+      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.40.0(eslint@9.34.0(jiti@2.5.1))(typescript@5.9.2))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.34.0(jiti@2.5.1)))(eslint@9.34.0(jiti@2.5.1))
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -24134,6 +24194,19 @@ snapshots:
     optionalDependencies:
       "@types/react": 19.1.11
 
+  react-signature-canvas@1.1.0-alpha.2(@types/prop-types@15.7.15)(@types/react@19.1.11)(prop-types@15.8.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+    dependencies:
+      "@babel/runtime": 7.28.2
+      "@types/signature_pad": 2.3.6
+      prop-types: 15.8.1
+      react: 19.1.1
+      react-dom: 19.1.1(react@19.1.1)
+      signature_pad: 2.3.2
+      trim-canvas: 0.1.2
+    optionalDependencies:
+      "@types/prop-types": 15.7.15
+      "@types/react": 19.1.11
+
   react-style-singleton@2.2.3(@types/react@19.1.11)(react@19.1.1):
     dependencies:
       get-nonce: 1.0.1
@@ -24620,6 +24693,8 @@ snapshots:
 
   signal-exit@4.1.0: {}
 
+  signature_pad@2.3.2: {}
+
   simple-swizzle@0.2.2:
     dependencies:
       is-arrayish: 0.3.2
@@ -25055,6 +25130,8 @@ snapshots:
       punycode: 2.3.1
 
   tree-kill@1.2.2: {}
+
+  trim-canvas@0.1.2: {}
 
   trim-lines@3.0.1: {}
 

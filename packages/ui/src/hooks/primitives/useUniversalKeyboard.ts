@@ -257,44 +257,44 @@ export function useUniversalKeyboard<T>({
   );
 
   // Component-level event handling
-  const getContainerProps = useCallback(() => {
-    return {
-      ref: containerRef,
-      onKeyDown: handleKeyDown,
-      tabIndex: isActive ? 0 : -1,
-      role: "listbox",
-      "aria-activedescendant": activeOptions[highlightedIndex]?.value
-        ? `option-${activeOptions[highlightedIndex].value}`
-        : undefined,
-      // Ensure container can receive focus
-      onFocus: () => {
-        // Auto-focus behavior when container receives focus
-        if (isActive && autoFocus && !isDropdownOpen) {
-          // Only open dropdown if it's not already open
-          setDropdownOpen(true);
-        }
-      },
-      // Better keyboard capture
-      onKeyDownCapture: handleKeyDown,
-    };
-  }, [
-    handleKeyDown,
-    isActive,
-    activeOptions,
-    highlightedIndex,
-    autoFocus,
-    isDropdownOpen,
-    setDropdownOpen,
-  ]);
+  const getContainerProps =
+    useCallback((): React.HTMLAttributes<HTMLDivElement> => {
+      return {
+        onKeyDown: (e) => handleKeyDown(e),
+        tabIndex: isActive ? 0 : -1,
+        role: "listbox",
+        "aria-activedescendant": activeOptions[highlightedIndex]?.value
+          ? `option-${String(activeOptions[highlightedIndex].value)}`
+          : undefined,
+        onFocus: () => {
+          if (isActive && autoFocus && !isDropdownOpen) {
+            setDropdownOpen(true);
+          }
+        },
+        onKeyDownCapture: (e) => handleKeyDown(e),
+      };
+    }, [
+      handleKeyDown,
+      isActive,
+      activeOptions,
+      highlightedIndex,
+      autoFocus,
+      isDropdownOpen,
+      setDropdownOpen,
+    ]);
 
   const getOptionProps = useCallback(
-    (index: number) => {
+    (index: number): React.HTMLAttributes<HTMLElement> => {
       const option = activeOptions[index];
       const isHighlighted = index === highlightedIndex;
       const isSelected = false; // This should be passed from parent if needed
 
+      if (!option) {
+        return { role: "option", tabIndex: -1 };
+      }
+
       return {
-        id: `option-${option.value}`,
+        id: `option-${String(option.value)}`,
         role: "option",
         "aria-selected": isSelected,
         "aria-disabled": option.disabled,
@@ -305,7 +305,6 @@ export function useUniversalKeyboard<T>({
             onSelect(option);
           }
         },
-        "data-highlighted": isHighlighted,
       };
     },
     [activeOptions, highlightedIndex, onSelect],

@@ -78,7 +78,7 @@ export function useFormMode() {
   const { mode, setMode } = extendedContext;
   const isChatMode = extendedContext.isChatMode ?? mode === "chat";
   const isTypeFormMode = extendedContext.isTypeFormMode ?? mode === "typeform";
-  const isClassicMode = (context as any).isClassicMode ?? mode === "classic";
+  const isClassicMode = extendedContext.isClassicMode ?? mode === "classic";
 
   return {
     mode: mode === "chat" ? ("ai" as const) : (mode as AppFormMode),
