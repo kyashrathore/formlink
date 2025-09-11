@@ -42,6 +42,46 @@ export function useThemeLoader(formSchema: Form): ThemeLoaderResult {
 
         // Extract theme from form settings
         const settings = formSchema.settings as FormSettings;
+        const themeMode = (settings?.theme_overrides as any)?.theme_mode as
+          | "light"
+          | "dark"
+          | "system"
+          | undefined;
+        // Apply theme mode (default to dark per product requirement)
+        const root = document.documentElement;
+        const desired = themeMode ?? "dark";
+        console.info("[Formlink][ThemeLoader] begin", {
+          formId: formSchema.id,
+          mode: desired,
+          hasOverrides: Boolean(settings?.theme_overrides),
+          hasShadcn: Boolean(settings?.theme_overrides?.shadcn_css),
+          shadcnLength: settings?.theme_overrides?.shadcn_css?.length || 0,
+        });
+        root.classList.remove("light", "dark");
+        if (desired === "dark") {
+          root.classList.add("dark");
+        } else if (desired === "light") {
+          root.classList.add("light");
+        } else if (desired === "system") {
+          // For system mode, let CSS media queries handle it
+          const systemPrefersDark = window.matchMedia(
+            "(prefers-color-scheme: dark)",
+          ).matches;
+          if (systemPrefersDark) {
+            root.classList.add("dark");
+          } else {
+            root.classList.add("light");
+          }
+        }
+        // SSR 'initial-formlink-theme' presence (to detect SSR injection)
+        try {
+          const st = document.getElementById("initial-formlink-theme");
+          const sLen = st && st.textContent ? st.textContent.length : 0;
+          console.info("[Formlink][ThemeLoader] ssrcss", {
+            initialTagLen: sLen,
+          });
+        } catch {}
+
         const savedTheme = settings?.theme_overrides?.shadcn_css;
 
         if (savedTheme && typeof savedTheme === "string") {
@@ -55,18 +95,42 @@ export function useThemeLoader(formSchema: Form): ThemeLoaderResult {
               ...result.appliedRootVariables,
               ...result.appliedDarkVariables,
             ]);
+            try {
+              const cs = getComputedStyle(document.documentElement);
+              console.info("[Formlink][ThemeLoader] applied", {
+                rootVars: result.appliedRootVariables.length,
+                darkVars: result.appliedDarkVariables.length,
+                sample: {
+                  background: cs.getPropertyValue("--background").trim(),
+                  foreground: cs.getPropertyValue("--foreground").trim(),
+                  primary: cs.getPropertyValue("--primary").trim(),
+                },
+              });
+            } catch {}
 
             if (result.warnings.length > 0) {
-              console.warn("Theme application warnings:", result.warnings);
+              console.warn("[Formlink][ThemeLoader] warnings", result.warnings);
             }
           } else {
-            console.error("Theme application failed:", result.error);
+            console.error("[Formlink][ThemeLoader] apply failed", result.error);
             setError(result.error || "Theme application failed");
           }
         } else {
+          // No custom theme CSS; still ensure theme mode is applied
+          try {
+            const cs = getComputedStyle(document.documentElement);
+            console.info("[Formlink][ThemeLoader] no shadcn, mode-only", {
+              mode: desired,
+              sample: {
+                background: cs.getPropertyValue("--background").trim(),
+                primary: cs.getPropertyValue("--primary").trim(),
+              },
+            });
+          } catch {}
+          setThemeApplied(true);
         }
       } catch (err) {
-        console.error("Error loading theme:", err);
+        console.error("[Formlink][ThemeLoader] error", err);
         setError(
           err instanceof Error ? err.message : "Unknown error loading theme",
         );

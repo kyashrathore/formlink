@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@formlink/ui/globals.css";
-import { ThemeProvider } from "next-themes";
 import {
   PostHogProviderWrapper,
   PostHogPageview,
@@ -28,13 +27,13 @@ export const metadata: Metadata = {
     description:
       "Build forms effortlessly by chatting with AI. Formlink.ai is the best form builder - no coding or drag-and-drop needed. Create forms in seconds.",
     url: "https://formlink.ai",
-    siteName: "Formfiller",
+    siteName: "Formlink",
     images: [
       {
         url: "/formlink-logo.png",
         width: 512,
         height: 512,
-        alt: "Formfiller Logo",
+        alt: "Formlink Logo",
       },
     ],
     locale: "en_US",
@@ -51,7 +50,7 @@ export const metadata: Metadata = {
         url: "/formlink-logo.png",
         width: 512,
         height: 512,
-        alt: "Formfiller Logo",
+        alt: "Formlink Logo",
       },
     ],
   },
@@ -86,16 +85,10 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <PostHogProviderWrapper>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="light"
-            disableTransitionOnChange
-          >
-            <Suspense fallback={null}>
-              <PostHogPageview />
-            </Suspense>
-            <div className="h-screen">{children}</div>
-          </ThemeProvider>
+          <Suspense fallback={null}>
+            <PostHogPageview />
+          </Suspense>
+          <div className="h-screen">{children}</div>
         </PostHogProviderWrapper>
       </body>
     </html>

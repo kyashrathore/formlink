@@ -4,6 +4,8 @@ import PreviewPageClient from "./PreviewPageClient";
 import { createServerClient } from "@formlink/db";
 import { notFound } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 // Transform legacy string-based question types to new discriminated union format
 function transformLegacyQuestionType(legacyQuestion: any): any {
   const { type, questionType, ...rest } = legacyQuestion;
@@ -140,7 +142,9 @@ async function getFormSchemaById(
   // First try short_id
   const shortIdResult = await supabase
     .from("forms")
-    .select("id, current_published_version_id, current_draft_version_id")
+    .select(
+      "id, brand_id, current_published_version_id, current_draft_version_id",
+    )
     .eq("short_id", formIdOrShortId)
     .single();
 
@@ -151,7 +155,9 @@ async function getFormSchemaById(
     // If not found by short_id, try by full id
     const fullIdResult = await supabase
       .from("forms")
-      .select("id, current_published_version_id, current_draft_version_id")
+      .select(
+        "id, brand_id, current_published_version_id, current_draft_version_id",
+      )
       .eq("id", formIdOrShortId)
       .single();
 
@@ -169,12 +175,12 @@ async function getFormSchemaById(
     return null;
   }
 
-  let versionId = formData.current_published_version_id;
-  let versionStatus: "published" | "draft" = "published";
-
+  // In preview, prefer draft if available
+  let versionId = formData.current_draft_version_id;
+  let versionStatus: "published" | "draft" = versionId ? "draft" : "published";
   if (!versionId) {
-    versionId = formData.current_draft_version_id;
-    versionStatus = "draft";
+    versionId = formData.current_published_version_id;
+    versionStatus = "published";
   }
 
   if (!versionId) {
@@ -206,6 +212,81 @@ async function getFormSchemaById(
     // Transform legacy questions to new schema format
     const transformedQuestions = rawQuestions.map(transformLegacyQuestionType);
 
+    const brandToShadcn = (
+      brandTheme: any,
+    ): { css?: string; mode?: "light" | "dark" | "system" } => {
+      if (!brandTheme) return {};
+      const css =
+        (typeof brandTheme.shadcn_css === "string" &&
+          brandTheme.shadcn_css.trim()) ||
+        (typeof brandTheme.shadcnCss === "string" &&
+          brandTheme.shadcnCss.trim()) ||
+        (typeof brandTheme.css === "string" && brandTheme.css.trim()) ||
+        undefined;
+      const mode = (brandTheme.theme_mode || brandTheme.themeMode) as any;
+      return { css, mode };
+    };
+
+    const overrides = ((versionData as any)?.settings as any)?.theme_overrides;
+    try {
+      console.info("[Formlink][SSR][Preview][Server] fetch summary", {
+        formId: formData.id,
+        shortId: formIdOrShortId,
+        brandId: (formData as any)?.brand_id || null,
+        versionStatus,
+        versionId,
+        hasOverrides: Boolean(overrides),
+        cssLen: (overrides?.shadcn_css || "").length || 0,
+        mode: overrides?.theme_mode || null,
+      });
+    } catch {}
+
+    // Choose a single source: form overrides > brand > none
+    let source: "form" | "brand" | "default" = "default";
+    let effectiveThemeOverrides:
+      | { shadcn_css?: string; theme_mode?: "light" | "dark" | "system" }
+      | undefined;
+    const hasFormCss = Boolean(
+      overrides?.shadcn_css && overrides.shadcn_css.trim(),
+    );
+    const hasFormMode = Boolean(overrides?.theme_mode);
+    if (hasFormCss || hasFormMode) {
+      source = "form";
+      effectiveThemeOverrides = {
+        ...(hasFormCss ? { shadcn_css: overrides!.shadcn_css } : {}),
+        ...(hasFormMode ? { theme_mode: overrides!.theme_mode } : {}),
+      };
+    } else {
+      const brandId = (formData as any)?.brand_id as string | null;
+      if (brandId) {
+        try {
+          const { data: brandData } = await supabase
+            .from("brands")
+            .select("theme")
+            .eq("brand_id", brandId)
+            .single();
+          const brandTheme = (brandData as any)?.theme || {};
+          const norm = brandToShadcn(brandTheme);
+          const hasBrandCss = Boolean(norm.css && norm.css.length);
+          const hasBrandMode = Boolean(norm.mode);
+          if (hasBrandCss || hasBrandMode) {
+            source = "brand";
+            effectiveThemeOverrides = {
+              ...(hasBrandCss ? { shadcn_css: norm.css } : {}),
+              ...(hasBrandMode ? { theme_mode: norm.mode as any } : {}),
+            };
+          }
+          console.info("[Formlink][SSR][Preview][Server] brand check", {
+            brandId,
+            hasBrandCss,
+            hasBrandMode,
+          });
+        } catch {
+          // ignore
+        }
+      }
+    }
+
     const formSchemaResult = {
       id: formData.id,
       short_id: formIdOrShortId,
@@ -213,11 +294,15 @@ async function getFormSchemaById(
       title: versionData.title,
       description: versionData.description,
       questions: transformedQuestions,
-      settings:
-        typeof versionData.settings === "object" &&
+      settings: {
+        ...((typeof versionData.settings === "object" &&
         versionData.settings !== null
-          ? versionData.settings
-          : {},
+          ? (versionData.settings as any)
+          : {}) as any),
+        ...(effectiveThemeOverrides
+          ? { theme_overrides: effectiveThemeOverrides }
+          : {}),
+      },
       current_published_version_id: formData.current_published_version_id,
       current_draft_version_id: formData.current_draft_version_id,
     };
@@ -236,7 +321,25 @@ async function getFormSchemaById(
       return null;
     }
 
-    return validationResult.data;
+    // Preserve theme_overrides even if schema strips unknown keys
+    const parsed = validationResult.data;
+    const injectedOverrides = (formSchemaResult.settings as any)
+      ?.theme_overrides;
+    if (injectedOverrides) {
+      parsed.settings = {
+        ...(parsed.settings as any),
+        theme_overrides: injectedOverrides,
+      } as any;
+    }
+    try {
+      const eff = (parsed.settings as any)?.theme_overrides || {};
+      console.info("[Formlink][SSR][Preview][Server] effective overrides", {
+        cssLen: (eff.shadcn_css || "").length || 0,
+        mode: eff.theme_mode || null,
+        source,
+      });
+    } catch {}
+    return parsed;
   } catch (castError) {
     console.error(
       `Error constructing form schema object for version ${versionId}:`,
@@ -267,10 +370,42 @@ export default async function PreviewPage({
   // Always set test mode for preview
   const isTestSubmission = true;
 
+  const themeOverrides = (formSchema.settings as any)?.theme_overrides || {};
+  const shadcnCss =
+    typeof themeOverrides.shadcn_css === "string"
+      ? themeOverrides.shadcn_css
+      : null;
+  const themeMode =
+    (themeOverrides.theme_mode as "light" | "dark" | "system" | undefined) ||
+    "dark";
+
+  const initialThemeScript = `!(function(){try{var d=document.documentElement;d.classList.remove('light','dark');var m=${JSON.stringify(themeMode)};if(m==='dark')d.classList.add('dark');else if(m==='light')d.classList.add('light');else if(m==='system'){var prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;if(prefersDark)d.classList.add('dark');else d.classList.add('light');}}catch(e){}})();`;
+
   return (
-    <PreviewPageClient
-      formSchema={formSchema}
-      isTestSubmission={isTestSubmission}
-    />
+    <>
+      {shadcnCss ? (
+        <style
+          id="initial-formlink-theme"
+          dangerouslySetInnerHTML={{ __html: shadcnCss }}
+        />
+      ) : null}
+      <script dangerouslySetInnerHTML={{ __html: initialThemeScript }} />
+      <script
+        // diagnostics: log SSR theme presence in preview iframe before hydration
+        dangerouslySetInnerHTML={{
+          __html: `try{(function(){
+            var st=document.getElementById('initial-formlink-theme');
+            var len=st&&st.textContent?st.textContent.length:0;
+            var hasDark=st&&/\.dark\s*\{/.test(st.textContent||'');
+            var vsn = (function(){try{var fs=${JSON.stringify(formSchema)};return fs.version_id===fs.current_draft_version_id?'draft':'published';}catch{return 'unknown'}})();
+            console.info('[Formlink][SSR][Preview] injected', { cssLength: len, hasDark: !!hasDark, themeMode: ${JSON.stringify(themeMode)}, versionStatus: vsn });
+          })()}catch(e){console.warn('[Formlink][SSR][Preview] diag error',e)};`,
+        }}
+      />
+      <PreviewPageClient
+        formSchema={formSchema}
+        isTestSubmission={isTestSubmission}
+      />
+    </>
   );
 }
