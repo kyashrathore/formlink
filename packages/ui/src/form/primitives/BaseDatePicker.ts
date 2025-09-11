@@ -219,9 +219,9 @@ export function BaseDatePicker(
     const parts = dateString.split(/[/\-.]/);
     if (parts.length !== 3) return null;
 
-    const month = parseInt(parts[0]) - 1;
-    const day = parseInt(parts[1]);
-    const year = parseInt(parts[2]);
+    const month = parseInt(parts[0] || "") - 1;
+    const day = parseInt(parts[1] || "");
+    const year = parseInt(parts[2] || "");
 
     if (isNaN(month) || isNaN(day) || isNaN(year)) return null;
 
@@ -655,7 +655,9 @@ export function BaseDatePicker(
     onKeyDown: handleCalendarKeyDown,
   };
 
-  const inputProps: React.InputHTMLAttributes<HTMLInputElement> = {
+  const inputProps: React.InputHTMLAttributes<HTMLInputElement> & {
+    ref: React.RefObject<HTMLInputElement | null>;
+  } = {
     ref: inputRef,
     id,
     name,

@@ -23,7 +23,7 @@ const meta: Meta = {
 } as Meta;
 
 // Temporarily disable due to TypeScript conflicts
-export default {
+const exportedMeta: Meta = {
   ...meta,
   title: "Form/Typeform Dummy Flow (Disabled)",
   parameters: {
@@ -31,6 +31,8 @@ export default {
     docs: { disable: true },
   },
 };
+
+export default exportedMeta;
 type Story = StoryObj;
 
 type StepType =
@@ -425,7 +427,10 @@ export const Flow: Story = {
                   onChange={(v) =>
                     setAnswers((p) => ({ ...p, [currentStep.id]: v }))
                   }
-                  config={currentStep.config}
+                  config={{
+                    ...currentStep.config,
+                    step: currentStep.config.step ?? 1,
+                  }}
                 />
               )}
               {currentStep.kind === "rating" && (

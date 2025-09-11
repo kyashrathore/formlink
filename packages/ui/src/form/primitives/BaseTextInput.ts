@@ -295,7 +295,9 @@ export function BaseTextInput(props: BaseTextInputProps): BaseTextInputReturn {
     id: id ? `${id}-container` : undefined,
   };
 
-  const inputProps: React.InputHTMLAttributes<HTMLInputElement> = {
+  const inputProps: React.InputHTMLAttributes<HTMLInputElement> & {
+    ref: React.RefObject<HTMLInputElement | null>;
+  } = {
     ref: inputRef,
     id,
     name,

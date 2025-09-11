@@ -173,7 +173,7 @@ export function BaseLinearScale(
       }
 
       if (newIndex !== currentIndex) {
-        setFocusedValue(scaleValues[newIndex]);
+        setFocusedValue(scaleValues[newIndex] ?? null);
         // Focus the new button
         const button = document.querySelector(
           `[data-scale-value="${scaleValues[newIndex]}"]`,
@@ -185,7 +185,11 @@ export function BaseLinearScale(
   );
 
   const getOptionProps = useCallback(
-    (optionValue: number): React.ButtonHTMLAttributes<HTMLButtonElement> => {
+    (
+      optionValue: number,
+    ): React.ButtonHTMLAttributes<HTMLButtonElement> & {
+      "data-scale-value": number;
+    } => {
       const isCurrentlySelected = value === optionValue;
       const isFocused = focusedValue === optionValue;
 

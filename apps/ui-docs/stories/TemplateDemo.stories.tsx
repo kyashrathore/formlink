@@ -27,7 +27,7 @@ const options = [
 
 export const ChatTemplateShowcase: Story = {
   render: () => {
-    const [single, setSingle] = useState<string | null>(null);
+    const [single, setSingle] = useState<string>("");
     const [multi, setMulti] = useState<string[]>([]);
     const [linear, setLinear] = useState<number | null>(null);
     const [rating, setRating] = useState<number | null>(0);
@@ -41,7 +41,7 @@ export const ChatTemplateShowcase: Story = {
           <ChatSelect
             options={options}
             value={single}
-            onChange={(v) => setSingle(v as string)}
+            onChange={(v) => setSingle(v)}
             onSubmit={() => console.log("selected", single)}
           />
           <UnifiedMultiSelect

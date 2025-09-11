@@ -119,7 +119,7 @@ export function useKeyboardNav(
 
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isNavigating, setIsNavigating] = useState(false);
-  const navigationTimeoutRef = useRef<NodeJS.Timeout>();
+  const navigationTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Reset navigation after inactivity
   useEffect(() => {

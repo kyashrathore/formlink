@@ -20,7 +20,7 @@ import {
   SelectValue,
   Textarea,
 } from "@formlink/ui";
-import { Calendar as CalendarIcon } from "lucide-react";
+//import { Calendar } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@formlink/ui/lib/utils";
 
@@ -278,7 +278,7 @@ export const ClassicGrid: Story = {
                 )}
                 onClick={() => setDateOpen(!dateOpen)}
               >
-                <CalendarIcon className="mr-2 h-4 w-4" />
+                📅
                 {dateVal ? (
                   format(dateVal, "MM/dd/yyyy")
                 ) : (

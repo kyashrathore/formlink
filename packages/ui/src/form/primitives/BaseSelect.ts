@@ -258,7 +258,7 @@ export function BaseSelect<T = string>(
       const safeOptions = options || [];
       if (index >= 0 && index < safeOptions.length) {
         const option = safeOptions[index];
-        if (!option.disabled) {
+        if (option && !option.disabled) {
           selectOption(option.value);
         }
       }

@@ -479,7 +479,9 @@ export function BaseAddress(props: BaseAddressProps): BaseAddressReturn {
           value:
             (typeof value?.[field] === "string"
               ? value[field]
-              : value?.[field]?.toString?.() || "") || "",
+              : value?.[field] != null
+                ? String(value[field])
+                : "") || "",
           onChange: (event: React.ChangeEvent<HTMLInputElement>) =>
             handleFieldChange(field, event.target.value),
           onBlur: () => handleFieldBlur(field),

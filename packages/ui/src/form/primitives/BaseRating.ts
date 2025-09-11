@@ -319,7 +319,9 @@ export function BaseRating(props: BaseRatingProps): BaseRatingReturn {
     });
   }
 
-  const containerProps: React.HTMLAttributes<HTMLElement> = {
+  const containerProps: React.HTMLAttributes<HTMLElement> & {
+    ref: React.RefObject<HTMLElement | null>;
+  } = {
     ref: containerRef,
     id: id ? `${id}-container` : undefined,
     tabIndex: disabled ? -1 : 0,

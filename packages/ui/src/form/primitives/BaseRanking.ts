@@ -169,7 +169,9 @@ export function BaseRanking(props: BaseRankingProps): BaseRankingReturn {
     (arr: string[], from: number, to: number): string[] => {
       const newArr = [...arr];
       const [removed] = newArr.splice(from, 1);
-      newArr.splice(to, 0, removed);
+      if (removed !== undefined) {
+        newArr.splice(to, 0, removed);
+      }
       return newArr;
     },
     [],
@@ -358,7 +360,10 @@ export function BaseRanking(props: BaseRankingProps): BaseRankingReturn {
     (e: React.TouchEvent, value: string) => {
       if (disabled || !enableTouch) return;
 
-      touchStartY.current = e.touches[0].clientY;
+      const touch = e.touches[0];
+      if (touch) {
+        touchStartY.current = touch.clientY;
+      }
       setDraggedItem(value);
     },
     [disabled, enableTouch],
@@ -376,6 +381,8 @@ export function BaseRanking(props: BaseRankingProps): BaseRankingReturn {
 
       e.preventDefault();
       const touch = e.touches[0];
+      if (!touch) return;
+
       const element = document.elementFromPoint(touch.clientX, touch.clientY);
 
       if (element && element.hasAttribute("data-ranking-item")) {
@@ -432,7 +439,16 @@ export function BaseRanking(props: BaseRankingProps): BaseRankingReturn {
       const orderedItems = getOrderedItems();
       const itemValue = orderedItems[index];
 
-      const props: React.HTMLAttributes<HTMLElement> = {
+      if (itemValue === undefined) {
+        // Return empty props if itemValue is undefined
+        return {};
+      }
+
+      const props: React.HTMLAttributes<HTMLElement> & {
+        "data-index": string;
+        "data-value": string;
+        "data-ranking-item": string;
+      } = {
         id: id ? `${id}-item-${index}` : undefined,
         role: "listitem",
         "aria-grabbed": draggedItem === itemValue,
@@ -499,7 +515,9 @@ export function BaseRanking(props: BaseRankingProps): BaseRankingReturn {
     };
   });
 
-  const containerProps: React.HTMLAttributes<HTMLElement> = {
+  const containerProps: React.HTMLAttributes<HTMLElement> & {
+    ref: React.RefObject<HTMLElement | null>;
+  } = {
     ref: containerRef,
     id: id ? `${id}-container` : undefined,
     tabIndex: disabled ? -1 : 0,
