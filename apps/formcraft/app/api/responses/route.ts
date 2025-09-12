@@ -100,10 +100,28 @@ export async function GET(request: NextRequest) {
 
     for (const [key, value] of Object.entries(filters)) {
       if (allowedSubmissionFilters.includes(key)) {
-        submissionFilters[key] = value
+        // Temporary compatibility: if status is an array, coerce to first value
+        if (key === "status" && Array.isArray(value)) {
+          submissionFilters[key] = value.length ? value[0] : undefined
+        } else {
+          submissionFilters[key] = value
+        }
       } else if (validQuestionIds.includes(key)) {
         answerFilters[key] = value
       }
+    }
+
+    // Defaults
+    // If testmode is array ['true','false'] or empty, treat as undefined (Any)
+    if (Array.isArray(submissionFilters.testmode)) {
+      const arr = submissionFilters.testmode as any[]
+      if (arr.length !== 1) delete submissionFilters.testmode
+      else submissionFilters.testmode = String(arr[0]) === "true"
+    }
+    if (submissionFilters.testmode === undefined)
+      submissionFilters.testmode = false
+    if (submissionFilters.status === undefined) {
+      submissionFilters.status = "completed"
     }
 
     const page = pageParam ? parseInt(pageParam, 10) : 1

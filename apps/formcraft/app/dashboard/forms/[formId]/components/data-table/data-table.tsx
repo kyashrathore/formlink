@@ -1,6 +1,8 @@
 "use client"
 
 import {
+  ScrollArea,
+  ScrollBar,
   Table,
   TableBody,
   TableCell,
@@ -10,63 +12,51 @@ import {
 } from "@formlink/ui"
 import type { ColumnDef, Table as TTable } from "@tanstack/react-table"
 import { flexRender } from "@tanstack/react-table"
-import {
-  createParser,
-  createSearchParamsCache,
-  parseAsArrayOf,
-  parseAsString,
-} from "nuqs/server"
-import { DataTablePagination } from "./data-table-pagination"
-import { useDataTableStore } from "./dataTableStore"
-import type { DataTableFilterField } from "./types"
-
-export const ARRAY_DELIMITER = ","
-export const SLIDER_DELIMITER = "-"
-export const SPACE_DELIMITER = "_"
-export const RANGE_DELIMITER = "-"
-export const SORT_DELIMITER = "."
-
-export const parseAsSort = createParser({
-  parse(queryValue) {
-    const [id, desc] = queryValue.split(".")
-    if (!id && !desc) return null
-    return { id, desc: desc === "desc" }
-  },
-  serialize(value) {
-    return `${value.id}.${value.desc ? "desc" : "asc"}`
-  },
-})
-
-export const searchParamsParser = {
-  q_car_fuel_type: parseAsArrayOf(parseAsString, ARRAY_DELIMITER),
-}
-
-export const searchParamsCache = createSearchParamsCache(searchParamsParser)
+import { Loader2 } from "lucide-react"
+import { DataTablePagination } from "../data-table/data-table-pagination"
+import { useDataTableStore } from "../data-table/dataTableStore"
+import DataTableActionBar from "./data-table-action-bar"
+import DataTableToolbar from "./data-table-toolbar"
 
 export interface DataTableProps<TData, TValue> {
   table: TTable<TData>
   columns: ColumnDef<TData, TValue>[]
-  filterFields?: DataTableFilterField<TData>[]
+  onExportAll?: () => void
+  onExportSelected?: () => void
+  onWebhookSelected?: () => void
   isLoading?: boolean
-  showFilterControls?: boolean
 }
 
 export function DataTable<TData, TValue>({
   table,
   columns,
+  onExportAll,
+  onExportSelected,
+  onWebhookSelected,
+  isLoading,
 }: DataTableProps<TData, TValue>) {
   return (
-    <div className="flex h-full w-full flex-col gap-3 sm:flex-row">
+    <div className="flex h-full w-full flex-col gap-3">
+      <DataTableToolbar table={table} onExport={onExportAll} />
       <div className="flex max-w-full flex-1 flex-col gap-4 overflow-hidden p-1">
-        {}
-        <div className="z-0 rounded-md border">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id}>
+        <div className="relative z-0 rounded-md border">
+          <ScrollArea className="w-full">
+            <Table>
+              <TableHeader className="bg-muted/50 sticky top-0 z-20">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="hover:bg-transparent"
+                  >
+                    {headerGroup.headers.map((header, idx) => (
+                      <TableHead
+                        key={header.id}
+                        className={
+                          idx === 0
+                            ? "bg-muted/50 sticky left-0 z-30"
+                            : undefined
+                        }
+                      >
                         {header.isPlaceholder
                           ? null
                           : flexRender(
@@ -74,40 +64,53 @@ export function DataTable<TData, TValue>({
                               header.getContext()
                             )}
                       </TableHead>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
-                      </TableCell>
                     ))}
                   </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No results.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows?.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                    >
+                      {row.getVisibleCells().map((cell, idx) => (
+                        <TableCell
+                          key={cell.id}
+                          className={
+                            idx === 0
+                              ? "bg-background sticky left-0 z-10"
+                              : undefined
+                          }
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-24 text-center"
+                    >
+                      No results.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+            <ScrollBar orientation="horizontal" />
+          </ScrollArea>
+          {isLoading ? (
+            <div className="bg-card/90 pointer-events-none absolute top-2 right-2 z-40 flex items-center gap-2 rounded-md border px-2 py-1 text-xs shadow-sm">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…
+            </div>
+          ) : null}
         </div>
         {table.getPageCount() > 1 && (
           <DataTablePagination
@@ -117,6 +120,13 @@ export function DataTable<TData, TValue>({
           />
         )}
       </div>
+      <DataTableActionBar
+        table={table}
+        onExportSelected={onExportSelected}
+        onWebhookSelected={onWebhookSelected}
+      />
     </div>
   )
 }
+
+export default DataTable

@@ -2,6 +2,14 @@
 
 import { Form } from "@formlink/schema"
 import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@formlink/ui"
+import {
   getCoreRowModel,
   getFacetedMinMaxValues,
   getFacetedRowModel,
@@ -16,8 +24,9 @@ import {
   generateFilterFieldsFromForm,
   generateTableColumnsFromForm,
 } from "../../lib/responses/generateFilterFieldsFromForm"
-import { DataTable } from "../data-table/data-table"
+import DataTable from "../data-table/data-table"
 import { useDataTableStore } from "../data-table/dataTableStore"
+import APIKeyManager from "./APIKeyManager"
 
 interface ResponsesProps {
   form: Form
@@ -117,6 +126,61 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     },
   })
 
+  async function doExportCsv(selectedOnly: boolean) {
+    // Build search
+    const search: Record<string, unknown> = {
+      form_version_id: form?.current_draft_version_id,
+    }
+    for (const f of useDataTableStore.getState().columnFilters) {
+      if (f?.id && f.value !== undefined && f.value !== null) {
+        search[(f as any).id] = (f as any).value
+      }
+    }
+    const selected = selectedOnly
+      ? table
+          .getSelectedRowModel()
+          .rows.map((r) => (r.original as any).submission_id)
+      : []
+    const res = await fetch(`/api/forms/${form.id}/responses/export`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        format: "csv",
+        search: JSON.stringify(search),
+        submission_ids: selected.length ? selected : undefined,
+      }),
+    })
+    if (!res.ok) throw new Error(`Export failed (${res.status})`)
+    const blob = await res.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `responses-${form?.title || form?.id}.csv`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  async function doWebhookSelected() {
+    const selected = table
+      .getSelectedRowModel()
+      .rows.map((r) => (r.original as any).submission_id)
+    if (!selected.length) return
+    const url = window.prompt("Webhook URL")
+    if (!url) return
+    const res = await fetch(`/api/forms/${form.id}/responses/actions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action_name: "webhook",
+        submission_ids: selected,
+        parameters: { url },
+      }),
+    })
+    if (!res.ok) throw new Error(`Action failed (${res.status})`)
+  }
+
   useEffect(() => {
     if (table && responsesData) {
       setTableInstance(table)
@@ -127,17 +191,7 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     }
   }, [table, responsesData, setTableInstance])
 
-  if (isLoading) {
-    return <div>Loading responses...</div>
-  }
-
-  if (error) {
-    return <div>Error loading responses: {error.message}</div>
-  }
-
-  if (!table) {
-    return <div>Preparing responses table...</div>
-  }
+  // Keep page content static; let table show loading overlay.
 
   const renderResponseCards = () => (
     <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -185,12 +239,108 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
       {}
       {!isLoading && totalCount > 0 && (
         <>
+          <div className="mb-2 hidden">
+            {/* Export is moved to the toolbar/action bar for DiceUI parity. */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={async () => {
+                try {
+                  // Build search param including form_version_id and active filters
+                  const search: Record<string, unknown> = {
+                    form_version_id: form?.current_draft_version_id,
+                  }
+                  for (const f of useDataTableStore.getState().columnFilters) {
+                    if (f?.id && f.value !== undefined && f.value !== null) {
+                      search[f.id] = f.value as any
+                    }
+                  }
+                  // Selected submissions
+                  const selected = table
+                    .getSelectedRowModel()
+                    .rows.map((r) => (r.original as any).submission_id)
+
+                  const res = await fetch(
+                    `/api/forms/${form.id}/responses/export`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        format: "csv",
+                        search: JSON.stringify(search),
+                        submission_ids: selected.length ? selected : undefined,
+                      }),
+                    }
+                  )
+                  if (!res.ok) throw new Error(`Export failed (${res.status})`)
+                  const blob = await res.blob()
+                  const url = URL.createObjectURL(blob)
+                  const a = document.createElement("a")
+                  a.href = url
+                  a.download = `responses-${form?.title || form?.id}.csv`
+                  document.body.appendChild(a)
+                  a.click()
+                  a.remove()
+                  URL.revokeObjectURL(url)
+                } catch (e) {
+                  console.error(e)
+                  alert("Export failed. Please try again.")
+                }
+              }}
+            >
+              Export CSV
+            </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button size="sm" variant="outline">
+                  Hook
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl">
+                <DialogHeader>
+                  <DialogTitle>Generated React Hook</DialogTitle>
+                </DialogHeader>
+                <pre className="bg-muted max-h-[60vh] overflow-auto rounded-md p-3 text-xs">
+                  {`
+// Fetch with your API key
+fetch('/api/views/VIEW_ID/generate-hook?framework=react')
+  .then(r=>r.json()).then(console.log)
+`}
+                </pre>
+              </DialogContent>
+            </Dialog>
+            <APIKeyManager />
+          </div>
+          {/* DiceUI action bar handles bulk actions */}
           {}
           <DataTable
             columns={columns}
             table={table}
-            showFilterControls={showFilterToolbarAndCommand}
-            filterFields={useDataTableStore.getState().filterFields}
+            isLoading={isLoading}
+            onExportAll={async () => {
+              try {
+                await doExportCsv(false)
+              } catch (e) {
+                console.error(e)
+                alert("Export failed.")
+              }
+            }}
+            onExportSelected={async () => {
+              try {
+                await doExportCsv(true)
+              } catch (e) {
+                console.error(e)
+                alert("Export failed.")
+              }
+            }}
+            onWebhookSelected={async () => {
+              try {
+                await doWebhookSelected()
+              } catch (e) {
+                console.error(e)
+                alert("Action failed.")
+              }
+            }}
           />
 
           {}

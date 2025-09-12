@@ -7,7 +7,7 @@ This document defines the implementation for the Form Response tab views, with c
 Key alignment with current codebase (Sept 2025):
 
 - Backend endpoint for responses: `apps/formcraft/app/api/responses/route.ts` using the Supabase RPC `public.get_filtered_submissions(...)`.
-- RPC returns a single row with `data` (array of submissions + aggregated answers) and counts; see `packages/db/src/migrations/update_get_filtered_submissions_with_counts.sql`.
+- RPC returns a single row with `data` (array of submissions + aggregated answers) and counts; see `packages/db/src/migrations/20250912_get_filtered_submissions_status_array.sql`.
 - Submission fields available today: `submission_id`, `form_version_id`, `user_id`, `created_at`, `completed_at`, `status` (enum), `testmode` (boolean), and `answers` (JSON keyed by `question_id`).
 - AuthZ: `verifyUserCanAccessFormVersion(form_version_id, user_id)` enforced in the route.
 
@@ -20,7 +20,7 @@ Form Submissions → DB (form_submissions, form_answers)
                        ↓
                Tab Views (saved configs)
                        ↓
-     Insights (lite SQL, cached) & Actions (ACI)
+               Export (CSV)
 ```
 
 ## Core Components Implementation
@@ -982,6 +982,10 @@ CREATE TABLE form_funnel_analytics (
 );
 ```
 
+### Sidecar Annotation Tables — deferred
+
+Moved to a separate doc. Not part of the current release scope.
+
 ### Enums
 
 ```sql
@@ -1020,7 +1024,10 @@ Body: {
   answer_filters?: AnswerFilters;
   submission_ids?: string[];
 }
+
 ```
+
+````
 
 ### Public View API (FORMLINK_API_KEY Authentication) — planned
 
@@ -1043,7 +1050,7 @@ Response: {
     columns: ViewColumn[];
     total_count: number;
   };
-  data: ResponseRow[];
+  data: ResponseRow[]; // Includes merged annotations (subset per allow‑list)
   pagination: {
     page: number;
     limit: number;
@@ -1079,7 +1086,7 @@ Body: {
   submission_ids: string[];
   parameters?: Record<string, any>;
 }
-```
+````
 
 ### Analytics Endpoints
 
@@ -1269,53 +1276,161 @@ Response: {
 
 ### Phase 1: Core Table (Week 1)
 
-- [ ] Basic response table component
-- [ ] Column configuration from form schema
-- [ ] Type icons and data formatting
-- [ ] Basic sorting and pagination
-- [ ] Selection checkboxes
+- [x] Basic response table component
+- [x] Column configuration from form schema
+- [x] Type icons and data formatting
+- [x] Basic sorting and pagination
+- [x] Selection checkboxes
 
 ### Phase 2: Filtering & Views (Week 2)
 
-- [ ] Filter panel implementation
-- [ ] Saved views CRUD operations
-- [ ] Default view creation
-- [ ] View tab interface
-- [ ] Filter persistence
+- [x] Filter panel implementation (DiceUI-style toolbar facets: Status multi-select, Test, Created time)
+- [x] Saved views CRUD operations (server only; UI deferred)
+- [ ] Default view creation (deferred)
+- [ ] View tab interface (deferred; removed from UI per product request)
+- [x] Filter persistence (server via RPC params + client state)
 
 ### Phase 3: Export & AI Analytics (Week 3)
 
-- [ ] CSV/PDF export functionality
-- [ ] AI insights generation endpoint
-- [ ] Insights card component system
-- [ ] Funnel analytics calculation
-- [ ] Funnel visualization component
-- [ ] Response statistics dashboard
+- [x] CSV/PDF export functionality (CSV shipped; PDF deferred)
+- [x] AI insights generation endpoint (available; UI currently hidden)
+- [ ] Insights card component system (removed from UI for now)
+- [ ] Funnel analytics calculation (stub only)
+- [ ] Funnel visualization component (removed from UI for now)
+- [x] Response statistics dashboard (basic counts: Completed, In Progress, Total)
 - [ ] Performance optimization
 
 ### Phase 4: AI Views & Actions (Week 4)
 
-- [ ] Natural language query parser
-- [ ] AI-powered view generation
-- [ ] ACI action integration
-- [ ] Bulk action execution
-- [ ] Action history tracking
+- [x] Natural language query parser (endpoint: POST /api/forms/{formId}/views/nl)
+- [x] AI-powered view generation (server-side only; UI deferred)
+- [x] ACI action integration (minimal webhook action implemented)
+- [x] Bulk action execution (selection-based)
+- [x] Action history tracking (response_actions_log)
 
 ### Phase 5: API Keys & Embedding (Week 5)
 
-- [ ] API key generation and management system
-- [ ] Public view access authentication
-- [ ] Component code generation endpoints
-- [ ] Copy-paste UI in dashboard
-- [ ] Framework-specific code templates
+- [x] API key generation and management system (SHA-256 hashed keys)
+- [x] Public view access authentication (FORMLINK_API_KEY)
+- [x] Component code generation endpoints (hook generator)
+- [x] Copy-paste UI in dashboard (Hook dialog)
+- [ ] Framework-specific code templates (React shipped; others deferred)
 
 ### Phase 6: Polish & Performance (Week 6)
 
-- [ ] UI/UX refinements
-- [ ] Loading states and error handling
+- [x] UI/UX refinements (DiceUI table, simplified stats, removed unused UI)
+- [x] Loading states and error handling (non-blocking table-only loader)
 - [ ] Real-time WebSocket updates
 - [ ] Mobile responsiveness
 - [ ] Performance testing and optimization
+
+## Progress Update — Sept 12, 2025
+
+Delivered (current UI and APIs):
+
+- Table: DiceUI-style grid with sticky header/first column, sorting, selection, pagination.
+- Facets: Status (multi-select in UI), Test (tri-state), Created time presets; dotted border on active facet buttons.
+- Export: CSV for filtered view and selected rows; moved to kebab menu. CSV injection mitigation in place.
+- Actions: Minimal webhook action with idempotency; selection-based execution; audit log persists.
+- Public embeds: API key CRUD (SHA-256 hashed), public view data/meta endpoints, hook generator; basic Hook dialog in UI.
+- Views: Server CRUD + NL parser endpoints exist; UI (tabs/creator) removed per product request until later.
+- Insights/Funnel: Endpoints exist; cards/funnel UI intentionally removed to avoid duplication with top-line stats.
+- Loading behavior: Only the grid shows a small top-right loading pill; the toolbar/header remain visible during fetches.
+- Cleanup: Legacy data-table components removed; replaced with DiceUI equivalents.
+
+Migrations added (apply via Supabase):
+
+- 20250912_get_filtered_submissions_status_array.sql — RPC accepts status arrays (UI supports multi-select).
+- (Separately verifiable) 20250912_response_views_and_api_keys.sql + 20250912_rls_policies_response_views_api_keys.sql — saved views + API keys.
+- (Optional later) 20250912_response_actions_idempotency.sql — idempotency for actions log.
+
+Notes:
+
+- Until the status-array migration is applied, the /api/responses handler coerces an array status to the first value to avoid 500s. Remove this compatibility path after the migration is live.
+- “Manage columns” removed from UI for now.
+- Views UI (tabs/save), Public embeds/API keys, Actions, Insights/Funnel: not part of this release; verify or ship separately.
+
+## Verification Checklist (Owner/QA)
+
+Pre‑reqs
+
+- [ ] Apply status‑array RPC migration (20250912_get_filtered_submissions_status_array.sql).
+- [ ] Sign in as a non‑guest user with access to at least one form with responses (≥ 7 rows to test pagination).
+- [ ] Optional: Seed a few submissions in all three statuses (completed, in_progress, abandoned) and both testmode true/false.
+
+Responses UI
+
+- Toolbar & header
+  - [ ] Toolbar renders left‑aligned: Search input, Status, Test, Created facet buttons (with icons), then Clear filters (only when active).
+  - [ ] Right‑aligned kebab menu contains Export CSV; “Manage columns” is not present.
+  - [ ] Active facet buttons show a dotted border and a compact value (e.g., “2 selected”, “Yes”, “Last 30d”).
+  - [ ] Clicking a facet opens a dropdown; items show proper checkbox selection state.
+  - [ ] Selecting filters keeps the page static; only the grid shows a small loading indicator badge; header and toolbar remain visible.
+
+- Facets behavior
+  - [ ] Status supports multi‑select; choosing multiple values updates the button label to “N selected”.
+  - [ ] Test supports Any/Yes/No; if both Yes and No are checked it behaves as Any.
+  - [ ] Created supports Last 7d/30d/90d/All time and displays a matching label; clearing resets to All time.
+  - [ ] Clear filters resets all facets and removes dotted borders.
+
+- Grid & sorting
+  - [ ] Column headers use sort toggles; click cycles None → Asc → Desc.
+  - [ ] Sticky header and first column stay fixed during scroll; horizontal scrollbar appears for wide schemas.
+  - [ ] Selection column works: header checkbox selects all on page; rows toggle individually.
+
+- Stats banner
+  - [ ] Only simple totals render (Completed, In Progress, Total). No Insights or Funnel cards render anywhere.
+
+- Export
+  - [ ] Export CSV from kebab exports the current filtered view (when none selected) and downloads a file with base columns + question columns.
+  - [ ] Export Selected (from selection action bar) exports only selected row IDs.
+  - [ ] CSV content is properly quoted; leading = + - @ are prefixed (CSV injection mitigated).
+
+- Actions
+  - [ ] No ACI actions visible. Any legacy webhook action is hidden/disabled for this release.
+
+Public API & Keys (verify separately)
+
+- [ ] API key generation flows and RLS (if this lane is enabled for verification).
+
+Server endpoints
+
+- [ ] /api/forms/{formId}/responses/export returns CSV for filtered and selected sets.
+- [ ] (No other endpoints exposed in this release.)
+
+- [ ] /api/responses responds 200 for: status single; status array (if status array migration applied). If migration isn’t applied, array coerces to first element and still returns 200.
+- [ ] /api/forms/{formId}/responses/export returns CSV for filtered and selected sets.
+- [ ] /api/forms/{formId}/responses/actions logs a completed or failed action with idempotency_key.
+
+Error/edge handling
+
+- [ ] If formlink_api_keys/response_views tables or policies are missing, creation endpoints return 501 with descriptive messages (not generic 500s).
+- [ ] Large text values are truncated in cells; missing values show as “—”.
+- [ ] File answers render filename; no public file URLs are inlined.
+
+## Current State (Feature Matrix)
+
+- Implemented (UI + API)
+  - DiceUI table (sorting, selection, sticky header/first col, pagination).
+  - Facets: Status (multi‑select UI), Test (tri‑state), Created presets.
+  - Export CSV: filtered/selected; kebab menu; CSV safety.
+  - Actions: Webhook action (selection‑based) with idempotency + audit logging.
+  - API keys: Create/list/update/delete; hashed; public view data/meta endpoints; hook generator.
+
+- Implemented (API only, UI hidden/deferred)
+  - Views CRUD (/api/forms/{formId}/views) and NL parser (/views/nl).
+  - Insights endpoints; Funnel/stats endpoints.
+
+- Deferred / Removed from UI
+  - View tabs + save/update/clone.
+  - Insights & funnel cards (to avoid duplication with simple stats for now).
+  - Manage columns (kebab) — removed per product feedback; can be re‑added.
+
+- Pending / Optional next work
+  - Apply status-array RPC migration; then simplify /api/responses to pass arrays directly (remove temporary coercion).
+  - Real-time updates; mobile responsiveness; performance passes.
+  - Public API rate limiting, origin/IP allowlists, usage analytics.
+  - PDF export via background jobs; large export queuing + signed URL delivery.
 
 ## Technical Considerations
 
@@ -1341,7 +1456,8 @@ Response: {
 - **Public view restrictions**:
   - Explicit public flag required
   - View-level access controls
-  - Field-level data masking options
+  - Field-level data masking options (per‑field allow‑list for annotation/AI columns; default deny)
+  - Sidecar tables (annotations/votes/AI) protected by RLS tied to form ownership
 
 ### Scalability
 

@@ -19,6 +19,9 @@ Contents
 - Automations: Support on_submission and schedule (cron) triggers. Scope by saved view or inline filters. Same action definitions, idempotent, audit‑logged. Our scheduler triggers runs; ACI executes tools.
 - Compliance: With ACI self‑hosted inside our infra/VPC, data egress is minimized. Admins can restrict which ACI apps/tools are permitted and which fields may be used in action parameter mappings.
 - Email sending: Route through ACI email apps (e.g., Gmail/SendGrid/Resend) using the user’s linked account; no separate in‑house mailer required.
+- Sidecar annotations model: Per‑submission annotations (status/tags/notes/sentiment/votes/mailed_count/sale_made, etc.) live in dedicated tables and are joined in responses. We do not create per‑view physical tables nor mutate core answers.
+- Dynamic columns: A view’s columns can include system fields, answer fields, annotation fields, AI fields, and computed fields. New needs map to new annotation keys/typed columns without runtime DDL.
+- No per‑view materialization: Saved views persist configuration only (filters/columns/sort); the RPC applies them over submissions + joins to sidecar tables.
 
 ## Core Primitives
 
@@ -28,13 +31,14 @@ Contents
   - Partial saves on each answer (resume-safe), plus localStorage cache for refresh.
 
 - Enrichment (optional, per form)
-  - Computed fields (JSONata or deterministic transforms) written as additional fields into `allResponses`.
-  - AI fields (phase 1b): sentiment, themes, classification tags; persisted in a side table (e.g., `submission_ai_insights`).
+  - Computed fields: deterministic transforms (e.g., scoring, UTM normalization). Persist as annotations when they must be filterable/sortable.
+  - AI fields: sentiment, themes, classification tags; stored in a side table (e.g., `submission_ai_insights`) and/or promoted into annotations for hot filters.
+  - Votes/reactions: `submission_votes` with an aggregate view for totals.
 
 - Views (saved configurations)
-  - Schema: `{ id, name, filters, columns, sort, isDefault }`.
-  - Filters: by answer fields, tags, system fields (created_at, source), and computed/AI fields.
-  - Columns: selected question fields + computed fields + system fields.
+  - Schema: `{ id, name, filters, columns, sort, isDefault }` persisted in `response_views`.
+  - Filters: by system fields (created_at, status, testmode), answer fields (question ids), annotation/AI fields (e.g., `annotations.status = 'shortlisted'`, `annotations.sentiment = 'positive'`).
+  - Columns: union of system, answer, annotation, AI, and computed columns; labels resolve from the form schema for answer fields.
 
 - Insights (per view)
   - Lightweight aggregates over current view: total count, last 7d trend, simple breakdowns.
@@ -83,6 +87,11 @@ Contents
 
 Below, each use case lists: required inputs (fields), default tabs/views, insights, actions, enabling tech, and whether a public page/API/embed is used.
 
+### Column Model (Dynamic)
+
+- Fixed vs dynamic: Fixed system fields exist, but most business‑specific needs (shortlisted, mailed_count, sale_made, approved, owner, etc.) are dynamic via annotations/AI. No migrations are required to “add a column”; add an annotation key or a typed column on the annotations table and expose it in views.
+- Sort/filter readiness: Promote frequently filtered annotation keys to typed columns with indexes (e.g., status, shortlisted, sentiment, mailed_count, sale_made). Long‑tail keys live in an `extra` jsonb and remain queryable when needed.
+
 ### 1) Waitlist OS (Startups/Launches)
 
 - Required fields: `email`, `name` (opt), `company` (opt), `role` (opt), `why_join` (opt), `utm_*` (optional via query extraction).
@@ -93,10 +102,10 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
   - Top sources: saved grouping by `utm_source` (presented as a table view + small breakdown insight).
 - Insights: total signups, 7‑day trend, top 3 sources.
 - Actions:
-  - Send welcome/confirmation email (SMTP) — bulk.
-  - Invite to cohort (Mailchimp/ConvertKit via MCP) — bulk.
-  - Export to CRM (HubSpot create_contact) — bulk.
-- Tech enablement: query param extraction (done), SMTP action, HubSpot MCP tool. Optional: email verification status field.
+  - Send welcome/confirmation email (SMTP) — bulk; increment annotations.mailed_count; set last_mailed_at.
+  - Invite to cohort (Mailchimp/ConvertKit via MCP) — bulk; add tag in annotations (e.g., cohort_X).
+  - Export to CRM (HubSpot create_contact) — bulk; set annotations.status = 'synced_crm'.
+- Tech enablement: query param extraction (done), SMTP action, HubSpot MCP tool. Optional: annotation field for email verification.
 - Public/Embed: Not required; optional public counter widget later.
 
 ### 2) Feedback/NPS Hub (SaaS)
@@ -108,9 +117,9 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
   - Bugs (category = bug), Feature requests (category = feature).
 - Insights: NPS score, volume trend, category breakdown.
 - Actions:
-  - Create issue (GitHub/Linear) for bug rows — bulk or row.
-  - Follow‑up email to detractors (SMTP) — bulk.
-  - Push to Notion “Feedback backlog” — bulk.
+  - Create issue (GitHub/Linear) for bug rows — bulk or row; store annotations.tracked_issue_url.
+  - Follow‑up email to detractors (SMTP) — bulk; set annotations.followup_sent = true; increment mailed_count.
+  - Push to Notion “Feedback backlog” — bulk; set annotations.status = 'backlog'.
 - Tech: simple filters, MCP tools for GitHub/Linear/Notion/SMTP. Optional AI tagging later.
 - Public/Embed: Not required; possible public “What’s New / Feedback” later.
 
@@ -124,9 +133,9 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
   - Website widget (tagged `widget=true`).
 - Insights: avg rating, source breakdown.
 - Actions:
-  - Approve & publish to widget (flip status, tag `widget=true`).
-  - Request consent email (SMTP) — row/bulk.
-  - Cross‑post to Slack/Twitter (Slack MCP, webhook for socials).
+  - Approve & publish to widget (set annotations.approved = true; tag annotations.widget = true).
+  - Request consent email (SMTP) — row/bulk; set annotations.consent_requested_at.
+  - Cross‑post to Slack/Twitter (Slack MCP, webhook for socials); optionally store annotations.published_url.
 - Tech: publish endpoint (public JSON) for widget consumption; action toggles status; SMTP/Slack MCP.
 - Public/Embed: Yes — public JSON endpoint + lightweight JS widget snippet.
 
@@ -138,9 +147,9 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
   - Shortlisted (tag=true) view.
 - Insights: stage counts; conversion rate (later).
 - Actions:
-  - Move to stage (update `stage`) — bulk.
-  - Send screening email — bulk/row.
-  - Create candidate in HubSpot/Notion — bulk.
+  - Move to stage — bulk; set annotations.stage and optional annotations.shortlisted.
+  - Send screening email — bulk/row; increment mailed_count.
+  - Create candidate in HubSpot/Notion — bulk; set annotations.synced = true.
 - Tech: field updates, SMTP, CRM MCP tools.
 - Public/Embed: No.
 
@@ -153,7 +162,7 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
   - High‑value (budget >= threshold).
   - Needs follow‑up (no email sent yet).
 - Insights: qualified rate; source breakdown.
-- Actions: create contact/deal (HubSpot/Pipedrive), send intro email, assign owner (Slack notify).
+- Actions: create contact/deal (HubSpot/Pipedrive), send intro email, assign owner (Slack notify); set annotations.status = 'qualified'|'won'|'lost', annotations.owner, optional sale_made/sale_amount.
 - Tech: computed “qualified” flag; MCP: HubSpot/Pipedrive/SMTP/Slack.
 - Public/Embed: No.
 
@@ -163,7 +172,7 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
 - Views:
   - New (status=new), Needs scoping, Ready to quote, Sent, Won/Lost.
 - Insights: avg quote value (computed), win rate.
-- Actions: generate quote PDF (doc MCP), email quote (SMTP), create deal (CRM MCP).
+- Actions: generate quote PDF (doc MCP), email quote (SMTP), create deal (CRM MCP); update annotations.status (New/Scoping/Sent/Won/Lost) and annotations.quote_amount.
 - Tech: document generation MCP (e.g., a PDF server), SMTP, CRM.
 - Public/Embed: No.
 
@@ -172,7 +181,7 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
 - Required: `title`, `description`, `severity`, `steps_to_repro`, `contact` (opt), `status`.
 - Views: New, High severity, Repro available, Waiting on user, Resolved.
 - Insights: issues by severity; time‑to‑first‑response (manual to start).
-- Actions: create GitHub/Linear issue, request more info (email), assign owner (Slack tag).
+- Actions: create GitHub/Linear issue, request more info (email), assign owner (Slack tag); set annotations.status, annotations.owner, annotations.issue_url.
 - Tech: GitHub/Linear MCP, SMTP, Slack.
 - Public/Embed: No.
 
@@ -181,7 +190,7 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
 - Required: `title`, `description`, `impact`, `category`, `status`.
 - Views: All; P1 candidates (impact high), Needs spec, In backlog, Released.
 - Insights: top requested themes (manual tags first); request velocity.
-- Actions: create Linear/Jira ticket; add to Notion roadmap; notify subscribers (email batch).
+- Actions: create Linear/Jira ticket; add to Notion roadmap; notify subscribers (email batch); write annotations.priority, annotations.tags, annotations.roadmap_link.
 - Tech: MCP: Linear/Jira/Notion/SMTP; manual tagging fields.
 - Public/Embed: Optional public roadmap JSON for website widget.
 
@@ -190,7 +199,7 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
 - Required: `client_name`, `contact`, `assets_provided` (multi), `missing_assets`, `status`.
 - Views: Ready to kickoff, Missing assets, In progress, Blocked.
 - Insights: time‑to‑kickoff; bottlenecks (count missing_assets).
-- Actions: request missing assets (email), create project in Asana/ClickUp, assign PM (Slack).
+- Actions: request missing assets (email), create project in Asana/ClickUp, assign PM (Slack); set annotations.status, annotations.assignee, annotations.missing_assets_count.
 - Tech: MCP: SMTP, Asana/ClickUp, Slack.
 - Public/Embed: No.
 
@@ -199,7 +208,7 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
 - Required: `name`, `email`, `ticket_type`, `status` (registered/confirmed/waitlisted/checked_in).
 - Views: Confirmed, Waitlisted, Checked‑in.
 - Insights: capacity utilization; daily signups.
-- Actions: send ticket/QR (doc MCP + email), move waitlist → confirmed, export to CSV.
+- Actions: send ticket/QR (doc MCP + email), move waitlist → confirmed, export to CSV; set annotations.checked_in and annotations.ticket_id.
 - Tech: PDF/QR MCP, SMTP.
 - Public/Embed: Optional public attendee count widget.
 
@@ -208,7 +217,7 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
 - Required: `content_type`, `url_or_upload`, `consent`, `status`.
 - Views: All, For review, Approved, With consent.
 - Insights: source mix; approval rate.
-- Actions: request rights (email), publish to CMS (Notion/Webflow CMS via MCP), schedule post (Slack/Twitter webhook).
+- Actions: request rights (email), publish to CMS (Notion/Webflow CMS via MCP), schedule post (Slack/Twitter webhook); update annotations.rights_granted, annotations.published_url, annotations.publish_at.
 - Tech: Webflow/Notion MCP, SMTP, Slack/webhook.
 - Public/Embed: Public JSON for website components (gallery feed).
 
@@ -223,23 +232,23 @@ Below, each use case lists: required inputs (fields), default tabs/views, insigh
 
 ## Public/Embed Patterns
 
-- Public JSON endpoints per view (read‑only): for testimonials/UGC widgets.
+- Public JSON endpoints per view (read‑only): for testimonials/UGC widgets. Public responses include only allowed columns; annotation/AI fields follow explicit allow‑lists.
 - Public page (view-only): optional share for stakeholders (later access control).
 - Embed snippet: small JS to render testimonials/attendee counts on websites.
 
 ## Enabling Technology — Checklist
 
-- Views store and API: CRUD for saved views; server applies filters/columns/sort.
+- Views store and API: CRUD for saved views; server applies filters/columns/sort; dynamic columns include annotation/AI fields.
 - Insights service: simple SQL aggregate endpoints bound to a view.
 - Actions service:
   - Single transport: ACI self‑hosted MCP.
   - ACI: deploy in our infra; manage provider OAuth/secrets; expose MCP tools; discover tools per workspace/connection.
-  - Execution engine (batch per selection; retry; audit log); idempotency keys.
+  - Execution engine (batch per selection; retry; audit log); idempotency keys. Batch effects write to annotations/votes (e.g., status changes, mailed counters, vote totals).
   - Param resolution mapping (field→param), with templates for email/docs.
-- Public endpoints: per‑view JSON with cache headers; optional ISR.
+- Public endpoints: per‑view JSON with cache headers; optional ISR; per‑field allow‑lists for annotation/AI columns (default deny).
 - Security:
   - Workspace ACI app/tool allowlist; per‑action field‑level egress allowlist.
-  - Access control to views/actions; secrets storage; tokenized public endpoints.
+  - Access control to views/actions; secrets storage; tokenized public endpoints; RLS on annotation tables keyed by form ownership.
 - Operability: audit log UI, action status toasts, idempotency keys.
 
 ## Minimum Viable Implementation Plan

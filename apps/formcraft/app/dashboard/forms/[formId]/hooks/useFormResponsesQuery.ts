@@ -45,11 +45,20 @@ interface UseFormResponsesQueryResult {
 function buildSearchParam(formVersionId: string, filters: FilterItem[]) {
   const search: Record<string, unknown> = {}
   if (formVersionId) search.form_version_id = formVersionId
+  const provided = new Set<string>()
   filters.forEach(({ id, value }) => {
     if (value !== undefined && value !== null) {
       search[id] = value
+      provided.add(id)
     }
   })
+  // Default filters: hide test submissions and show completed by default if not provided
+  if (!provided.has("testmode")) {
+    search.testmode = false
+  }
+  if (!provided.has("status")) {
+    search.status = "completed"
+  }
   return JSON.stringify(search)
 }
 

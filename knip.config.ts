@@ -8,6 +8,8 @@ const config: KnipConfig = {
     },
     "apps/formcraft": {
       entry: ["app/**/*.{ts,tsx}", "next.config.js"],
+      // Disable Jest plugin to avoid Next's jest loader expecting pages/app at repo root
+      jest: false,
       ignoreDependencies: [
         // Build/dev tools
         "autoprefixer",
@@ -25,6 +27,7 @@ const config: KnipConfig = {
     },
     "apps/formfiller": {
       entry: ["app/**/*.{ts,tsx}", "next.config.js"],
+      jest: false,
       ignoreDependencies: [
         // Build/dev tools
         "autoprefixer",
