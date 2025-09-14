@@ -1,7 +1,7 @@
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import { NextRequest, NextResponse } from "next/server"
 
-export async function GET(req: NextRequest, _ctx: any) {
+export async function GET(req: NextRequest) {
   try {
     await requireAuth(req)
     return NextResponse.json({

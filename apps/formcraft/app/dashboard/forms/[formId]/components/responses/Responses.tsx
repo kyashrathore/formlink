@@ -24,9 +24,12 @@ import {
   generateFilterFieldsFromForm,
   generateTableColumnsFromForm,
 } from "../../lib/responses/generateFilterFieldsFromForm"
+import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
 import DataTable from "../data-table/data-table"
 import { useDataTableStore } from "../data-table/dataTableStore"
 import APIKeyManager from "./APIKeyManager"
+import ResponseCharts from "./ResponseCharts"
+import ResponseViewsTabs from "./ResponseViewsTabs"
 
 interface ResponsesProps {
   form: Form
@@ -50,6 +53,11 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     setFilterFields,
   } = useDataTableStore()
 
+  const activeViewPlan = useResponseViewsStore((s) => {
+    const id = s.activeViewId
+    return s.views.find((v) => v.id === id)?.plan
+  })
+
   const {
     data: responsesData,
     isLoading,
@@ -58,11 +66,13 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     totalCompletedCount,
     totalInProgressCount,
     totalFilteredCount,
+    insights,
   } = useFormResponsesQuery(
     form?.current_draft_version_id as string,
     columnFilters,
     pagination.pageIndex + 1,
-    pagination.pageSize
+    pagination.pageSize,
+    (activeViewPlan?.plan?.ui?.insights_spec as any) || []
   )
 
   const tableData = responsesData ?? []
@@ -205,7 +215,13 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
   return (
     <div>
       <h2 className="mb-4 text-xl font-bold">Responses</h2>
+      <ResponseViewsTabs />
       {renderResponseCards()}
+      <ResponseCharts
+        plan={activeViewPlan}
+        rows={tableData as any}
+        insights={insights as any}
+      />
 
       {}
 

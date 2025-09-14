@@ -21,6 +21,7 @@ interface FormResponsesApiResponse {
   totalFilteredCount: number
   completedCount: number
   inProgressCount: number
+  insights?: Array<Record<string, unknown>>
 }
 
 interface FilterItem {
@@ -40,6 +41,7 @@ interface UseFormResponsesQueryResult {
   totalFilteredCount: number
   completedCount: number
   inProgressCount: number
+  insights?: Array<Record<string, unknown>>
 }
 
 function buildSearchParam(formVersionId: string, filters: FilterItem[]) {
@@ -66,7 +68,8 @@ export function useFormResponsesQuery(
   formVersionId: string,
   filters: FilterItem[] = [],
   page: number = 1,
-  pageSize: number = 50
+  pageSize: number = 50,
+  insightsSpec?: Array<Record<string, unknown>>
 ): UseFormResponsesQueryResult {
   const [data, setData] = useState<FormResponse[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -79,6 +82,9 @@ export function useFormResponsesQuery(
   const [totalFilteredCount, setTotalFilteredCount] = useState(0)
   const [completedCount, setCompletedCount] = useState(0)
   const [inProgressCount, setInProgressCount] = useState(0)
+  const [insightsState, setInsightsState] = useState<
+    Array<Record<string, unknown>> | undefined
+  >(undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -86,7 +92,17 @@ export function useFormResponsesQuery(
     setError(undefined)
 
     const search = buildSearchParam(formVersionId, filters)
-    const url = `/api/responses?search=${encodeURIComponent(search)}&page=${page}&pageSize=${pageSize}`
+    const params = new URLSearchParams({
+      search,
+      page: String(page),
+      pageSize: String(pageSize),
+    })
+    if (insightsSpec && insightsSpec.length) {
+      try {
+        params.set("insights", JSON.stringify(insightsSpec))
+      } catch {}
+    }
+    const url = `/api/responses?${params.toString()}`
 
     fetch(url)
       .then(async (res) => {
@@ -102,6 +118,7 @@ export function useFormResponsesQuery(
         setTotalFilteredCount(json.totalFilteredCount || 0)
         setCompletedCount(json.completedCount || 0)
         setInProgressCount(json.inProgressCount || 0)
+        setInsightsState(json.insights || undefined)
         setIsLoading(false)
       })
       .catch((err) => {
@@ -113,7 +130,13 @@ export function useFormResponsesQuery(
     return () => {
       cancelled = true
     }
-  }, [formVersionId, JSON.stringify(filters), page, pageSize])
+  }, [
+    formVersionId,
+    JSON.stringify(filters),
+    page,
+    pageSize,
+    JSON.stringify(insightsSpec || []),
+  ])
 
   return {
     data,
@@ -127,5 +150,6 @@ export function useFormResponsesQuery(
     totalFilteredCount,
     completedCount,
     inProgressCount,
+    insights: insightsState,
   }
 }

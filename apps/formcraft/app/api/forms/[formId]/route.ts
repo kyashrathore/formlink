@@ -425,25 +425,12 @@ export async function PATCH(
       .single()
 
     if (versionError) {
-      console.error("[Formlink][API][PATCH] update failed", {
-        targetVersionId,
-        targetStatus,
-        error: versionError.message,
-      })
+      // Update failed - error will be returned in response
       return NextResponse.json({ error: versionError.message }, { status: 500 })
     }
 
     try {
-      console.info("[Formlink][API][PATCH] update success", {
-        updatedVersionId: versionData?.version_id,
-        status: versionData?.status,
-        hasSettings: Boolean((versionData as any)?.settings),
-        hasOverrides: Boolean((versionData as any)?.settings?.theme_overrides),
-        cssLen:
-          ((versionData as any)?.settings?.theme_overrides?.shadcn_css || "")
-            .length || 0,
-        mode: (versionData as any)?.settings?.theme_overrides?.theme_mode,
-      })
+      // Update successful
     } catch {}
 
     return NextResponse.json(versionData)
@@ -499,7 +486,7 @@ function validateMinorUpdate(
 }
 
 export async function GET(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ formId: string }> }
 ) {
   const formId = (await params).formId
@@ -536,16 +523,7 @@ export async function GET(
       )
     }
 
-    try {
-      const eff = (formSchema.settings as any)?.theme_overrides || {}
-      console.info("[Formlink][API][GET]/api/forms/:id returning", {
-        formId,
-        versionId: formSchema.version_id,
-        hasOverrides: Boolean(eff),
-        cssLen: (eff.shadcn_css || "").length || 0,
-        mode: eff.theme_mode || null,
-      })
-    } catch {}
+    // Successfully retrieved form data
 
     return NextResponse.json(formSchema)
   } catch (error) {

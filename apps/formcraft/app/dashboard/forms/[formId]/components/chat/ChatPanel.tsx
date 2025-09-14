@@ -1,19 +1,25 @@
 import { MODEL_DEFAULT } from "@/app/lib/config"
 import { FormGenerationEventHandler } from "@/app/lib/handlers/FormGenerationEventHandler"
+import type { RIPlanResponse } from "@/app/lib/ri/types"
 import { useChat } from "@ai-sdk/react"
 import { Button, PromptSuggestion } from "@formlink/ui"
+import { Suggestion, Suggestions } from "@formlink/ui/ai-elements"
 import { DefaultChatTransport } from "ai"
 import { AlertTriangle } from "lucide-react"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { useChatHistoryQuery } from "../../hooks/useChatHistoryQuery"
+import { usePanelState } from "../../hooks/usePanelState"
+import { applyRIPlanToUI } from "../../lib/responses/ri-adapter"
 import { AgentEvent } from "../../lib/types/agent-events"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
+import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
 import Chat from "./chat-components/chat"
 import { Conversation } from "./conversation"
 import { useAutoScroll, useFormattedEvents } from "./hooks"
 import { normalizePersistedParts } from "./parts"
+import RIPlanPreview from "./RIPlanPreview"
 import { computeChatStatus } from "./status"
 import type { ChatMessage, ChatPanelProps } from "./types"
 import { getDisplaySummaryMessage, getLastUserMessage } from "./utils"
@@ -35,6 +41,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const editorForm = useFormEditorStore((s) => s.form)
   const generationForm = useFormGenerationStore((s) => s.currentForm)
+  const { activeMainTab } = usePanelState()
+  const addOrUpdateFromPlan = useResponseViewsStore(
+    (s) => s.addOrUpdateFromPlan
+  )
 
   // All refs together
   const eventHandlerRef = useRef<FormGenerationEventHandler | null>(null)
@@ -46,6 +56,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const [storedInitialMessage, setStoredInitialMessage] = useState<
     string | undefined
   >(() => initialMessage)
+  type RISuggestion = { label: string; message: string }
+  const [riSuggestions, setRiSuggestions] = useState<RISuggestion[]>([])
+  const responseViewsStore = useResponseViewsStore()
+  const [riPlanPreview, setRiPlanPreview] = useState<RIPlanResponse | null>(
+    null
+  )
 
   // All queries and hooks together
   const chatHistoryQuery = useChatHistoryQuery(formId, Boolean(formId))
@@ -59,7 +75,16 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     id: formId,
     transport: new DefaultChatTransport({
       api: "/api/chat",
-      body: () => ({ formId, userId: userId || "anonymous", selectedModel }),
+      body: () => ({
+        formId,
+        userId: userId || "anonymous",
+        selectedModel,
+        options: {
+          intent:
+            activeMainTab === "responses" ? "response_intelligence" : "general",
+          responseIntelligence: activeMainTab === "responses",
+        },
+      }),
     }),
     onData: (dataPart) => {
       try {
@@ -70,7 +95,58 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           (dataPart as any).type === "data-agent_event" &&
           "data" in (dataPart as any)
         ) {
-          const event = (dataPart as any).data as AgentEvent
+          const raw = (dataPart as any).data as any
+          // Intercept Response Intelligence plan events (not part of standard AgentEvent union)
+          if (raw?.type === "response_intelligence_plan" && raw?.plan) {
+            try {
+              applyRIPlanToUI(raw.plan, editorForm || generationForm)
+              // Create/activate ephemeral view for this plan
+              addOrUpdateFromPlan(raw.plan, editorForm || generationForm)
+              const followups = raw?.plan?.plan?.meta?.followups
+              if (Array.isArray(followups) && followups.length) {
+                const items: RISuggestion[] = followups.map((f: any) => {
+                  if (typeof f === "string") {
+                    return { label: f, message: f }
+                  }
+                  const kind = String(f?.kind || "insight").toLowerCase()
+                  const title = typeof f?.title === "string" ? f.title : ""
+                  const prefix =
+                    kind === "column"
+                      ? "Column"
+                      : kind === "action"
+                        ? "Action"
+                        : kind === "chart"
+                          ? "Chart"
+                          : kind === "filter"
+                            ? "Filter"
+                            : "Insight"
+                  const label = title ? `${prefix}: ${title}` : prefix
+                  const message =
+                    kind === "column"
+                      ? `Add column ${title}`
+                      : kind === "action"
+                        ? `Add action ${title}`
+                        : kind === "chart"
+                          ? `Add chart ${title}`
+                          : kind === "filter"
+                            ? `Apply filter ${title}`
+                            : `Add insight ${title}`
+                  return { label, message }
+                })
+                setRiSuggestions(items)
+              }
+              setRiPlanPreview(raw.plan)
+              // Optionally switch to Responses tab
+              if (activeMainTab !== "responses") {
+                // defer switch; avoid importing setter to keep minimal changes
+              }
+            } catch (e) {
+              console.error("Failed to apply RI plan", e)
+            }
+            return
+          }
+
+          const event = raw as AgentEvent
 
           if (eventHandlerRef.current) {
             eventHandlerRef.current.handleRawEvent(event)
@@ -219,11 +295,22 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       await sendMessage(
         { parts: [{ type: "text", text: message }] },
         {
-          body: { formId, userId: userId || "anonymous", selectedModel: model },
+          body: {
+            formId,
+            userId: userId || "anonymous",
+            selectedModel: model,
+            options: {
+              intent:
+                activeMainTab === "responses"
+                  ? "response_intelligence"
+                  : "general",
+              responseIntelligence: activeMainTab === "responses",
+            },
+          },
         }
       )
     },
-    [sendMessage, formId, userId]
+    [sendMessage, formId, userId, activeMainTab]
   )
 
   const handleRetryClick = useCallback(() => {
@@ -339,6 +426,98 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {agentState?.status !== "FAILED" && (
         <div className="border-border bg-background flex-shrink-0 border-t p-4">
+          {riPlanPreview && (
+            <RIPlanPreview
+              plan={riPlanPreview}
+              saved={(() => {
+                const id = responseViewsStore.activeViewId
+                const v = responseViewsStore.views.find((x) => x.id === id)
+                return v?.saved
+              })()}
+              onSave={() => {
+                try {
+                  // mark saved
+                  const id = responseViewsStore.activeViewId
+                  const v = responseViewsStore.views.find((x) => x.id === id)
+                  if (v && !v.saved) {
+                    // saveActiveView modifies store in place (import at top-level creates cycles), so inline update
+                    v.saved = true
+                    useResponseViewsStore.setState({
+                      views: [...responseViewsStore.views],
+                    })
+                  }
+                } catch (e) {
+                  console.error(e)
+                }
+              }}
+              onOpenResponses={() => {
+                // Switch right panel tab to Responses
+                try {
+                  const { setActiveMainTab } = usePanelState.getState() as any
+                  setActiveMainTab && setActiveMainTab("responses")
+                } catch {}
+              }}
+              onCopyJson={() => {
+                try {
+                  navigator.clipboard.writeText(
+                    JSON.stringify(riPlanPreview, null, 2)
+                  )
+                } catch (e) {
+                  console.error(e)
+                }
+              }}
+            />
+          )}
+          {riSuggestions.length > 0 && (
+            <div className="mb-2">
+              <Suggestions>
+                {riSuggestions.map((s) => (
+                  <Suggestion
+                    key={s.label}
+                    suggestion={s.label}
+                    onClick={() => {
+                      // Refine current in-flight view if one is active and unsaved
+                      const activeId = responseViewsStore.activeViewId
+                      const activeView = responseViewsStore.views.find(
+                        (v) => v.id === activeId
+                      )
+                      const refineContext =
+                        activeView &&
+                        activeView.id !== "default" &&
+                        !activeView.saved
+                          ? {
+                              mode: "refine",
+                              correlationId:
+                                activeView.correlationId || activeView.id,
+                              currentPlan: activeView.plan,
+                            }
+                          : undefined
+
+                      sendMessage(
+                        { parts: [{ type: "text", text: s.message }] },
+                        {
+                          body: {
+                            formId,
+                            userId: userId || "anonymous",
+                            selectedModel,
+                            options: {
+                              intent:
+                                activeMainTab === "responses"
+                                  ? "response_intelligence"
+                                  : "general",
+                              responseIntelligence:
+                                activeMainTab === "responses",
+                              planContext: refineContext,
+                            },
+                          },
+                        }
+                      )
+                    }}
+                  />
+                ))}
+              </Suggestions>
+            </div>
+          )}
           <Chat
             onSubmit={handleSendMessageForChatComponent}
             isLoading={

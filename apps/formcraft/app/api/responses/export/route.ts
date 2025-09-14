@@ -39,10 +39,7 @@ function generateCSV(data: any[], columns: string[]): string {
   return [header, ...rows].join("\n")
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ formId: string }> }
-) {
+export async function POST(request: NextRequest) {
   try {
     // Authenticate user
     let authResult

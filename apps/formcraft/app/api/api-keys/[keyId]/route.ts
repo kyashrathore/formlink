@@ -10,7 +10,7 @@ export async function PUT(req: NextRequest, ctx: any) {
     const body = (await req.json().catch(() => ({}))) as any
     const cookieStore = await cookies()
     const supabase = await createServerClient(cookieStore)
-    const { data, error } = await (supabase as any)
+    const { error } = await (supabase as any)
       .from("formlink_api_keys")
       .update({
         name: body.name,

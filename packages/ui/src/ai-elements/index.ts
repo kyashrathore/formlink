@@ -63,3 +63,5 @@ export {
 } from "./prompt-suggestion";
 
 export { Response } from "../ui/response";
+
+export { Suggestions, Suggestion } from "./suggestion";
