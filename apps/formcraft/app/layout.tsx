@@ -33,6 +33,9 @@ export const metadata: Metadata = {
   description:
     "Build advanced forms through simple conversation with AI. Create powerful, intelligent forms in seconds without coding.",
   metadataBase: new URL("https://formlink.ai"),
+  alternates: {
+    canonical: "https://formlink.ai",
+  },
 }
 
 export default function RootLayout({

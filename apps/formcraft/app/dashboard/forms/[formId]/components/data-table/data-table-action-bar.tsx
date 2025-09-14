@@ -7,13 +7,11 @@ import * as React from "react"
 interface DataTableActionBarProps<TData> {
   table: Table<TData>
   onExportSelected?: () => void
-  onWebhookSelected?: () => void
 }
 
 export function DataTableActionBar<TData>({
   table,
   onExportSelected,
-  onWebhookSelected,
 }: DataTableActionBarProps<TData>) {
   const selectedCount = table.getSelectedRowModel().rows.length
   if (selectedCount === 0) return null
@@ -26,11 +24,6 @@ export function DataTableActionBar<TData>({
           {onExportSelected ? (
             <Button size="sm" variant="secondary" onClick={onExportSelected}>
               Export Selected
-            </Button>
-          ) : null}
-          {onWebhookSelected ? (
-            <Button size="sm" variant="outline" onClick={onWebhookSelected}>
-              Send to Webhook
             </Button>
           ) : null}
           <Button

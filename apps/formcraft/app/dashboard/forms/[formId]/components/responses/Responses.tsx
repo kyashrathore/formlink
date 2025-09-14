@@ -162,25 +162,6 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     URL.revokeObjectURL(url)
   }
 
-  async function doWebhookSelected() {
-    const selected = table
-      .getSelectedRowModel()
-      .rows.map((r) => (r.original as any).submission_id)
-    if (!selected.length) return
-    const url = window.prompt("Webhook URL")
-    if (!url) return
-    const res = await fetch(`/api/forms/${form.id}/responses/actions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action_name: "webhook",
-        submission_ids: selected,
-        parameters: { url },
-      }),
-    })
-    if (!res.ok) throw new Error(`Action failed (${res.status})`)
-  }
-
   useEffect(() => {
     if (table && responsesData) {
       setTableInstance(table)
@@ -331,14 +312,6 @@ fetch('/api/views/VIEW_ID/generate-hook?framework=react')
               } catch (e) {
                 console.error(e)
                 alert("Export failed.")
-              }
-            }}
-            onWebhookSelected={async () => {
-              try {
-                await doWebhookSelected()
-              } catch (e) {
-                console.error(e)
-                alert("Action failed.")
               }
             }}
           />

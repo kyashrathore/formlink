@@ -23,7 +23,6 @@ export interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   onExportAll?: () => void
   onExportSelected?: () => void
-  onWebhookSelected?: () => void
   isLoading?: boolean
 }
 
@@ -32,7 +31,6 @@ export function DataTable<TData, TValue>({
   columns,
   onExportAll,
   onExportSelected,
-  onWebhookSelected,
   isLoading,
 }: DataTableProps<TData, TValue>) {
   return (
@@ -120,11 +118,7 @@ export function DataTable<TData, TValue>({
           />
         )}
       </div>
-      <DataTableActionBar
-        table={table}
-        onExportSelected={onExportSelected}
-        onWebhookSelected={onWebhookSelected}
-      />
+      <DataTableActionBar table={table} onExportSelected={onExportSelected} />
     </div>
   )
 }

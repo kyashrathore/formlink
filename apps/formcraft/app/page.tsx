@@ -23,6 +23,9 @@ export const metadata: Metadata = {
     "form creation",
     "no-code forms",
   ],
+  alternates: {
+    canonical: "https://formlink.ai",
+  },
   openGraph: {
     title: "Formlink.ai - Build Advanced Forms by Simply Talking to AI",
     description:
