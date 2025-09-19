@@ -1,11 +1,3 @@
-/**
- * Main Form Creation Workflow
- *
- * This module provides a sequential workflow for form generation that replaces
- * the previous complex state-graph approach with a simpler, more maintainable
- * function-based architecture using AI SDK streaming.
- */
-
 import logger from "@/app/lib/logger"
 import { Form } from "@formlink/schema"
 import { QUESTION_SCHEMA_PROMPT } from "../../prompts"

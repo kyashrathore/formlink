@@ -42,9 +42,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const editorForm = useFormEditorStore((s) => s.form)
   const generationForm = useFormGenerationStore((s) => s.currentForm)
   const { activeMainTab } = usePanelState()
-  const addOrUpdateFromPlan = useResponseViewsStore(
-    (s) => s.addOrUpdateFromPlan
-  )
+  const addOrUpdateFromPlan = useResponseViewsStore((s) => s.addOrUpdateFromPlan)
 
   // All refs together
   const eventHandlerRef = useRef<FormGenerationEventHandler | null>(null)
@@ -430,15 +428,25 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             <RIPlanPreview
               plan={riPlanPreview}
               saved={(() => {
-                const id = responseViewsStore.activeViewId
-                const v = responseViewsStore.views.find((x) => x.id === id)
+                const currentForm = editorForm || generationForm
+                const id = currentForm?.id
+                  ? responseViewsStore.activeViewIdMap[currentForm.id] || "default"
+                  : "default"
+                const v = responseViewsStore.views.find(
+                  (x) => x.id === id && (x.formId === currentForm?.id || x.id === "default")
+                )
                 return v?.saved
               })()}
               onSave={() => {
                 try {
                   // mark saved
-                  const id = responseViewsStore.activeViewId
-                  const v = responseViewsStore.views.find((x) => x.id === id)
+                  const currentForm = editorForm || generationForm
+                  const id = currentForm?.id
+                    ? responseViewsStore.activeViewIdMap[currentForm.id] || "default"
+                    : "default"
+                  const v = responseViewsStore.views.find(
+                    (x) => x.id === id && (x.formId === currentForm?.id || x.id === "default")
+                  )
                   if (v && !v.saved) {
                     // saveActiveView modifies store in place (import at top-level creates cycles), so inline update
                     v.saved = true
@@ -477,9 +485,12 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                     suggestion={s.label}
                     onClick={() => {
                       // Refine current in-flight view if one is active and unsaved
-                      const activeId = responseViewsStore.activeViewId
+                      const currentForm = editorForm || generationForm
+                      const activeId = currentForm?.id
+                        ? responseViewsStore.activeViewIdMap[currentForm.id] || "default"
+                        : "default"
                       const activeView = responseViewsStore.views.find(
-                        (v) => v.id === activeId
+                        (v) => v.id === activeId && (v.formId === currentForm?.id || v.id === "default")
                       )
                       const refineContext =
                         activeView &&

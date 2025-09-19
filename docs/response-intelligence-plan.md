@@ -146,7 +146,9 @@ Minimal Phases (All RI‑focused)
 5. Insights + Charts
 
 - [x] `/api/responses` supports `insights` (count, trend, breakdown; multi‑series via `args.by`; `window` honored).
-- [x] Charts render in Responses via `ResponseCharts` using `@formlink/ui/ui/chart` (Line/Bar, stacked breakdowns).
+- [x] Charts render in Responses via `ResponseCharts` using `@formlink/ui/ui/chart`.
+  - Visualization hint: `args.chart` optional — for `trend`: `line|area|bar` (default `line`); for `breakdown`: `bar|pie` (default `bar`).
+  - UI hides Y‑axis ticks (shadcn style), adds card title/description, and a footer summary.
 
 6. Plan Preview UX
 
@@ -161,6 +163,13 @@ Pointers in Repo
 - Types: `apps/formcraft/app/lib/ri/types.ts`
 - RPC: `apps/formcraft/supabase/schema.sql` → `get_filtered_submissions`
 - Responses UI: `apps/formcraft/app/dashboard/forms/[formId]/components/data-table/**`
+
+Dev Utilities
+
+- Generate test responses (dev only): `POST /api/dev/generate-responses`
+  - Body: `{ form_version_id: string, count?: number=100, days?: number=14, includeAbandoned?: boolean=false, testmode?: boolean=true, answersRate?: number=0.8 }`
+  - Inserts rows into `form_submissions` (defaults to `testmode=true`) and synthetic `form_answers` per the form’s question IDs.
+  - To view in the UI, set filter `testmode=true` or remove the default “testmode=false” filter in the Responses toolbar.
 
 Appendix — Useful commands
 

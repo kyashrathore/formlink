@@ -15,7 +15,7 @@ export function DataTableColumnHeader<TData, TValue>({
 }: DataTableColumnHeaderProps<TData, TValue>) {
   const sorted = column.getIsSorted()
   return (
-    <div className="flex w-full items-center justify-between gap-2">
+    <div className="group flex w-full items-center justify-between gap-2">
       <span className="truncate" title={title}>
         {title}
       </span>
@@ -23,7 +23,9 @@ export function DataTableColumnHeader<TData, TValue>({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6"
+          className={`h-6 w-6 transition-opacity ${
+            sorted ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          }`}
           onClick={() => column.toggleSorting(sorted === "asc")}
           aria-label={
             sorted

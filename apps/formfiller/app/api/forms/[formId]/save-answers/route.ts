@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { createServerClient, SupabaseClient, Database } from "@formlink/db";
 import { saveAllFormAnswers, saveIndividualFormAnswer } from "./utils";
 import type {
@@ -137,6 +138,17 @@ export async function POST(req: NextRequest) {
             : "in_progress")) === "completed",
         !!testmode,
       );
+
+      // Invalidate summary caches for this form via tag
+      try {
+        const { data: fv } = await supabase
+          .from("form_versions")
+          .select("form_id")
+          .eq("version_id", versionId)
+          .single();
+        const formId = (fv as any)?.form_id as string | undefined;
+        if (formId) revalidateTag(`ri:summary:${formId}`);
+      } catch {}
 
       // Only call the integration if there are actual responses
       if (allResponses && Object.keys(allResponses).length > 0) {

@@ -10,6 +10,68 @@ export const RISortSchema = z
 
 // Insight card specification (client renders, values come from responses API)
 // Strict insight spec schema used by the agent and API
+const LayoutSchema = z
+  .object({
+    colSpan: z.number().int().min(1).max(12).optional(),
+    rowSpan: z.number().int().min(1).max(6).optional(),
+    minH: z.number().int().min(80).max(1200).optional(),
+  })
+  .strict()
+
+// Advanced args (pass-through for planner; UI may ignore initially)
+const CompositeSchema = z
+  .object({
+    formula: z.string(),
+    fields: z.array(z.string()).min(1),
+    aggregation: z.enum(["sum", "avg", "median", "mode"]).optional(),
+  })
+  .strict()
+
+const ComparisonSchema = z
+  .object({
+    baseline: z.enum(["previous_period", "average", "target"]).optional(),
+    change_type: z.enum(["absolute", "percentage", "index"]).optional(),
+  })
+  .strict()
+
+const SegmentationSchema = z
+  .object({
+    primary: z.string().optional(),
+    secondary: z.string().optional(),
+    filters: z
+      .array(
+        z
+          .object({ field: z.string(), op: z.string(), value: z.any().optional() })
+          .strict()
+      )
+      .optional(),
+  })
+  .strict()
+
+const ThresholdsSchema = z
+  .object({ warning: z.number().optional(), critical: z.number().optional(), target: z.number().optional() })
+  .strict()
+
+const CorrelationSchema = z
+  .object({
+    x: z.string().optional(),
+    y: z.string().optional(),
+    method: z.enum(["pearson", "spearman", "kendall"]).optional(),
+  })
+  .strict()
+
+const AdvancedArgsSchema = z
+  .object({
+    composite: CompositeSchema.optional(),
+    comparison: ComparisonSchema.optional(),
+    segmentation: SegmentationSchema.optional(),
+    thresholds: ThresholdsSchema.optional(),
+    correlation: CorrelationSchema.optional(),
+    // Display hint for UI grid layout density
+    layout_variant: z.enum(["small", "medium", "large"]).optional(),
+  })
+  .strict()
+
 const TrendArgsSchema = z
   .object({
     field: z
@@ -22,7 +84,12 @@ const TrendArgsSchema = z
       .default("7d")
       .optional(),
     by: z.string().optional(), // status or a question id
+    chart: z.enum(["line", "area", "bar"]).optional(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    layout: LayoutSchema.optional(),
   })
+  .merge(AdvancedArgsSchema)
   .strict()
 
 const BreakdownArgsSchema = z
@@ -31,10 +98,33 @@ const BreakdownArgsSchema = z
     by: z.string().optional(),
     topN: z.number().int().positive().max(20).default(10).optional(),
     stacked: z.boolean().default(true).optional(),
+    chart: z.enum(["bar", "pie"]).optional(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    layout: LayoutSchema.optional(),
   })
+  .merge(AdvancedArgsSchema)
   .strict()
 
-const CountArgsSchema = z.object({ label: z.string().optional() }).strict()
+const CountArgsSchema = z
+  .object({
+    label: z.string().optional(),
+    title: z.string().optional(),
+    description: z.string().optional(),
+    layout: LayoutSchema.optional(),
+  })
+  .merge(AdvancedArgsSchema)
+  .strict()
+
+const TextArgsSchema = z
+  .object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    content: z.string().optional(),
+    layout: LayoutSchema.optional(),
+  })
+  .merge(AdvancedArgsSchema)
+  .strict()
 
 export const RIInsightSpecSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("count"), args: CountArgsSchema.optional() }),
@@ -43,6 +133,24 @@ export const RIInsightSpecSchema = z.discriminatedUnion("type", [
     type: z.literal("breakdown"),
     args: BreakdownArgsSchema.optional(),
   }),
+  // Numeric/statistical metric insight (e.g., avg budget, sum revenue)
+  z.object({
+    type: z.literal("metric"),
+    args: z
+      .object({
+        field: z.string(),
+        agg: z.enum(["avg", "sum", "min", "max", "median"]).default("avg"),
+        by: z.string().optional(),
+        format: z.enum(["number", "currency"]).default("number").optional(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        layout: LayoutSchema.optional(),
+      })
+      .merge(AdvancedArgsSchema)
+      .optional(),
+  }),
+  z.object({ type: z.literal("text"), args: TextArgsSchema.optional() }),
+  z.object({ type: z.literal("summary"), args: TextArgsSchema.optional() }),
 ])
 
 // Sidecar proposed keys/virtual columns

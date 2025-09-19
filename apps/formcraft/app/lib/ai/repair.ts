@@ -1,6 +1,7 @@
 import { generateObject } from "ai"
 import { z } from "zod"
 import { getModel } from "./provider"
+import logger from "@/app/lib/logger"
 
 // Use OpenRouter for Gemini models as Vercel has restrictions
 const MODEL = getModel("google/gemini-2.5-pro", "openrouter")
@@ -63,6 +64,12 @@ The schema validation errors are:
 ${JSON.stringify(errorDetails, null, 2)}
 
 Please fix the JSON data based on these errors and your instructions.`
+    const startedAt = Date.now()
+    logger.info("[REPAIR] generateObject start", {
+      model: String(MODEL),
+      errorCount: errorDetails.length,
+      schemaHint: (schema as any)?._def?.typeName || "zodSchema",
+    })
 
     const { object: repairedData } = await generateObject({
       model: MODEL,
@@ -71,9 +78,19 @@ Please fix the JSON data based on these errors and your instructions.`
       prompt: userPrompt,
     })
 
+    logger.info("[REPAIR] generateObject success", {
+      durationMs: Date.now() - startedAt,
+      model: String(MODEL),
+    })
+
     return repairedData
   } catch (repairError) {
-    console.error("Error repairing JSON:", repairError)
+    logger.error("[REPAIR] Error repairing JSON", {
+      error:
+        repairError instanceof Error
+          ? { message: repairError.message, stack: repairError.stack }
+          : String(repairError),
+    })
     return null
   }
 }

@@ -179,98 +179,28 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
-
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border outline-ring/100;
   }
   body {
     @apply bg-background text-foreground;
   }
-}
-
-code {
-  font-family: var(--font-geist-mono);
-  font-feature-settings: var(--default-mono-font-feature-settings);
-  font-variation-settings: var(--default-mono-font-variation-settings);
-}
-
-/* sonner toast */
-[data-sonner-toaster] > li {
-  width: 100%;
-}
-
-/* Custom styles for Formlink.ai with black & white linear.app theme */
-@layer components {
-  .accent-text {
-    @apply text-white font-medium;
+  :root {
+    --chart-1: oklch(0.646 0.222 41.116);
+    --chart-2: oklch(0.6 0.118 184.704);
+    --chart-3: oklch(0.398 0.07 227.392);
+    --chart-4: oklch(0.828 0.189 84.429);
+    --chart-5: oklch(0.769 0.188 70.08);
   }
 
-  .accent-bg {
-    @apply bg-white text-black;
-  }
-
-  .accent-border {
-    @apply border-2 border-white;
-  }
-
-  .chat-bubble {
-    @apply p-4 rounded-lg max-w-[85%] bg-secondary;
-  }
-
-  .chat-bubble-ai {
-    @apply ml-auto bg-secondary;
-  }
-
-  .chat-bubble-user {
-    @apply mr-auto;
-  }
-
-  .section-padding {
-    @apply py-16 md:py-24;
-  }
-
-  .container-custom {
-    @apply px-4 mx-auto max-w-7xl;
-  }
-
-  .subtle-glow {
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
-  }
-}
-
-[data-support-yes],
-[data-support-no] {
-  display: none;
-}
-
-
-@supports (view-transition-name: test) {
-  [data-support] [data-support-yes] {
-      display: inline;
-  }
-  [data-support] [data-support-no] {
-    display: none;
-  }
-}
-
-@supports not (view-transition-name: test) {
-  [data-support] [data-support-yes] {
-      display: none;
-  }
-  [data-support] [data-support-no] {
-    display: inline;
-  }
-}
-
-/* Safari */
-@supports (-webkit-hyphens: none) and (not (-moz-appearance: none)) {
-  [data-support] [data-support-yes] {
-    display: none;
-  }
-  [data-support] [data-support-no] {
-    display: inline;
+  .dark {
+    --chart-1: oklch(0.488 0.243 264.376);
+    --chart-2: oklch(0.696 0.17 162.48);
+    --chart-3: oklch(0.769 0.188 70.08);
+    --chart-4: oklch(0.627 0.265 303.9);
+    --chart-5: oklch(0.645 0.246 16.439);
   }
 }

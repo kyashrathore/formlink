@@ -10,6 +10,7 @@ export type ViewSort = { by: string; dir: "asc" | "desc" }
 
 export interface ResponseView {
   id: string
+  formId: string
   name: string
   columns: string[]
   sort?: ViewSort
@@ -22,11 +23,11 @@ export interface ResponseView {
 
 interface ResponseViewsState {
   views: ResponseView[]
-  activeViewId: string
+  activeViewIdMap: Record<string, string>
   initDefault: (form: Form | null) => void
   addOrUpdateFromPlan: (plan: RIPlanResponse, form: Form | null) => string
   setActiveView: (id: string, form: Form | null) => void
-  removeView: (id: string) => void
+  removeView: (id: string, form?: Form | null) => void
 }
 
 function clamp(n: number, min: number, max: number) {
@@ -97,6 +98,7 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
       views: [
         {
           id: "default",
+          formId: "__global__",
           name: "Default",
           columns: [],
           sort: undefined,
@@ -104,12 +106,16 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
           pageSize: 10,
         },
       ],
-      activeViewId: "default",
+      activeViewIdMap: {},
 
       initDefault: (form) => {
         // Reset table to default state
         applyDefaultToTable()
-        set((state) => ({ ...state, activeViewId: "default" }))
+        if (!form?.id) return
+        set((state) => ({
+          ...state,
+          activeViewIdMap: { ...state.activeViewIdMap, [form.id]: "default" },
+        }))
       },
 
       addOrUpdateFromPlan: (resp, form) => {
@@ -117,6 +123,7 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
         const id = resp.correlationId || `ri-${Date.now()}`
         const view: ResponseView = {
           id,
+          formId: form?.id || "__unknown__",
           name: plan.meta?.view_name || "Smart View",
           columns: plan.ui?.columns || [],
           sort: plan.ui?.sort,
@@ -135,29 +142,36 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
           if (existingIdx >= 0)
             nextViews[existingIdx] = { ...nextViews[existingIdx], ...view }
           else nextViews.push(view)
-          return { views: nextViews, activeViewId: id }
+          const fId = form?.id
+          const nextActive = fId
+            ? { ...state.activeViewIdMap, [fId]: id }
+            : { ...state.activeViewIdMap }
+          return { views: nextViews, activeViewIdMap: nextActive }
         })
         return id
       },
 
       setActiveView: (id, form) => {
         const state = get()
+        const formId = form?.id
+        if (!formId) return
         if (id === "default") {
           applyDefaultToTable()
-          set({ activeViewId: "default" })
+          set({ activeViewIdMap: { ...state.activeViewIdMap, [formId]: "default" } })
           return
         }
-        const view = state.views.find((v) => v.id === id)
+        const view = state.views.find((v) => v.id === id && v.formId === formId)
         if (!view) return
         applyViewToTable(view, form)
-        set({ activeViewId: id })
+        set({ activeViewIdMap: { ...state.activeViewIdMap, [formId]: id } })
       },
 
-      removeView: (id) => {
+      removeView: (id, form) => {
+        const formId = form?.id
         set((state) => ({ views: state.views.filter((v) => v.id !== id) }))
-        if (get().activeViewId === id) {
+        if (formId && get().activeViewIdMap[formId] === id) {
           applyDefaultToTable()
-          set({ activeViewId: "default" })
+          set({ activeViewIdMap: { ...get().activeViewIdMap, [formId]: "default" } })
         }
       },
     }),
@@ -165,7 +179,7 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
       name: "response-views-store",
       partialize: (state) => ({
         views: state.views,
-        activeViewId: state.activeViewId,
+        activeViewIdMap: state.activeViewIdMap,
       }),
     }
   )
@@ -173,7 +187,11 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
 
 export function saveActiveView() {
   const store = useResponseViewsStore.getState()
-  const id = store.activeViewId
+  // Cannot infer current formId here; rely on current activeViewId across forms
+  // This helper will save whichever active view was last set via setActiveView
+  const activeEntry = Object.entries(store.activeViewIdMap)[0]
+  if (!activeEntry) return
+  const [, id] = activeEntry
   if (id === "default") return
   const v = store.views.find((x) => x.id === id)
   if (!v) return

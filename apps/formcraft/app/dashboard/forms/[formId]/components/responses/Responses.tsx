@@ -29,6 +29,8 @@ import DataTable from "../data-table/data-table"
 import { useDataTableStore } from "../data-table/dataTableStore"
 import APIKeyManager from "./APIKeyManager"
 import ResponseCharts from "./ResponseCharts"
+import GenerateTestDataButton from "./GenerateTestDataButton"
+import CleanupTestDataButton from "./CleanupTestDataButton"
 import ResponseViewsTabs from "./ResponseViewsTabs"
 
 interface ResponsesProps {
@@ -54,8 +56,17 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
   } = useDataTableStore()
 
   const activeViewPlan = useResponseViewsStore((s) => {
-    const id = s.activeViewId
-    return s.views.find((v) => v.id === id)?.plan
+    const formId = form?.id
+    if (!formId) return undefined
+    const id = s.activeViewIdMap[formId] || "default"
+    const view = s.views.find((v) => (v.id === id && (v.formId === formId || v.id === "default")))
+    return view?.plan
+  })
+
+  const isDefaultView = useResponseViewsStore((s) => {
+    const formId = form?.id
+    if (!formId) return true
+    return (s.activeViewIdMap[formId] || "default") === "default"
   })
 
   const {
@@ -135,6 +146,19 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
       totalCount,
     },
   })
+
+  // Stable search object for child components and caching
+  const search = useMemo(() => {
+    const s: Record<string, unknown> = {
+      form_version_id: form?.current_draft_version_id,
+    }
+    for (const f of useDataTableStore.getState().columnFilters) {
+      if ((f as any)?.id && (f as any).value !== undefined && (f as any).value !== null) {
+        s[(f as any).id] = (f as any).value
+      }
+    }
+    return s
+  }, [form?.current_draft_version_id, columnFilters])
 
   async function doExportCsv(selectedOnly: boolean) {
     // Build search
@@ -216,14 +240,40 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     <div>
       <h2 className="mb-4 text-xl font-bold">Responses</h2>
       <ResponseViewsTabs />
-      {renderResponseCards()}
+      <div className="mb-3 flex items-center justify-end gap-2">
+        <GenerateTestDataButton
+          formId={form.id}
+          onDone={() => {
+            // ensure testmode=true filter to reveal generated rows
+            const filters = [...useDataTableStore.getState().columnFilters]
+            const hasTestmode = filters.some((f) => f.id === "testmode")
+            if (!hasTestmode) filters.push({ id: "testmode", value: true } as any)
+            setColumnFilters(filters as any)
+            setPagination({ pageIndex: 0, pageSize: pagination.pageSize })
+          }}
+        />
+        <CleanupTestDataButton
+          formId={form.id}
+          onDone={() => {
+            // refresh the table after cleanup
+            setPagination({ pageIndex: 0, pageSize: pagination.pageSize })
+          }}
+        />
+      </div>
+      {isDefaultView && renderResponseCards()}
       <ResponseCharts
         plan={activeViewPlan}
         rows={tableData as any}
         insights={insights as any}
+        form={form}
+        search={search}
+        totals={{
+          totalCount: totalCount ?? 0,
+          totalCompletedCount: totalCompletedCount ?? 0,
+          totalInProgressCount: totalInProgressCount ?? 0,
+          totalFilteredCount: totalFilteredCount ?? 0,
+        }}
       />
-
-      {}
 
       {!isLoading && totalCount === 0 && (
         <div className="mt-4 flex h-40 items-center justify-center rounded-md border border-dashed">
