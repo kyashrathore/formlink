@@ -165,7 +165,10 @@ function ChartCard({
                 (form as any)?.current_published_version_id ||
                 (form as any)?.current_draft_version_id ||
                 undefined,
-              plan: { rpc: (plan as any)?.plan?.rpc || {}, ui: { insights_spec: [spec] } },
+              plan: {
+                rpc: (plan as any)?.plan?.rpc || {},
+                ui: { insights_spec: [spec] },
+              },
               search,
             }),
           })
@@ -212,7 +215,9 @@ function ChartCard({
           ) : summaries.length === 0 ? (
             <EmptyChartState />
           ) : content ? (
-            <div className="text-sm leading-relaxed whitespace-pre-line">{content}</div>
+            <div className="text-sm leading-relaxed whitespace-pre-line">
+              {content}
+            </div>
           ) : (
             <EmptyChartState />
           )}
@@ -682,18 +687,28 @@ function ChartCard({
                       <ChartTooltipContent
                         labelKey="name"
                         nameKey="name"
-                        formatter={(val, name, _item, _idx, payload) => (
-                          <span className="flex w-full items-center justify-between gap-2">
-                            <span className="text-muted-foreground max-w-[160px] truncate">
-                              <span title={String(payload?.name ?? name)}>
-                                {String(payload?.name ?? name)}
+                        formatter={(val, name, _item, _idx, payload) => {
+                          const payloadName = Array.isArray(payload)
+                            ? payload[0]?.name
+                            : typeof payload === "object" && payload !== null
+                              ? (payload as { name?: unknown }).name
+                              : undefined
+                          const labelValue =
+                            typeof payloadName === "string"
+                              ? payloadName
+                              : String(name)
+
+                          return (
+                            <span className="flex w-full items-center justify-between gap-2">
+                              <span className="text-muted-foreground max-w-[160px] truncate">
+                                <span title={labelValue}>{labelValue}</span>
+                              </span>
+                              <span className="font-mono font-medium tabular-nums">
+                                {formatVal(Number(val))}
                               </span>
                             </span>
-                            <span className="font-mono font-medium tabular-nums">
-                              {formatVal(Number(val))}
-                            </span>
-                          </span>
-                        )}
+                          )
+                        }}
                       />
                     }
                   />
@@ -845,18 +860,28 @@ function ChartCard({
                         <ChartTooltipContent
                           labelKey="name"
                           nameKey="name"
-                          formatter={(val, name, _item, _idx, payload) => (
-                            <span className="flex w-full items-center justify-between gap-2">
-                              <span className="text-muted-foreground max-w-[160px] truncate">
-                                <span title={String(payload?.name ?? name)}>
-                                  {String(payload?.name ?? name)}
+                          formatter={(val, name, _item, _idx, payload) => {
+                            const payloadName = Array.isArray(payload)
+                              ? payload[0]?.name
+                              : typeof payload === "object" && payload !== null
+                                ? (payload as { name?: unknown }).name
+                                : undefined
+                            const labelValue =
+                              typeof payloadName === "string"
+                                ? payloadName
+                                : String(name)
+
+                            return (
+                              <span className="flex w-full items-center justify-between gap-2">
+                                <span className="text-muted-foreground max-w-[160px] truncate">
+                                  <span title={labelValue}>{labelValue}</span>
+                                </span>
+                                <span className="font-mono font-medium tabular-nums">
+                                  {Number(val).toLocaleString()} Responses
                                 </span>
                               </span>
-                              <span className="font-mono font-medium tabular-nums">
-                                {Number(val).toLocaleString()} Responses
-                              </span>
-                            </span>
-                          )}
+                            )
+                          }}
                         />
                       }
                     />
@@ -927,18 +952,28 @@ function ChartCard({
                     <ChartTooltipContent
                       labelKey="name"
                       nameKey="name"
-                      formatter={(val, name, _item, _idx, payload) => (
-                        <span className="flex w-full items-center justify-between gap-2">
-                          <span className="text-muted-foreground max-w-[160px] truncate">
-                            <span title={String(payload?.name ?? name)}>
-                              {String(payload?.name ?? name)}
+                      formatter={(val, name, _item, _idx, payload) => {
+                        const payloadName = Array.isArray(payload)
+                          ? payload[0]?.name
+                          : typeof payload === "object" && payload !== null
+                            ? (payload as { name?: unknown }).name
+                            : undefined
+                        const labelValue =
+                          typeof payloadName === "string"
+                            ? payloadName
+                            : String(name)
+
+                        return (
+                          <span className="flex w-full items-center justify-between gap-2">
+                            <span className="text-muted-foreground max-w-[160px] truncate">
+                              <span title={labelValue}>{labelValue}</span>
+                            </span>
+                            <span className="font-mono font-medium tabular-nums">
+                              {Number(val).toLocaleString()} Responses
                             </span>
                           </span>
-                          <span className="font-mono font-medium tabular-nums">
-                            {Number(val).toLocaleString()} Responses
-                          </span>
-                        </span>
-                      )}
+                        )
+                      }}
                     />
                   }
                 />

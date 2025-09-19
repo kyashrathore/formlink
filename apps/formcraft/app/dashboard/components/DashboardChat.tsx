@@ -15,11 +15,11 @@ interface DashboardChatProps {
 }
 
 const suggestions = [
-  "Quick contact form (Name, Email)?",
-  "Survey: 'Coffee vs Tea' poll",
-  "Fun quiz: 3 quick questions!",
-  "Event registration with RSVP",
-  "Customer feedback form",
+  "Lead gen form for a marketing agency",
+  "Anonymous employee satisfaction survey",
+  "Feedback form for a food delivery app",
+  "Diwali party registration form",
+  "Market research for eco-friendly products",
 ]
 
 function Chat({

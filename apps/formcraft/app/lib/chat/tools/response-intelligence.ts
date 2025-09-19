@@ -1,7 +1,7 @@
 import { getModel } from "@/app/lib/ai/provider"
 import { repairJSON } from "@/app/lib/ai/repair"
 import logger from "@/app/lib/logger"
-import { RIPlanResponseSchema } from "@/app/lib/ri/types"
+import { RIPlanResponseSchema, type RIPlanResponse } from "@/app/lib/ri/types"
 import { generateObject, generateText, tool } from "ai"
 import { z } from "zod"
 import { TOOL_DESCRIPTIONS } from "../prompts"
@@ -175,7 +175,7 @@ export function responseIntelligenceTool(context: ChatToolContext) {
 
       // Generate object directly against schema, then sanitize/repair if needed
       try {
-        const MODEL = getModel("google/gemini-2.5-pro", "openrouter")
+        const MODEL = getModel("gpt-5", "openrouter")
         const input = {
           formId,
           formVersionId,
@@ -265,11 +265,16 @@ export function responseIntelligenceTool(context: ChatToolContext) {
           preInsightTypes: preSpecs.map((x: any) => x?.type).slice(0, 12),
           preInsights: preSpecs,
         })
-        // Manual sanitize of obvious schema violations before validation
-        candidate = sanitizeRIPlan(candidate)
+        // Skip sanitization so we can inspect raw model output
+        // candidate = sanitizeRIPlan(candidate)
         let planObj = candidate
         const parsed = RIPlanResponseSchema.safeParse(planObj)
         if (!parsed.success) {
+          logger.warn("[RI] Initial schema validation failed", {
+            issues: parsed.error.issues.map(
+              (issue) => issue.path.join(".") + ": " + issue.message
+            ),
+          })
           // Try deterministic auto-fixes based on Zod issues
           logger.warn("[RI] Schema validation failed; applying auto-fix", {
             issueCount: parsed.error.issues.length,
@@ -369,138 +374,6 @@ export function responseIntelligenceTool(context: ChatToolContext) {
   })
 }
 
-function sanitizeRIPlan(obj: any) {
-  try {
-    if (!obj || typeof obj !== "object") return obj
-    // Ensure top-level defaults when missing/incorrect
-    if (!obj.plan) obj.plan = {}
-    if (!obj.plan.rpc) obj.plan.rpc = {}
-    if (!obj.plan.ui) obj.plan.ui = {}
-    if (!Array.isArray(obj.plan.ui.columns)) {
-      obj.plan.ui.columns = ["created_at", "status"]
-    }
-    if (obj.plan?.rpc?.page_size != null) {
-      const n = Number(obj.plan.rpc.page_size)
-      if (Number.isFinite(n)) {
-        obj.plan.rpc.page_size = Math.max(1, Math.min(200, Math.trunc(n)))
-      } else {
-        delete obj.plan.rpc.page_size
-      }
-    }
-
-    const specs = obj?.plan?.ui?.insights_spec
-    if (Array.isArray(specs)) {
-      for (const item of specs) {
-        const t = String(item?.type || "")
-        const args = (item as any).args || {}
-        if (!item || typeof item !== "object") continue
-
-        // Remove unrecognized keys according to each type
-        const allow = (keys: string[]) => {
-          for (const k of Object.keys(args)) {
-            if (!keys.includes(k)) delete args[k]
-          }
-        }
-
-        if (t === "count") {
-          allow(["label", "title", "description", "layout", "layout_variant"]) // drop others
-          // Default count to small if not specified or invalid
-          if (!args.layout_variant || !["small", "medium", "large"].includes(String(args.layout_variant).toLowerCase())) {
-            args.layout_variant = "small"
-          }
-        } else if (t === "text" || t === "summary") {
-          allow(["title", "description", "content", "layout", "layout_variant"]) // drop others
-        } else if (t === "trend") {
-          allow([
-            "field",
-            "window",
-            "by",
-            "chart",
-            "title",
-            "description",
-            "layout",
-            "layout_variant",
-            "composite",
-            "comparison",
-            "segmentation",
-            "thresholds",
-            "correlation",
-          ])
-          // Coerce types & values
-          if (
-            args.field &&
-            !["created_at", "completed_at"].includes(String(args.field))
-          )
-            delete args.field // let schema default handle
-          if (typeof args.window === "string") {
-            if (!/^\d+(d|w|m)$/i.test(args.window)) delete args.window
-          } else if (args.window != null) delete args.window
-          if (args.chart && !["line", "area", "bar"].includes(args.chart))
-            delete args.chart
-        } else if (t === "breakdown") {
-          allow([
-            "field",
-            "by",
-            "topN",
-            "stacked",
-            "chart",
-            "title",
-            "description",
-            "layout",
-            "layout_variant",
-            "composite",
-            "comparison",
-            "segmentation",
-            "thresholds",
-            "correlation",
-          ])
-          if (args.topN != null) {
-            const n = Number(args.topN)
-            if (Number.isFinite(n))
-              args.topN = Math.max(1, Math.min(20, Math.trunc(n)))
-            else delete args.topN
-          }
-          if (typeof args.stacked !== "boolean") {
-            if (String(args.stacked).toLowerCase() === "true") args.stacked = true
-            else if (String(args.stacked).toLowerCase() === "false")
-              args.stacked = false
-            else delete args.stacked
-          }
-          if (args.chart && !["bar", "pie"].includes(args.chart)) delete args.chart
-        } else if (t === "metric") {
-          allow([
-            "field",
-            "agg",
-            "by",
-            "format",
-            "title",
-            "description",
-            "layout",
-            "layout_variant",
-            "composite",
-            "comparison",
-            "segmentation",
-            "thresholds",
-            "correlation",
-          ])
-          if (args.agg && !["avg", "sum", "min", "max", "median"].includes(args.agg))
-            args.agg = "avg"
-          if (args.format && !["number", "currency"].includes(args.format))
-            args.format = "number"
-        }
-        // Coerce/validate layout_variant if present
-        if (args.layout_variant != null) {
-          const lv = String(args.layout_variant).toLowerCase()
-          if (["small", "medium", "large"].includes(lv)) args.layout_variant = lv
-          else delete args.layout_variant
-        }
-        ;(item as any).args = args
-      }
-    }
-  } catch {}
-  return obj
-}
-
 function extractFirstJSONObject(input: string): string | null {
   const start = input.indexOf("{")
   if (start < 0) return null
@@ -534,7 +407,8 @@ function autoFixRIPlan(obj: any, error: z.ZodError) {
   const delAtPath = (root: any, path: (string | number)[]) => {
     if (!path.length) return
     const parent = getAtPath(root, path.slice(0, -1))
-    if (parent && typeof parent === "object") delete parent[path[path.length - 1] as any]
+    if (parent && typeof parent === "object")
+      delete parent[path[path.length - 1] as any]
   }
 
   for (const issue of error.issues) {
@@ -575,7 +449,11 @@ function autoFixRIPlan(obj: any, error: z.ZodError) {
           if (cur == null) setAtPath(clone, path, "")
           else setAtPath(clone, path, String(cur))
         } else if (expected === "array") {
-          setAtPath(clone, path, Array.isArray(cur) ? cur : cur != null ? [cur] : [])
+          setAtPath(
+            clone,
+            path,
+            Array.isArray(cur) ? cur : cur != null ? [cur] : []
+          )
         } else if (expected === "object") {
           setAtPath(clone, path, typeof cur === "object" && cur ? cur : {})
         } else {
@@ -619,7 +497,7 @@ function autoFixRIPlan(obj: any, error: z.ZodError) {
     }
   }
 
-  return sanitizeRIPlan(clone)
+  return clone
 }
 
 async function repairRIPlanWithAI(data: unknown, error: z.ZodError) {

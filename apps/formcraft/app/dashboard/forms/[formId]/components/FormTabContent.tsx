@@ -16,14 +16,23 @@ const mockUser = {
 
 export default function FormTabContent() {
   const { form: initialForm, isLoading } = useFormEditorStore()
-  const { currentForm, isFormGenerating } = useFormGenerationStore()
+  const { currentForm, isFormGenerating, questionProgress } =
+    useFormGenerationStore()
   const form = currentForm || initialForm
+  const hasStreamingForm = !!(form?.questions && form.questions.length > 0)
+  const desiredSkeletonCount = Math.max(
+    questionProgress.total || 0,
+    form?.questions?.length || 0,
+    3
+  )
+  const shouldShowSkeleton =
+    isLoading || (isFormGenerating && !hasStreamingForm)
 
-  if (isLoading || isFormGenerating) {
+  if (shouldShowSkeleton) {
     return (
       <div className="bg-background flex h-full flex-col space-y-4 overflow-auto p-4">
         <MetadataShimmer />
-        <QuestionsShimmer count={3} />
+        <QuestionsShimmer count={desiredSkeletonCount} />
       </div>
     )
   }
@@ -55,9 +64,6 @@ export default function FormTabContent() {
       </div>
     )
   }
-
-  const hasFormContent = form.questions && form.questions.length > 0
-
   return (
     <div className="bg-background flex h-full flex-col overflow-auto">
       <div className="relative flex-1">

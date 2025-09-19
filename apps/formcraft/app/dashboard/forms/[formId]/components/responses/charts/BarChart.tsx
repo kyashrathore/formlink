@@ -1,23 +1,5 @@
-"use client";
+"use client"
 
-import React from "react";
-import { TrendingUp } from "lucide-react";
-import {
-  Bar,
-  BarChart as RechartsBarChart,
-  CartesianGrid,
-  Cell,
-  LabelList,
-  Rectangle,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@formlink/ui/ui/chart";
 import {
   Card,
   CardContent,
@@ -25,24 +7,43 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@formlink/ui/ui/card";
+} from "@formlink/ui/ui/card"
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@formlink/ui/ui/chart"
+import { TrendingUp } from "lucide-react"
+import React from "react"
+import {
+  Bar,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  BarChart as RechartsBarChart,
+  Rectangle,
+  XAxis,
+  YAxis,
+} from "recharts"
+
 interface BarChartProps {
-  chartData: any[];
-  chartConfig: ChartConfig;
-  title: string;
-  description: string;
-  footerText?: string;
-  dataKeys: string[];
-  xAxisDataKey: string;
-  layout?: "horizontal" | "vertical";
-  showLabel?: boolean;
-  radius?: number;
-  interactive?: boolean;
-  activeKey?: string;
-  onActiveChange?: (key: string) => void;
-  mixed?: boolean;
-  activeBar?: boolean;
-  negative?: boolean;
+  chartData: any[]
+  chartConfig: ChartConfig
+  title: string
+  description: string
+  footerText?: string
+  dataKeys: string[]
+  xAxisDataKey: string
+  layout?: "horizontal" | "vertical"
+  showLabel?: boolean
+  radius?: number
+  interactive?: boolean
+  activeKey?: string
+  onActiveChange?: (key: string) => void
+  mixed?: boolean
+  activeBar?: boolean
+  negative?: boolean
 }
 /**
  * A versatile bar chart component that wraps Recharts BarChart.
@@ -123,15 +124,18 @@ export function BarChartWrapper({
   activeBar = false,
   negative = false,
 }: BarChartProps) {
-  const isVertical = layout === "vertical";
+  const isVertical = layout === "vertical"
   const total = React.useMemo(
     () =>
-      dataKeys.reduce((acc, key) => {
-        acc[key] = chartData.reduce((total, item) => total + item[key], 0);
-        return acc;
-      }, {} as { [key: string]: number }),
+      dataKeys.reduce(
+        (acc, key) => {
+          acc[key] = chartData.reduce((total, item) => total + item[key], 0)
+          return acc
+        },
+        {} as { [key: string]: number }
+      ),
     [chartData, dataKeys]
-  );
+  )
   return (
     <Card>
       <CardHeader>
@@ -150,7 +154,7 @@ export function BarChartWrapper({
                   {chartConfig[key]?.label}
                 </span>
                 <span className="text-lg leading-none font-bold sm:text-3xl">
-                  {total[key].toLocaleString()}
+                  {(total[key] ?? 0).toLocaleString()}
                 </span>
               </button>
             ))}
@@ -165,10 +169,7 @@ export function BarChartWrapper({
             layout={layout}
             margin={isVertical ? { right: 16 } : { top: 20 }}
           >
-            <CartesianGrid
-              vertical={!isVertical}
-              horizontal={isVertical}
-            />
+            <CartesianGrid vertical={!isVertical} horizontal={isVertical} />
             {isVertical ? (
               <YAxis
                 dataKey={xAxisDataKey}
@@ -243,9 +244,7 @@ export function BarChartWrapper({
                         <Cell
                           key={entry[xAxisDataKey]}
                           fill={
-                            entry[key] > 0
-                              ? "var(--chart-1)"
-                              : "var(--chart-2)"
+                            entry[key] > 0 ? "var(--chart-1)" : "var(--chart-2)"
                           }
                         />
                       ))}
@@ -264,5 +263,5 @@ export function BarChartWrapper({
       </CardContent>
       {/* Footer removed per UX guidance */}
     </Card>
-  );
+  )
 }

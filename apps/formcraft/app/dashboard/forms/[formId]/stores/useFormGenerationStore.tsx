@@ -80,25 +80,33 @@ const formGenerationStore: StateCreator<
 
   initializeConnection: (formId) => {
     set((state) => {
-      if (
+      const isNewFormSession =
         (state.formId && state.formId !== formId) ||
         (state.currentForm && state.currentForm.id !== formId)
-      ) {
-        const newState = {
-          ...state,
-          formId,
-          connectionStatus: "connecting",
-          agentStreamConnectionStatus: "requested",
-        }
-        return newState
+
+      if (isNewFormSession) {
+        state.currentForm = null
+        state.agentState = null
+        state.eventsLog = []
+        state.progress = null
+        state.errorDetails = null
+        state.lastSystemEvent = null
+        state.totalTaskCount = null
+        state.completedTaskCount = 0
+        state.questionTaskCount = null
+        state.generatedQuestions = []
+        state.formMetadata = null
+        state.isFormGenerating = false
+        state.questionProgress = { current: 0, total: 0 }
+        state.hasFormMetadata = false
+        state.hasFormJourney = false
+        state.showQuestionsSection = false
+        state.loadingPhase = "metadata"
       }
 
-      return {
-        ...state,
-        formId,
-        connectionStatus: "connecting",
-        agentStreamConnectionStatus: "requested",
-      }
+      state.formId = formId
+      ;(state as any).connectionStatus = "connecting"
+      ;(state as any).agentStreamConnectionStatus = "requested"
     })
   },
 

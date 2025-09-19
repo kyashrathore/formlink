@@ -446,6 +446,27 @@ export type Database = {
           },
         ];
       };
+      ri_ai_cache: {
+        Row: {
+          id: string;
+          meta: Json;
+          updated_at: string;
+          value: Json;
+        };
+        Insert: {
+          id: string;
+          meta?: Json;
+          updated_at?: string;
+          value?: Json;
+        };
+        Update: {
+          id?: string;
+          meta?: Json;
+          updated_at?: string;
+          value?: Json;
+        };
+        Relationships: [];
+      };
       subscription_logs: {
         Row: {
           action: string;

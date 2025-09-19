@@ -1,20 +1,5 @@
-"use client";
+"use client"
 
-import React from "react";
-import { TrendingUp } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart as RechartsLineChart,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@formlink/ui/ui/chart";
 import {
   Card,
   CardContent,
@@ -22,21 +7,38 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@formlink/ui/ui/card";
+} from "@formlink/ui/ui/card"
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@formlink/ui/ui/chart"
+import { TrendingUp } from "lucide-react"
+import React from "react"
+import {
+  CartesianGrid,
+  Line,
+  LineChart as RechartsLineChart,
+  XAxis,
+  YAxis,
+} from "recharts"
+import type { LineProps } from "recharts"
+
 interface LineChartProps {
-  chartData: any[];
-  chartConfig: ChartConfig;
-  title: string;
-  description: string;
-  footerText?: string;
-  dataKeys: string[];
-  xAxisDataKey: string;
-  type?: "natural" | "linear" | "step";
-  showDots?: boolean;
-  interactive?: boolean;
-  activeKey?: string;
-  onActiveChange?: (key: string) => void;
-  customDot?: (props: any) => React.ReactNode;
+  chartData: any[]
+  chartConfig: ChartConfig
+  title: string
+  description: string
+  footerText?: string
+  dataKeys: string[]
+  xAxisDataKey: string
+  type?: "natural" | "linear" | "step"
+  showDots?: boolean
+  interactive?: boolean
+  activeKey?: string
+  onActiveChange?: (key: string) => void
+  customDot?: LineProps["dot"]
 }
 /**
  * A versatile line chart component that wraps Recharts LineChart.
@@ -104,12 +106,15 @@ export function LineChartWrapper({
 }: LineChartProps) {
   const total = React.useMemo(
     () =>
-      dataKeys.reduce((acc, key) => {
-        acc[key] = chartData.reduce((total, item) => total + item[key], 0);
-        return acc;
-      }, {} as { [key: string]: number }),
+      dataKeys.reduce(
+        (acc, key) => {
+          acc[key] = chartData.reduce((total, item) => total + item[key], 0)
+          return acc
+        },
+        {} as { [key: string]: number }
+      ),
     [chartData, dataKeys]
-  );
+  )
   return (
     <Card>
       <CardHeader>
@@ -128,7 +133,7 @@ export function LineChartWrapper({
                   {chartConfig[key]?.label}
                 </span>
                 <span className="text-lg leading-none font-bold sm:text-3xl">
-                  {total[key].toLocaleString()}
+                  {(total[key] ?? 0).toLocaleString()}
                 </span>
               </button>
             ))}
@@ -170,7 +175,7 @@ export function LineChartWrapper({
                       type={type}
                       stroke={`var(--color-${key})`}
                       strokeWidth={2}
-                      dot={showDots ? customDot || true : false}
+                      dot={customDot ?? (showDots ? true : false)}
                     />
                   ))
               : dataKeys.map((key) => (
@@ -180,7 +185,7 @@ export function LineChartWrapper({
                     type={type}
                     stroke={`var(--color-${key})`}
                     strokeWidth={2}
-                    dot={showDots ? customDot || true : false}
+                    dot={customDot ?? (showDots ? true : false)}
                   />
                 ))}
           </RechartsLineChart>
@@ -188,5 +193,5 @@ export function LineChartWrapper({
       </CardContent>
       {/* Footer removed per UX guidance */}
     </Card>
-  );
+  )
 }

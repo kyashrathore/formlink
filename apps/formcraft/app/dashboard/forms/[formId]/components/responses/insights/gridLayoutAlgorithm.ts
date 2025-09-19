@@ -47,9 +47,13 @@ export const generateGridLayout = (items: InsightItem[]): GridLayout => {
   const largeItems = items.filter((item) => item.variant === "large")
 
   // Normalize small cards into stacks of two, padding with placeholders if needed
-  const smallCardStacks: Array<
+  type QueueItem =
+    | { type: "large"; width: number; items: InsightItem[] }
+    | { type: "medium"; width: number; items: InsightItem[] }
     | { type: "small-stack"; width: number; items: InsightItem[] }
-  > = []
+    | { type: "small-single"; width: number; items: InsightItem[] }
+
+  const smallCardStacks: Array<Extract<QueueItem, { type: "small-stack" }>> = []
   let placeholderCount = 0
   for (let i = 0; i < smallItems.length; i += 2) {
     const stackItems: InsightItem[] = [smallItems[i] as InsightItem]
@@ -69,11 +73,7 @@ export const generateGridLayout = (items: InsightItem[]): GridLayout => {
   }
 
   // Pack larger items first for a more optimal layout
-  const itemQueue: Array<
-    | { type: "large"; width: number; items: InsightItem[] }
-    | { type: "medium"; width: number; items: InsightItem[] }
-    | { type: "small-stack"; width: number; items: InsightItem[] }
-  > = [
+  const itemQueue: QueueItem[] = [
     ...largeItems.map((item) => ({
       type: "large" as const,
       width: 6,
@@ -88,11 +88,12 @@ export const generateGridLayout = (items: InsightItem[]): GridLayout => {
   ]
 
   // Greedy row packing into 12 columns
-  const layoutRows: (typeof itemQueue)[] = []
-  type QItem = (typeof itemQueue)[number]
-  const expandRowToFill = (row: QItem[], remainingSpace: number) => {
+  const layoutRows: QueueItem[][] = []
+  const expandRowToFill = (row: QueueItem[], remainingSpace: number) => {
     if (remainingSpace <= 0 || row.length === 0) return
-    const smalls = row.filter((r) => r.type === 'small-stack')
+    const smalls = row.filter(
+      (r) => r.type === "small-stack" || r.type === "small-single"
+    )
     if (smalls.length > 0) {
       const base = Math.floor(remainingSpace / smalls.length)
       let extra = remainingSpace % smalls.length
@@ -115,7 +116,7 @@ export const generateGridLayout = (items: InsightItem[]): GridLayout => {
     } else {
       const remainingSpace = 12 - currentRowWidth
       if (remainingSpace > 0 && currentRow.length > 0) {
-        expandRowToFill(currentRow as QItem[], remainingSpace)
+        expandRowToFill(currentRow, remainingSpace)
       }
       layoutRows.push(currentRow)
       currentRow = [qItem]
@@ -126,7 +127,7 @@ export const generateGridLayout = (items: InsightItem[]): GridLayout => {
   if (currentRow.length > 0) {
     const remainingSpace = 12 - currentRowWidth
     if (remainingSpace > 0) {
-      expandRowToFill(currentRow as QItem[], remainingSpace)
+      expandRowToFill(currentRow, remainingSpace)
     }
     layoutRows.push(currentRow)
   }
@@ -134,15 +135,17 @@ export const generateGridLayout = (items: InsightItem[]): GridLayout => {
   // If a row has exactly one small-stack whose second item is a placeholder, convert it to a small-single (no placeholder)
   for (let r = 0; r < layoutRows.length; r++) {
     const row = layoutRows[r]!
-    if (row.length === 1 && row[0]!.type === 'small-stack') {
-      const ss = row[0] as any
-      const hasPlaceholder = (ss.items || []).some((it: InsightItem) => it?.type === 'placeholder')
+    if (row.length === 1 && row[0]!.type === "small-stack") {
+      const ss = row[0]!
+      const hasPlaceholder = ss.items.some(
+        (it) => (it as InsightItem)?.type === "placeholder"
+      )
       if (hasPlaceholder) {
-        const real = (ss.items as InsightItem[]).find((it) => it?.type !== 'placeholder')
+        const real = ss.items.find(
+          (it) => (it as InsightItem)?.type !== "placeholder"
+        ) as InsightItem | undefined
         if (real) {
-          row[0] = { type: 'small-stack', width: ss.width, items: [real] } as any
-          // we will render it as a single half-height by using the small-single branch below
-          ;(row[0] as any).type = 'small-single'
+          row[0] = { type: "small-single", width: ss.width, items: [real] }
         }
       }
     }

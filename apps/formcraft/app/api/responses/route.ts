@@ -198,23 +198,21 @@ export async function GET(request: NextRequest) {
         .map((q) => (q as { id: string }).id)
 
       // Build id -> human label map
-      questionLabelMap = questionsArr.reduce(
-        (acc, q) => {
-          if (
-            q &&
-            typeof q === "object" &&
-            q !== null &&
-            "id" in q &&
-            typeof (q as any).id === "string"
-          ) {
-            const id = (q as any).id as string
-            const title = (q as any).title || (q as any).label || id
-            acc[id] = String(title)
-          }
-          return acc
-        },
-        {} as Record<string, string>
-      )
+      const labelMap: Record<string, string> = {}
+      for (const q of questionsArr) {
+        if (
+          q &&
+          typeof q === "object" &&
+          q !== null &&
+          "id" in q &&
+          typeof (q as any).id === "string"
+        ) {
+          const id = (q as any).id as string
+          const title = (q as any).title || (q as any).label || id
+          labelMap[id] = String(title)
+        }
+      }
+      questionLabelMap = labelMap
     }
 
     const allowedSubmissionFilters = [

@@ -42,7 +42,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const editorForm = useFormEditorStore((s) => s.form)
   const generationForm = useFormGenerationStore((s) => s.currentForm)
   const { activeMainTab } = usePanelState()
-  const addOrUpdateFromPlan = useResponseViewsStore((s) => s.addOrUpdateFromPlan)
+  const addOrUpdateFromPlan = useResponseViewsStore(
+    (s) => s.addOrUpdateFromPlan
+  )
 
   // All refs together
   const eventHandlerRef = useRef<FormGenerationEventHandler | null>(null)
@@ -57,9 +59,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   type RISuggestion = { label: string; message: string }
   const [riSuggestions, setRiSuggestions] = useState<RISuggestion[]>([])
   const responseViewsStore = useResponseViewsStore()
-  const [riPlanPreview, setRiPlanPreview] = useState<RIPlanResponse | null>(
-    null
-  )
+  const [responsePlanSuggestions, setResponsePlanSuggestions] = useState<
+    string[]
+  >([])
+  const [responsePlanSuggestionsLoading, setResponsePlanSuggestionsLoading] =
+    useState(false)
+  const [responsePlanSuggestionsError, setResponsePlanSuggestionsError] =
+    useState<string | null>(null)
+  const suggestionSignatureRef = useRef<string | null>(null)
 
   // All queries and hooks together
   const chatHistoryQuery = useChatHistoryQuery(formId, Boolean(formId))
@@ -97,10 +104,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           // Intercept Response Intelligence plan events (not part of standard AgentEvent union)
           if (raw?.type === "response_intelligence_plan" && raw?.plan) {
             try {
-              applyRIPlanToUI(raw.plan, editorForm || generationForm)
+              const plan = raw.plan as RIPlanResponse
+              applyRIPlanToUI(plan, editorForm || generationForm)
               // Create/activate ephemeral view for this plan
-              addOrUpdateFromPlan(raw.plan, editorForm || generationForm)
-              const followups = raw?.plan?.plan?.meta?.followups
+              addOrUpdateFromPlan(plan, editorForm || generationForm, formId)
+              const followups = plan?.plan?.meta?.followups
               if (Array.isArray(followups) && followups.length) {
                 const items: RISuggestion[] = followups.map((f: any) => {
                   if (typeof f === "string") {
@@ -133,7 +141,30 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                 })
                 setRiSuggestions(items)
               }
-              setRiPlanPreview(raw.plan)
+              const correlationId =
+                plan.correlationId ||
+                plan.plan?.meta?.view_name ||
+                `plan-${Date.now()}`
+              const messageId = `ri-plan-${correlationId}`
+
+              setMessages((prev) => {
+                const planPart = { type: "ri-plan", plan }
+                const exists = prev.some((m) => m.id === messageId)
+                if (exists) {
+                  return prev.map((m) =>
+                    m.id === messageId ? { ...m, parts: [planPart] } : m
+                  )
+                }
+                return [
+                  ...prev,
+                  {
+                    id: messageId,
+                    role: "assistant",
+                    content: "",
+                    parts: [planPart],
+                  } as any,
+                ]
+              })
               // Optionally switch to Responses tab
               if (activeMainTab !== "responses") {
                 // defer switch; avoid importing setter to keep minimal changes
@@ -187,6 +218,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     "Event sign-up form (easy RSVP)",
     "Need a job form? (CV upload ready)",
   ]
+
+  const fallbackResponsePrompts = [
+    "Show a view of incomplete responses this week",
+    "Compare submissions by source channel",
+    "Highlight responses requiring manual follow-up",
+  ]
+
+  const responsePlanPromptIntro =
+    "Ask for smart views, applied filters, or charts to explore your submissions."
 
   useEffect(() => {
     if (initialMessage && initialMessage !== storedInitialMessage) {
@@ -258,6 +298,79 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     formId,
     setInitialPrompt,
   ])
+
+  const isResponsesTab = activeMainTab === "responses"
+
+  useEffect(() => {
+    if (!isResponsesTab) {
+      setResponsePlanSuggestionsLoading(false)
+      return
+    }
+
+    const form = editorForm || generationForm
+    if (!form) {
+      setResponsePlanSuggestions([])
+      setResponsePlanSuggestionsError(null)
+      return
+    }
+
+    const questionSignature = Array.isArray(form.questions)
+      ? form.questions.map((q: any) => q?.id || q?.title || "").join("|")
+      : ""
+    const signature = `${form.id || "no-form"}|${questionSignature}`
+    if (suggestionSignatureRef.current === signature) {
+      return
+    }
+    suggestionSignatureRef.current = signature
+
+    setResponsePlanSuggestionsLoading(true)
+    setResponsePlanSuggestionsError(null)
+
+    const controller = new AbortController()
+
+    const payload = {
+      operationType: "response-plan-suggestions" as const,
+      prompt: `Provide several short prompt ideas to analyze responses for the form titled "${
+        form.title || "Untitled Form"
+      }". Focus on filters, segments, comparisons, and insights.`,
+      form_details: {
+        title: form.title || "",
+        description: form.description || "",
+        questions: form.questions || [],
+      },
+    }
+
+    fetch("/api/ai", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        const json = await res.json()
+        if (res.ok && !json.error && Array.isArray(json.data?.suggestions)) {
+          setResponsePlanSuggestions(json.data.suggestions)
+        } else {
+          throw new Error(json.message || "Failed to generate suggestions")
+        }
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return
+        console.error("Failed to load response plan suggestions", error)
+        setResponsePlanSuggestions([])
+        setResponsePlanSuggestionsError(
+          "Unable to generate response suggestions right now."
+        )
+        suggestionSignatureRef.current = null
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setResponsePlanSuggestionsLoading(false)
+        }
+      })
+
+    return () => controller.abort()
+  }, [isResponsesTab, editorForm, generationForm])
 
   const { formattedEventsForLogView } = useFormattedEvents(eventsLog)
 
@@ -342,10 +455,69 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const suggestionsVisible =
     !historyLoading &&
-    !formReady &&
     !storedInitialMessage &&
     !hasUserInteracted &&
-    chatMessages.length === 0
+    chatMessages.length === 0 &&
+    (isResponsesTab || !formReady)
+
+  const responseSuggestionsToShow = isResponsesTab
+    ? responsePlanSuggestions.length > 0
+      ? responsePlanSuggestions
+      : fallbackResponsePrompts
+    : initialFormPrompts
+
+  const renderPlanPreview = useCallback(
+    (plan: RIPlanResponse) => {
+      const currentForm = editorForm || generationForm
+      const currentFormId = currentForm?.id
+      const correlationId =
+        plan.correlationId || plan.plan?.meta?.view_name || ""
+
+      const matchingView = responseViewsStore.views.find((v) => {
+        if (correlationId) return v.correlationId === correlationId
+        if (!currentFormId) return false
+        const activeId =
+          responseViewsStore.activeViewIdMap[currentFormId] || "default"
+        return v.id === activeId && v.formId === currentFormId
+      })
+
+      const saved = Boolean(matchingView?.saved)
+      const canSave = Boolean(matchingView && !matchingView.saved)
+
+      const handleSave = () => {
+        if (!matchingView || matchingView.saved) return
+        useResponseViewsStore.setState((state) => {
+          const idx = state.views.findIndex((v) => v.id === matchingView.id)
+          if (idx === -1) return state
+          const existing = state.views[idx]
+          if (!existing) return state
+          const nextViews = [...state.views]
+          nextViews[idx] = { ...existing, saved: true }
+          return { views: nextViews }
+        })
+        try {
+          const { setActiveMainTab } = usePanelState.getState() as any
+          setActiveMainTab && setActiveMainTab("responses")
+        } catch (e) {
+          console.error(e)
+        }
+      }
+
+      return (
+        <RIPlanPreview
+          plan={plan}
+          saved={saved}
+          onSave={canSave ? handleSave : undefined}
+        />
+      )
+    },
+    [
+      editorForm,
+      generationForm,
+      responseViewsStore.views,
+      responseViewsStore.activeViewIdMap,
+    ]
+  )
 
   const lastAssistantMessage = chatMessages.find(
     (m) => m.role === "assistant" && Array.isArray(m.parts)
@@ -373,31 +545,66 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                     : "ready"
             }
             displaySummaryMessage={displaySummaryMessage}
+            renderPlanPreview={renderPlanPreview}
           />
         ) : suggestionsVisible ? (
-          <div className="p-8 text-center">
-            <div className="text-muted-foreground mb-6">
-              <div className="mb-2 text-lg font-medium">
-                Start a conversation
+          <div className="flex h-full items-center justify-center p-8 text-center">
+            <div className="flex w-full max-w-md flex-col items-center gap-3">
+              <div className="text-muted-foreground">
+                <div className="mb-2 text-lg font-medium">
+                  Start a conversation
+                </div>
+                <div className="text-sm">
+                  Choose a suggestion below or ask me anything about forms
+                </div>
               </div>
-              <div className="text-sm">
-                Choose a suggestion below or ask me anything about forms
-              </div>
-            </div>
 
-            <div className="mx-auto flex max-w-md flex-wrap justify-center gap-2">
-              {initialFormPrompts.map((prompt, index) => (
-                <PromptSuggestion
-                  key={index}
-                  onClick={() => handleSuggestionClick(prompt)}
-                  variant="outline"
-                  size="sm"
-                  className="text-sm"
-                  highlight=""
-                >
-                  {prompt}
-                </PromptSuggestion>
-              ))}
+              <div className="flex w-full flex-col gap-2">
+                {isResponsesTab && (
+                  <PromptSuggestion
+                    variant="ghost"
+                    size="sm"
+                    disabled
+                    className="border-primary/20 bg-primary/5 w-full cursor-default items-start justify-start gap-1 rounded-xl border px-4 py-3 text-left"
+                  >
+                    <span className="text-primary text-sm font-semibold">
+                      Explore Response Intelligence
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {responsePlanPromptIntro}
+                    </span>
+                  </PromptSuggestion>
+                )}
+
+                {isResponsesTab && responsePlanSuggestionsLoading && (
+                  <div className="text-muted-foreground text-xs">
+                    Generating tailored suggestions…
+                  </div>
+                )}
+
+                {isResponsesTab && responsePlanSuggestionsError && (
+                  <div className="text-destructive text-xs">
+                    {responsePlanSuggestionsError}
+                  </div>
+                )}
+
+                {responseSuggestionsToShow.map((prompt, index) => (
+                  <PromptSuggestion
+                    key={`${prompt}-${index}`}
+                    onClick={() => handleSuggestionClick(prompt)}
+                    variant={isResponsesTab ? "ghost" : "outline"}
+                    size="sm"
+                    className={
+                      isResponsesTab
+                        ? "w-full justify-start text-left"
+                        : "text-sm"
+                    }
+                    highlight={isResponsesTab ? "view" : ""}
+                  >
+                    {prompt}
+                  </PromptSuggestion>
+                ))}
+              </div>
             </div>
           </div>
         ) : null}
@@ -424,58 +631,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {agentState?.status !== "FAILED" && (
         <div className="border-border bg-background flex-shrink-0 border-t p-4">
-          {riPlanPreview && (
-            <RIPlanPreview
-              plan={riPlanPreview}
-              saved={(() => {
-                const currentForm = editorForm || generationForm
-                const id = currentForm?.id
-                  ? responseViewsStore.activeViewIdMap[currentForm.id] || "default"
-                  : "default"
-                const v = responseViewsStore.views.find(
-                  (x) => x.id === id && (x.formId === currentForm?.id || x.id === "default")
-                )
-                return v?.saved
-              })()}
-              onSave={() => {
-                try {
-                  // mark saved
-                  const currentForm = editorForm || generationForm
-                  const id = currentForm?.id
-                    ? responseViewsStore.activeViewIdMap[currentForm.id] || "default"
-                    : "default"
-                  const v = responseViewsStore.views.find(
-                    (x) => x.id === id && (x.formId === currentForm?.id || x.id === "default")
-                  )
-                  if (v && !v.saved) {
-                    // saveActiveView modifies store in place (import at top-level creates cycles), so inline update
-                    v.saved = true
-                    useResponseViewsStore.setState({
-                      views: [...responseViewsStore.views],
-                    })
-                  }
-                } catch (e) {
-                  console.error(e)
-                }
-              }}
-              onOpenResponses={() => {
-                // Switch right panel tab to Responses
-                try {
-                  const { setActiveMainTab } = usePanelState.getState() as any
-                  setActiveMainTab && setActiveMainTab("responses")
-                } catch {}
-              }}
-              onCopyJson={() => {
-                try {
-                  navigator.clipboard.writeText(
-                    JSON.stringify(riPlanPreview, null, 2)
-                  )
-                } catch (e) {
-                  console.error(e)
-                }
-              }}
-            />
-          )}
           {riSuggestions.length > 0 && (
             <div className="mb-2">
               <Suggestions>
@@ -487,10 +642,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                       // Refine current in-flight view if one is active and unsaved
                       const currentForm = editorForm || generationForm
                       const activeId = currentForm?.id
-                        ? responseViewsStore.activeViewIdMap[currentForm.id] || "default"
+                        ? responseViewsStore.activeViewIdMap[currentForm.id] ||
+                          "default"
                         : "default"
                       const activeView = responseViewsStore.views.find(
-                        (v) => v.id === activeId && (v.formId === currentForm?.id || v.id === "default")
+                        (v) =>
+                          v.id === activeId &&
+                          (v.formId === currentForm?.id || v.id === "default")
                       )
                       const refineContext =
                         activeView &&
@@ -524,6 +682,38 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                         }
                       )
                     }}
+                  />
+                ))}
+              </Suggestions>
+            </div>
+          )}
+          {isResponsesTab && !suggestionsVisible && (
+            <div className="mb-2">
+              <div className="border-primary/30 bg-primary/10 mb-3 rounded-xl border px-4 py-3 shadow-sm">
+                <div className="text-primary text-sm font-semibold">
+                  Response intelligence starter
+                </div>
+                <div className="text-muted-foreground text-xs leading-snug">
+                  Explore the prompts below to segment results, compare groups,
+                  and surface key insights from your submissions.
+                </div>
+              </div>
+              {responsePlanSuggestionsLoading && (
+                <div className="text-muted-foreground text-xs">
+                  Generating tailored suggestions…
+                </div>
+              )}
+              {responsePlanSuggestionsError && (
+                <div className="text-destructive text-xs">
+                  {responsePlanSuggestionsError}
+                </div>
+              )}
+              <Suggestions>
+                {responseSuggestionsToShow.map((prompt, index) => (
+                  <Suggestion
+                    key={`${prompt}-${index}`}
+                    suggestion={prompt}
+                    onClick={handleSuggestionClick}
                   />
                 ))}
               </Suggestions>

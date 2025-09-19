@@ -1,5 +1,6 @@
 "use client"
 
+import type { RIPlanResponse } from "@/app/lib/ri/types"
 import {
   Conversation as AIConversation,
   ConversationContent,
@@ -15,6 +16,7 @@ import {
 } from "@formlink/ui/ai-elements"
 import { getToolName } from "ai"
 import { Loader2 } from "lucide-react"
+import type { ReactNode } from "react"
 import { cn } from "../../lib"
 import { useQuestionRenderer } from "./hooks/useQuestionRenderer"
 import type { ChatMessage } from "./types"
@@ -23,12 +25,14 @@ type ConversationProps = {
   messages: ChatMessage[]
   status?: "streaming" | "ready" | "submitted" | "error"
   displaySummaryMessage?: string
+  renderPlanPreview?: (plan: RIPlanResponse) => ReactNode
 }
 
 export function Conversation({
   messages,
   status = "ready",
   displaySummaryMessage = "",
+  renderPlanPreview,
 }: ConversationProps) {
   // Filter out hidden messages
   const visibleMessages = messages.filter((msg) => {
@@ -37,7 +41,7 @@ export function Conversation({
   })
 
   return (
-    <AIConversation className="relative flex h-[calc(75vh)] w-full overflow-x-hidden overflow-y-auto">
+    <AIConversation className="relative flex h-full w-full overflow-x-hidden overflow-y-auto">
       <ConversationContent className="flex w-full flex-col">
         {visibleMessages?.map((message, index) => {
           const isLast =
@@ -90,6 +94,30 @@ export function Conversation({
                           >
                             {part.text}
                           </Response>
+                        )
+                      }
+
+                      if (part.type === "ri-plan" && part.plan) {
+                        if (renderPlanPreview) {
+                          return (
+                            <div key={`part-${partIndex}`} className="my-3">
+                              {renderPlanPreview(part.plan as RIPlanResponse)}
+                            </div>
+                          )
+                        }
+                        return (
+                          <Tool
+                            key={`tool-${partIndex}`}
+                            state="output-available"
+                          >
+                            <ToolHeader
+                              type="response-plan"
+                              state="output-available"
+                            />
+                            <ToolContent>
+                              <ToolOutput output={part.plan} />
+                            </ToolContent>
+                          </Tool>
                         )
                       }
 

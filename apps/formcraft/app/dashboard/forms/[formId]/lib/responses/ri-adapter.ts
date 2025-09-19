@@ -53,20 +53,34 @@ export function applyRIPlanToUI(resp: RIPlanResponse, form: Form | null) {
 
   // Column visibility and order (best effort)
   if (form) {
-    const allKeys = deriveAllColumnKeys(form)
     const requested = new Set(plan.ui?.columns || [])
-    const columnVisibility = allKeys.reduce<Record<string, boolean>>(
-      (acc, key) => {
-        if (key === "select") acc[key] = true
-        else acc[key] = requested.size ? requested.has(key) : true
-        return acc
-      },
-      {}
-    )
-    // Order: select, requested columns, then the rest
-    const rest = allKeys.filter((k) => k !== "select" && !requested.has(k))
-    const order = ["select", ...Array.from(requested), ...rest]
-    store.setColumnVisibility(columnVisibility)
-    store.setColumnOrder(order)
+    if (requested.size > 0) {
+      store.setColumnVisibility((prev) => {
+        const next = { ...prev }
+        requested.forEach((key) => {
+          if (key) next[key] = true
+        })
+        return next
+      })
+
+      store.setColumnOrder((prev) => {
+        const baseOrder = prev.length ? [...prev] : deriveAllColumnKeys(form)
+        const existing = new Set(baseOrder)
+        let changed = false
+        requested.forEach((key) => {
+          if (!key) return
+          if (!existing.has(key)) {
+            baseOrder.push(key)
+            existing.add(key)
+            changed = true
+          }
+        })
+        return changed ? baseOrder : prev.length ? prev : baseOrder
+      })
+    } else {
+      store.setColumnOrder((prev) =>
+        prev.length ? prev : deriveAllColumnKeys(form)
+      )
+    }
   }
 }

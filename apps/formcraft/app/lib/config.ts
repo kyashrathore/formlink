@@ -25,6 +25,20 @@ export type Model = {
 
 export const MODELS = [
   {
+    id: "openai/gpt-5",
+    name: "GPT-5",
+    provider: "openai",
+    features: [
+      {
+        id: "file-upload",
+        enabled: true,
+      },
+    ],
+    api_sdk: openai("openai/gpt-5"),
+    icon: OpenAIIcon,
+    openRouterId: "openai/gpt-5",
+  },
+  {
     id: "openai/gpt-4.1",
     name: "GPT-4.1",
     provider: "openai",
@@ -38,16 +52,16 @@ export const MODELS = [
     icon: OpenAIIcon,
   },
   {
-    id: "google/gemini-2.5-pro-preview",
+    id: "google/gemini-2.5-pro",
     name: "Google Gemini 2.5 Pro",
     provider: "google",
     features: [],
     api_sdk: openai("gpt-4"),
-    openRouterId: "google/gemini-2.5-pro-preview",
+    openRouterId: "google/gemini-2.5-pro",
     icon: GeminiIcon,
   },
   {
-    id: "google/gemini-2.5-flash-preview-05-20",
+    id: "google/gemini-2.5-flash",
     name: "Google Gemini 2.5 Flash",
     provider: "google",
     features: [
@@ -57,16 +71,16 @@ export const MODELS = [
       },
     ],
     api_sdk: openai("gpt-4"),
-    openRouterId: "google/gemini-2.5-flash-preview-05-20",
+    openRouterId: "google/gemini-2.5-flash",
     icon: GeminiIcon,
   },
   {
-    id: "anthropic/claude-opus-4",
-    name: "Claude Opus 4",
+    id: "anthropic/claude-opus-4.1",
+    name: "Claude Opus 4.1",
     provider: "anthropic",
     features: [],
     api_sdk: openai("gpt-4"),
-    openRouterId: "anthropic/claude-opus-4",
+    openRouterId: "anthropic/claude-opus-4.1",
     icon: ClaudeIcon,
   },
   {
@@ -145,18 +159,7 @@ export function getFormFillerFBasePath() {
 }
 
 export function getFormFillerPreviewBasePath() {
-  const customBaseUrl = getenv("NEXT_PUBLIC_FORMFILLER_BASE_URL")
-  if (customBaseUrl) {
-    return `${customBaseUrl}/preview`
-  }
-
-  const isDev =
-    getenv("NODE_ENV") === "development" ||
-    (typeof window !== "undefined" && window.location.hostname === "localhost")
-  if (isDev) {
-    return "http://localhost:3001/preview"
-  }
-  return "https://formlink.ai/preview"
+  return `${getFormFillerFBasePath()}/preview`
 }
 
 export function getEmbedScriptsBasePath() {

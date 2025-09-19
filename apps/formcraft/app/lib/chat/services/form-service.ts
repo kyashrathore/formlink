@@ -1,5 +1,5 @@
 import logger from "@/app/lib/logger"
-import { SupabaseClient } from "@formlink/db"
+import { createGuestServerClient, SupabaseClient } from "@formlink/db"
 import { customAlphabet } from "nanoid"
 
 const nanoid = customAlphabet(
@@ -43,6 +43,74 @@ interface FormContext {
 export class FormService {
   constructor(private supabase: SupabaseClient) {}
 
+  private async ensureUserProfile(userId: string) {
+    try {
+      const serviceClient = await createGuestServerClient()
+
+      const { data: existingUser, error: fetchError } = await serviceClient
+        .from("users")
+        .select("id")
+        .eq("id", userId)
+        .maybeSingle()
+
+      if (fetchError) {
+        logger.error("[FormService] Failed to check user profile", {
+          userId,
+          error: fetchError.message,
+        })
+        throw new Error(`Failed to verify user profile: ${fetchError.message}`)
+      }
+
+      if (existingUser) {
+        return
+      }
+
+      let email: string | null = null
+      try {
+        const { data: authData } = await this.supabase.auth.getUser()
+        email = authData?.user?.email ?? null
+      } catch (authError) {
+        logger.warn("[FormService] Unable to read auth user for email", {
+          userId,
+          error: authError instanceof Error ? authError.message : authError,
+        })
+      }
+
+      const fallbackEmail = email ?? `${userId}@anonymous.local`
+      const isAnonymous = !email
+
+      const { error: insertError } = await serviceClient.from("users").upsert(
+        {
+          id: userId,
+          email: fallbackEmail,
+          anonymous: isAnonymous,
+          created_at: new Date().toISOString(),
+        },
+        { onConflict: "id", ignoreDuplicates: true }
+      )
+
+      if (insertError) {
+        logger.error("[FormService] Failed to create user profile", {
+          userId,
+          error: insertError.message,
+        })
+        throw new Error(
+          `Failed to prepare user profile: ${insertError.message}`
+        )
+      }
+
+      logger.info("[FormService] User profile created for form chat", {
+        userId,
+        createdAsAnonymous: isAnonymous,
+      })
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error(`Failed to ensure user profile: ${String(error)}`)
+    }
+  }
+
   async createNewForm(
     formId: string,
     userId: string
@@ -51,6 +119,7 @@ export class FormService {
 
     const shortId = nanoid()
     const timestamp = new Date().toISOString()
+    await this.ensureUserProfile(userId)
 
     const { error: formsInsertError } = await this.supabase
       .from("forms")

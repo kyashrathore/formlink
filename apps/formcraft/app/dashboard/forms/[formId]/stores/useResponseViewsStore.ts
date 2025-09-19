@@ -25,7 +25,11 @@ interface ResponseViewsState {
   views: ResponseView[]
   activeViewIdMap: Record<string, string>
   initDefault: (form: Form | null) => void
-  addOrUpdateFromPlan: (plan: RIPlanResponse, form: Form | null) => string
+  addOrUpdateFromPlan: (
+    plan: RIPlanResponse,
+    form: Form | null,
+    formIdOverride?: string
+  ) => string
   setActiveView: (id: string, form: Form | null) => void
   removeView: (id: string, form?: Form | null) => void
 }
@@ -118,12 +122,13 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
         }))
       },
 
-      addOrUpdateFromPlan: (resp, form) => {
+      addOrUpdateFromPlan: (resp, form, formIdOverride) => {
         const plan = resp.plan
         const id = resp.correlationId || `ri-${Date.now()}`
+        const resolvedFormId = form?.id || formIdOverride || "__unknown__"
         const view: ResponseView = {
           id,
-          formId: form?.id || "__unknown__",
+          formId: resolvedFormId,
           name: plan.meta?.view_name || "Smart View",
           columns: plan.ui?.columns || [],
           sort: plan.ui?.sort,
@@ -142,9 +147,8 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
           if (existingIdx >= 0)
             nextViews[existingIdx] = { ...nextViews[existingIdx], ...view }
           else nextViews.push(view)
-          const fId = form?.id
-          const nextActive = fId
-            ? { ...state.activeViewIdMap, [fId]: id }
+          const nextActive = resolvedFormId
+            ? { ...state.activeViewIdMap, [resolvedFormId]: id }
             : { ...state.activeViewIdMap }
           return { views: nextViews, activeViewIdMap: nextActive }
         })
@@ -157,7 +161,9 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
         if (!formId) return
         if (id === "default") {
           applyDefaultToTable()
-          set({ activeViewIdMap: { ...state.activeViewIdMap, [formId]: "default" } })
+          set({
+            activeViewIdMap: { ...state.activeViewIdMap, [formId]: "default" },
+          })
           return
         }
         const view = state.views.find((v) => v.id === id && v.formId === formId)
@@ -171,7 +177,9 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
         set((state) => ({ views: state.views.filter((v) => v.id !== id) }))
         if (formId && get().activeViewIdMap[formId] === id) {
           applyDefaultToTable()
-          set({ activeViewIdMap: { ...get().activeViewIdMap, [formId]: "default" } })
+          set({
+            activeViewIdMap: { ...get().activeViewIdMap, [formId]: "default" },
+          })
         }
       },
     }),

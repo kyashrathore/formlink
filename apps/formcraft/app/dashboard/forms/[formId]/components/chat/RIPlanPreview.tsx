@@ -18,23 +18,26 @@ import {
   LineChart,
   Save,
   Settings2,
-  Table,
   TrendingUp,
 } from "lucide-react"
 import React from "react"
+
+const DEFAULT_COLUMNS = new Set([
+  "select",
+  "submission_id",
+  "created_at",
+  "status",
+  "testmode",
+])
 
 export default function RIPlanPreview({
   plan,
   saved,
   onSave,
-  onOpenResponses,
-  onCopyJson,
 }: {
   plan: RIPlanResponse
   saved?: boolean
   onSave?: () => void
-  onOpenResponses?: () => void
-  onCopyJson?: () => void
 }) {
   const viewName = plan?.plan?.meta?.view_name || "Smart View"
   const filters = {
@@ -48,7 +51,7 @@ export default function RIPlanPreview({
   const rationale = plan?.plan?.meta?.rationale
 
   return (
-    <Card className="border-muted-foreground/20 bg-muted/30 mb-2">
+    <Card className="border-muted-foreground/20 bg-muted/30">
       <CardHeader className="py-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -62,21 +65,6 @@ export default function RIPlanPreview({
               <Badge variant="outline">In‑progress</Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {!saved && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onSave}
-                className="gap-1"
-              >
-                <Save className="h-3.5 w-3.5" /> Save
-              </Button>
-            )}
-            <Button size="sm" onClick={onOpenResponses} className="gap-1">
-              <Table className="h-3.5 w-3.5" /> Open Responses
-            </Button>
-          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -86,7 +74,7 @@ export default function RIPlanPreview({
           </p>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="space-y-2">
           <Section title="Filters" icon={<Filter className="h-3.5 w-3.5" />}>
             <div className="flex flex-wrap gap-1.5">
               {Object.entries(filters).length === 0 ? (
@@ -112,7 +100,12 @@ export default function RIPlanPreview({
                   <Badge
                     key={c}
                     variant="outline"
-                    className="max-w-[160px] truncate"
+                    className={cn(
+                      "max-w-[160px] truncate",
+                      !DEFAULT_COLUMNS.has(c)
+                        ? "border-primary/40 bg-primary/10 text-primary"
+                        : undefined
+                    )}
                   >
                     {c}
                   </Badge>
@@ -136,7 +129,7 @@ export default function RIPlanPreview({
 
         <Separator />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
           <Section
             title="Insights"
             icon={<TrendingUp className="h-3.5 w-3.5" />}
@@ -172,9 +165,14 @@ export default function RIPlanPreview({
           </Section>
         </div>
 
-        <div className="flex items-center justify-end gap-2">
-          <Button size="sm" variant="ghost" onClick={onCopyJson}>
-            Copy JSON
+        <div className="flex justify-end pt-2">
+          <Button
+            size="sm"
+            className="gap-1"
+            onClick={onSave}
+            disabled={saved || !onSave}
+          >
+            <Save className="h-3.5 w-3.5" /> {saved ? "Saved" : "Save view"}
           </Button>
         </div>
       </CardContent>

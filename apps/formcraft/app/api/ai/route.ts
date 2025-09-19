@@ -27,7 +27,9 @@ const conditionsPrompt = CONDITIONS_PROMPT
 // Removed - using provider utility instead
 
 // Use provider utility - using vercel to avoid Azure issues
-const MODEL = getModel("gpt-4", "vercel")
+const MODEL = getModel("cerebras/gpt-oss-120b", "vercel")
+
+const RESPONSE_PLAN_SUGGESTIONS_PROMPT = `You are a helpful analytics assistant in FormLink. A user has a form with collected responses and is viewing the Responses tab. You must return a JSON object with a \\\"suggestions\\\" array containing up to 5 short, natural-language prompt ideas (each <= 120 characters) that they can ask the assistant to generate a response intelligence plan. Tailor the suggestions to the form's title, description, and question types, covering filters, segments, charts, or insights they might explore. The response MUST be valid JSON.`
 
 export const maxDuration = 20
 
@@ -92,6 +94,7 @@ type AIRequest = {
     | "add-question"
     | "generate-compute-field-expression"
     | "sanitize_result_generation"
+    | "response-plan-suggestions"
   prompt: string
   questions?: Question[]
   currentQuestionId?: string
@@ -117,6 +120,7 @@ type AIResponse = {
     | Question
     | JSONataExpressionData
     | { isValid: boolean }
+    | { suggestions: string[] }
 }
 
 export async function POST(req: Request) {
@@ -188,6 +192,13 @@ export async function POST(req: Request) {
         })
         break
 
+      case "response-plan-suggestions":
+        systemPrompt = RESPONSE_PLAN_SUGGESTIONS_PROMPT
+        responseSchema = z.object({
+          suggestions: z.array(z.string().min(1)).min(1).max(5),
+        })
+        break
+
       default:
         return NextResponse.json(
           {
@@ -213,7 +224,13 @@ export async function POST(req: Request) {
                 form_details: form_details,
                 questions: transformedQuestions,
               })
-            : `
+            : operationType === "response-plan-suggestions"
+              ? JSON.stringify({
+                  user_prompt: prompt,
+                  form_details,
+                  questions: transformedQuestions,
+                })
+              : `
 user_prompt: ${prompt}
 
 questions: ${transformedQuestions}
@@ -285,6 +302,15 @@ questions: ${transformedQuestions}
           error: !aiResponseData.isValid,
           message: aiResponseData.message,
           data: { isValid: aiResponseData.isValid },
+        },
+        { status: 200 }
+      )
+    } else if (operationType === "response-plan-suggestions") {
+      return NextResponse.json<AIResponse>(
+        {
+          error: false,
+          message: null,
+          data: { suggestions: aiResponseData.suggestions },
         },
         { status: 200 }
       )

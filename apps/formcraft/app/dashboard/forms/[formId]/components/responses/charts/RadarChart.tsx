@@ -1,21 +1,5 @@
-"use client";
+"use client"
 
-import React from "react";
-import { TrendingUp } from "lucide-react";
-import {
-  PolarAngleAxis,
-  PolarGrid,
-  Radar,
-  RadarChart as RechartsRadarChart,
-} from "recharts";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@formlink/ui/ui/chart";
 import {
   Card,
   CardContent,
@@ -23,25 +7,43 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@formlink/ui/ui/card";
+} from "@formlink/ui/ui/card"
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@formlink/ui/ui/chart"
+import { TrendingUp } from "lucide-react"
+import React from "react"
+import {
+  PolarAngleAxis,
+  PolarGrid,
+  Radar,
+  RadarChart as RechartsRadarChart,
+} from "recharts"
+import type { PolarAngleAxisProps } from "recharts"
+
 interface RadarChartProps {
-  chartData: any[];
-  chartConfig: ChartConfig;
-  title: string;
-  description: string;
-  footerText?: string;
-  dataKeys: string[];
-  polarAngleKey: string;
-  showDots?: boolean;
-  linesOnly?: boolean;
-  showLegend?: boolean;
-  gridType?: "polygon" | "circle";
-  customTick?: (props: any) => React.ReactNode;
-  radialLines?: boolean;
-  polarRadius?: number[];
-  strokeWidth?: number;
-  gridFill?: boolean;
-  noGrid?: boolean;
+  chartData: any[]
+  chartConfig: ChartConfig
+  title: string
+  description: string
+  footerText?: string
+  dataKeys: string[]
+  polarAngleKey: string
+  showDots?: boolean
+  linesOnly?: boolean
+  showLegend?: boolean
+  gridType?: "polygon" | "circle"
+  customTick?: PolarAngleAxisProps["tick"]
+  radialLines?: boolean
+  polarRadius?: number[]
+  strokeWidth?: number
+  gridFill?: boolean
+  noGrid?: boolean
 }
 /**
  * A versatile radar chart component that wraps Recharts RadarChart.
@@ -126,10 +128,7 @@ export function RadarChartWrapper({
           className="mx-auto aspect-square max-h-[250px]"
         >
           <RechartsRadarChart data={chartData}>
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent />}
-            />
+            <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
             <PolarAngleAxis dataKey={polarAngleKey} tick={customTick} />
             {!noGrid && (
               <PolarGrid
@@ -157,5 +156,5 @@ export function RadarChartWrapper({
       </CardContent>
       {/* Footer removed per UX guidance */}
     </Card>
-  );
+  )
 }
