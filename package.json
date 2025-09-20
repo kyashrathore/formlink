@@ -49,6 +49,7 @@
     "libphonenumber-js": "^1.12.7",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "tailwindcss": "^4.1.5"
+    "tailwindcss": "^4.1.5",
+    "usesend-js": "^1.5.2"
   }
 }
