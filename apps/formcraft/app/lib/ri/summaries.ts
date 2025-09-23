@@ -5,7 +5,6 @@ import { getModel } from "@/app/lib/ai/provider"
 import logger from "@/app/lib/logger"
 import { createServerClient, SupabaseClient, Tables } from "@formlink/db"
 import { generateObject } from "ai"
-import { cookies } from "next/headers"
 import { z } from "zod"
 
 export type SummarySpec = {
@@ -32,6 +31,7 @@ export type SummaryRequest = {
   }
   locale?: string
   search?: Record<string, unknown>
+  model?: string
 }
 
 export type SummaryResponse = {
@@ -298,10 +298,10 @@ async function computeSummariesWithAI(
     answers?: Record<string, unknown>
   }> = []
   // Merge plan.rpc filters with UI 'search' (UI wins)
-  let submission_filters: Record<string, unknown> = {
+  const submission_filters: Record<string, unknown> = {
     ...(req.plan?.rpc?.submission_filters || {}),
   }
-  let answer_filters: Record<string, unknown> = {
+  const answer_filters: Record<string, unknown> = {
     ...(req.plan?.rpc?.answer_filters || {}),
   }
   if (req.search && req.formVersionId) {
@@ -398,7 +398,8 @@ async function computeSummariesWithAI(
     (x) => x.type === "summary"
   ) as SummarySpec[]
   const angles = summariesSpecs.flatMap((s) => s.args?.angles || [])
-  const MODEL = getModel("google/gemini-2.5-pro", "openrouter")
+  const MODEL = getModel(req.model) as any
+
   try {
     const { object } = await generateObject({
       model: MODEL,

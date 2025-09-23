@@ -373,8 +373,8 @@ export async function POST(req: NextRequest) {
     const count = Math.min(Math.max(body.count ?? 100, 1), 1000)
 
     // Step 1: Use AI to analyze questions and create data generation rules
-    console.log("Analyzing form questions with AI...")
-    const MODEL = getModel("gpt-5", "vercel")
+    console.warn("Analyzing form questions with AI...")
+    const MODEL = getModel()
 
     let dataGenerationSchema: z.infer<typeof DataGenerationSchemaResponse>
 
@@ -437,10 +437,6 @@ Also, identify any simple correlations between questions when obvious (e.g., sen
         })),
       }
     }
-
-    console.log(
-      `Generated data schema for ${dataGenerationSchema.rules.length} questions`
-    )
 
     // Step 2: Generate submissions
     const submissions: Array<{
@@ -623,7 +619,7 @@ Also, identify any simple correlations between questions when obvious (e.g., sen
                 .in("submission_id", submissionIds)
             }
           }
-        } catch (_) {
+        } catch {
           // Ignore cleanup errors; we'll still return the original failure
         }
 

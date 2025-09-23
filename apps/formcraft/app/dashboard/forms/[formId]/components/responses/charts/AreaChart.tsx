@@ -1,22 +1,5 @@
-"use client";
+"use client"
 
-import React from "react";
-import { TrendingUp } from "lucide-react";
-import {
-  Area,
-  AreaChart as RechartsAreaChart,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  ChartConfig,
-  ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@formlink/ui/ui/chart";
 import {
   Card,
   CardContent,
@@ -24,31 +7,49 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@formlink/ui/ui/card";
+} from "@formlink/ui/ui/card"
+import {
+  ChartConfig,
+  ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@formlink/ui/ui/chart"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@formlink/ui/ui/select";
+} from "@formlink/ui/ui/select"
+import { TrendingUp } from "lucide-react"
+import React from "react"
+import {
+  Area,
+  CartesianGrid,
+  AreaChart as RechartsAreaChart,
+  XAxis,
+  YAxis,
+} from "recharts"
+
 interface AreaChartProps {
-  chartData: any[];
-  chartConfig: ChartConfig;
-  title: string;
-  description: string;
-  footerText?: string;
-  dataKeys: string[];
-  xAxisDataKey: string;
-  type?: "natural" | "linear" | "step";
-  stacked?: boolean;
-  showGradient?: boolean;
-  showAxes?: boolean;
-  interactive?: boolean;
-  timeRange?: string;
-  onTimeRangeChange?: (value: string) => void;
-  stackOffset?: "expand";
-  showLegend?: boolean;
+  chartData: any[]
+  chartConfig: ChartConfig
+  title: string
+  description: string
+  footerText?: string
+  dataKeys: string[]
+  xAxisDataKey: string
+  type?: "natural" | "linear" | "step"
+  stacked?: boolean
+  showGradient?: boolean
+  showAxes?: boolean
+  interactive?: boolean
+  timeRange?: string
+  onTimeRangeChange?: (value: string) => void
+  stackOffset?: "expand"
+  showLegend?: boolean
 }
 /**
  * A versatile area chart component that wraps Recharts AreaChart.
@@ -122,21 +123,21 @@ export function AreaChartWrapper({
 }: AreaChartProps) {
   const latestDate = new Date(
     Math.max(...chartData.map((item) => new Date(item.date).getTime()))
-  );
+  )
   const filteredData = interactive
     ? chartData.filter((item) => {
-        const date = new Date(item.date);
-        let daysToSubtract = 90;
+        const date = new Date(item.date)
+        let daysToSubtract = 90
         if (timeRange === "30d") {
-          daysToSubtract = 30;
+          daysToSubtract = 30
         } else if (timeRange === "7d") {
-          daysToSubtract = 7;
+          daysToSubtract = 7
         }
-        const startDate = new Date(latestDate);
-        startDate.setDate(startDate.getDate() - daysToSubtract);
-        return date >= startDate;
+        const startDate = new Date(latestDate)
+        startDate.setDate(startDate.getDate() - daysToSubtract)
+        return date >= startDate
       })
-    : chartData;
+    : chartData
   return (
     <Card>
       <CardHeader>
@@ -227,9 +228,7 @@ export function AreaChartWrapper({
                 key={key}
                 dataKey={key}
                 type={type}
-                fill={
-                  showGradient ? `url(#fill${key})` : `var(--color-${key})`
-                }
+                fill={showGradient ? `url(#fill${key})` : `var(--color-${key})`}
                 fillOpacity={showGradient ? 1 : 0.4}
                 stroke={`var(--color-${key})`}
                 stackId={stacked ? "a" : undefined}
@@ -251,5 +250,5 @@ export function AreaChartWrapper({
         </CardFooter>
       )}
     </Card>
-  );
+  )
 }

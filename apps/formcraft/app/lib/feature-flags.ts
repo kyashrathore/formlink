@@ -6,6 +6,7 @@
 export const FEATURE_FLAGS = {
   FORM_GENERATION_ANALYTICS: true, // Enable analytics tracking
   PROGRESSIVE_QUESTION_RENDERING: true, // Enable progressive rendering of questions
+  ACTIONS_COMPOSIO_ENABLED: process.env.ACTIONS_COMPOSIO_ENABLED === "true",
 } as const
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS

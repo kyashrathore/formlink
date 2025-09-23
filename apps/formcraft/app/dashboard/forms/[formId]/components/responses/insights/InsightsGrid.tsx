@@ -15,32 +15,42 @@ type IncomingInsightItem = {
 }
 
 // Map provided layout (and type) to a layout variant understood by the algorithm
-function toLayoutVariant(item: IncomingInsightItem): 'small' | 'medium' | 'large' {
-  const v = String(item.variant || '').toLowerCase()
+function toLayoutVariant(
+  item: IncomingInsightItem
+): "small" | "medium" | "large" {
+  const v = String(item.variant || "").toLowerCase()
   const col = item.layout?.colSpan
   const row = item.layout?.rowSpan
 
-  if (typeof col === 'number' || typeof row === 'number') {
-    if ((row ?? 0) === 1 && (col ?? 0) <= 3) return 'small'
-    if ((col ?? 0) <= 3) return 'medium'
-    if ((col ?? 0) >= 6) return 'large'
+  if (typeof col === "number" || typeof row === "number") {
+    if ((row ?? 0) === 1 && (col ?? 0) <= 3) return "small"
+    if ((col ?? 0) <= 3) return "medium"
+    if ((col ?? 0) >= 6) return "large"
   }
 
   const t = item.type
-  if (t === 'count' || t === 'kpi' || t === 'metric') return 'small'
-  if (v === 'pie' || v === 'donut') return 'medium'
-  if (t === 'trend' || t === 'breakdown') return 'large'
-  if (t === 'text' || t === 'summary') return 'large'
-  return 'large'
+  if (t === "count" || t === "kpi" || t === "metric") return "small"
+  if (v === "pie" || v === "donut") return "medium"
+  if (t === "trend" || t === "breakdown") return "large"
+  if (t === "text" || t === "summary") return "large"
+  return "large"
 }
 
-export default function InsightsGrid({ items }: { items: IncomingInsightItem[] }) {
+export default function InsightsGrid({
+  items,
+}: {
+  items: IncomingInsightItem[]
+}) {
   const preparedItems: AlgoInsightItem[] = useMemo(() => {
     return items.map((it) => {
-      const v = String(it.variant || '').toLowerCase()
-      const provided = v === 'small' || v === 'medium' || v === 'large' ? (v as 'small'|'medium'|'large') : undefined
+      const v = String(it.variant || "").toLowerCase()
+      const provided =
+        v === "small" || v === "medium" || v === "large"
+          ? (v as "small" | "medium" | "large")
+          : undefined
       // Force count to small regardless of provided variant
-      const forced: 'small' | undefined = it.type === 'count' ? 'small' : undefined
+      const forced: "small" | undefined =
+        it.type === "count" ? "small" : undefined
       return {
         key: it.key,
         type: it.type,
@@ -58,15 +68,23 @@ export default function InsightsGrid({ items }: { items: IncomingInsightItem[] }
   return (
     <div className="mb-6" style={containerStyle}>
       {laidOutItems.map((item) => {
-        if (item.type === 'placeholder') {
+        if (item.type === "placeholder") {
           return (
-            <div key={item.key} style={item.style} className="h-full rounded-lg border border-dashed bg-muted/10 text-muted-foreground flex items-center justify-center">
+            <div
+              key={item.key}
+              style={item.style}
+              className="bg-muted/10 text-muted-foreground flex h-full items-center justify-center rounded-lg border border-dashed"
+            >
               <span className="text-xs">Add another insight</span>
             </div>
           )
         }
         return (
-          <div key={item.key} style={item.style} className="h-full min-h-0 overflow-hidden">
+          <div
+            key={item.key}
+            style={item.style}
+            className="h-full min-h-0 overflow-hidden"
+          >
             {item.node}
           </div>
         )

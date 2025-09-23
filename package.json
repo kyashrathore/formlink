@@ -19,7 +19,9 @@
     "type-check": "turbo run type-check",
     "quality-check": "./scripts/quality-check.sh",
     "prepare": "husky install",
-    "storybook": "pnpm --filter ui-docs storybook"
+    "storybook": "pnpm --filter ui-docs storybook",
+    "db:hard-reset": "pnpm -C packages/db dlx supabase stop --project-id formcraft || true && pnpm -C packages/db dlx supabase start --workdir ./supabase && pnpm -C packages/db dlx supabase db reset --local --yes --workdir ./supabase && PGPASSWORD=postgres psql -v ON_ERROR_STOP=1 -h 127.0.0.1 -p 54322 -U postgres -d postgres -f packages/db/supabase/schema.sql && PGPASSWORD=postgres psql -h 127.0.0.1 -p 54322 -U postgres -d postgres -c \"NOTIFY pgrst, 'reload schema';\" || true",
+    "db:gen-types": "pnpm -C packages/db dlx supabase gen types typescript --local > packages/db/src/types/database.types.ts"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.2",

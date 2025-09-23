@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@formlink/ui/ui/card"
@@ -14,7 +13,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@formlink/ui/ui/chart"
-import { TrendingUp } from "lucide-react"
 import React from "react"
 import {
   Bar,
@@ -32,7 +30,6 @@ interface BarChartProps {
   chartConfig: ChartConfig
   title: string
   description: string
-  footerText?: string
   dataKeys: string[]
   xAxisDataKey: string
   layout?: "horizontal" | "vertical"
@@ -54,7 +51,6 @@ interface BarChartProps {
  * @param {ChartConfig} props.chartConfig - The configuration for the chart.
  * @param {string} props.title - The title of the chart.
  * @param {string} props.description - The description of the chart.
- * @param {string} [props.footerText] - The text to be displayed in the footer.
  * @param {string[]} props.dataKeys - The keys from the data to be plotted.
  * @param {string} props.xAxisDataKey - The key from the data for the X-axis.
  * @param {'horizontal' | 'vertical'} [props.layout='horizontal'] - The layout of the chart.
@@ -111,7 +107,6 @@ export function BarChartWrapper({
   chartConfig,
   title,
   description,
-  footerText,
   dataKeys,
   xAxisDataKey,
   layout = "horizontal",

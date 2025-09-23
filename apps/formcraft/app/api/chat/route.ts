@@ -7,10 +7,10 @@ import {
   verifyUserOwnsForm,
 } from "@/app/lib/middleware/authorization"
 import { createServerClient } from "@formlink/db"
+import { customAlphabet } from "nanoid"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 import { handleChatRequest } from "./handlers"
-import { customAlphabet } from "nanoid"
 
 const nanoid = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-",
@@ -54,13 +54,19 @@ export async function POST(req: NextRequest) {
       formId: initialFormId,
       options,
     } = validateChatRequest(body)
+    // Normalize selected model: accept either top-level `selectedModel` or `options.model`
+    const selectedModel = body?.selectedModel || (options as any)?.model
+    const normalizedOptions = { ...(options as any), model: selectedModel }
     logger.info("[POST /api/chat] Request validated", {
       reqId,
       formId: initialFormId,
       messagesCount: Array.isArray(messages) ? messages.length : 0,
-      intent: (options as any)?.intent,
-      responseIntelligence: Boolean((options as any)?.responseIntelligence),
-      maxOutputTokens: (options as any)?.maxOutputTokens,
+      intent: (normalizedOptions as any)?.intent,
+      responseIntelligence: Boolean(
+        (normalizedOptions as any)?.responseIntelligence
+      ),
+      maxOutputTokens: (normalizedOptions as any)?.maxOutputTokens,
+      model: (normalizedOptions as any)?.model,
     })
 
     const userId = authResult.user.id
@@ -97,7 +103,7 @@ export async function POST(req: NextRequest) {
       initialFormId,
       userId,
       supabase as any,
-      options
+      normalizedOptions
     )
     const durationMs = Date.now() - startedAt
     logger.info("[POST /api/chat] Chat stream initialized", {
@@ -114,9 +120,10 @@ export async function POST(req: NextRequest) {
     logger.error("[POST /api/chat] Unhandled error", {
       reqId,
       durationMs,
-      error: error instanceof Error
-        ? { name: error.name, message: error.message, stack: error.stack }
-        : String(error),
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : String(error),
     })
 
     return new Response(
@@ -201,7 +208,10 @@ export async function GET(req: NextRequest) {
         JSON.stringify({ error: "Unauthorized to access this form" }),
         {
           status: 403,
-          headers: { "Content-Type": "application/json", "x-request-id": reqId },
+          headers: {
+            "Content-Type": "application/json",
+            "x-request-id": reqId,
+          },
         }
       )
     }
@@ -232,9 +242,10 @@ export async function GET(req: NextRequest) {
       reqId,
       formId,
       durationMs,
-      error: error instanceof Error
-        ? { name: error.name, message: error.message, stack: error.stack }
-        : String(error),
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : String(error),
     })
     return new Response(
       JSON.stringify({

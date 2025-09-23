@@ -197,6 +197,7 @@ export const RIPlanSchema = z.object({
         action_key: z.string(),
         params: z.record(z.any()).default({}),
         title: z.string().optional(),
+        provider: z.enum(["usesend", "composio"]).optional(),
       })
     )
     .optional(),

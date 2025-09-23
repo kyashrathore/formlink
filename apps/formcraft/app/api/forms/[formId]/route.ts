@@ -21,11 +21,6 @@ const nanoid = customAlphabet(
 const createFormSystemPrompt = CREATE_FORM_SYSTEM_PROMPT
 const createFormRepairSystemPrompt = CREATE_FORM_REPAIR_SYSTEM_PROMPT
 
-// Removed - using provider utility instead
-
-// Use provider utility - using vercel to avoid Azure issues
-const MODEL = getModel("gpt-4", "vercel")
-
 async function getFormSchemaById(
   formId: string,
   versionIdColumn: "current_published_version_id" | "current_draft_version_id",
@@ -195,7 +190,7 @@ export async function POST(req: NextRequest) {
 
       const { object: repairedSchema }: { object: Form } = await generateObject(
         {
-          model: MODEL,
+          model: getModel(),
           schema: FormSchema,
           system: createFormRepairSystemPrompt as string,
           experimental_repairText:
@@ -211,7 +206,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { object: initialSchema }: { object: Form } = await generateObject({
-      model: MODEL,
+      model: getModel(),
       schema: FormSchema,
       experimental_repairText: repairFunction,
       system: createFormSystemPrompt as string,

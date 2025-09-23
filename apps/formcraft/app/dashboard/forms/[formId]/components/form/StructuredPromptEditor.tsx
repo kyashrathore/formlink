@@ -67,7 +67,7 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
   // Minimal remark plugin to treat single newlines as <br/>
   // (avoids needing the external 'remark-breaks' package)
   const remarkHardBreaks = () => (tree: any) => {
-    const visit = (node: any, _parent?: any) => {
+    const visit = (node: any) => {
       if (!node) return
       if (Array.isArray(node.children)) {
         // Iterate over a copy, since we'll splice
@@ -88,7 +88,7 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
             node.children.splice(i, 1, ...next)
             i += next.length - 1
           } else if (child && typeof child === "object") {
-            visit(child, node)
+            visit(child)
           }
         }
       }
@@ -120,7 +120,7 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
         const parsed = parseXmlToNodes(sanitized)
         setNodes(parsed)
         onChange?.(sanitized)
-      } catch (e) {
+      } catch {
         setCodeError("Failed to parse XML")
       }
     }, 200)

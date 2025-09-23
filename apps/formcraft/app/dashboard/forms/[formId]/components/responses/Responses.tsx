@@ -1,5 +1,7 @@
 "use client"
 
+import ResponseViewPlan from "@/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan"
+import { requiresParamsForSlug } from "@/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan/utils"
 import { Form } from "@formlink/schema"
 import {
   Button,
@@ -8,6 +10,14 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  toast,
+  Button as UIButton,
 } from "@formlink/ui"
 import {
   getCoreRowModel,
@@ -18,19 +28,21 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table"
-import React, { useEffect, useMemo } from "react"
+import React, { useEffect, useMemo, useState } from "react"
+import { useActionTools } from "../../hooks/useActionTools"
 import { useFormResponsesQuery } from "../../hooks/useFormResponsesQuery"
 import {
   generateFilterFieldsFromForm,
   generateTableColumnsFromForm,
 } from "../../lib/responses/generateFilterFieldsFromForm"
 import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
+import type { ResponseViewsState } from "../../stores/useResponseViewsStore"
 import DataTable from "../data-table/data-table"
 import { useDataTableStore } from "../data-table/dataTableStore"
 import APIKeyManager from "./APIKeyManager"
-import ResponseCharts from "./ResponseCharts"
-import GenerateTestDataButton from "./GenerateTestDataButton"
 import CleanupTestDataButton from "./CleanupTestDataButton"
+import GenerateTestDataButton from "./GenerateTestDataButton"
+import ResponseCharts from "./ResponseCharts"
 import ResponseViewsTabs from "./ResponseViewsTabs"
 
 interface ResponsesProps {
@@ -59,8 +71,17 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     const formId = form?.id
     if (!formId) return undefined
     const id = s.activeViewIdMap[formId] || "default"
-    const view = s.views.find((v) => (v.id === id && (v.formId === formId || v.id === "default")))
+    const view = s.views.find(
+      (v) => v.id === id && (v.formId === formId || v.id === "default")
+    )
     return view?.plan
+  })
+
+  const activeViewMeta = useResponseViewsStore((s) => {
+    const formId = form?.id
+    if (!formId) return undefined
+    const id = s.activeViewIdMap[formId] || "default"
+    return s.views.find((v) => v.id === id && v.formId === formId)
   })
 
   const isDefaultView = useResponseViewsStore((s) => {
@@ -69,10 +90,14 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     return (s.activeViewIdMap[formId] || "default") === "default"
   })
 
+  const insightsSpecForQuery =
+    (activeViewPlan?.plan?.ui?.insights_spec as any) ||
+    (activeViewMeta?.insights as any) ||
+    []
+
   const {
     data: responsesData,
     isLoading,
-    error,
     totalCount,
     totalCompletedCount,
     totalInProgressCount,
@@ -83,10 +108,26 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     columnFilters,
     pagination.pageIndex + 1,
     pagination.pageSize,
-    (activeViewPlan?.plan?.ui?.insights_spec as any) || []
+    insightsSpecForQuery
   )
 
   const tableData = responsesData ?? []
+  // Also look for an ephemeral (unsaved) plan even if it isn't the active view yet
+  const ephemeralView = useResponseViewsStore((s) => {
+    const formId = form?.id
+    if (!formId) return undefined
+    const candidates = s.views.filter(
+      (v) => v.formId === formId && !v.saved && v.plan
+    )
+    return candidates.length ? candidates[candidates.length - 1] : undefined
+  })
+  // Consider any plan present (active or ephemeral)
+  const isEphemeralPlan = Boolean(ephemeralView)
+  const [showPlan, setShowPlan] = useState<boolean>(false)
+  useEffect(() => {
+    if (isEphemeralPlan) setShowPlan(true)
+  }, [isEphemeralPlan])
+  // Always show the plan card whenever a plan exists; dismiss removes the ephemeral view
 
   const columns = React.useMemo(
     () => (form ? generateTableColumnsFromForm(form) : []),
@@ -147,13 +188,33 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
     },
   })
 
+  const selectedSubmissionIds = useMemo(() => {
+    return table
+      .getSelectedRowModel()
+      .rows.map((row) => (row.original as any).submission_id)
+  }, [table, rowSelection])
+
+  const allowedActionSlugs = useMemo(() => {
+    const fromPlan = (activeViewPlan?.plan?.actions || [])
+      .map((a: any) => a?.action_key)
+      .filter(Boolean)
+    if (fromPlan.length) return fromPlan
+    return Array.isArray(activeViewMeta?.actionSlugs)
+      ? (activeViewMeta!.actionSlugs as string[]) || []
+      : []
+  }, [activeViewPlan, activeViewMeta?.actionSlugs])
+
   // Stable search object for child components and caching
   const search = useMemo(() => {
     const s: Record<string, unknown> = {
       form_version_id: form?.current_draft_version_id,
     }
     for (const f of useDataTableStore.getState().columnFilters) {
-      if ((f as any)?.id && (f as any).value !== undefined && (f as any).value !== null) {
+      if (
+        (f as any)?.id &&
+        (f as any).value !== undefined &&
+        (f as any).value !== null
+      ) {
         s[(f as any).id] = (f as any).value
       }
     }
@@ -234,20 +295,25 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
 
   const hasActiveFilters = columnFilters && columnFilters.length > 0
 
-  const showFilterToolbarAndCommand = totalCount > 0
-
   return (
     <div>
       <h2 className="mb-4 text-xl font-bold">Responses</h2>
       <ResponseViewsTabs />
       <div className="mb-3 flex items-center justify-end gap-2">
+        {/* Show Response Plan button once a view exists or after first render */}
+        {!isEphemeralPlan && activeViewMeta ? (
+          <Button size="sm" variant="outline" onClick={() => setShowPlan(true)}>
+            Open Response Plan
+          </Button>
+        ) : null}
         <GenerateTestDataButton
           formId={form.id}
           onDone={() => {
             // ensure testmode=true filter to reveal generated rows
             const filters = [...useDataTableStore.getState().columnFilters]
             const hasTestmode = filters.some((f) => f.id === "testmode")
-            if (!hasTestmode) filters.push({ id: "testmode", value: true } as any)
+            if (!hasTestmode)
+              filters.push({ id: "testmode", value: true } as any)
             setColumnFilters(filters as any)
             setPagination({ pageIndex: 0, pageSize: pagination.pageSize })
           }}
@@ -260,10 +326,24 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
           }}
         />
       </div>
+      {showPlan || isEphemeralPlan ? (
+        <PlanPreviewForRightPanel
+          formId={form.id}
+          onDismiss={() => {
+            setShowPlan(false)
+          }}
+        />
+      ) : null}
       {isDefaultView && renderResponseCards()}
       <ResponseCharts
-        plan={activeViewPlan}
-        rows={tableData as any}
+        plan={
+          activeViewPlan ||
+          (activeViewMeta?.insights && activeViewMeta.insights.length
+            ? ({
+                plan: { ui: { insights_spec: activeViewMeta.insights } },
+              } as any)
+            : undefined)
+        }
         insights={insights as any}
         form={form}
         search={search}
@@ -380,6 +460,14 @@ fetch('/api/views/VIEW_ID/generate-hook?framework=react')
                 alert("Export failed.")
               }
             }}
+            rightActions={
+              <ResponseActionsMenu
+                formId={form.id}
+                allowedSlugs={allowedActionSlugs}
+                selectedSubmissionIds={selectedSubmissionIds}
+                onSetupRequest={() => {}}
+              />
+            }
           />
 
           {}
@@ -392,8 +480,343 @@ fetch('/api/views/VIEW_ID/generate-hook?framework=react')
           )}
         </>
       )}
+
+      {/* Removed ActionsExecutionDialog in favor of a compact dropdown menu */}
     </div>
   )
 }
 
 export default Responses
+
+function ResponseActionsMenu({
+  formId,
+  allowedSlugs,
+  selectedSubmissionIds,
+  onSetupRequest,
+}: {
+  formId: string
+  allowedSlugs: string[]
+  selectedSubmissionIds: string[]
+  onSetupRequest?: () => void
+}) {
+  const activeViewId = useResponseViewsStore((s) => {
+    const id = s.activeViewIdMap[formId] || "default"
+    const view = s.views.find((v) => v.id === id && v.formId === formId)
+    return view?.saved ? view.id : undefined
+  })
+  const activeView = useResponseViewsStore((s) => {
+    const id = s.activeViewIdMap[formId] || "default"
+    return s.views.find((v) => v.id === id && v.formId === formId)
+  })
+
+  const { tools, enabled: remoteEnabled } = useActionTools({
+    formId,
+    enabled: Boolean(formId),
+    viewId: activeViewId,
+  })
+
+  const readyItems = useMemo(() => {
+    const allow = new Set((allowedSlugs || []).filter(Boolean))
+    return tools
+      .filter((t) => allow.has(t.slug))
+      .filter((tool) => {
+        const isUseSend = tool.provider === "usesend"
+        const providerOk = isUseSend || remoteEnabled
+        const status = (tool.authStatus || "unknown").toLowerCase()
+        const authReady =
+          isUseSend || status === "ready" || status === "connected"
+        // Per‑view configured only
+        const needsParams = requiresParamsForSlug(tool.slug)
+        const viewConfigured = Boolean(
+          (activeView as any)?.actions?.some(
+            (a: any) =>
+              a?.slug === tool.slug &&
+              a?.params &&
+              Object.keys(a.params || {}).length > 0
+          )
+        )
+        const ready = needsParams ? viewConfigured : true
+        return providerOk && authReady && ready
+      })
+      .map((tool) => ({ tool }))
+  }, [tools, allowedSlugs, remoteEnabled, activeView])
+
+  async function run(slug: string) {
+    const t = tools.find((x) => x.slug === slug)
+    if (!t) return
+    if (!selectedSubmissionIds.length) {
+      toast({
+        title: "No responses selected",
+        description: "Select responses to run an action.",
+        status: "warning",
+      })
+      return
+    }
+    const payload = {
+      formId,
+      submissionIds: selectedSubmissionIds,
+      action: {
+        kind: t.provider === "usesend" ? "email" : "composio",
+        slug: t.slug,
+        // No runtime overrides here; rely on view params for composio
+        params: {},
+        idempotencyKey: `${Date.now().toString(16)}-${Math.random()
+          .toString(16)
+          .slice(2)}`,
+      },
+      // Let server validate/merge view params
+      viewId: activeViewId,
+    }
+    const res = await fetch("/api/actions/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+    const json = (await res.json().catch(() => ({}))) as any
+    if (!res.ok) {
+      toast({
+        title: "Action failed",
+        description: json?.error || `Execution failed (${res.status})`,
+        status: "error",
+      })
+      return
+    }
+    const status = String(json?.status || "").toLowerCase()
+    if (status === "completed") {
+      toast({
+        title: "Action completed",
+        description: `${t.label || t.slug} ran on ${selectedSubmissionIds.length} response(s).`,
+        status: "success",
+      })
+    } else {
+      toast({
+        title: "Action queued",
+        description: `${t.label || t.slug} enqueued.`,
+        status: "info",
+      })
+    }
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <UIButton size="sm" variant="outline">
+          Actions
+        </UIButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        <DropdownMenuLabel>Configured actions</DropdownMenuLabel>
+        {readyItems.length ? null : (
+          <DropdownMenuItem disabled>No configured actions</DropdownMenuItem>
+        )}
+        {readyItems.map(({ tool }) => (
+          <DropdownMenuItem key={tool.slug} onClick={() => run(tool.slug)}>
+            {tool.label || tool.slug}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => onSetupRequest?.()}
+          className="text-muted-foreground text-xs"
+        >
+          Setup actions…
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function PlanPreviewForRightPanel({
+  formId,
+  onDismiss,
+}: {
+  formId: string
+  onDismiss?: () => void
+}) {
+  const { renderPlan, renderView } = useResponseViewsStore((s) => {
+    const activeId = s.activeViewIdMap[formId] || "default"
+    const activeView = s.views.find(
+      (v) => v.id === activeId && v.formId === formId
+    )
+    if (activeView?.plan) {
+      return { renderPlan: activeView.plan, renderView: activeView }
+    }
+    const ephemeral = [...s.views]
+      .reverse()
+      .find((v) => v.formId === formId && !v.saved && v.plan)
+    if (ephemeral) return { renderPlan: ephemeral.plan, renderView: ephemeral }
+    return { renderPlan: undefined, renderView: activeView }
+  })
+
+  const plan = renderPlan
+  const viewMeta = renderView
+  const saved = Boolean(renderView?.saved)
+
+  const handleSave = async () => {
+    if (!viewMeta || viewMeta.saved) return
+    try {
+      // Compute configured action slugs at save time (intersection of plan actions and configured configs)
+      const suggestedSlugs: string[] = Array.from(
+        new Set(
+          ((plan?.plan?.actions as any[]) || [])
+            .map((a: any) => a?.action_key)
+            .filter(Boolean)
+        )
+      )
+      // Transitional: store suggested slugs as-is; readiness now computed from view params + auth
+      const configuredSlugs: string[] = suggestedSlugs
+
+      const res = await fetch(`/api/forms/${formId}/views`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: viewMeta.name,
+          description: plan?.plan?.meta?.rationale,
+          columns: viewMeta.columns,
+          filters: viewMeta.filters,
+          sort: viewMeta.sort,
+          insights_spec: (plan?.plan?.ui?.insights_spec as any[]) || [],
+          actionSlugs: configuredSlugs,
+        }),
+        credentials: "include",
+      })
+      let data: any = null
+      let bodyText: string | null = null
+      try {
+        data = await res.json()
+      } catch {
+        try {
+          bodyText = await res.text()
+        } catch {}
+      }
+      if (!res.ok || !data?.view?.id) {
+        const msg =
+          (data && (data.error || data.message)) ||
+          (bodyText && bodyText.slice(0, 200)) ||
+          `Failed to save view (${res.status})`
+        throw new Error(msg)
+      }
+
+      const newId = data.view.id as string
+      useResponseViewsStore.setState((state) => {
+        const idx = state.views.findIndex((v) => v.id === viewMeta.id)
+        if (idx === -1) return state
+        const existing = state.views[idx]
+        if (!existing) return state
+        const nextViews = [...state.views]
+        nextViews[idx] = {
+          ...existing,
+          id: newId,
+          saved: true,
+        }
+        const nextActive = { ...state.activeViewIdMap, [formId]: newId }
+        const nextStatus: ResponseViewsState["lastPlanStatusMap"] = {
+          ...state.lastPlanStatusMap,
+          [formId]: { correlationId: existing.correlationId, status: "saved" },
+        }
+        return {
+          views: nextViews,
+          activeViewIdMap: nextActive,
+          lastPlanStatusMap: nextStatus,
+        }
+      })
+
+      toast({
+        title: "View saved",
+        description: `Saved "${viewMeta.name}"`,
+        status: "success",
+      })
+    } catch (error) {
+      toast({
+        title: "Failed to save view",
+        description: error instanceof Error ? error.message : String(error),
+        status: "error",
+      })
+    }
+  }
+
+  if (!plan && !viewMeta) return null
+
+  return (
+    <div className="mt-2">
+      {plan || viewMeta ? (
+        <ResponseViewPlan
+          plan={
+            plan || {
+              plan_version: "ri.v1",
+              correlationId: "view",
+              plan: {
+                meta: {
+                  view_name: viewMeta?.name || "Smart View",
+                  rationale: viewMeta?.description || undefined,
+                },
+                rpc: {
+                  submission_filters: Object.fromEntries(
+                    (viewMeta?.filters || []).map((f: any) => [f.id, f.value])
+                  ),
+                  answer_filters: {},
+                },
+                ui: {
+                  columns: viewMeta?.columns || [],
+                  sort: viewMeta?.sort || undefined,
+                  insights_spec: viewMeta?.insights || [],
+                },
+                actions: (viewMeta?.actionSlugs || []).map((slug) => ({
+                  action_key: slug,
+                  params: {},
+                })),
+              },
+            }
+          }
+          saved={saved}
+          onSave={!saved ? handleSave : undefined}
+          formId={formId}
+          view={viewMeta as any}
+          onDismiss={() => {
+            // Close only; remove only if unsaved ephemeral
+            if (viewMeta && !viewMeta.saved) {
+              useResponseViewsStore
+                .getState()
+                .removeView(viewMeta.id, { id: formId } as any)
+            }
+            onDismiss?.()
+          }}
+          onDelete={async () => {
+            if (!viewMeta?.saved) return
+            try {
+              const res = await fetch(
+                `/api/forms/${formId}/views/${viewMeta.id}`,
+                {
+                  method: "DELETE",
+                  credentials: "include",
+                }
+              )
+              if (!res.ok) {
+                const text = await res.text().catch(() => "")
+                throw new Error(text || `Failed to delete view (${res.status})`)
+              }
+              useResponseViewsStore.setState((state) => {
+                const nextViews = state.views.filter(
+                  (v) => v.id !== viewMeta.id
+                )
+                const nextActive = {
+                  ...state.activeViewIdMap,
+                  [formId]: "default",
+                }
+                return { views: nextViews, activeViewIdMap: nextActive }
+              })
+              onDismiss?.()
+              toast({ title: "View deleted", status: "success" })
+            } catch (e) {
+              toast({
+                title: "Failed to delete view",
+                description: e instanceof Error ? e.message : String(e),
+                status: "error",
+              })
+            }
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}

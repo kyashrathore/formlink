@@ -19,7 +19,6 @@ import {
   type ChartConfig,
 } from "@formlink/ui/ui/chart"
 import * as React from "react"
-import { useMemo } from "react"
 import {
   Area,
   AreaChart,
@@ -37,23 +36,14 @@ import {
 } from "recharts"
 import InsightsGrid from "./insights/InsightsGrid"
 
-type Row = {
-  submission_id: string
-  created_at: string
-  status: string
-  answers?: Record<string, unknown>
-}
-
 export default function ResponseCharts({
   plan,
-  rows,
   insights,
   form,
   search,
   totals,
 }: {
   plan: RIPlanResponse | undefined
-  rows: Row[]
   insights?: Array<Record<string, unknown>>
   form?: Form
   search?: Record<string, unknown>
@@ -99,7 +89,6 @@ export default function ResponseCharts({
         node: (
           <ChartCard
             spec={spec as any}
-            rows={rows}
             serverInsight={serverInsights[idx]}
             form={form}
             plan={plan}
@@ -116,7 +105,6 @@ export default function ResponseCharts({
 
 function ChartCard({
   spec,
-  rows,
   serverInsight,
   form,
   plan,
@@ -124,7 +112,6 @@ function ChartCard({
   totals,
 }: {
   spec: any
-  rows: Row[]
   serverInsight?: any
   form?: Form
   plan?: RIPlanResponse | undefined
@@ -144,46 +131,57 @@ function ChartCard({
     getTitle(type, args, form, serverInsight)
   const description =
     (args?.description as string | undefined) ?? getDescription(type, args)
+  const isTextSpec = type === "text" || type === "summary"
+  const [summaries, setSummaries] = React.useState<
+    Array<{ title?: string; content: string }>
+  >([])
+  const [loading, setLoading] = React.useState<boolean>(false)
+  const content = String(args?.content || "").trim()
 
-  if (type === "text" || type === "summary") {
-    const [summaries, setSummaries] = React.useState<
-      Array<{ title?: string; content: string }>
-    >([])
-    const [loading, setLoading] = React.useState<boolean>(true)
-    const content = String(args?.content || "").trim()
-    React.useEffect(() => {
-      let mounted = true
-      ;(async () => {
-        try {
-          setLoading(true)
-          const res = await fetch("/api/ri/summary", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              formId: (form as any)?.id,
-              formVersionId:
-                (form as any)?.current_published_version_id ||
-                (form as any)?.current_draft_version_id ||
-                undefined,
-              plan: {
-                rpc: (plan as any)?.plan?.rpc || {},
-                ui: { insights_spec: [spec] },
-              },
-              search,
-            }),
-          })
-          const json = await res.json()
-          if (mounted && Array.isArray(json?.summaries))
-            setSummaries(json.summaries)
-        } catch {
-        } finally {
-          if (mounted) setLoading(false)
+  React.useEffect(() => {
+    if (!isTextSpec) return undefined
+
+    let mounted = true
+
+    const loadSummaries = async () => {
+      try {
+        setLoading(true)
+        const res = await fetch("/api/ri/summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            formId: (form as any)?.id,
+            formVersionId:
+              (form as any)?.current_published_version_id ||
+              (form as any)?.current_draft_version_id ||
+              undefined,
+            plan: {
+              rpc: (plan as any)?.plan?.rpc || {},
+              ui: { insights_spec: [spec] },
+            },
+            search,
+          }),
+        })
+        const json = await res.json()
+        if (mounted && Array.isArray(json?.summaries)) {
+          setSummaries(json.summaries)
         }
-      })()
-      return () => {
-        mounted = false
+      } catch {
+      } finally {
+        if (mounted) {
+          setLoading(false)
+        }
       }
-    }, [spec, form, search])
+    }
+
+    loadSummaries()
+
+    return () => {
+      mounted = false
+    }
+  }, [isTextSpec, spec, form, plan, search])
+
+  if (isTextSpec) {
     return (
       <Card className="flex h-full flex-col overflow-hidden">
         <CardHeader className="py-3">
@@ -228,10 +226,9 @@ function ChartCard({
 
   if (type === "trend") {
     const preferred = String(args.chart || "line").toLowerCase()
-    const data = useMemo(
-      () => (serverInsight?.data as any[]) || [],
-      [serverInsight]
-    )
+    const data = Array.isArray(serverInsight?.data)
+      ? (serverInsight.data as any[])
+      : []
     // Detect multi-series
     const isMulti =
       Array.isArray(data) && data[0] && typeof data[0].series === "object"
@@ -244,10 +241,8 @@ function ChartCard({
         count: d.count,
       }))
       const hasEnough = shaped.length >= minPoints
-      const summary = makeTrendSummary(shaped, args)
       const target = Number(args?.thresholds?.target ?? NaN)
       const showTarget = !isNaN(target)
-      const deltaText = computeTrendDelta(shaped, args?.comparison)
       return (
         <Card className="flex h-full flex-col overflow-hidden">
           <CardHeader className="py-3">
@@ -432,14 +427,8 @@ function ChartCard({
       ...d.series,
     }))
     const hasEnough = shaped.length >= minPoints
-    const summary = makeTrendSummary(shaped, args, seriesKeys)
     const target = Number(args?.thresholds?.target ?? NaN)
     const showTarget = !isNaN(target)
-    const deltaText = computeTrendDeltaMulti(
-      shaped,
-      args?.comparison,
-      seriesKeys
-    )
     return (
       <Card className="flex h-full flex-col overflow-hidden">
         <CardHeader className="py-3">
@@ -770,10 +759,9 @@ function ChartCard({
   if (type === "breakdown") {
     const field = args.field || "status"
     const preferred = String(args.chart || "bar").toLowerCase()
-    const data = useMemo(
-      () => (serverInsight?.data as any[]) || [],
-      [serverInsight]
-    )
+    const data = Array.isArray(serverInsight?.data)
+      ? (serverInsight.data as any[])
+      : []
     const isMulti =
       Array.isArray(data) && data[0] && typeof data[0].series === "object"
     if (!isMulti) {
@@ -785,11 +773,6 @@ function ChartCard({
       if (field === "status" && buckets <= 1) {
         return null
       }
-      const summary = makeBreakdownSummary(data, field)
-      const total = Math.max(
-        1,
-        data.reduce((acc: number, d: any) => acc + Number(d.count || 0), 0)
-      )
       const target = Number(args?.thresholds?.target ?? NaN)
       const showTarget = !isNaN(target)
       return (
@@ -920,7 +903,6 @@ function ChartCard({
     const shaped = data.map((d: any) => ({ name: d.name, ...d.series }))
     const stacked = args.stacked !== false
     const hasEnough = (shaped?.length || 0) >= 1
-    const summary = makeBreakdownSummary(data, field, seriesKeys)
     return (
       <Card className="flex h-full flex-col overflow-hidden">
         <CardHeader className="py-3">
@@ -1102,56 +1084,6 @@ function getDescription(type: string, args: Record<string, any>) {
   return ""
 }
 
-function makeTrendSummary(
-  data: Array<
-    { day: string; count?: number } & Record<
-      string,
-      number | string | undefined
-    >
-  >,
-  args: Record<string, any>,
-  seriesKeys?: string[]
-) {
-  const period = args.window ? args.window : "recent period"
-  if (!data?.length) return `No data in the ${period}.`
-  if (seriesKeys && seriesKeys.length) {
-    const last = (data[data.length - 1] || {}) as Record<string, unknown>
-    const parts = seriesKeys.map(
-      (k) => `${k}: ${Number((last[k] as number) || 0)}`
-    )
-    return `Latest day totals — ${parts.join(", ")}. Period: ${period}.`
-  }
-  const total = data.reduce((acc, d) => acc + Number(d.count || 0), 0)
-  return `Total ${total.toLocaleString()} submissions in the ${period}.`
-}
-
-function makeBreakdownSummary(
-  data: Array<{
-    name: string
-    count?: number
-    series?: Record<string, number>
-  }> = [],
-  field: string,
-  seriesKeys?: string[]
-) {
-  if (!data?.length) return `No ${field} data available yet.`
-  if (seriesKeys && seriesKeys.length) {
-    const top = [...data]
-      .map((d) => ({
-        name: d.name,
-        total: Object.values(d.series || {}).reduce((a, b) => a + b, 0),
-      }))
-      .sort((a, b) => b.total - a.total)[0]
-    return top
-      ? `Top ${field}: ${top.name} (${top.total}).`
-      : `No ${field} data available yet.`
-  }
-  const top = [...data].sort((a, b) => (b.count || 0) - (a.count || 0))[0]
-  return top
-    ? `Top ${field}: ${top.name} (${top.count}).`
-    : `No ${field} data available yet.`
-}
-
 function EmptyChartState() {
   return (
     <div className="bg-muted/30 text-muted-foreground flex h-[220px] w-full items-center justify-center rounded-md border border-dashed">
@@ -1209,54 +1141,9 @@ function safeEvalFormula(expr: string, env: Record<string, number>) {
     s = s.replace(/[A-Za-z]+/g, "")
   }
   try {
-    // eslint-disable-next-line no-new-func
     const val = Function(`return (${s})`)()
     return typeof val === "number" && isFinite(val) ? val : 0
   } catch {
     return 0
   }
-}
-
-function computeTrendDelta(
-  shaped: Array<{ day: string } & Record<string, number | string | undefined>>,
-  comparison?: { baseline?: string; change_type?: string }
-) {
-  if (!comparison || comparison.baseline !== "previous_period") return ""
-  const n = shaped.length
-  if (n < 4) return ""
-  const half = Math.floor(n / 2)
-  const prev = shaped
-    .slice(0, half)
-    .reduce((a, d) => a + Number((d as any).count || 0), 0)
-  const curr = shaped
-    .slice(half)
-    .reduce((a, d) => a + Number((d as any).count || 0), 0)
-  if (prev === 0) return ""
-  const pct = ((curr - prev) / prev) * 100
-  const sign = pct >= 0 ? "+" : ""
-  return `Δ vs prev window: ${sign}${pct.toFixed(1)}%`
-}
-
-function computeTrendDeltaMulti(
-  shaped: Array<{ day: string } & Record<string, number | string | undefined>>,
-  comparison?: { baseline?: string; change_type?: string },
-  seriesKeys: string[] = []
-) {
-  if (!comparison || comparison.baseline !== "previous_period") return ""
-  const n = shaped.length
-  if (n < 4) return ""
-  const half = Math.floor(n / 2)
-  const parts = seriesKeys.map((k) => {
-    const prev = shaped
-      .slice(0, half)
-      .reduce((a, d) => a + Number((d as any)[k] || 0), 0)
-    const curr = shaped
-      .slice(half)
-      .reduce((a, d) => a + Number((d as any)[k] || 0), 0)
-    if (prev === 0) return `${k}: –`
-    const pct = ((curr - prev) / prev) * 100
-    const sign = pct >= 0 ? "+" : ""
-    return `${k}: ${sign}${pct.toFixed(1)}%`
-  })
-  return parts.length ? `Δ vs prev window — ${parts.join(", ")}` : ""
 }

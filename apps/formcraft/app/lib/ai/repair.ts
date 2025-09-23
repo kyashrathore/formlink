@@ -1,10 +1,10 @@
+import logger from "@/app/lib/logger"
 import { generateObject } from "ai"
 import { z } from "zod"
 import { getModel } from "./provider"
-import logger from "@/app/lib/logger"
 
-// Use OpenRouter for Gemini models as Vercel has restrictions
-const MODEL = getModel("google/gemini-2.5-pro", "openrouter")
+// Prefer fast, low-latency model via Vercel for repair retries
+const REPAIR_MODEL = getModel()
 
 const newSystemPrompt = `## System Role: Form Schema JSON Repair Agent (Error-Focused)
 
@@ -66,24 +66,35 @@ ${JSON.stringify(errorDetails, null, 2)}
 Please fix the JSON data based on these errors and your instructions.`
     const startedAt = Date.now()
     logger.info("[REPAIR] generateObject start", {
-      model: String(MODEL),
+      model: String(REPAIR_MODEL),
       errorCount: errorDetails.length,
       schemaHint: (schema as any)?._def?.typeName || "zodSchema",
     })
 
-    const { object: repairedData } = await generateObject({
-      model: MODEL,
-      schema,
-      system: newSystemPrompt,
-      prompt: userPrompt,
-    })
-
-    logger.info("[REPAIR] generateObject success", {
-      durationMs: Date.now() - startedAt,
-      model: String(MODEL),
-    })
-
-    return repairedData
+    // Try up to 3 attempts for repair
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const { object: repairedData } = await generateObject({
+          model: REPAIR_MODEL,
+          schema,
+          system: newSystemPrompt,
+          prompt: userPrompt,
+        })
+        logger.info("[REPAIR] generateObject success", {
+          durationMs: Date.now() - startedAt,
+          model: String(REPAIR_MODEL),
+          attempt,
+        })
+        return repairedData
+      } catch (err) {
+        logger.warn("[REPAIR] attempt failed", {
+          attempt,
+          error: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }
+    logger.error("[REPAIR] all attempts failed")
+    return null
   } catch (repairError) {
     logger.error("[REPAIR] Error repairing JSON", {
       error:

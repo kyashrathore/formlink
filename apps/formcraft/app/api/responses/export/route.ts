@@ -1,3 +1,4 @@
+import logger from "@/app/lib/logger"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import { verifyUserCanAccessFormVersion } from "@/app/lib/middleware/authorization"
 import { createServerClient, Json } from "@formlink/db"
@@ -199,6 +200,21 @@ export async function POST(request: NextRequest) {
     )
 
     if (error || !rpcResponseArray || rpcResponseArray.length === 0) {
+      if (error) {
+        logger.error?.("[RESP][export] RPC failed", {
+          message: error.message,
+          details: (error as any).details || null,
+          hint: (error as any).hint || null,
+          code: (error as any).code || null,
+          submissionFilters,
+          answerFilters,
+        })
+      } else {
+        logger.error?.("[RESP][export] RPC returned empty result", {
+          submissionFilters,
+          answerFilters,
+        })
+      }
       return NextResponse.json(
         { success: false, error: "Failed to fetch form responses for export" },
         { status: 500 }

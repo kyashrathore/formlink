@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
 import { Button } from "@formlink/ui"
 import { Trash2 } from "lucide-react"
+import { useState } from "react"
 
 export default function CleanupTestDataButton({
   formId,
@@ -21,7 +21,11 @@ export default function CleanupTestDataButton({
       size="sm"
       disabled={loading}
       onClick={async () => {
-        if (!confirm("Are you sure you want to delete all test data for this form?")) {
+        if (
+          !confirm(
+            "Are you sure you want to delete all test data for this form?"
+          )
+        ) {
           return
         }
         try {
@@ -33,7 +37,9 @@ export default function CleanupTestDataButton({
           })
           if (!res.ok) throw new Error("Failed to cleanup test data")
           const data = await res.json()
-          alert(`Deleted ${data.submissions_deleted} test submissions and ${data.answers_deleted} answers`)
+          alert(
+            `Deleted ${data.submissions_deleted} test submissions and ${data.answers_deleted} answers`
+          )
           onDone?.()
         } catch (e) {
           console.error(e)

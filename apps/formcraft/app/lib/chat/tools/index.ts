@@ -1,7 +1,7 @@
 import { ChatToolContext } from "../types"
 import { createFormTool } from "./create-form"
 import { getFormContextTool } from "./get-form-context"
-import { responseIntelligenceTool } from "./response-intelligence"
+import { responseIntelligenceTool } from "./response-intelligence/index"
 import { updateFormTool } from "./update-form"
 
 export function createChatTools(context: ChatToolContext) {

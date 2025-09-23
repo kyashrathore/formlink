@@ -1,96 +1,43 @@
 import { getenv } from "@/lib/env"
-import { openai } from "@ai-sdk/openai"
-import { ClaudeIcon, GeminiIcon, MistralIcon, OpenAIIcon } from "@formlink/ui"
+
+// Model list used in the chat UI. Keep minimal, focused options.
 
 export const NON_AUTH_DAILY_MESSAGE_LIMIT = 5
 export const AUTH_DAILY_MESSAGE_LIMIT = 100
 export const REMAINING_QUERY_ALERT_THRESHOLD = 2
 export const DAILY_FILE_UPLOAD_LIMIT = 10
 
-type AISDKModel = unknown
-
 export type Model = {
   id: string
   name: string
   provider: string
   available?: boolean
-  api_sdk?: AISDKModel
-  features?: {
-    id: string
-    enabled: boolean
-  }[]
-  openRouterId?: string
-  icon?: React.ComponentType<React.SVGProps<SVGSVGElement>>
 }
 
 export const MODELS = [
+  // Default (fast, open-source)
   {
-    id: "openai/gpt-5",
-    name: "GPT-5",
-    provider: "openai",
-    features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-    ],
-    api_sdk: openai("openai/gpt-5"),
-    icon: OpenAIIcon,
-    openRouterId: "openai/gpt-5",
+    id: "cerebras/gpt-oss-120b",
+    name: "Cerebras GPT-OSS 120B",
+    provider: "cerebras",
   },
-  {
-    id: "openai/gpt-4.1",
-    name: "GPT-4.1",
-    provider: "openai",
-    features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-    ],
-    api_sdk: openai("openai/gpt-4.1"),
-    icon: OpenAIIcon,
-  },
-  {
-    id: "google/gemini-2.5-pro",
-    name: "Google Gemini 2.5 Pro",
-    provider: "google",
-    features: [],
-    api_sdk: openai("gpt-4"),
-    openRouterId: "google/gemini-2.5-pro",
-    icon: GeminiIcon,
-  },
-  {
-    id: "google/gemini-2.5-flash",
-    name: "Google Gemini 2.5 Flash",
-    provider: "google",
-    features: [
-      {
-        id: "file-upload",
-        enabled: true,
-      },
-    ],
-    api_sdk: openai("gpt-4"),
-    openRouterId: "google/gemini-2.5-flash",
-    icon: GeminiIcon,
-  },
+  // Common proprietary options (optional to keep visible)
+  { id: "openai/gpt-5", name: "OpenAI GPT-5", provider: "openai" },
   {
     id: "anthropic/claude-opus-4.1",
     name: "Claude Opus 4.1",
     provider: "anthropic",
-    features: [],
-    api_sdk: openai("gpt-4"),
-    openRouterId: "anthropic/claude-opus-4.1",
-    icon: ClaudeIcon,
   },
   {
     id: "anthropic/claude-sonnet-4",
     name: "Claude Sonnet 4",
     provider: "anthropic",
-    features: [],
-    api_sdk: openai("gpt-4"),
-    openRouterId: "anthropic/claude-sonnet-4",
-    icon: ClaudeIcon,
+  },
+  { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", provider: "google" },
+  {
+    id: "google/gemini-2.5-flash",
+    name: "Gemini 2.5 Flash",
+    provider: "google",
   },
 ] as Model[]
 
@@ -101,44 +48,7 @@ export const MODELS_OPTIONS = [
   })),
 ] as Model[]
 
-export type Provider = {
-  id: string
-  name: string
-  available: boolean
-  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
-}
-
-export const PROVIDERS = [
-  {
-    id: "openai",
-    name: "OpenAI",
-    icon: OpenAIIcon,
-  },
-  {
-    id: "mistral",
-    name: "Mistral",
-    icon: MistralIcon,
-  },
-  {
-    id: "google",
-    name: "Google",
-    icon: GeminiIcon,
-  },
-  {
-    id: "anthropic",
-    name: "Anthropic",
-    icon: ClaudeIcon,
-  },
-] as Provider[]
-
-export const PROVIDERS_OPTIONS = [
-  ...PROVIDERS.map((provider) => ({
-    ...provider,
-    available: true,
-  })),
-] as Provider[]
-
-export const MODEL_DEFAULT = "google/gemini-2.5-pro-preview"
+export const MODEL_DEFAULT = "cerebras/gpt-oss-120b"
 
 export const APP_NAME = "FormLink.ai"
 export const APP_DOMAIN = "https://formlink.ai"

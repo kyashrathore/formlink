@@ -2,7 +2,7 @@ import { MODEL_DEFAULT } from "@/app/lib/config"
 import { FormGenerationEventHandler } from "@/app/lib/handlers/FormGenerationEventHandler"
 import type { RIPlanResponse } from "@/app/lib/ri/types"
 import { useChat } from "@ai-sdk/react"
-import { Button, PromptSuggestion } from "@formlink/ui"
+import { Button, PromptSuggestion, toast } from "@formlink/ui"
 import { Suggestion, Suggestions } from "@formlink/ui/ai-elements"
 import { DefaultChatTransport } from "ai"
 import { AlertTriangle } from "lucide-react"
@@ -19,10 +19,11 @@ import Chat from "./chat-components/chat"
 import { Conversation } from "./conversation"
 import { useAutoScroll, useFormattedEvents } from "./hooks"
 import { normalizePersistedParts } from "./parts"
-import RIPlanPreview from "./RIPlanPreview"
+// RIPlanPreview is no longer rendered inside chat history; plans are shown in the right panel
+// import RIPlanPreview from "./RIPlanPreview"
 import { computeChatStatus } from "./status"
-import type { ChatMessage, ChatPanelProps } from "./types"
-import { getDisplaySummaryMessage, getLastUserMessage } from "./utils"
+import type { ChatPanelProps } from "./types"
+import { getDisplaySummaryMessage } from "./utils"
 
 const ChatPanel: React.FC<ChatPanelProps> = ({
   formId,
@@ -145,29 +146,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                 plan.correlationId ||
                 plan.plan?.meta?.view_name ||
                 `plan-${Date.now()}`
-              const messageId = `ri-plan-${correlationId}`
-
-              setMessages((prev) => {
-                const planPart = { type: "ri-plan", plan }
-                const exists = prev.some((m) => m.id === messageId)
-                if (exists) {
-                  return prev.map((m) =>
-                    m.id === messageId ? { ...m, parts: [planPart] } : m
-                  )
-                }
-                return [
-                  ...prev,
-                  {
-                    id: messageId,
-                    role: "assistant",
-                    content: "",
-                    parts: [planPart],
-                  } as any,
-                ]
-              })
-              // Optionally switch to Responses tab
-              if (activeMainTab !== "responses") {
-                // defer switch; avoid importing setter to keep minimal changes
+              // Do not render the plan inside chat history; rely on right-panel rendering
+              // Switch to Responses tab to reveal the plan card instantly
+              try {
+                const { setActiveMainTab } = usePanelState.getState() as any
+                if (setActiveMainTab) setActiveMainTab("responses")
+              } catch (e) {
+                console.error(e)
               }
             } catch (e) {
               console.error("Failed to apply RI plan", e)
@@ -373,36 +358,44 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   }, [isResponsesTab, editorForm, generationForm])
 
   const { formattedEventsForLogView } = useFormattedEvents(eventsLog)
-
-  const messageTimestampRef = useRef<Map<string, string>>(new Map())
-
-  const chatMessages: ChatMessage[] = useMemo(() => {
-    return vercelChatMessages.map(
-      (msg): ChatMessage => ({
-        role: msg.role as "user" | "assistant",
-        content: (Array.isArray((msg as any).parts) ? (msg as any).parts : [])
-          .filter((p: any) => p?.type === "text" && typeof p.text === "string")
-          .map((p: any) => p.text)
-          .join(""),
-        timestamp: (() => {
-          const existing = messageTimestampRef.current.get((msg as any).id)
-          if (existing) return existing
-          const t = new Date().toISOString()
-          messageTimestampRef.current.set((msg as any).id, t)
-          return t
-        })(),
-        // In v5, messages have parts automatically populated by the SDK
-        ...(msg.parts ? { parts: msg.parts } : {}),
-      })
-    )
-  }, [vercelChatMessages])
   const isStreaming = chatStatus === "streaming"
-
-  const chatContainerRef = useAutoScroll([chatMessages, isStreaming], true)
+  const chatContainerRef = useAutoScroll(
+    [vercelChatMessages, isStreaming],
+    true
+  )
 
   const handleSendMessageForChatComponent = useCallback(
     async (message: string, model: string) => {
       setSelectedModel(model)
+      // If on Responses tab, include refine context for active view so agent can update it
+      let refineContext: any = undefined
+      if (activeMainTab === "responses") {
+        const currentForm = editorForm || generationForm
+        const activeId = currentForm?.id
+          ? responseViewsStore.activeViewIdMap[currentForm.id] || "default"
+          : "default"
+        const activeView = responseViewsStore.views.find(
+          (v) =>
+            v.id === activeId &&
+            (v.formId === currentForm?.id || v.id === "default")
+        )
+        if (activeView && activeView.id !== "default") {
+          refineContext = {
+            mode: "refine" as const,
+            correlationId: activeView.correlationId || activeView.id,
+            currentPlan: activeView.plan,
+            saved: Boolean(activeView.saved),
+          }
+        }
+        // Provide last plan disposition (saved/discarded/unsaved) for AI context
+        if (currentForm?.id) {
+          const last =
+            useResponseViewsStore.getState().lastPlanStatusMap[currentForm.id]
+          if (last) {
+            refineContext = { ...(refineContext || {}), previousPlan: last }
+          }
+        }
+      }
       await sendMessage(
         { parts: [{ type: "text", text: message }] },
         {
@@ -416,22 +409,28 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                   ? "response_intelligence"
                   : "general",
               responseIntelligence: activeMainTab === "responses",
+              planContext: refineContext,
             },
           },
         }
       )
     },
-    [sendMessage, formId, userId, activeMainTab]
+    [sendMessage, formId, userId, activeMainTab, editorForm, generationForm]
   )
 
   const handleRetryClick = useCallback(() => {
-    const lastUserMsg = getLastUserMessage(chatMessages)
-    const messageToRetry = lastUserMsg?.content || storedInitialMessage || ""
+    const lastUserUi = [...vercelChatMessages]
+      .filter((m: any) => m.role === "user")
+      .pop() as any
+    const textPart = (lastUserUi?.parts || []).find(
+      (p: any) => p?.type === "text" && typeof p.text === "string"
+    ) as any
+    const messageToRetry = textPart?.text || storedInitialMessage || ""
     if (messageToRetry) {
       handleSendMessageForChatComponent(messageToRetry, selectedModel)
     }
   }, [
-    chatMessages,
+    vercelChatMessages,
     selectedModel,
     handleSendMessageForChatComponent,
     storedInitialMessage,
@@ -457,7 +456,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     !historyLoading &&
     !storedInitialMessage &&
     !hasUserInteracted &&
-    chatMessages.length === 0 &&
+    vercelChatMessages.length === 0 &&
     (isResponsesTab || !formReady)
 
   const responseSuggestionsToShow = isResponsesTab
@@ -466,60 +465,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
       : fallbackResponsePrompts
     : initialFormPrompts
 
-  const renderPlanPreview = useCallback(
-    (plan: RIPlanResponse) => {
-      const currentForm = editorForm || generationForm
-      const currentFormId = currentForm?.id
-      const correlationId =
-        plan.correlationId || plan.plan?.meta?.view_name || ""
+  // No inline plan preview renderer; plans are presented on the right panel
 
-      const matchingView = responseViewsStore.views.find((v) => {
-        if (correlationId) return v.correlationId === correlationId
-        if (!currentFormId) return false
-        const activeId =
-          responseViewsStore.activeViewIdMap[currentFormId] || "default"
-        return v.id === activeId && v.formId === currentFormId
-      })
-
-      const saved = Boolean(matchingView?.saved)
-      const canSave = Boolean(matchingView && !matchingView.saved)
-
-      const handleSave = () => {
-        if (!matchingView || matchingView.saved) return
-        useResponseViewsStore.setState((state) => {
-          const idx = state.views.findIndex((v) => v.id === matchingView.id)
-          if (idx === -1) return state
-          const existing = state.views[idx]
-          if (!existing) return state
-          const nextViews = [...state.views]
-          nextViews[idx] = { ...existing, saved: true }
-          return { views: nextViews }
-        })
-        try {
-          const { setActiveMainTab } = usePanelState.getState() as any
-          setActiveMainTab && setActiveMainTab("responses")
-        } catch (e) {
-          console.error(e)
-        }
-      }
-
-      return (
-        <RIPlanPreview
-          plan={plan}
-          saved={saved}
-          onSave={canSave ? handleSave : undefined}
-        />
-      )
-    },
-    [
-      editorForm,
-      generationForm,
-      responseViewsStore.views,
-      responseViewsStore.activeViewIdMap,
-    ]
-  )
-
-  const lastAssistantMessage = chatMessages.find(
+  const lastAssistantMessage = vercelChatMessages.find(
     (m) => m.role === "assistant" && Array.isArray(m.parts)
   )
   const lastAssistantParts = lastAssistantMessage?.parts
@@ -532,9 +480,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   return (
     <div className="flex h-full flex-col">
       <div ref={chatContainerRef} className="min-h-0 flex-1 overflow-hidden">
-        {chatMessages.length > 0 ? (
+        {vercelChatMessages.length > 0 ? (
           <Conversation
-            messages={chatMessages}
+            messages={vercelChatMessages as any}
             status={
               uiStatus === "streaming"
                 ? "streaming"
@@ -545,7 +493,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                     : "ready"
             }
             displaySummaryMessage={displaySummaryMessage}
-            renderPlanPreview={renderPlanPreview}
+            // Plan previews are hidden in chat; shown in right panel
           />
         ) : suggestionsVisible ? (
           <div className="flex h-full items-center justify-center p-8 text-center">
@@ -639,7 +587,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                     key={s.label}
                     suggestion={s.label}
                     onClick={() => {
-                      // Refine current in-flight view if one is active and unsaved
+                      // Refine current active view (saved or unsaved)
                       const currentForm = editorForm || generationForm
                       const activeId = currentForm?.id
                         ? responseViewsStore.activeViewIdMap[currentForm.id] ||
@@ -651,16 +599,27 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                           (v.formId === currentForm?.id || v.id === "default")
                       )
                       const refineContext =
-                        activeView &&
-                        activeView.id !== "default" &&
-                        !activeView.saved
+                        activeView && activeView.id !== "default"
                           ? {
-                              mode: "refine",
+                              mode: "refine" as const,
                               correlationId:
                                 activeView.correlationId || activeView.id,
                               currentPlan: activeView.plan,
+                              saved: Boolean(activeView.saved),
                             }
                           : undefined
+                      if (currentForm?.id) {
+                        const last =
+                          useResponseViewsStore.getState().lastPlanStatusMap[
+                            currentForm.id
+                          ]
+                        if (last) {
+                          ;(refineContext as any) = {
+                            ...(refineContext || {}),
+                            previousPlan: last,
+                          }
+                        }
+                      }
 
                       sendMessage(
                         { parts: [{ type: "text", text: s.message }] },

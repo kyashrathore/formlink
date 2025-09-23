@@ -14,7 +14,11 @@ const eslintConfig = [
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "warn",
-      "no-console": ["error", { allow: ["error", "warn"] }],
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }
+      ],
+      "no-console": ["warn", { allow: ["error", "warn"] }],
       "react/no-unescaped-entities": "off",
     },
   },

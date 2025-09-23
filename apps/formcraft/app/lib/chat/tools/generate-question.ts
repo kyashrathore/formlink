@@ -61,7 +61,8 @@ export async function generateQuestion(
   systemPrompt: string,
   formId: string,
   userId: string,
-  getSequence: () => number
+  getSequence: () => number,
+  modelId?: string
 ): Promise<QuestionGenerationResult> {
   try {
     const { questionTitle, questionType, order, totalQuestions, formContext } =
@@ -92,7 +93,7 @@ export async function generateQuestion(
     }): Promise<string | null> => {
       if (remainingRepairs-- <= 0) return null
       const { object: repaired } = await generateObject({
-        model: getModel("google/gemini-2.5-pro", "openrouter"), // Using OpenRouter to avoid Vercel restrictions
+        model: getModel(modelId) as any,
         schema: QuestionSchema,
         system: CREATE_FORM_REPAIR_SYSTEM_PROMPT as string,
         experimental_repairText:
@@ -157,7 +158,7 @@ Notes:
 `
 
     const generateSchemaResult = await generateObject({
-      model: getModel("google/gemini-2.5-pro", "openrouter"), // Using OpenRouter to avoid Vercel restrictions
+      model: getModel(modelId) as any,
       schema: QuestionSchema,
       system: enrichedSystemPrompt,
       prompt: userPrompt,
@@ -299,7 +300,8 @@ export async function generateQuestionsParallel(
   systemPrompt: string,
   formId: string,
   userId: string,
-  getSequence: () => number
+  getSequence: () => number,
+  modelId?: string
 ): Promise<QuestionGenerationResult[]> {
   dataStream.write({
     type: "data-agent_event",
@@ -329,7 +331,8 @@ export async function generateQuestionsParallel(
         systemPrompt,
         formId,
         userId,
-        getSequence
+        getSequence,
+        modelId
       )
     )
   )

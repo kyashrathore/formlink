@@ -1,8 +1,12 @@
-"use client";
+"use client"
 
-import React from "react";
-import { TrendingUp } from "lucide-react";
-import { Label, LabelList, Pie, PieChart as RechartsPieChart, Sector } from "recharts";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@formlink/ui/ui/card"
 import {
   ChartConfig,
   ChartContainer,
@@ -10,40 +14,40 @@ import {
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "@formlink/ui/ui/chart";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@formlink/ui/ui/card";
+} from "@formlink/ui/ui/chart"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@formlink/ui/ui/select";
+} from "@formlink/ui/ui/select"
+import React from "react"
+import {
+  Label,
+  LabelList,
+  Pie,
+  PieChart as RechartsPieChart,
+  Sector,
+} from "recharts"
+
 interface PieChartProps {
-  chartData: any[];
-  chartConfig: ChartConfig;
-  title: string;
-  description: string;
-  footerText?: string;
-  dataKey: string;
-  nameKey: string;
-  showLabel?: boolean;
-  showLegend?: boolean;
-  variant?: "pie" | "donut";
-  customLabel?: (props: any) => React.ReactNode;
-  showLabelList?: boolean;
-  donutText?: string;
-  stackedData?: any[];
-  interactive?: boolean;
-  activeKey?: string;
-  onActiveChange?: (key: string) => void;
+  chartData: any[]
+  chartConfig: ChartConfig
+  title: string
+  description: string
+  dataKey: string
+  nameKey: string
+  showLabel?: boolean
+  showLegend?: boolean
+  variant?: "pie" | "donut"
+  customLabel?: (props: any) => React.ReactNode
+  showLabelList?: boolean
+  donutText?: string
+  stackedData?: any[]
+  interactive?: boolean
+  activeKey?: string
+  onActiveChange?: (key: string) => void
 }
 /**
  * A versatile pie chart component that wraps Recharts PieChart.
@@ -101,7 +105,6 @@ export function PieChartWrapper({
   chartConfig,
   title,
   description,
-  footerText,
   dataKey,
   nameKey,
   showLabel = false,
@@ -115,15 +118,15 @@ export function PieChartWrapper({
   activeKey,
   onActiveChange,
 }: PieChartProps) {
-  const innerRadius = variant === "donut" ? 60 : 0;
+  const innerRadius = variant === "donut" ? 60 : 0
   const activeIndex = React.useMemo(
     () => chartData.findIndex((item) => item[nameKey] === activeKey),
     [chartData, nameKey, activeKey]
-  );
+  )
   const total = React.useMemo(
     () => chartData.reduce((acc, curr) => acc + curr[dataKey], 0),
     [chartData, dataKey]
-  );
+  )
   return (
     <Card className="flex flex-col">
       <CardHeader className="items-center pb-0">
@@ -228,7 +231,7 @@ export function PieChartWrapper({
                             {donutText}
                           </tspan>
                         </text>
-                      );
+                      )
                     }
                   }}
                 />
@@ -254,5 +257,5 @@ export function PieChartWrapper({
       </CardContent>
       {/* Footer removed per UX guidance */}
     </Card>
-  );
+  )
 }

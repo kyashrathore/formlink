@@ -4,13 +4,19 @@ import { Button } from "@formlink/ui"
 import { Save, X } from "lucide-react"
 import React from "react"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
-import { saveActiveView, useResponseViewsStore } from "../../stores/useResponseViewsStore"
+import {
+  saveActiveView,
+  useResponseViewsStore,
+} from "../../stores/useResponseViewsStore"
 
 export default function ResponseViewsTabs() {
   const form = useFormEditorStore((s) => s.form)
-  const { views, activeViewIdMap, setActiveView, removeView } = useResponseViewsStore()
+  const { views, activeViewIdMap, setActiveView, removeView } =
+    useResponseViewsStore()
   const formId = form?.id
-  const filteredViews = (views || []).filter((v) => v.formId === formId || v.id === "default")
+  const filteredViews = (views || []).filter(
+    (v) => v.formId === formId || v.id === "default"
+  )
   const activeViewId = (formId && activeViewIdMap[formId]) || "default"
 
   return (

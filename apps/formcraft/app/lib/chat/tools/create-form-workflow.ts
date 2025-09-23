@@ -130,7 +130,8 @@ export async function createFormWorkflow(
       dataStream,
       formId,
       userId,
-      () => ++eventSequence
+      () => ++eventSequence,
+      selectedModel
     )
 
     if (!metadataResult.success || !metadataResult.metadata) {
@@ -171,7 +172,8 @@ export async function createFormWorkflow(
       QUESTION_SCHEMA_PROMPT,
       formId,
       userId,
-      () => ++currentSequence
+      () => ++currentSequence,
+      selectedModel
     )
     // Update eventSequence after question generation
     eventSequence = currentSequence

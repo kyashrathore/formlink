@@ -81,7 +81,8 @@ export async function generateMetadata(
   dataStream: DataStream,
   formId: string,
   userId: string,
-  getSequence: () => number
+  getSequence: () => number,
+  modelId?: string
 ): Promise<MetadataGenerationResult> {
   try {
     // Stream progress update
@@ -108,7 +109,7 @@ export async function generateMetadata(
 
     // Core AI call - using OpenRouter to avoid Vercel restrictions
     const result = await generateObject({
-      model: getModel("google/gemini-2.5-pro", "openrouter"),
+      model: getModel(modelId) as any,
       schema: MetadataResponseSchema,
       system: aiSystemPromptWithInput,
       prompt: normalizedInputContent,

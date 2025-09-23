@@ -1,6 +1,9 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getOrComputeSummary, type SummaryRequest } from "@/app/lib/ri/summaries"
+import {
+  getOrComputeSummary,
+  type SummaryRequest,
+} from "@/app/lib/ri/summaries"
 import { revalidateTag } from "next/cache"
+import { NextRequest, NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
 

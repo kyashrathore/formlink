@@ -54,11 +54,11 @@ export async function DELETE(req: NextRequest) {
           success: true,
           message: "No forms found for user",
           submissions_deleted: 0,
-          answers_deleted: 0
+          answers_deleted: 0,
         })
       }
 
-      const formIds = userForms.map(f => f.id)
+      const formIds = userForms.map((f) => f.id)
 
       // Get all form versions for these forms
       const { data: formVersions } = await supabase
@@ -71,11 +71,11 @@ export async function DELETE(req: NextRequest) {
           success: true,
           message: "No form versions found",
           submissions_deleted: 0,
-          answers_deleted: 0
+          answers_deleted: 0,
         })
       }
 
-      const versionIds = formVersions.map(v => v.version_id)
+      const versionIds = formVersions.map((v) => v.version_id)
 
       // Get all test submissions for these versions
       const { data: testSubmissions, error: fetchError } = await supabase
@@ -86,10 +86,13 @@ export async function DELETE(req: NextRequest) {
 
       if (fetchError) {
         console.error("Error fetching test submissions:", fetchError)
-        return NextResponse.json({
-          error: "Failed to fetch test submissions",
-          details: fetchError.message
-        }, { status: 500 })
+        return NextResponse.json(
+          {
+            error: "Failed to fetch test submissions",
+            details: fetchError.message,
+          },
+          { status: 500 }
+        )
       }
 
       if (!testSubmissions || testSubmissions.length === 0) {
@@ -97,11 +100,11 @@ export async function DELETE(req: NextRequest) {
           success: true,
           message: "No test data found to delete",
           submissions_deleted: 0,
-          answers_deleted: 0
+          answers_deleted: 0,
         })
       }
 
-      const submissionIds = testSubmissions.map(s => s.submission_id)
+      const submissionIds = testSubmissions.map((s) => s.submission_id)
 
       // Count and delete answers first
       const { data: answersToDelete } = await supabase
@@ -135,12 +138,12 @@ export async function DELETE(req: NextRequest) {
         success: true,
         message: `Deleted all test data for user's forms`,
         submissions_deleted: submissionsCount,
-        answers_deleted: answersCount
+        answers_deleted: answersCount,
       })
     }
 
     // Handle deletion for specific form or form version
-    let formVersionId = body.form_version_id || null
+    const formVersionId = body.form_version_id || null
 
     if (!formVersionId && body.form_id) {
       // Get all versions for this form
@@ -154,7 +157,7 @@ export async function DELETE(req: NextRequest) {
           success: true,
           message: "No form versions found",
           submissions_deleted: 0,
-          answers_deleted: 0
+          answers_deleted: 0,
         })
       }
 
@@ -170,10 +173,9 @@ export async function DELETE(req: NextRequest) {
       }
 
       // Delete test data for all versions of this form
-      const versionIds = versions.map(v => v.version_id)
+      const versionIds = versions.map((v) => v.version_id)
 
       // Get all test submissions
-      console.log("Looking for test submissions in versions:", versionIds)
       const { data: testSubmissions, error: fetchError } = await supabase
         .from("form_submissions")
         .select("submission_id")
@@ -182,24 +184,25 @@ export async function DELETE(req: NextRequest) {
 
       if (fetchError) {
         console.error("Error fetching test submissions:", fetchError)
-        return NextResponse.json({
-          error: "Failed to fetch test submissions",
-          details: fetchError.message
-        }, { status: 500 })
+        return NextResponse.json(
+          {
+            error: "Failed to fetch test submissions",
+            details: fetchError.message,
+          },
+          { status: 500 }
+        )
       }
-
-      console.log(`Found ${testSubmissions?.length || 0} test submissions to delete`)
 
       if (!testSubmissions || testSubmissions.length === 0) {
         return NextResponse.json({
           success: true,
           message: "No test data found to delete",
           submissions_deleted: 0,
-          answers_deleted: 0
+          answers_deleted: 0,
         })
       }
 
-      const submissionIds = testSubmissions.map(s => s.submission_id)
+      const submissionIds = testSubmissions.map((s) => s.submission_id)
 
       // Delete answers first (select to count before deleting)
       const { data: answersToDelete } = await supabase
@@ -208,7 +211,6 @@ export async function DELETE(req: NextRequest) {
         .in("submission_id", submissionIds)
 
       const answersCount = answersToDelete?.length || 0
-      console.log(`Deleting ${answersCount} answers`)
 
       if (answersCount > 0) {
         const { error: answerDeleteError } = await supabaseService
@@ -228,44 +230,44 @@ export async function DELETE(req: NextRequest) {
         .in("submission_id", submissionIds)
 
       if (messagesDeleteError) {
-        console.error("Error deleting submission messages:", messagesDeleteError)
+        console.error(
+          "Error deleting submission messages:",
+          messagesDeleteError
+        )
       }
 
       // Delete submissions using service client
       const submissionsCount = testSubmissions.length
-      console.log(`Deleting ${submissionsCount} submissions`)
-      console.log("Submission IDs to delete:", submissionIds.slice(0, 5), "...") // Log first 5 IDs
 
-      const { error: submissionDeleteError, data: deleteResult } = await supabaseService
+      const { error: submissionDeleteError } = await supabaseService
         .from("form_submissions")
         .delete()
         .in("submission_id", submissionIds)
         .select() // Add select to return deleted rows
 
-      console.log("Delete result:", deleteResult?.length || 0, "rows deleted")
-
       if (submissionDeleteError) {
         console.error("Error deleting submissions:", submissionDeleteError)
-        return NextResponse.json({
-          error: "Failed to delete submissions",
-          details: submissionDeleteError.message
-        }, { status: 500 })
+        return NextResponse.json(
+          {
+            error: "Failed to delete submissions",
+            details: submissionDeleteError.message,
+          },
+          { status: 500 }
+        )
       }
 
       // Verify deletion
-      const { data: remainingTest } = await supabase
+      await supabase
         .from("form_submissions")
         .select("submission_id")
         .in("submission_id", submissionIds.slice(0, 5))
         .eq("testmode", true)
 
-      console.log("Verification - remaining test submissions:", remainingTest?.length || 0)
-
       return NextResponse.json({
         success: true,
         message: `Deleted test data for form ${body.form_id}`,
         submissions_deleted: submissionsCount,
-        answers_deleted: answersCount
+        answers_deleted: answersCount,
       })
     }
 
@@ -295,10 +297,13 @@ export async function DELETE(req: NextRequest) {
 
     if (fetchError) {
       console.error("Error fetching test submissions:", fetchError)
-      return NextResponse.json({
-        error: "Failed to fetch test submissions",
-        details: fetchError.message
-      }, { status: 500 })
+      return NextResponse.json(
+        {
+          error: "Failed to fetch test submissions",
+          details: fetchError.message,
+        },
+        { status: 500 }
+      )
     }
 
     if (!testSubmissions || testSubmissions.length === 0) {
@@ -306,11 +311,11 @@ export async function DELETE(req: NextRequest) {
         success: true,
         message: "No test data found to delete",
         submissions_deleted: 0,
-        answers_deleted: 0
+        answers_deleted: 0,
       })
     }
 
-    const submissionIds = testSubmissions.map(s => s.submission_id)
+    const submissionIds = testSubmissions.map((s) => s.submission_id)
 
     // Count and delete answers first
     const { data: answersToDelete } = await supabase
@@ -344,13 +349,15 @@ export async function DELETE(req: NextRequest) {
       success: true,
       message: `Deleted test data for form version ${formVersionId}`,
       submissions_deleted: submissionsCount,
-      answers_deleted: answersCount
+      answers_deleted: answersCount,
     })
-
   } catch (e) {
     console.error("Error deleting test data:", e)
     return NextResponse.json(
-      { error: "Failed to delete test data", details: e instanceof Error ? e.message : "Unknown error" },
+      {
+        error: "Failed to delete test data",
+        details: e instanceof Error ? e.message : "Unknown error",
+      },
       { status: 500 }
     )
   }

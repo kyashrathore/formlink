@@ -4,7 +4,18 @@ import { getPublishedBlogPosts } from "../lib/notion"
 const URL = "https://formlink.ai"
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const posts = await getPublishedBlogPosts()
+  let posts: Awaited<ReturnType<typeof getPublishedBlogPosts>> = []
+  try {
+    posts = await getPublishedBlogPosts()
+  } catch (err) {
+    console.warn(
+      "[sitemap] failed to fetch blog posts; continuing with static routes",
+      {
+        error: err instanceof Error ? err.message : String(err),
+      }
+    )
+    posts = []
+  }
 
   const blogPosts = posts
     .filter((post) => !post.doNotIndex)

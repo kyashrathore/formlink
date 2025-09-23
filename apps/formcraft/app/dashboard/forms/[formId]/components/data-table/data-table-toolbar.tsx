@@ -6,23 +6,11 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   Input,
 } from "@formlink/ui"
 import type { Table } from "@tanstack/react-table"
-import {
-  AlertTriangle,
-  CalendarClock,
-  CheckCircle2,
-  FlaskConical,
-  Loader2,
-  SlidersHorizontal,
-  X as XIcon,
-} from "lucide-react"
+import { CalendarClock, CheckCircle2, FlaskConical } from "lucide-react"
 import * as React from "react"
 
 interface DataTableToolbarProps<TData> {
@@ -40,8 +28,6 @@ export function DataTableToolbar<TData>({
 
   // Optional: Hook to propagate a generic search value into your filter state.
   // Here we just hold it locally to match DiceUI's layout without changing server API.
-
-  const columns = table.getAllLeafColumns().filter((c) => c.getCanHide())
 
   // Facet helpers
   const setFilter = (id: string, value: any) => {

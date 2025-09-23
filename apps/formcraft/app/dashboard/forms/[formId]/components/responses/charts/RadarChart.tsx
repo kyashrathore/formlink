@@ -4,7 +4,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@formlink/ui/ui/card"
@@ -16,15 +15,13 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@formlink/ui/ui/chart"
-import { TrendingUp } from "lucide-react"
-import React from "react"
+import type { PolarAngleAxisProps } from "recharts"
 import {
   PolarAngleAxis,
   PolarGrid,
   Radar,
   RadarChart as RechartsRadarChart,
 } from "recharts"
-import type { PolarAngleAxisProps } from "recharts"
 
 interface RadarChartProps {
   chartData: any[]
@@ -102,7 +99,6 @@ export function RadarChartWrapper({
   chartConfig,
   title,
   description,
-  footerText,
   dataKeys,
   polarAngleKey,
   showDots = false,

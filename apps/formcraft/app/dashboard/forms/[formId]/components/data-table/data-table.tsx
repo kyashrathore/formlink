@@ -13,6 +13,7 @@ import {
 import type { ColumnDef, Table as TTable } from "@tanstack/react-table"
 import { flexRender } from "@tanstack/react-table"
 import { Loader2 } from "lucide-react"
+import type { ReactNode } from "react"
 import { DataTablePagination } from "../data-table/data-table-pagination"
 import { useDataTableStore } from "../data-table/dataTableStore"
 import DataTableActionBar from "./data-table-action-bar"
@@ -24,6 +25,7 @@ export interface DataTableProps<TData, TValue> {
   onExportAll?: () => void
   onExportSelected?: () => void
   isLoading?: boolean
+  rightActions?: ReactNode
 }
 
 export function DataTable<TData, TValue>({
@@ -32,10 +34,15 @@ export function DataTable<TData, TValue>({
   onExportAll,
   onExportSelected,
   isLoading,
+  rightActions,
 }: DataTableProps<TData, TValue>) {
   return (
     <div className="flex h-full w-full flex-col gap-3">
-      <DataTableToolbar table={table} onExport={onExportAll} />
+      <DataTableToolbar
+        table={table}
+        onExport={onExportAll}
+        rightActions={rightActions}
+      />
       <div className="flex max-w-full flex-1 flex-col gap-4 overflow-hidden p-1">
         <div className="relative z-0 rounded-md border">
           <ScrollArea className="w-full">

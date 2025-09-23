@@ -175,22 +175,6 @@ export function generateTableColumnsFromForm(
           ? headerText.slice(0, maxHeader) + "…"
           : headerText
 
-      const typeName = (question as any)?.type?.name as string | undefined
-      const icon =
-        typeName === "text"
-          ? "📝"
-          : typeName === "singleChoice" || typeName === "multipleChoice"
-            ? "🔘"
-            : typeName === "rating"
-              ? "⭐"
-              : typeName === "date"
-                ? "📅"
-                : typeName === "fileUpload"
-                  ? "📎"
-                  : typeName === "address"
-                    ? "📍"
-                    : ""
-
       return {
         accessorKey: question.id,
         header: ({ column }) => (

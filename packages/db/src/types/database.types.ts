@@ -34,6 +34,63 @@ export type Database = {
   };
   public: {
     Tables: {
+      actions_config: {
+        Row: {
+          auth_status: string;
+          config: Json;
+          connected_account_id: string | null;
+          created_at: string;
+          form_id: string;
+          id: string;
+          pending_connection_request_id: string | null;
+          provider: Database["public"]["Enums"]["action_provider"];
+          tool_slug: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          auth_status?: string;
+          config?: Json;
+          connected_account_id?: string | null;
+          created_at?: string;
+          form_id: string;
+          id?: string;
+          pending_connection_request_id?: string | null;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          tool_slug: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          auth_status?: string;
+          config?: Json;
+          connected_account_id?: string | null;
+          created_at?: string;
+          form_id?: string;
+          id?: string;
+          pending_connection_request_id?: string | null;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          tool_slug?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "actions_config_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "actions_config_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       brands: {
         Row: {
           brand_id: string;
@@ -502,6 +559,81 @@ export type Database = {
           },
         ];
       };
+      response_actions_log: {
+        Row: {
+          aci_function: string | null;
+          aci_payload: Json | null;
+          action_name: string;
+          completed_at: string | null;
+          connected_account_id: string | null;
+          error_message: string | null;
+          form_id: string;
+          id: string;
+          idempotency_key: string | null;
+          params: Json | null;
+          provider: Database["public"]["Enums"]["action_provider"];
+          provider_response: Json | null;
+          result: Json | null;
+          started_at: string;
+          status: Database["public"]["Enums"]["action_status"];
+          submission_ids: string[];
+          user_id: string;
+        };
+        Insert: {
+          aci_function?: string | null;
+          aci_payload?: Json | null;
+          action_name: string;
+          completed_at?: string | null;
+          connected_account_id?: string | null;
+          error_message?: string | null;
+          form_id: string;
+          id?: string;
+          idempotency_key?: string | null;
+          params?: Json | null;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          provider_response?: Json | null;
+          result?: Json | null;
+          started_at?: string;
+          status?: Database["public"]["Enums"]["action_status"];
+          submission_ids: string[];
+          user_id: string;
+        };
+        Update: {
+          aci_function?: string | null;
+          aci_payload?: Json | null;
+          action_name?: string;
+          completed_at?: string | null;
+          connected_account_id?: string | null;
+          error_message?: string | null;
+          form_id?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          params?: Json | null;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          provider_response?: Json | null;
+          result?: Json | null;
+          started_at?: string;
+          status?: Database["public"]["Enums"]["action_status"];
+          submission_ids?: string[];
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "response_actions_log_form_id_fkey";
+            columns: ["form_id"];
+            isOneToOne: false;
+            referencedRelation: "forms";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "response_actions_log_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       tasks: {
         Row: {
           completed_at: string | null;
@@ -670,6 +802,68 @@ export type Database = {
         };
         Relationships: [];
       };
+      tool_connections: {
+        Row: {
+          id: string;
+          user_id: string;
+          provider: Database["public"]["Enums"]["action_provider"];
+          toolkit: string;
+          connected_account_id: string | null;
+          auth_status: string;
+          pending_connection_request_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          toolkit: string;
+          connected_account_id?: string | null;
+          auth_status?: string;
+          pending_connection_request_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          toolkit?: string;
+          connected_account_id?: string | null;
+          auth_status?: string;
+          pending_connection_request_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "tool_connections_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      submission_action_logs: {
+        Row: {
+          submission_id: string;
+          action_log_id: string;
+          created_at: string;
+        };
+        Insert: {
+          submission_id: string;
+          action_log_id: string;
+          created_at?: string;
+        };
+        Update: {
+          submission_id?: string;
+          action_log_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -698,6 +892,8 @@ export type Database = {
       };
     };
     Enums: {
+      action_provider: "usesend" | "composio";
+      action_status: "pending" | "running" | "completed" | "failed";
       form_status: "draft" | "published" | "archived";
       submission_status: "in_progress" | "completed" | "abandoned";
     };

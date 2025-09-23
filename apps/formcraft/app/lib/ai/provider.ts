@@ -20,72 +20,67 @@ export type ProviderType = "vercel" | "openrouter" | "openai"
  * const model = getModel("openai/gpt-5", "vercel")
  */
 export function getModel(
-  modelName: string,
-  providerType: ProviderType = "vercel"
+  modelName?: string,
+  providerType?: ProviderType
 ): string | LanguageModel {
-  // For Vercel (default), just return the string
-  // AI SDK v5 automatically uses Vercel AI Gateway when a string is passed
-  if (providerType === "vercel") {
-    return modelName
+  // Decide gateway: env override or default to vercel
+  const defaultGateway = (process.env.API_GATEWAY as ProviderType) || "vercel"
+  const gateway: ProviderType = providerType || defaultGateway
+
+  // Default model if none provided
+  const resolvedModel =
+    modelName && modelName.trim() ? modelName : "cerebras/gpt-oss-120b"
+
+  // Canonical mapping: Vercel → OpenRouter
+  const modelMap: Record<string, string> = {
+    // OpenAI
+    "gpt-5": "openai/gpt-5",
+    // Anthropic
+    "claude-opus-4.1": "anthropic/claude-opus-4.1",
+    "claude-sonnet-4": "anthropic/claude-sonnet-4",
+    // Google
+    "gemini-2.5-pro": "google/gemini-2.5-pro",
+    "gemini-2.5-flash": "google/gemini-2.5-flash",
+    // Cerebras (OpenRouter provider name differs)
+    "cerebras/gpt-oss-120b": "chutes/gpt-oss-120b",
+  }
+  const reverseModelMap: Record<string, string> = Object.fromEntries(
+    Object.entries(modelMap).map(([key, value]) => [value, key])
+  )
+
+  // Normalize model id for the selected gateway
+  const normalized =
+    gateway === "openrouter"
+      ? modelMap[resolvedModel] || resolvedModel
+      : gateway === "vercel"
+        ? reverseModelMap[resolvedModel] || resolvedModel
+        : resolvedModel
+
+  if (gateway === "vercel") {
+    // AI SDK v5 uses Vercel AI Gateway when receiving a string model id
+    return normalized
   }
 
-  // For OpenRouter, create and use the OpenRouter provider
-  if (providerType === "openrouter") {
+  if (gateway === "openrouter") {
     const openrouter = createOpenRouter({
       apiKey: process.env.OPENROUTER_API_KEY!,
     })
-    return openrouter(modelName)
+    return openrouter(normalized)
   }
 
-  // For direct OpenAI - using Vercel AI Gateway for now
-  // TODO: Implement direct OpenAI SDK integration when needed
-  if (providerType === "openai") {
-    return modelName
+  if (gateway === "openai") {
+    return normalized
   }
 
-  // Default fallback to Vercel
-  return modelName
+  // Fallback
+  return normalized
 }
 
 /**
  * Helper to convert model names between providers
  * Useful when switching providers but keeping the same model
  */
-export function convertModelName(
-  modelName: string,
-  fromProvider: ProviderType,
-  toProvider: ProviderType
-): string {
-  // If same provider, return as-is
-  if (fromProvider === toProvider) {
-    return modelName
-  }
-
-  // Convert from Vercel to OpenRouter format
-  if (fromProvider === "vercel" && toProvider === "openrouter") {
-    const modelMap: Record<string, string> = {
-      "gpt-5": "openai/gpt-5",
-    }
-    return modelMap[modelName] || modelName
-  }
-
-  // Convert from OpenRouter to Vercel format
-  if (fromProvider === "openrouter" && toProvider === "vercel") {
-    const modelMap: Record<string, string> = {
-      "openai/gpt-4o": "gpt-4o",
-      "openai/gpt-5": "gpt-5",
-      "openai/gpt-4o-mini": "gpt-4o-mini",
-      "openai/gpt-4": "gpt-4",
-      "openai/gpt-3.5-turbo": "gpt-3.5-turbo",
-      "anthropic/claude-3.5-sonnet": "claude-3-5-sonnet",
-      "anthropic/claude-3-opus": "claude-3-opus",
-      "anthropic/claude-3-haiku": "claude-3-haiku",
-    }
-    return modelMap[modelName] || modelName
-  }
-
-  return modelName
-}
+// Deprecated utility; intentionally removed to avoid unused code.
 
 // Environment check helper
 export function checkProviderConfig() {

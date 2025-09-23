@@ -2,6 +2,7 @@
 
 import type { RIPlan, RIPlanResponse } from "@/app/lib/ri/types"
 import type { Form } from "@formlink/schema"
+import { toast } from "@formlink/ui"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { useDataTableStore } from "../components/data-table/dataTableStore"
@@ -12,6 +13,7 @@ export interface ResponseView {
   id: string
   formId: string
   name: string
+  description?: string
   columns: string[]
   sort?: ViewSort
   filters: { id: string; value: unknown }[]
@@ -19,12 +21,29 @@ export interface ResponseView {
   correlationId?: string
   saved?: boolean
   plan?: RIPlanResponse
+  insights?: any[]
+  actionSlugs?: string[]
+  // New: per-view actions with params
+  actions?: ActionInView[]
 }
 
-interface ResponseViewsState {
+export type ActionInView = {
+  slug: string
+  provider?: "composio" | "usesend"
+  toolkit?: string
+  toolConnectionId?: string
+  params?: Record<string, unknown>
+}
+
+export interface ResponseViewsState {
   views: ResponseView[]
   activeViewIdMap: Record<string, string>
+  lastPlanStatusMap: Record<
+    string,
+    { correlationId?: string; status: "unsaved" | "saved" | "discarded" }
+  >
   initDefault: (form: Form | null) => void
+  loadSavedViews: (formId: string) => Promise<void>
   addOrUpdateFromPlan: (
     plan: RIPlanResponse,
     form: Form | null,
@@ -87,6 +106,41 @@ function applyViewToTable(view: ResponseView, form: Form | null) {
   store.setColumnOrder(order)
 }
 
+async function persistViewUpdate(view: ResponseView) {
+  try {
+    if (!view.formId || view.id === "default") return
+    const payload: any = {
+      name: view.name,
+      columns: view.columns,
+      filters: view.filters,
+      sort: view.sort,
+    }
+    if (Array.isArray(view.actions)) payload.actions = view.actions
+    const res = await fetch(`/api/forms/${view.formId}/views/${view.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "include",
+    })
+    if (!res.ok) {
+      const data = (await res.json().catch(() => ({}))) as any
+      throw new Error(data?.error || `Failed to update view`)
+    }
+    toast({
+      title: "View updated",
+      description: `Saved changes to "${view.name}"`,
+      status: "success",
+    })
+  } catch (e) {
+    console.error("[views] persist update failed", e)
+    toast({
+      title: "Failed to update view",
+      description: e instanceof Error ? e.message : String(e),
+      status: "error",
+    })
+  }
+}
+
 function applyDefaultToTable() {
   const store = useDataTableStore.getState()
   store.setPagination({ pageIndex: 0, pageSize: 10 })
@@ -111,6 +165,7 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
         },
       ],
       activeViewIdMap: {},
+      lastPlanStatusMap: {},
 
       initDefault: (form) => {
         // Reset table to default state
@@ -120,6 +175,55 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
           ...state,
           activeViewIdMap: { ...state.activeViewIdMap, [form.id]: "default" },
         }))
+      },
+
+      // Load saved views for this form from the server and replace any local copies
+      loadSavedViews: async (formId: string) => {
+        try {
+          const res = await fetch(`/api/forms/${formId}/views`, {
+            method: "GET",
+            credentials: "include",
+          })
+          if (!res.ok) return
+          const json = (await res.json().catch(() => ({}))) as any
+          const rows: any[] = Array.isArray(json?.views) ? json.views : []
+          const mapped: ResponseView[] = rows.map((row) => ({
+            id: row.id,
+            formId: row.form_id || formId,
+            name: row.name || "Saved View",
+            description: row.description || undefined,
+            columns: Array.isArray(row.columns) ? row.columns : [],
+            sort: row.sort_config || undefined,
+            filters: Array.isArray(row.filters) ? row.filters : [],
+            pageSize: 20,
+            saved: true,
+            insights: Array.isArray(row.insights_spec) ? row.insights_spec : [],
+            actionSlugs: Array.isArray(row.action_slugs)
+              ? (row.action_slugs as any[]).filter((s) => typeof s === "string")
+              : [],
+            actions: Array.isArray((row as any).actions)
+              ? ((row as any).actions as any[])
+              : [],
+          }))
+          set((state) => {
+            const keep = state.views.filter(
+              (v) => v.formId !== formId || v.id === "default" || !v.saved
+            )
+            const nextViews = [...keep, ...mapped]
+            const currentActive = state.activeViewIdMap[formId]
+            const activeExists = nextViews.some((v) => v.id === currentActive)
+            return {
+              views: nextViews,
+              activeViewIdMap: {
+                ...state.activeViewIdMap,
+                [formId]:
+                  activeExists && currentActive ? currentActive : "default",
+              },
+            }
+          })
+        } catch {
+          // ignore
+        }
       },
 
       addOrUpdateFromPlan: (resp, form, formIdOverride) => {
@@ -144,13 +248,34 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
         set((state) => {
           const existingIdx = state.views.findIndex((v) => v.id === id)
           const nextViews = [...state.views]
-          if (existingIdx >= 0)
-            nextViews[existingIdx] = { ...nextViews[existingIdx], ...view }
-          else nextViews.push(view)
+          if (existingIdx >= 0) {
+            const wasSaved = Boolean(nextViews[existingIdx]?.saved)
+            nextViews[existingIdx] = {
+              ...nextViews[existingIdx],
+              ...view,
+              // if user is refining an existing saved view, keep it marked saved
+              saved: wasSaved || view.saved,
+            }
+            // persist updates for previously saved views
+            if (wasSaved) {
+              void persistViewUpdate(nextViews[existingIdx])
+            }
+          } else nextViews.push(view)
           const nextActive = resolvedFormId
             ? { ...state.activeViewIdMap, [resolvedFormId]: id }
             : { ...state.activeViewIdMap }
-          return { views: nextViews, activeViewIdMap: nextActive }
+          const nextStatus: ResponseViewsState["lastPlanStatusMap"] = {
+            ...state.lastPlanStatusMap,
+            [resolvedFormId]: {
+              correlationId: resp.correlationId,
+              status: "unsaved",
+            },
+          }
+          return {
+            views: nextViews,
+            activeViewIdMap: nextActive,
+            lastPlanStatusMap: nextStatus,
+          }
         })
         return id
       },
@@ -174,7 +299,19 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
 
       removeView: (id, form) => {
         const formId = form?.id
-        set((state) => ({ views: state.views.filter((v) => v.id !== id) }))
+        const stateBefore = get()
+        const view = stateBefore.views.find((v) => v.id === id)
+        set((state) => {
+          const nextViews = state.views.filter((v) => v.id !== id)
+          const nextMap = { ...state.lastPlanStatusMap }
+          if (formId && view?.plan && !view?.saved) {
+            nextMap[formId] = {
+              correlationId: view.correlationId,
+              status: "discarded",
+            }
+          }
+          return { views: nextViews, lastPlanStatusMap: nextMap }
+        })
         if (formId && get().activeViewIdMap[formId] === id) {
           applyDefaultToTable()
           set({
@@ -185,9 +322,30 @@ export const useResponseViewsStore = create<ResponseViewsState>()(
     }),
     {
       name: "response-views-store",
+      version: 2,
+      // Drop any previously persisted `views` and only persist minimal UX state
+      migrate: (persisted: any, version: number) => {
+        if (!persisted || version < 2) {
+          return {
+            views: [
+              {
+                id: "default",
+                formId: "__global__",
+                name: "Default",
+                columns: [],
+                filters: [],
+                pageSize: 10,
+              },
+            ],
+            activeViewIdMap: (persisted && persisted.activeViewIdMap) || {},
+            lastPlanStatusMap: (persisted && persisted.lastPlanStatusMap) || {},
+          }
+        }
+        return persisted
+      },
       partialize: (state) => ({
-        views: state.views,
         activeViewIdMap: state.activeViewIdMap,
+        lastPlanStatusMap: state.lastPlanStatusMap,
       }),
     }
   )

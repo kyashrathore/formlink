@@ -20,6 +20,7 @@ const nanoid = customAlphabet(
 )
 
 interface ChatRequestOptions {
+  model?: string
   temperature?: number
   maxOutputTokens?: number
 }
@@ -81,10 +82,8 @@ export async function handleChatRequest(
         const tools = createChatTools(toolContext)
         const intent = (options as any)?.intent || "general"
         const riFlag = Boolean((options as any)?.responseIntelligence)
-        const isFirstMessage = messages.length <= 1
         const system = `${SYSTEM_PROMPT}\n\n## Current Session Context:\n- Form ID: ${currentFormId}\n- Intent: ${intent}\n- RI Requested: ${riFlag}`
-        const MODEL = getModel("google/gemini-2.5-pro", "openrouter")
-
+        const MODEL = getModel(options?.model)
         const result = await streamText({
           model: MODEL,
           messages: convertToModelMessages(messages),

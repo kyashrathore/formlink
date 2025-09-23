@@ -1,3 +1,6 @@
+import fs from "node:fs"
+import path from "node:path"
+import url from "node:url"
 import { getModel } from "@/app/lib/ai/provider"
 import logger from "@/app/lib/logger"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
@@ -13,12 +16,8 @@ let SUMMARY_SYSTEM_PROMPT =
   "Return ONLY JSON with a 'summaries' array of {title, content}."
 let SUMMARY_SYSTEM_PROMPT_PATH: string | null = null
 try {
-  const path = require("node:path")
-  const fs = require("node:fs")
   let moduleDir = process.cwd()
   try {
-    const url = require("node:url")
-    // eslint-disable-next-line no-undef
     const maybeDirname =
       typeof __dirname !== "undefined" ? __dirname : undefined
     moduleDir = maybeDirname || path.dirname(url.fileURLToPath(import.meta.url))
@@ -274,6 +273,16 @@ export async function GET(request: NextRequest) {
     })
 
     if (error) {
+      logger.error?.("[RESP] RPC failed", {
+        message: error.message,
+        details: (error as any).details || null,
+        hint: (error as any).hint || null,
+        code: (error as any).code || null,
+        page,
+        page_size,
+        submissionFilters,
+        answerFilters,
+      })
       return NextResponse.json(
         { success: false, error: "Failed to fetch form responses" },
         { status: 500 }
@@ -281,6 +290,12 @@ export async function GET(request: NextRequest) {
     }
 
     if (!rpcResponseArray || rpcResponseArray.length === 0) {
+      logger.error?.("[RESP] RPC returned empty result", {
+        page,
+        page_size,
+        submissionFilters,
+        answerFilters,
+      })
       return NextResponse.json(
         { success: false, error: "Failed to process form responses" },
         { status: 500 }
@@ -553,7 +568,10 @@ export async function GET(request: NextRequest) {
             field_label: fieldLabelFor(field),
             data,
           }
-          if (by) ((base.by = by), (base.by_label = fieldLabelFor(by)))
+          if (by) {
+            base.by = by
+            base.by_label = fieldLabelFor(by)
+          }
           return base
         }
 
@@ -633,7 +651,10 @@ export async function GET(request: NextRequest) {
             field_label: fieldLabelFor(field),
             data,
           }
-          if (by) ((base.by = by), (base.by_label = fieldLabelFor(by)))
+          if (by) {
+            base.by = by
+            base.by_label = fieldLabelFor(by)
+          }
           logger.info("[RESP] Insight computed", {
             idx,
             type: "breakdown",
@@ -655,19 +676,7 @@ export async function GET(request: NextRequest) {
       const textIdxs: number[] = []
       if (textIdxs.length) {
         try {
-          const MODEL = getModel("google/gemini-2.5-pro", "openrouter")
-          // No timeout/sample cap (per request)
-          const truncate = (s: string, n: number) =>
-            s.length <= n ? s : s.slice(0, n) + "…"
-          const pickSample = <T>(arr: T[], max: number) => {
-            if (arr.length <= max) return arr
-            const stride = Math.ceil(arr.length / max)
-            const out: T[] = []
-            for (let i = 0; i < arr.length && out.length < max; i += stride) {
-              out.push(arr[i]!)
-            }
-            return out
-          }
+          const MODEL = getModel()
           // Note: no timeout wrapper here to capture full provider output
           const aiStart = Date.now()
           const SummarySchema = z
@@ -772,9 +781,8 @@ export async function GET(request: NextRequest) {
                 error: normalizeErr(e1),
               }
             )
-            const BACKUP_MODEL =
-              process.env.RESP_SUMMARY_BACKUP_MODEL || "google/gemini-2.5-pro"
-            const BACKUP = getModel(BACKUP_MODEL, "openrouter")
+
+            const BACKUP = getModel()
             try {
               const res2 = await generateObject({
                 model: BACKUP,

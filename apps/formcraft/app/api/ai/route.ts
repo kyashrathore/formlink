@@ -27,7 +27,6 @@ const conditionsPrompt = CONDITIONS_PROMPT
 // Removed - using provider utility instead
 
 // Use provider utility - using vercel to avoid Azure issues
-const MODEL = getModel("cerebras/gpt-oss-120b", "vercel")
 
 const RESPONSE_PLAN_SUGGESTIONS_PROMPT = `You are a helpful analytics assistant in FormLink. A user has a form with collected responses and is viewing the Responses tab. You must return a JSON object with a \\\"suggestions\\\" array containing up to 5 short, natural-language prompt ideas (each <= 120 characters) that they can ask the assistant to generate a response intelligence plan. Tailor the suggestions to the form's title, description, and question types, covering filters, segments, charts, or insights they might explore. The response MUST be valid JSON.`
 
@@ -237,7 +236,7 @@ questions: ${transformedQuestions}
 `
 
     const { object: aiResponseText } = await generateObject({
-      model: MODEL,
+      model: getModel(),
       schema: responseSchema,
       system: systemPrompt as string,
       prompt: promptContent,

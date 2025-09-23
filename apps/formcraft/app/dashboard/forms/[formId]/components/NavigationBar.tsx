@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react"
 import { usePanelState } from "../hooks/usePanelState"
 import { selectIsDirty, useFormEditorStore } from "../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../stores/useFormGenerationStore"
+import { useResponseViewsStore } from "../stores/useResponseViewsStore"
 
 type ButtonState = "normal" | "loading" | "success" | "error"
 
@@ -34,6 +35,23 @@ export default function NavigationBar({
   const isFormGenerating = useFormGenerationStore(
     (state) => state.isFormGenerating
   )
+  const hasBlockingUnsavedPlan = useResponseViewsStore((s) => {
+    const id = s.activeViewIdMap[formId] || "default"
+    const view = s.views.find((v) => v.id === id && v.formId === formId)
+    return Boolean(view && view.plan && !view.saved)
+  })
+
+  function guardNav(target: Parameters<typeof setActiveMainTab>[0]) {
+    if (hasBlockingUnsavedPlan && target !== "responses") {
+      toast({
+        title: "Save response plan first",
+        description: "Save or dismiss the Response Plan to leave Responses.",
+        status: "warning",
+      })
+      return
+    }
+    setActiveMainTab(target)
+  }
 
   const updateFormMutation = useMutation({
     mutationFn: async (updates: unknown) => {
@@ -195,7 +213,7 @@ export default function NavigationBar({
     <div className="bg-card border-border flex items-center justify-between rounded-t-lg border-b px-4 py-2">
       <div className="flex space-x-1">
         <button
-          onClick={() => setActiveMainTab("form")}
+          onClick={() => guardNav("form")}
           className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             activeMainTab === "form"
               ? "bg-primary text-primary-foreground shadow-sm"
@@ -206,7 +224,7 @@ export default function NavigationBar({
         </button>
 
         <button
-          onClick={() => setActiveMainTab("preview")}
+          onClick={() => guardNav("preview")}
           className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             activeMainTab === "preview"
               ? "bg-primary text-primary-foreground shadow-sm"
@@ -228,7 +246,7 @@ export default function NavigationBar({
         </button>
 
         <button
-          onClick={() => hasShortId && setActiveMainTab("share")}
+          onClick={() => hasShortId && guardNav("share")}
           disabled={!hasShortId}
           className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             !hasShortId
@@ -242,7 +260,7 @@ export default function NavigationBar({
         </button>
 
         <button
-          onClick={() => setActiveMainTab("settings")}
+          onClick={() => guardNav("settings")}
           className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
             activeMainTab === "settings"
               ? "bg-primary text-primary-foreground shadow-sm"

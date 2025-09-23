@@ -74,6 +74,11 @@ apps/formcraft/.env
 apps/formcraft/out/
 apps/formcraft/.env.local
 
+# Supabase CLI temp/artifacts
+supabase/**/.temp/
+supabase/**/.branches/
+packages/db/supabase/.temp/
+
 
 # Cloudflare worker for dev only (apps/formcraft)
 apps/formcraft-do-worker/build/
