@@ -188,6 +188,13 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Route-scoped root scroll lock for dashboard */
+  html:has(#dashboard-root),
+  body:has(#dashboard-root) {
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
   :root {
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);

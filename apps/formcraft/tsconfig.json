@@ -3,7 +3,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@formlink/prompts": ["../../packages/prompts/src"]
     },
     "plugins": [
       {

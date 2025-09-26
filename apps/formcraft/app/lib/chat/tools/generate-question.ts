@@ -1,7 +1,7 @@
+import { generateObject } from "@/app/lib/ai/tracing"
+import { loadPrompt } from "@formlink/prompts"
 import { Question, QuestionSchema } from "@formlink/schema"
-import { generateObject } from "ai"
 import { getModel } from "../../ai/provider"
-import { CREATE_FORM_REPAIR_SYSTEM_PROMPT } from "../../prompts"
 import { createAgentEvent } from "../../types/agent-events"
 
 // Define QuestionType locally since it's not exported from schema
@@ -45,6 +45,8 @@ export interface GenerateQuestionParams {
     title: string
     description: string
   }
+  // Optional hint for prompt to avoid id collisions; minimally [{ id }]
+  existingQuestions?: Array<{ id: string }>
 }
 
 /**
@@ -58,7 +60,6 @@ export interface GenerateQuestionParams {
 export async function generateQuestion(
   params: GenerateQuestionParams,
   dataStream: DataStream,
-  systemPrompt: string,
   formId: string,
   userId: string,
   getSequence: () => number,
@@ -68,19 +69,19 @@ export async function generateQuestion(
     const { questionTitle, questionType, order, totalQuestions, formContext } =
       params
 
-    if (!systemPrompt || systemPrompt.trim() === "") {
-      throw new Error("System prompt is required for question generation")
-    }
+    // System prompt is rendered from the shared template with injected variables.
 
     // Progress handled by workflow - removed raw stream write
 
-    let userPrompt = `Generate a complete JSON schema for the question: \"${questionTitle}\" (type: ${questionType}). This is question ${
-      order + 1
-    } of ${totalQuestions}.`
-
-    if (formContext) {
-      userPrompt += `\n\nForm context:\nTitle: ${formContext.title}\nDescription: ${formContext.description}`
-    }
+    const system = await loadPrompt("form/question-schema.md", {
+      user_prompt: questionTitle,
+      question_type: questionType,
+      question_index: order + 1,
+      total_questions: totalQuestions,
+      form_title: formContext?.title ?? "",
+      form_description: formContext?.description ?? "",
+      existing_questions: params.existingQuestions ?? [],
+    })
 
     // Add a repair function to increase robustness against schema drift
     let remainingRepairs = 2
@@ -92,76 +93,51 @@ export async function generateQuestion(
       error: unknown
     }): Promise<string | null> => {
       if (remainingRepairs-- <= 0) return null
+      let parsed: any = null
+      try {
+        parsed = JSON.parse(text)
+      } catch {
+        parsed = text
+      }
+      const repairSystem = await loadPrompt("form/create-form-repair.md", {
+        errors_json: [
+          {
+            path: Array.isArray((error as any)?.path)
+              ? (error as any).path.join(".")
+              : "",
+            message:
+              (error as any)?.message ||
+              (error instanceof Error ? error.message : String(error)),
+            code: (error as any)?.code || "unknown",
+          },
+        ],
+        json_payload: parsed,
+        generation_context: {
+          model: String(getModel(modelId)),
+          schema_name: "QuestionSchema",
+          timestamp: new Date().toISOString(),
+          form_title: formContext?.title ?? "",
+          form_description: formContext?.description ?? "",
+          question_text: questionTitle,
+          question_type: questionType,
+        },
+      })
       const { object: repaired } = await generateObject({
         model: getModel(modelId) as any,
         schema: QuestionSchema,
-        system: CREATE_FORM_REPAIR_SYSTEM_PROMPT as string,
+        system: repairSystem,
         experimental_repairText:
           remainingRepairs > 0 ? repairFunction : undefined,
-        prompt: `
-          Repair the following JSON schema based on the error: ${JSON.stringify(
-            error
-          )}
-          Original question context:
-          - Form Title: ${formContext?.title ?? ""}
-          - Form Description: ${formContext?.description ?? ""}
-          - Question Text: ${questionTitle}
-          - Question Type: ${questionType}
-          
-          Faulty JSON:
-          ${text}
-        `,
+        prompt: "",
       })
       return JSON.stringify(repaired)
     }
 
-    // Enrich the system prompt to match the current QuestionSchema shape (discriminated union under "type")
-    const enrichedSystemPrompt = `
-${systemPrompt}
-
-CRITICAL SCHEMA SHAPE (align with @formlink/schema):
-- The question uses "type" as a discriminated union object:
-  {
-    "type": {
-      "name": "text" | "singleChoice" | "multipleChoice" | "rating" | "date" | "ranking" | "fileUpload" | "address" | "linearScale" | "likertScale",
-      // Per-type properties:
-      // text:          { "name":"text", "format":"text"|"email"|"url"|"tel"|"number"|"password"|"country" }
-      // singleChoice:  { "name":"singleChoice",  "display": "radio"|"dropdown",              "options":[{ "value":string, "label":string, "score":number }] }
-      // multipleChoice:{ "name":"multipleChoice","display": "checkbox"|"multiSelectDropdown", "options":[{ "value":string, "label":string, "score":number }] }
-      // rating:        { "name":"rating",       "config":      { "min":number, "max":number (>min), "step":number, "minLabel"?:string, "maxLabel"?:string } }
-      // date:          { "name":"date", "format":"date"|"dateRange" }
-      // linearScale:   { "name":"linearScale",  "config": { "start":number, "end":number (>start), "step":number, "startLabel"?:string, "endLabel"?:string } }
-      // ranking:       { "name":"ranking",      "options":[{ "value":string, "label":string, "score":number }] }
-      // fileUpload:    { "name":"fileUpload" }
-      // address:       { "name":"address" }
-      // likertScale:   { "name":"likertScale",  "options": string[] } // 2-7 labels
-    }
-  }
-
-Top-level fields:
-- "id": string (e.g., "q${order + 1}_keyword1_keyword2")
-- "questionNo": number (use ${order + 1})
-- "title": string (exactly the question text)
-- "description"?: string
-- "validations"?: Partial rules; each rule object contains { value, message?, originalText? }
-- "defaultValue"?: appropriate type
-- "submissionBehavior": "autoAnswer" | "manualAnswer" | "manualUnclear"
-  Guidance:
-    manualAnswer: multipleChoice, address, ranking
-    manualUnclear: text (and number-like text when unsure)
-    autoAnswer: singleChoice, rating, date, fileUpload, linearScale, likertScale
-- "styling" defaults to { "colSpan": 12 } if omitted.
-
-Notes:
-- For choice questions, include options with a numeric "score" (use 0 if not scoring).
-- Ensure configs (rating/linearScale/ranking) are present when required by the type.
-`
-
     const generateSchemaResult = await generateObject({
       model: getModel(modelId) as any,
       schema: QuestionSchema,
-      system: enrichedSystemPrompt,
-      prompt: userPrompt,
+      system: system,
+      prompt: "",
       experimental_repairText: repairFunction,
     })
 
@@ -297,7 +273,6 @@ Notes:
 export async function generateQuestionsParallel(
   questionParams: GenerateQuestionParams[],
   dataStream: DataStream,
-  systemPrompt: string,
   formId: string,
   userId: string,
   getSequence: () => number,
@@ -325,15 +300,7 @@ export async function generateQuestionsParallel(
 
   const results: QuestionGenerationResult[] = await Promise.all(
     questionParams.map((params) =>
-      generateQuestion(
-        params,
-        dataStream,
-        systemPrompt,
-        formId,
-        userId,
-        getSequence,
-        modelId
-      )
+      generateQuestion(params, dataStream, formId, userId, getSequence, modelId)
     )
   )
 

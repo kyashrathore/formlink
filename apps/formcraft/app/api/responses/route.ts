@@ -1,54 +1,15 @@
-import fs from "node:fs"
-import path from "node:path"
-import url from "node:url"
 import { getModel } from "@/app/lib/ai/provider"
+import { generateObject } from "@/app/lib/ai/tracing"
 import logger from "@/app/lib/logger"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import { verifyUserCanAccessFormVersion } from "@/app/lib/middleware/authorization"
 import { createServerClient, Json } from "@formlink/db"
-import { generateObject } from "ai"
+import { loadPrompt } from "@formlink/prompts"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 
-// Load Summary Insights system prompt once at module load (no gate)
-let SUMMARY_SYSTEM_PROMPT =
-  "Return ONLY JSON with a 'summaries' array of {title, content}."
-let SUMMARY_SYSTEM_PROMPT_PATH: string | null = null
-try {
-  let moduleDir = process.cwd()
-  try {
-    const maybeDirname =
-      typeof __dirname !== "undefined" ? __dirname : undefined
-    moduleDir = maybeDirname || path.dirname(url.fileURLToPath(import.meta.url))
-  } catch {}
-  const candidates = [
-    // Relative to this route file
-    path.resolve(moduleDir, "../../lib/chat/prompts/summary-system.md"),
-    // Absolute from repo root
-    path.resolve(
-      process.cwd(),
-      "apps/formcraft/app/lib/chat/prompts/summary-system.md"
-    ),
-  ]
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) {
-        SUMMARY_SYSTEM_PROMPT = fs.readFileSync(candidate, "utf8")
-        SUMMARY_SYSTEM_PROMPT_PATH = candidate
-        logger.info("[RESP] Loaded summary system prompt", { candidate })
-        break
-      }
-    } catch {}
-  }
-  if (!SUMMARY_SYSTEM_PROMPT_PATH) {
-    logger.warn("[RESP] Using fallback summary system prompt", { candidates })
-  }
-} catch (e) {
-  logger.warn("[RESP] Failed to resolve summary system prompt", {
-    error: e instanceof Error ? e.message : String(e),
-  })
-}
+// Summary prompt is rendered per request with injected variables (rows/questions/angles/context)
 
 type InsightSpec =
   | { type: "count"; args?: { label?: string } }
@@ -227,12 +188,7 @@ export async function GET(request: NextRequest) {
 
     for (const [key, value] of Object.entries(filters)) {
       if (allowedSubmissionFilters.includes(key)) {
-        // Temporary compatibility: if status is an array, coerce to first value
-        if (key === "status" && Array.isArray(value)) {
-          submissionFilters[key] = value.length ? value[0] : undefined
-        } else {
-          submissionFilters[key] = value
-        }
+        submissionFilters[key] = value
       } else if (validQuestionIds.includes(key)) {
         answerFilters[key] = value
       }
@@ -737,15 +693,7 @@ export async function GET(request: NextRequest) {
             title: (insightSpecs[i] as any)?.args?.title,
             description: (insightSpecs[i] as any)?.args?.description,
           }))
-          const payload = {
-            instructions:
-              "Produce concise, actionable textual insights (1–2 sentences each; under ~220 chars). Avoid filler.",
-            formVersionId,
-            questions,
-            angles,
-            rows: compactRows,
-            context: { metrics: metricContext, breakdowns: breakdownContext },
-          }
+
           logger.info("[RESP] Insight text AI start", {
             model: String(MODEL),
             rowSample: compactRows.length,
@@ -766,11 +714,17 @@ export async function GET(request: NextRequest) {
             summaries?: Array<{ title: string; content: string }>
           } | null = null
           try {
+            const summarySystem = await loadPrompt("ri/summary-system.md", {
+              rows: compactRows,
+              questions,
+              angles,
+              context: { metrics: metricContext, breakdowns: breakdownContext },
+            })
             const res = await generateObject({
               model: MODEL,
               schema: SummarySchema,
-              system: SUMMARY_SYSTEM_PROMPT,
-              prompt: JSON.stringify(payload),
+              system: summarySystem,
+              prompt: "",
             })
             summariesObj = res.object as any
           } catch (e1) {
@@ -784,11 +738,20 @@ export async function GET(request: NextRequest) {
 
             const BACKUP = getModel()
             try {
+              const summarySystem = await loadPrompt("ri/summary-system.md", {
+                rows: compactRows,
+                questions,
+                angles,
+                context: {
+                  metrics: metricContext,
+                  breakdowns: breakdownContext,
+                },
+              })
               const res2 = await generateObject({
                 model: BACKUP,
                 schema: SummarySchema,
-                system: SUMMARY_SYSTEM_PROMPT,
-                prompt: JSON.stringify(payload),
+                system: summarySystem,
+                prompt: "",
               })
               summariesObj = res2.object as any
               logger.info("[RESP] Insight text AI backup success", {

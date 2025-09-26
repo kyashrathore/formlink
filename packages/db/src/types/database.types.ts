@@ -17,10 +17,10 @@ export type Database = {
     Functions: {
       graphql: {
         Args: {
+          extensions?: Json;
           operationName?: string;
           query?: string;
           variables?: Json;
-          extensions?: Json;
         };
         Returns: Json;
       };
@@ -34,63 +34,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      actions_config: {
-        Row: {
-          auth_status: string;
-          config: Json;
-          connected_account_id: string | null;
-          created_at: string;
-          form_id: string;
-          id: string;
-          pending_connection_request_id: string | null;
-          provider: Database["public"]["Enums"]["action_provider"];
-          tool_slug: string;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          auth_status?: string;
-          config?: Json;
-          connected_account_id?: string | null;
-          created_at?: string;
-          form_id: string;
-          id?: string;
-          pending_connection_request_id?: string | null;
-          provider?: Database["public"]["Enums"]["action_provider"];
-          tool_slug: string;
-          updated_at?: string;
-          user_id: string;
-        };
-        Update: {
-          auth_status?: string;
-          config?: Json;
-          connected_account_id?: string | null;
-          created_at?: string;
-          form_id?: string;
-          id?: string;
-          pending_connection_request_id?: string | null;
-          provider?: Database["public"]["Enums"]["action_provider"];
-          tool_slug?: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "actions_config_form_id_fkey";
-            columns: ["form_id"];
-            isOneToOne: false;
-            referencedRelation: "forms";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "actions_config_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       brands: {
         Row: {
           brand_id: string;
@@ -301,6 +244,27 @@ export type Database = {
           },
         ];
       };
+      formlink_api_keys: {
+        Row: {
+          api_key: string;
+          created_at: string;
+          id: string;
+          user_id: string;
+        };
+        Insert: {
+          api_key: string;
+          created_at?: string;
+          id?: string;
+          user_id: string;
+        };
+        Update: {
+          api_key?: string;
+          created_at?: string;
+          id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       forms: {
         Row: {
           agent_state: Json | null;
@@ -312,6 +276,7 @@ export type Database = {
           short_id: string | null;
           updated_at: string;
           user_id: string | null;
+          workspace_id: string;
         };
         Insert: {
           agent_state?: Json | null;
@@ -323,6 +288,7 @@ export type Database = {
           short_id?: string | null;
           updated_at?: string;
           user_id?: string | null;
+          workspace_id: string;
         };
         Update: {
           agent_state?: Json | null;
@@ -334,8 +300,23 @@ export type Database = {
           short_id?: string | null;
           updated_at?: string;
           user_id?: string | null;
+          workspace_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "current_draft_version_id";
+            columns: ["current_draft_version_id"];
+            isOneToOne: true;
+            referencedRelation: "form_versions";
+            referencedColumns: ["version_id"];
+          },
+          {
+            foreignKeyName: "current_published_version_id";
+            columns: ["current_published_version_id"];
+            isOneToOne: true;
+            referencedRelation: "form_versions";
+            referencedColumns: ["version_id"];
+          },
           {
             foreignKeyName: "fk_forms_brand";
             columns: ["brand_id"];
@@ -344,25 +325,18 @@ export type Database = {
             referencedColumns: ["brand_id"];
           },
           {
-            foreignKeyName: "fk_forms_current_draft_version";
-            columns: ["current_draft_version_id"];
-            isOneToOne: true;
-            referencedRelation: "form_versions";
-            referencedColumns: ["version_id"];
-          },
-          {
-            foreignKeyName: "fk_forms_current_published_version";
-            columns: ["current_published_version_id"];
-            isOneToOne: true;
-            referencedRelation: "form_versions";
-            referencedColumns: ["version_id"];
-          },
-          {
             foreignKeyName: "forms_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "forms_workspace_id_fkey";
+            columns: ["workspace_id"];
+            isOneToOne: false;
+            referencedRelation: "workspaces";
+            referencedColumns: ["workspace_id"];
           },
         ];
       };
@@ -413,6 +387,189 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      organizations: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          name: string;
+          org_id: string;
+          slug: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          name: string;
+          org_id?: string;
+          slug?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          name?: string;
+          org_id?: string;
+          slug?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      response_actions_log: {
+        Row: {
+          action_name: string;
+          completed_at: string | null;
+          connected_account_id: string | null;
+          created_at: string;
+          error_message: string | null;
+          form_id: string;
+          id: string;
+          idempotency_key: string | null;
+          params: Json | null;
+          provider: Database["public"]["Enums"]["action_provider"];
+          provider_response: Json | null;
+          result: Json | null;
+          started_at: string | null;
+          status: string;
+          submission_ids: string[] | null;
+          user_id: string | null;
+        };
+        Insert: {
+          action_name: string;
+          completed_at?: string | null;
+          connected_account_id?: string | null;
+          created_at?: string;
+          error_message?: string | null;
+          form_id: string;
+          id?: string;
+          idempotency_key?: string | null;
+          params?: Json | null;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          provider_response?: Json | null;
+          result?: Json | null;
+          started_at?: string | null;
+          status: string;
+          submission_ids?: string[] | null;
+          user_id?: string | null;
+        };
+        Update: {
+          action_name?: string;
+          completed_at?: string | null;
+          connected_account_id?: string | null;
+          created_at?: string;
+          error_message?: string | null;
+          form_id?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          params?: Json | null;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          provider_response?: Json | null;
+          result?: Json | null;
+          started_at?: string | null;
+          status?: string;
+          submission_ids?: string[] | null;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
+      response_views: {
+        Row: {
+          action_slugs: Json | null;
+          actions: Json | null;
+          columns: Json | null;
+          created_at: string;
+          description: string | null;
+          filters: Json | null;
+          form_id: string;
+          id: string;
+          insights_spec: Json | null;
+          is_default: boolean | null;
+          is_public: boolean | null;
+          name: string;
+          public_access_level: string | null;
+          public_api_key_required: boolean | null;
+          sort_config: Json | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          action_slugs?: Json | null;
+          actions?: Json | null;
+          columns?: Json | null;
+          created_at?: string;
+          description?: string | null;
+          filters?: Json | null;
+          form_id: string;
+          id?: string;
+          insights_spec?: Json | null;
+          is_default?: boolean | null;
+          is_public?: boolean | null;
+          name: string;
+          public_access_level?: string | null;
+          public_api_key_required?: boolean | null;
+          sort_config?: Json | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          action_slugs?: Json | null;
+          actions?: Json | null;
+          columns?: Json | null;
+          created_at?: string;
+          description?: string | null;
+          filters?: Json | null;
+          form_id?: string;
+          id?: string;
+          insights_spec?: Json | null;
+          is_default?: boolean | null;
+          is_public?: boolean | null;
+          name?: string;
+          public_access_level?: string | null;
+          public_api_key_required?: boolean | null;
+          sort_config?: Json | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      ri_ai_cache: {
+        Row: {
+          id: string;
+          meta: Json;
+          updated_at: string;
+          value: Json;
+        };
+        Insert: {
+          id: string;
+          meta: Json;
+          updated_at?: string;
+          value: Json;
+        };
+        Update: {
+          id?: string;
+          meta?: Json;
+          updated_at?: string;
+          value?: Json;
+        };
+        Relationships: [];
+      };
+      submission_action_logs: {
+        Row: {
+          action_log_id: string;
+          created_at: string;
+          submission_id: string;
+        };
+        Insert: {
+          action_log_id: string;
+          created_at?: string;
+          submission_id: string;
+        };
+        Update: {
+          action_log_id?: string;
+          created_at?: string;
+          submission_id?: string;
+        };
+        Relationships: [];
       };
       submission_chat_attachments: {
         Row: {
@@ -503,27 +660,6 @@ export type Database = {
           },
         ];
       };
-      ri_ai_cache: {
-        Row: {
-          id: string;
-          meta: Json;
-          updated_at: string;
-          value: Json;
-        };
-        Insert: {
-          id: string;
-          meta?: Json;
-          updated_at?: string;
-          value?: Json;
-        };
-        Update: {
-          id?: string;
-          meta?: Json;
-          updated_at?: string;
-          value?: Json;
-        };
-        Relationships: [];
-      };
       subscription_logs: {
         Row: {
           action: string;
@@ -552,81 +688,6 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "subscription_logs_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      response_actions_log: {
-        Row: {
-          aci_function: string | null;
-          aci_payload: Json | null;
-          action_name: string;
-          completed_at: string | null;
-          connected_account_id: string | null;
-          error_message: string | null;
-          form_id: string;
-          id: string;
-          idempotency_key: string | null;
-          params: Json | null;
-          provider: Database["public"]["Enums"]["action_provider"];
-          provider_response: Json | null;
-          result: Json | null;
-          started_at: string;
-          status: Database["public"]["Enums"]["action_status"];
-          submission_ids: string[];
-          user_id: string;
-        };
-        Insert: {
-          aci_function?: string | null;
-          aci_payload?: Json | null;
-          action_name: string;
-          completed_at?: string | null;
-          connected_account_id?: string | null;
-          error_message?: string | null;
-          form_id: string;
-          id?: string;
-          idempotency_key?: string | null;
-          params?: Json | null;
-          provider?: Database["public"]["Enums"]["action_provider"];
-          provider_response?: Json | null;
-          result?: Json | null;
-          started_at?: string;
-          status?: Database["public"]["Enums"]["action_status"];
-          submission_ids: string[];
-          user_id: string;
-        };
-        Update: {
-          aci_function?: string | null;
-          aci_payload?: Json | null;
-          action_name?: string;
-          completed_at?: string | null;
-          connected_account_id?: string | null;
-          error_message?: string | null;
-          form_id?: string;
-          id?: string;
-          idempotency_key?: string | null;
-          params?: Json | null;
-          provider?: Database["public"]["Enums"]["action_provider"];
-          provider_response?: Json | null;
-          result?: Json | null;
-          started_at?: string;
-          status?: Database["public"]["Enums"]["action_status"];
-          submission_ids?: string[];
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "response_actions_log_form_id_fkey";
-            columns: ["form_id"];
-            isOneToOne: false;
-            referencedRelation: "forms";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "response_actions_log_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "users";
@@ -683,6 +744,42 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      tool_connections: {
+        Row: {
+          auth_status: string;
+          connected_account_id: string | null;
+          created_at: string;
+          id: string;
+          pending_connection_request_id: string | null;
+          provider: Database["public"]["Enums"]["action_provider"];
+          toolkit: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          auth_status?: string;
+          connected_account_id?: string | null;
+          created_at?: string;
+          id?: string;
+          pending_connection_request_id?: string | null;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          toolkit: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          auth_status?: string;
+          connected_account_id?: string | null;
+          created_at?: string;
+          id?: string;
+          pending_connection_request_id?: string | null;
+          provider?: Database["public"]["Enums"]["action_provider"];
+          toolkit?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       usage_history: {
         Row: {
@@ -754,7 +851,7 @@ export type Database = {
           {
             foreignKeyName: "user_subscriptions_user_id_fkey";
             columns: ["user_id"];
-            isOneToOne: true;
+            isOneToOne: false;
             referencedRelation: "users";
             referencedColumns: ["id"];
           },
@@ -802,67 +899,40 @@ export type Database = {
         };
         Relationships: [];
       };
-      tool_connections: {
+      workspaces: {
         Row: {
-          id: string;
-          user_id: string;
-          provider: Database["public"]["Enums"]["action_provider"];
-          toolkit: string;
-          connected_account_id: string | null;
-          auth_status: string;
-          pending_connection_request_id: string | null;
           created_at: string;
+          created_by: string | null;
+          name: string;
+          org_id: string;
           updated_at: string;
+          workspace_id: string;
         };
         Insert: {
-          id?: string;
-          user_id: string;
-          provider?: Database["public"]["Enums"]["action_provider"];
-          toolkit: string;
-          connected_account_id?: string | null;
-          auth_status?: string;
-          pending_connection_request_id?: string | null;
           created_at?: string;
+          created_by?: string | null;
+          name: string;
+          org_id: string;
           updated_at?: string;
+          workspace_id?: string;
         };
         Update: {
-          id?: string;
-          user_id?: string;
-          provider?: Database["public"]["Enums"]["action_provider"];
-          toolkit?: string;
-          connected_account_id?: string | null;
-          auth_status?: string;
-          pending_connection_request_id?: string | null;
           created_at?: string;
+          created_by?: string | null;
+          name?: string;
+          org_id?: string;
           updated_at?: string;
+          workspace_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "tool_connections_user_id_fkey";
-            columns: ["user_id"];
+            foreignKeyName: "workspaces_org_id_fkey";
+            columns: ["org_id"];
             isOneToOne: false;
-            referencedRelation: "users";
-            referencedColumns: ["id"];
+            referencedRelation: "organizations";
+            referencedColumns: ["org_id"];
           },
         ];
-      };
-      submission_action_logs: {
-        Row: {
-          submission_id: string;
-          action_log_id: string;
-          created_at: string;
-        };
-        Insert: {
-          submission_id: string;
-          action_log_id: string;
-          created_at?: string;
-        };
-        Update: {
-          submission_id?: string;
-          action_log_id?: string;
-          created_at?: string;
-        };
-        Relationships: [];
       };
     };
     Views: {
@@ -871,19 +941,19 @@ export type Database = {
     Functions: {
       get_filtered_submissions: {
         Args: {
-          submission_filters: Json;
           answer_filters: Json;
           page?: number;
           page_size?: number;
+          submission_filters: Json;
         };
         Returns: {
-          data: Json;
-          total_count: number;
-          total_completed_count: number;
-          total_in_progress_count: number;
-          total_filtered_count: number;
           completed_count: number;
+          data: Json;
           in_progress_count: number;
+          total_completed_count: number;
+          total_count: number;
+          total_filtered_count: number;
+          total_in_progress_count: number;
         }[];
       };
       increment_daily_message_count: {
@@ -893,7 +963,6 @@ export type Database = {
     };
     Enums: {
       action_provider: "usesend" | "composio";
-      action_status: "pending" | "running" | "completed" | "failed";
       form_status: "draft" | "published" | "archived";
       submission_status: "in_progress" | "completed" | "abandoned";
     };
@@ -1029,6 +1098,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      action_provider: ["usesend", "composio"],
       form_status: ["draft", "published", "archived"],
       submission_status: ["in_progress", "completed", "abandoned"],
     },

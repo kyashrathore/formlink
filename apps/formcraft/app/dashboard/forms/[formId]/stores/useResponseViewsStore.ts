@@ -67,10 +67,22 @@ function deriveAllColumnKeys(form: Form | null): string[] {
   return [...base, ...qIds]
 }
 
+function normalizeFilterValue(value: unknown): unknown {
+  // Normalize common operator objects from AI into primitives backend supports
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const v = value as Record<string, unknown>
+    if (Array.isArray(v.includes)) return v.includes
+    if (Array.isArray(v.in)) return v.in
+    if ("eq" in v) return (v as any).eq
+  }
+  return value
+}
+
 function toColumnFilters(plan: RIPlan) {
   const filters: { id: string; value: unknown }[] = []
   const pushEntries = (obj: Record<string, unknown>) => {
-    for (const [key, value] of Object.entries(obj || {})) {
+    for (const [key, raw] of Object.entries(obj || {})) {
+      const value = normalizeFilterValue(raw)
       if (value !== undefined) filters.push({ id: key, value })
     }
   }

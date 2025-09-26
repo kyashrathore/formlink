@@ -1,16 +1,25 @@
 "use client"
 
+import { MODEL_DEFAULT, MODELS_OPTIONS } from "@/app/lib/config"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@formlink/ui"
 import {
   PromptInput,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
+  PromptInputTools,
   PromptSuggestion,
 } from "@formlink/ui/ai-elements"
 import { useCallback, useState } from "react"
 
 interface DashboardChatProps {
-  onSubmit: (message: string) => void
+  onSubmit: (message: string, selectedModel: string) => void
   isNavigating?: boolean
 }
 
@@ -28,12 +37,13 @@ function Chat({
   showSuggestions,
   onInputChange,
 }: {
-  onSubmit?: (input: string) => void
+  onSubmit?: (input: string, selectedModel: string) => void
   isLoading?: boolean
   showSuggestions?: boolean
   onInputChange?: (input: string) => void
 }) {
   const [input, setInput] = useState("")
+  const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
 
   const handleInputChange = useCallback(
     (value: string) => {
@@ -50,11 +60,11 @@ function Chat({
       if (!input.trim() || isLoading) return
 
       if (onSubmit) {
-        await onSubmit(input)
+        await onSubmit(input, selectedModel)
       }
       setInput("")
     },
-    [input, isLoading, onSubmit]
+    [input, selectedModel, isLoading, onSubmit]
   )
 
   const handleSuggestionClick = (suggestion: string) => {
@@ -73,11 +83,29 @@ function Chat({
             className="mt-2 ml-2 min-h-[44px] text-base leading-[1.3] sm:text-base md:text-base"
             disabled={isLoading}
           />
-          <PromptInputToolbar>
-            <PromptInputSubmit
-              className="absolute right-1 bottom-1"
-              disabled={!input.trim() || isLoading}
-            />
+          <PromptInputToolbar className="w-full justify-between px-3 py-2">
+            <div className="flex items-center gap-2">
+              <Select value={selectedModel} onValueChange={setSelectedModel}>
+                <SelectTrigger className="text-muted-foreground w-auto border-none bg-transparent text-xs shadow-none">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="z-[70]">
+                  {MODELS_OPTIONS.map((model) => (
+                    <SelectItem key={model.id} value={model.id}>
+                      <div className="flex flex-col">
+                        <span>{model.name}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <PromptInputTools>
+              <PromptInputSubmit
+                className="h-8 w-8 cursor-pointer rounded-full transition-all duration-300 ease-out"
+                disabled={!input.trim() || isLoading}
+              />
+            </PromptInputTools>
           </PromptInputToolbar>
         </PromptInput>
       </div>
@@ -101,8 +129,8 @@ function Chat({
 
 export function DashboardChat({ onSubmit, isNavigating }: DashboardChatProps) {
   const handleSubmit = useCallback(
-    (message: string) => {
-      onSubmit(message)
+    (message: string, model: string) => {
+      onSubmit(message, model)
     },
     [onSubmit]
   )

@@ -156,7 +156,11 @@ const VisibleMessage = ({
                           )}
 
                         {(() => {
-                          const hideOutput = toolName === "responseIntelligence"
+                          const isResponseTool =
+                            toolName === "createResponseView" ||
+                            toolName === "updateResponseView" ||
+                            toolName === "responseIntelligence"
+                          const hideOutput = isResponseTool
                           const finalResult = hideOutput ? undefined : result
                           const finalError = hideOutput ? undefined : errorText
                           if (
@@ -176,10 +180,9 @@ const VisibleMessage = ({
                           if (displaySummaryMessage) {
                             return <ToolLogs logs={displaySummaryMessage} />
                           }
-                          const doneLabel =
-                            toolName === "responseIntelligence"
-                              ? "✓ Response Plan generated"
-                              : `✓ Completed ${toolName}`
+                          const doneLabel = isResponseTool
+                            ? "✓ Response Plan generated"
+                            : `✓ Completed ${toolName}`
                           return (
                             <div className="text-muted-foreground p-4 text-xs">
                               {doneLabel}

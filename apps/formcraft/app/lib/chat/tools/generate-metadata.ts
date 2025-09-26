@@ -1,7 +1,7 @@
-import { generateObject } from "ai"
+import { generateObject } from "@/app/lib/ai/tracing"
+import { loadPrompt } from "@formlink/prompts"
 import { z } from "zod"
 import { getModel } from "../../ai/provider"
-import { ENHANCED_METADATA_PROMPT } from "../../prompts"
 import { getDefaultSettings } from "../../settings-defaults"
 import { createAgentEvent } from "../../types/agent-events"
 
@@ -93,11 +93,10 @@ export async function generateMetadata(
       progress: 10,
     })
 
-    // Prepare the system prompt with user input
-    const systemPromptTemplate = ENHANCED_METADATA_PROMPT || ""
-    const aiSystemPromptWithInput = systemPromptTemplate.replace(
-      "{{userInput}}",
-      normalizedInputContent
+    // Prepare the system prompt from template with variables
+    const aiSystemPromptWithInput = await loadPrompt(
+      "form/enhanced-metadata.md",
+      { userInput: normalizedInputContent }
     )
 
     dataStream.write({

@@ -1,12 +1,7 @@
 import { getModel } from "@/app/lib/ai/provider"
+import { generateObject } from "@/app/lib/ai/tracing"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
-import {
-  ADD_QUESTION_PROMPT,
-  CONDITIONS_PROMPT,
-  GENERATE_EXPRESSION_PROMPT,
-  SANITIZE_RESULT_GENERATION_PROMPT,
-  VALIDATIONS_PROMPT,
-} from "@/app/lib/prompts"
+import { loadPrompt } from "@formlink/prompts"
 import {
   Option,
   Question,
@@ -14,21 +9,8 @@ import {
   QuestionValidations,
   QuestionValidationsSchema,
 } from "@formlink/schema"
-import { generateObject } from "ai"
 import { NextResponse } from "next/server"
 import { z } from "zod"
-
-const validationRuleSystemPrompt = VALIDATIONS_PROMPT
-const addQuestionSystemPrompt = ADD_QUESTION_PROMPT
-const generateJSONataExpressionPrompt = GENERATE_EXPRESSION_PROMPT
-const sanitizeResultGenerationPrompt = SANITIZE_RESULT_GENERATION_PROMPT
-const conditionsPrompt = CONDITIONS_PROMPT
-
-// Removed - using provider utility instead
-
-// Use provider utility - using vercel to avoid Azure issues
-
-const RESPONSE_PLAN_SUGGESTIONS_PROMPT = `You are a helpful analytics assistant in FormLink. A user has a form with collected responses and is viewing the Responses tab. You must return a JSON object with a \\\"suggestions\\\" array containing up to 5 short, natural-language prompt ideas (each <= 120 characters) that they can ask the assistant to generate a response intelligence plan. Tailor the suggestions to the form's title, description, and question types, covering filters, segments, charts, or insights they might explore. The response MUST be valid JSON.`
 
 export const maxDuration = 20
 
@@ -160,15 +142,25 @@ export async function POST(req: Request) {
 
     switch (operationType) {
       case "conditional":
-        systemPrompt = conditionsPrompt as string
+        systemPrompt = await loadPrompt("ai/conditions.md", {
+          user_prompt: prompt,
+          target_question_id: currentQuestionId || "",
+          questions: transformedQuestions ?? [],
+        })
         responseSchema = JSONataExpressionResponseSchema
         break
       case "generate-compute-field-expression":
-        systemPrompt = generateJSONataExpressionPrompt as string
+        systemPrompt = await loadPrompt("ai/jsonata-generate.md", {
+          user_prompt: prompt,
+          questions: transformedQuestions ?? [],
+        })
         responseSchema = JSONataExpressionResponseSchema
         break
       case "validation":
-        systemPrompt = validationRuleSystemPrompt as string
+        systemPrompt = await loadPrompt("ai/validations.md", {
+          user_prompt: prompt,
+          questions: transformedQuestions ?? [],
+        })
         responseSchema = z.object({
           valid: z.boolean(),
           message: z.string().optional(),
@@ -176,7 +168,10 @@ export async function POST(req: Request) {
         })
         break
       case "add-question":
-        systemPrompt = addQuestionSystemPrompt as string
+        systemPrompt = await loadPrompt("ai/add-question.md", {
+          user_prompt: prompt,
+          existing_questions: transformedQuestions ?? [],
+        })
         responseSchema = z.object({
           valid: z.boolean(),
           message: z.string(),
@@ -184,7 +179,11 @@ export async function POST(req: Request) {
         })
         break
       case "sanitize_result_generation":
-        systemPrompt = sanitizeResultGenerationPrompt as string
+        systemPrompt = await loadPrompt("ai/sanitize-result-gen.md", {
+          user_prompt: prompt,
+          form_details: form_details ?? null,
+          questions: transformedQuestions ?? [],
+        })
         responseSchema = z.object({
           isValid: z.boolean(),
           message: z.string(),
@@ -192,7 +191,11 @@ export async function POST(req: Request) {
         break
 
       case "response-plan-suggestions":
-        systemPrompt = RESPONSE_PLAN_SUGGESTIONS_PROMPT
+        systemPrompt = await loadPrompt("ri/response-plan-suggestions.md", {
+          user_prompt: prompt,
+          form_details,
+          questions: transformedQuestions ?? [],
+        })
         responseSchema = z.object({
           suggestions: z.array(z.string().min(1)).min(1).max(5),
         })
@@ -208,32 +211,7 @@ export async function POST(req: Request) {
         )
     }
 
-    const promptContent =
-      operationType === "add-question"
-        ? `User request: "${prompt}"\n\nExisting Questions:${transformedQuestions ? "\n" + JSON.stringify(transformedQuestions, null, 2) : " None"}`
-        : operationType === "conditional"
-          ? JSON.stringify({
-              user_prompt: prompt,
-              target_question_id: currentQuestionId,
-              questions: transformedQuestions,
-            })
-          : operationType === "sanitize_result_generation"
-            ? JSON.stringify({
-                user_prompt: prompt,
-                form_details: form_details,
-                questions: transformedQuestions,
-              })
-            : operationType === "response-plan-suggestions"
-              ? JSON.stringify({
-                  user_prompt: prompt,
-                  form_details,
-                  questions: transformedQuestions,
-                })
-              : `
-user_prompt: ${prompt}
-
-questions: ${transformedQuestions}
-`
+    const promptContent = ""
 
     const { object: aiResponseText } = await generateObject({
       model: getModel(),

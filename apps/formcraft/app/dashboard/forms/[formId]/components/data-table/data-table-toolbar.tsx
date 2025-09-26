@@ -1,6 +1,7 @@
 "use client"
 
 import {
+  Badge,
   Button,
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -10,7 +11,7 @@ import {
   Input,
 } from "@formlink/ui"
 import type { Table } from "@tanstack/react-table"
-import { CalendarClock, CheckCircle2, FlaskConical } from "lucide-react"
+import { CalendarClock, CheckCircle2, FlaskConical, X } from "lucide-react"
 import * as React from "react"
 
 interface DataTableToolbarProps<TData> {
@@ -57,6 +58,26 @@ export function DataTableToolbar<TData>({
   }
   const activeFilters = table.getState().columnFilters
   const hasFilters = (activeFilters?.length || 0) > 0
+  const filterSummary = React.useMemo(() => {
+    if (!hasFilters) return ""
+    const parts: string[] = []
+    for (const f of activeFilters as any[]) {
+      const id = String(f.id)
+      const raw = f.value
+      if (raw === undefined || raw === null || raw === "") continue
+      if (id === "status" || id === "testmode") continue // shown via facets
+      if (id === "created_at") continue // summarized separately
+      let val: string
+      if (Array.isArray(raw)) val = raw.join(", ")
+      else if (typeof raw === "boolean") val = raw ? "true" : "false"
+      else val = String(raw)
+      parts.push(`${id}: ${val}`)
+    }
+    const max = 3
+    const shown = parts.slice(0, max)
+    const extra = parts.length > max ? ` +${parts.length - max} more` : ""
+    return shown.join(" · ") + extra
+  }, [hasFilters, JSON.stringify(activeFilters)])
 
   const getFilterValue = (id: string) =>
     activeFilters?.find((f) => (f as any).id === id)?.value
@@ -81,6 +102,24 @@ export function DataTableToolbar<TData>({
     return `Since ${since.toISOString().slice(0, 10)}`
   })()
 
+  // Build clickable chips for non-facet filters (typically question IDs)
+  const filterChips = React.useMemo(() => {
+    const chips: Array<{ id: string; text: string }> = []
+    for (const f of activeFilters as any[]) {
+      const id = String(f.id)
+      const raw = f.value
+      if (raw === undefined || raw === null || raw === "") continue
+      if (id === "status" || id === "testmode" || id === "created_at") continue
+      let val: string
+      if (Array.isArray(raw)) val = raw.join(", ")
+      else if (typeof raw === "boolean") val = raw ? "true" : "false"
+      else if (typeof raw === "object") val = JSON.stringify(raw)
+      else val = String(raw)
+      chips.push({ id, text: `${id}: ${val}` })
+    }
+    return chips
+  }, [JSON.stringify(activeFilters)])
+
   return (
     <div className="mb-2 flex w-full flex-wrap items-center justify-between gap-2">
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -90,6 +129,29 @@ export function DataTableToolbar<TData>({
           onChange={(e) => setQuery(e.target.value)}
           className="w-64"
         />
+        {filterChips.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1">
+            {filterChips.map((chip) => (
+              <Badge
+                key={`${chip.id}-${chip.text}`}
+                variant="secondary"
+                className="cursor-pointer"
+                onClick={() => setFilter(chip.id, undefined)}
+                title="Click to clear filter"
+              >
+                {chip.text}
+                <X className="ml-1 size-3 opacity-60" />
+              </Badge>
+            ))}
+          </div>
+        ) : hasFilters && filterSummary ? (
+          <div
+            className="text-muted-foreground truncate text-xs"
+            title={filterSummary}
+          >
+            Filters: {filterSummary}
+          </div>
+        ) : null}
         {/* Facets: Status */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

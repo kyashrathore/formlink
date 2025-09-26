@@ -4,12 +4,26 @@ import ResponseViewPlan from "@/app/dashboard/forms/[formId]/components/response
 import { requiresParamsForSlug } from "@/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan/utils"
 import { Form } from "@formlink/schema"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
   Button,
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -35,13 +49,11 @@ import {
   generateFilterFieldsFromForm,
   generateTableColumnsFromForm,
 } from "../../lib/responses/generateFilterFieldsFromForm"
-import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
 import type { ResponseViewsState } from "../../stores/useResponseViewsStore"
+import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
 import DataTable from "../data-table/data-table"
 import { useDataTableStore } from "../data-table/dataTableStore"
 import APIKeyManager from "./APIKeyManager"
-import CleanupTestDataButton from "./CleanupTestDataButton"
-import GenerateTestDataButton from "./GenerateTestDataButton"
 import ResponseCharts from "./ResponseCharts"
 import ResponseViewsTabs from "./ResponseViewsTabs"
 
@@ -298,33 +310,20 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
   return (
     <div>
       <h2 className="mb-4 text-xl font-bold">Responses</h2>
-      <ResponseViewsTabs />
-      <div className="mb-3 flex items-center justify-end gap-2">
-        {/* Show Response Plan button once a view exists or after first render */}
-        {!isEphemeralPlan && activeViewMeta ? (
-          <Button size="sm" variant="outline" onClick={() => setShowPlan(true)}>
-            Open Response Plan
-          </Button>
-        ) : null}
-        <GenerateTestDataButton
-          formId={form.id}
-          onDone={() => {
-            // ensure testmode=true filter to reveal generated rows
-            const filters = [...useDataTableStore.getState().columnFilters]
-            const hasTestmode = filters.some((f) => f.id === "testmode")
-            if (!hasTestmode)
-              filters.push({ id: "testmode", value: true } as any)
-            setColumnFilters(filters as any)
-            setPagination({ pageIndex: 0, pageSize: pagination.pageSize })
-          }}
-        />
-        <CleanupTestDataButton
-          formId={form.id}
-          onDone={() => {
-            // refresh the table after cleanup
-            setPagination({ pageIndex: 0, pageSize: pagination.pageSize })
-          }}
-        />
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <ResponseViewsTabs />
+        <div className="flex items-center gap-2">
+          {/* Show Response Plan button when a view exists or an ephemeral plan is present and sheet is closed */}
+          {!showPlan && (activeViewMeta || isEphemeralPlan) ? (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setShowPlan(true)}
+            >
+              Response View
+            </Button>
+          ) : null}
+        </div>
       </div>
       {showPlan || isEphemeralPlan ? (
         <PlanPreviewForRightPanel
@@ -364,7 +363,7 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
       )}
 
       {}
-      {!isLoading && totalCount > 0 && (
+      {!isLoading && (
         <>
           <div className="mb-2 hidden">
             {/* Export is moved to the toolbar/action bar for DiceUI parity. */}
@@ -615,6 +614,10 @@ function ResponseActionsMenu({
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
+        {process.env.NEXT_PUBLIC_ENABLE_TESTDATA === "true" ? (
+          <MoreActionsSubmenu formId={formId} />
+        ) : null}
+        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => onSetupRequest?.()}
           className="text-muted-foreground text-xs"
@@ -626,6 +629,56 @@ function ResponseActionsMenu({
   )
 }
 
+function MoreActionsSubmenu({ formId }: { formId: string }) {
+  const { pagination, setPagination, setColumnFilters } = useDataTableStore()
+  async function generate() {
+    try {
+      const res = await fetch(`/api/responses/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ form_id: formId, count: 100 }),
+      })
+      if (!res.ok) throw new Error("Failed to generate test data")
+      const filters = [...useDataTableStore.getState().columnFilters]
+      const hasTestmode = filters.some((f) => (f as any).id === "testmode")
+      if (!hasTestmode) filters.push({ id: "testmode", value: true } as any)
+      setColumnFilters(filters as any)
+      setPagination({ pageIndex: 0, pageSize: pagination.pageSize })
+      toast({ title: "Generated 100 test responses", status: "success" })
+    } catch (e) {
+      console.error(e)
+      toast({ title: "Failed to generate test data", status: "error" })
+    }
+  }
+  async function cleanup() {
+    try {
+      if (!confirm("Delete all test data for this form?")) return
+      const res = await fetch(`/api/responses/cleanup`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ form_id: formId }),
+      })
+      if (!res.ok) throw new Error("Failed to cleanup test data")
+      setPagination({ pageIndex: 0, pageSize: pagination.pageSize })
+      toast({ title: "Test data cleaned", status: "success" })
+    } catch (e) {
+      console.error(e)
+      toast({ title: "Failed to cleanup test data", status: "error" })
+    }
+  }
+  return (
+    <>
+      <DropdownMenuLabel>More actions</DropdownMenuLabel>
+      <DropdownMenuItem onClick={generate}>
+        Generate 100 Test Responses
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={cleanup} variant="destructive">
+        Clean Test Data
+      </DropdownMenuItem>
+    </>
+  )
+}
+
 function PlanPreviewForRightPanel({
   formId,
   onDismiss,
@@ -633,6 +686,7 @@ function PlanPreviewForRightPanel({
   formId: string
   onDismiss?: () => void
 }) {
+  const [open, setOpen] = useState(true)
   const { renderPlan, renderView } = useResponseViewsStore((s) => {
     const activeId = s.activeViewIdMap[formId] || "default"
     const activeView = s.views.find(
@@ -651,6 +705,18 @@ function PlanPreviewForRightPanel({
   const plan = renderPlan
   const viewMeta = renderView
   const saved = Boolean(renderView?.saved)
+  // Lock body scroll while the plan drawer is open to avoid double scrollbars
+  useEffect(() => {
+    if (!open) return
+    const prevHtml = document.documentElement.style.overflow
+    const prevBody = document.body.style.overflow
+    document.documentElement.style.overflow = "hidden"
+    document.body.style.overflow = "hidden"
+    return () => {
+      document.documentElement.style.overflow = prevHtml
+      document.body.style.overflow = prevBody
+    }
+  }, [open])
 
   const handleSave = async () => {
     if (!viewMeta || viewMeta.saved) return
@@ -736,87 +802,153 @@ function PlanPreviewForRightPanel({
   }
 
   if (!plan && !viewMeta) return null
+  const viewName = plan?.plan?.meta?.view_name || viewMeta?.name || "Smart View"
 
   return (
-    <div className="mt-2">
-      {plan || viewMeta ? (
-        <ResponseViewPlan
-          plan={
-            plan || {
-              plan_version: "ri.v1",
-              correlationId: "view",
-              plan: {
-                meta: {
-                  view_name: viewMeta?.name || "Smart View",
-                  rationale: viewMeta?.description || undefined,
-                },
-                rpc: {
-                  submission_filters: Object.fromEntries(
-                    (viewMeta?.filters || []).map((f: any) => [f.id, f.value])
-                  ),
-                  answer_filters: {},
-                },
-                ui: {
-                  columns: viewMeta?.columns || [],
-                  sort: viewMeta?.sort || undefined,
-                  insights_spec: viewMeta?.insights || [],
-                },
-                actions: (viewMeta?.actionSlugs || []).map((slug) => ({
-                  action_key: slug,
-                  params: {},
-                })),
-              },
-            }
-          }
-          saved={saved}
-          onSave={!saved ? handleSave : undefined}
-          formId={formId}
-          view={viewMeta as any}
-          onDismiss={() => {
-            // Close only; remove only if unsaved ephemeral
-            if (viewMeta && !viewMeta.saved) {
-              useResponseViewsStore
-                .getState()
-                .removeView(viewMeta.id, { id: formId } as any)
-            }
-            onDismiss?.()
-          }}
-          onDelete={async () => {
-            if (!viewMeta?.saved) return
-            try {
-              const res = await fetch(
-                `/api/forms/${formId}/views/${viewMeta.id}`,
-                {
-                  method: "DELETE",
-                  credentials: "include",
+    <Drawer
+      open={open}
+      onOpenChange={(o) => {
+        setOpen(o)
+        if (!o) onDismiss?.()
+      }}
+      direction="right"
+    >
+      <DrawerContent className="p-0 data-[vaul-drawer-direction=right]:sm:max-w-xl">
+        <DrawerHeader className="bg-background sticky top-0 z-10 border-b px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <DrawerTitle className="text-base font-semibold">
+                {viewName}
+              </DrawerTitle>
+              {saved ? (
+                <span className="text-xs text-emerald-600">Saved</span>
+              ) : (
+                <span className="text-muted-foreground text-xs">Unsaved</span>
+              )}
+            </div>
+            <DrawerClose asChild>
+              <Button size="icon" variant="ghost" aria-label="Close plan">
+                ×
+              </Button>
+            </DrawerClose>
+          </div>
+        </DrawerHeader>
+        <div className="flex h-[calc(100vh-56px)] flex-col">
+          <div className="flex-1 overflow-y-auto">
+            {plan || viewMeta ? (
+              <ResponseViewPlan
+                plan={
+                  plan || {
+                    plan_version: "ri.v1",
+                    correlationId: "view",
+                    plan: {
+                      meta: {
+                        view_name: viewMeta?.name || "Smart View",
+                        rationale: viewMeta?.description || undefined,
+                      },
+                      rpc: {
+                        submission_filters: Object.fromEntries(
+                          (viewMeta?.filters || []).map((f: any) => [
+                            f.id,
+                            f.value,
+                          ])
+                        ),
+                        answer_filters: {},
+                      },
+                      ui: {
+                        columns: viewMeta?.columns || [],
+                        sort: viewMeta?.sort || undefined,
+                        insights_spec: viewMeta?.insights || [],
+                      },
+                      actions: (viewMeta?.actionSlugs || []).map((slug) => ({
+                        action_key: slug,
+                        params: {},
+                      })),
+                    },
+                  }
                 }
-              )
-              if (!res.ok) {
-                const text = await res.text().catch(() => "")
-                throw new Error(text || `Failed to delete view (${res.status})`)
-              }
-              useResponseViewsStore.setState((state) => {
-                const nextViews = state.views.filter(
-                  (v) => v.id !== viewMeta.id
-                )
-                const nextActive = {
-                  ...state.activeViewIdMap,
-                  [formId]: "default",
-                }
-                return { views: nextViews, activeViewIdMap: nextActive }
-              })
-              onDismiss?.()
-              toast({ title: "View deleted", status: "success" })
-            } catch (e) {
-              toast({
-                title: "Failed to delete view",
-                description: e instanceof Error ? e.message : String(e),
-                status: "error",
-              })
-            }
-          }}
-        />
-      ) : null}
-    </div>
+                saved={saved}
+                formId={formId}
+                view={viewMeta as any}
+                onDismiss={undefined}
+                hideHeader
+              />
+            ) : null}
+          </div>
+          <DrawerFooter className="border-t p-3">
+            <div className="ml-auto flex gap-2">
+              {!saved ? (
+                <Button size="sm" onClick={handleSave}>
+                  Save View
+                </Button>
+              ) : null}
+              {saved && viewMeta ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button size="sm" variant="destructive">
+                      Delete View
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete View</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure? This cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="flex justify-end gap-2">
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(
+                              `/api/forms/${formId}/views/${viewMeta.id}`,
+                              {
+                                method: "DELETE",
+                                credentials: "include",
+                              }
+                            )
+                            if (!res.ok) {
+                              const text = await res.text().catch(() => "")
+                              throw new Error(
+                                text || `Failed to delete view (${res.status})`
+                              )
+                            }
+                            useResponseViewsStore.setState((state) => {
+                              const nextViews = state.views.filter(
+                                (v) => v.id !== viewMeta.id
+                              )
+                              const nextActive = {
+                                ...state.activeViewIdMap,
+                                [formId]: "default",
+                              }
+                              return {
+                                views: nextViews,
+                                activeViewIdMap: nextActive,
+                              }
+                            })
+                            onDismiss?.()
+                            toast({ title: "View deleted", status: "success" })
+                          } catch (e) {
+                            toast({
+                              title: "Failed to delete view",
+                              description:
+                                e instanceof Error ? e.message : String(e),
+                              status: "error",
+                            })
+                          }
+                        }}
+                      >
+                        Delete
+                      </AlertDialogAction>
+                    </div>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : null}
+            </div>
+          </DrawerFooter>
+        </div>
+      </DrawerContent>
+    </Drawer>
   )
 }

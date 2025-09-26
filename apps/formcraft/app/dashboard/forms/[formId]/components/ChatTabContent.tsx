@@ -6,11 +6,13 @@ import ChatPanel from "./chat/ChatPanel"
 interface ChatTabContentProps {
   userId: string | null
   formId: string
+  initialModel?: string
 }
 
 export default function ChatTabContent({
   userId,
   formId,
+  initialModel,
 }: ChatTabContentProps) {
   const initialPrompt = useFormGenerationStore((state) => state.initialPrompt)
 
@@ -21,6 +23,7 @@ export default function ChatTabContent({
           formId={formId}
           userId={userId || undefined}
           initialMessage={initialPrompt || undefined}
+          initialModel={initialModel}
         />
       </div>
     </div>

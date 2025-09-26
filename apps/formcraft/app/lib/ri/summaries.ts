@@ -1,10 +1,9 @@
 import crypto from "node:crypto"
-import fs from "node:fs"
-import path from "node:path"
 import { getModel } from "@/app/lib/ai/provider"
+import { generateObject } from "@/app/lib/ai/tracing"
 import logger from "@/app/lib/logger"
 import { createServerClient, SupabaseClient, Tables } from "@formlink/db"
-import { generateObject } from "ai"
+import { loadPrompt } from "@formlink/prompts"
 import { z } from "zod"
 
 export type SummarySpec = {
@@ -234,23 +233,7 @@ async function refreshSummary(
   } catch {}
 }
 
-// Load system prompt for summaries at module init
-let SUMMARY_SYSTEM_PROMPT = ""
-try {
-  const candidates = [
-    path.resolve(
-      process.cwd(),
-      "apps/formcraft/app/lib/chat/prompts/summary-system.md"
-    ),
-    path.resolve(process.cwd(), "app/lib/chat/prompts/summary-system.md"),
-  ]
-  for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      SUMMARY_SYSTEM_PROMPT = fs.readFileSync(p, "utf8")
-      break
-    }
-  }
-} catch {}
+// System prompt is rendered per invocation with injected variables
 
 const SummariesObjectSchema = z
   .object({
@@ -401,18 +384,17 @@ async function computeSummariesWithAI(
   const MODEL = getModel(req.model) as any
 
   try {
+    const systemPrompt = await loadPrompt("ri/summary-system.md", {
+      rows: compactRows,
+      questions,
+      angles,
+      context: {},
+    })
     const { object } = await generateObject({
       model: MODEL,
       schema: SummariesObjectSchema,
-      system:
-        SUMMARY_SYSTEM_PROMPT ||
-        "Return ONLY JSON: { summaries: [{ title?, content }] }",
-      prompt: JSON.stringify({
-        questions,
-        rows: compactRows,
-        angles,
-        context: {},
-      }),
+      system: systemPrompt,
+      prompt: "",
     })
     return object.summaries as Array<{ title?: string; content: string }>
   } catch {

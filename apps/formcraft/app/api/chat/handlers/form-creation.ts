@@ -1,18 +1,18 @@
 import { getModel } from "@/app/lib/ai/provider"
-import { SYSTEM_PROMPT } from "@/app/lib/chat/prompts"
 import { ChatService } from "@/app/lib/chat/services/chat-service"
 import { FormService } from "@/app/lib/chat/services/form-service"
 import { createChatTools } from "@/app/lib/chat/tools"
 import logger from "@/app/lib/logger"
 import { SupabaseClient } from "@formlink/db"
+import { loadPrompt } from "@formlink/prompts"
 import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  streamText,
   UIMessage,
 } from "ai"
 import { customAlphabet } from "nanoid"
+import { streamText } from "../../../lib/ai/tracing"
 
 const nanoid = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-",
@@ -82,7 +82,13 @@ export async function handleChatRequest(
         const tools = createChatTools(toolContext)
         const intent = (options as any)?.intent || "general"
         const riFlag = Boolean((options as any)?.responseIntelligence)
-        const system = `${SYSTEM_PROMPT}\n\n## Current Session Context:\n- Form ID: ${currentFormId}\n- Intent: ${intent}\n- RI Requested: ${riFlag}`
+        const system = await loadPrompt("chat/form-creation-system.md", {
+          session_form_id: currentFormId,
+          session_intent: intent,
+          ri_requested: riFlag,
+          // Include guardrails only for user-facing chat endpoint
+          include_guards: true,
+        })
         const MODEL = getModel(options?.model)
         const result = await streamText({
           model: MODEL,

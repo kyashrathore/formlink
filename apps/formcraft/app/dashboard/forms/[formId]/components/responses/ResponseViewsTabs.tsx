@@ -1,13 +1,8 @@
 "use client"
 
-import { Button } from "@formlink/ui"
-import { Save, X } from "lucide-react"
-import React from "react"
+import { Tabs, TabsList, TabsTrigger } from "@formlink/ui"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
-import {
-  saveActiveView,
-  useResponseViewsStore,
-} from "../../stores/useResponseViewsStore"
+import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
 
 export default function ResponseViewsTabs() {
   const form = useFormEditorStore((s) => s.form)
@@ -20,45 +15,23 @@ export default function ResponseViewsTabs() {
   const activeViewId = (formId && activeViewIdMap[formId]) || "default"
 
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      {filteredViews.map((v) => {
-        const isActive = v.id === activeViewId
-        return (
-          <div
-            key={v.id}
-            className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-sm ${isActive ? "bg-accent border-accent-foreground/20" : "bg-muted"}`}
-          >
-            <button
-              className={`font-medium ${isActive ? "text-foreground" : "text-muted-foreground"}`}
-              onClick={() => setActiveView(v.id, form || null)}
-            >
-              {v.name}
-            </button>
-            {v.id !== "default" && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground h-5 w-5"
-                onClick={() => removeView(v.id, form || null)}
-                aria-label={`Close ${v.name}`}
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            )}
-            {v.id !== "default" && !v.saved && isActive && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground h-5 w-5"
-                onClick={() => saveActiveView()}
-                aria-label={`Save ${v.name}`}
-              >
-                <Save className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-        )
-      })}
+    <div className="flex items-center">
+      <Tabs
+        value={activeViewId}
+        onValueChange={(val) => setActiveView(val, form || null)}
+      >
+        <TabsList className="flex flex-wrap">
+          {filteredViews.map((v) => {
+            return (
+              <div key={v.id} className="mr-1 inline-flex items-center">
+                <TabsTrigger value={v.id} className="px-3 py-1.5 text-sm">
+                  {v.name}
+                </TabsTrigger>
+              </div>
+            )
+          })}
+        </TabsList>
+      </Tabs>
     </div>
   )
 }

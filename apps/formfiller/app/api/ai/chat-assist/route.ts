@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { FormValidator } from "@/lib/validation/FormValidator";
 import { createUIMessageStreamResponse } from "ai";
 import { streamAIResponse } from "./_lib/ai";
-import { SIMPLE_FORM_ASSISTANT_PROMPT } from "./_lib/constants";
+import { loadPrompt } from "@formlink/prompts";
 import {
   ensureSubmissionExists,
   hydrateEffectiveResponses,
@@ -372,10 +372,11 @@ export async function POST(req: Request) {
       responses: effectiveResponses,
     });
 
-    let systemPrompt = SIMPLE_FORM_ASSISTANT_PROMPT;
-    if (formSchema.settings?.journeyScript) {
-      systemPrompt += `\n\n## FORM-SPECIFIC JOURNEY SCRIPT:\n${String(formSchema.settings.journeyScript)}`;
-    }
+    const systemPrompt = await loadPrompt("filler/form-assistant-system.md", {
+      journey_script: String(formSchema.settings?.journeyScript || ""),
+      // Include guardrails only for user-facing chat-assist endpoint
+      include_guards: true,
+    });
 
     // Stream AI response
     try {

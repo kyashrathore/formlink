@@ -58,6 +58,10 @@ function TestUIPageContent() {
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
+  const initialModel = useMemo(
+    () => searchParams.get("model") || undefined,
+    [searchParams]
+  )
 
   const formIdFromUrl = params.formId as string
   // Defer formId creation - only use real IDs, not sentinels like "new"
@@ -155,9 +159,10 @@ function TestUIPageContent() {
     setLoading,
   ])
 
-  // Read initial prompt from URL query parameter and set it in the store
+  // Read initial prompt and model from URL query parameters
   useEffect(() => {
     const initialPromptFromUrl = searchParams.get("initialPrompt")
+    const initialModelFromUrl = searchParams.get("model")
     if (initialPromptFromUrl) {
       const decodedPrompt = decodeURIComponent(initialPromptFromUrl)
       useFormGenerationStore.getState().setInitialPrompt(decodedPrompt)
@@ -165,6 +170,10 @@ function TestUIPageContent() {
       // Clean up the URL by removing the query parameter
       const newUrl = window.location.pathname
       window.history.replaceState({}, "", newUrl)
+    }
+    if (initialModelFromUrl) {
+      // No global store for model; pass down via props from current URL read
+      // Cleanup already handled above by replacing to pathname
     }
   }, [searchParams])
 
@@ -249,7 +258,13 @@ function TestUIPageContent() {
 
   const handlePublishForm = () => {}
 
-  const chatContent = <ChatTabContent userId={userId} formId={formId || ""} />
+  const chatContent = (
+    <ChatTabContent
+      userId={userId}
+      formId={formId || ""}
+      initialModel={initialModel}
+    />
+  )
   const designContent = (
     <DesignTabContent
       formId={formId || ""}
@@ -278,7 +293,7 @@ function TestUIPageContent() {
   )
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col overflow-hidden">
       {}
       <div className="flex flex-shrink-0 items-center justify-between px-6">
         <Link
@@ -308,7 +323,11 @@ function TestUIPageContent() {
           {({ onHeaderMouseDown }) => (
             <ChatDesignPanel
               chatContent={
-                <ChatTabContent userId={userId} formId={formId || ""} />
+                <ChatTabContent
+                  userId={userId}
+                  formId={formId || ""}
+                  initialModel={initialModel}
+                />
               }
               designContent={designContent}
               onHeaderMouseDown={onHeaderMouseDown}

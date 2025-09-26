@@ -17,6 +17,7 @@
     "@formlink/db": "workspace:*",
     "@formlink/schema": "workspace:*",
     "@formlink/ui": "workspace:*",
+    "@formlink/prompts": "workspace:*",
     "@hookform/resolvers": "^5.2.1",
     "@openrouter/ai-sdk-provider": "^1.1.2",
     "@phosphor-icons/react": "^2.1.7",

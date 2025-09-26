@@ -1,6 +1,5 @@
 import logger from "@/app/lib/logger"
 import { Form } from "@formlink/schema"
-import { QUESTION_SCHEMA_PROMPT } from "../../prompts"
 import { getDefaultSettings } from "../../settings-defaults"
 import { AgentEvent, createAgentEvent } from "../../types/agent-events"
 import {
@@ -169,7 +168,6 @@ export async function createFormWorkflow(
     const questionResults = await generateQuestionsParallel(
       questionParams,
       dataStream,
-      QUESTION_SCHEMA_PROMPT,
       formId,
       userId,
       () => ++currentSequence,

@@ -1,5 +1,6 @@
 "use client"
 
+import InsightPreviewCard from "@/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan/InsightPreviewCard"
 import { MetaSummary } from "@/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan/MetaSummary"
 import { PlanHeader } from "@/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan/PlanHeader"
 import { Section } from "@/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan/Section"
@@ -13,7 +14,7 @@ import { useResponseViewsStore } from "@/app/dashboard/forms/[formId]/stores/use
 import type { ResponseView } from "@/app/dashboard/forms/[formId]/stores/useResponseViewsStore"
 import type { RIPlanResponse } from "@/app/lib/ri/types"
 import { Badge, Button, Card, CardContent } from "@formlink/ui"
-import { Save, Settings2, TrendingUp } from "lucide-react"
+import { Settings2, TrendingUp } from "lucide-react"
 import React, { useMemo, useState } from "react"
 import { useActionTools } from "../../../hooks/useActionTools"
 
@@ -25,6 +26,7 @@ export default function ResponseViewPlan({
   onDismiss,
   onDelete,
   view,
+  hideHeader,
 }: {
   plan: RIPlanResponse
   saved?: boolean
@@ -33,6 +35,7 @@ export default function ResponseViewPlan({
   onDismiss?: () => void
   onDelete?: () => void
   view?: ResponseView | null
+  hideHeader?: boolean
 }) {
   const selectorResult = useResponseViewsStore((s) => {
     if (!formId) return null
@@ -199,24 +202,22 @@ export default function ResponseViewPlan({
   const [openSlug, setOpenSlug] = useState<string | null>(null)
 
   const highlightClass = saved
-    ? "mb-4 !bg-transparent border border-border shadow-none"
-    : "mb-4 !bg-transparent border border-primary/50 shadow-none"
+    ? "mb-4 !bg-transparent rounded-none border-0 shadow-none"
+    : "mb-4 !bg-transparent rounded-none border-0 shadow-none"
 
   return (
     <>
       <Card className={highlightClass}>
-        <PlanHeader
-          viewName={viewName}
-          saved={saved}
-          onDelete={onDelete}
-          onDismiss={onDismiss}
-        />
+        {!hideHeader ? (
+          <PlanHeader viewName={viewName} saved={saved} onDismiss={onDismiss} />
+        ) : null}
         <CardContent className="space-y-4 text-sm">
           <MetaSummary
             rationale={rationale}
             filters={filters}
             columns={columns}
             sort={sort}
+            formId={formId}
           />
 
           <div className="space-y-2">
@@ -224,20 +225,15 @@ export default function ResponseViewPlan({
               title="Insights"
               icon={<TrendingUp className="h-3.5 w-3.5" />}
             >
-              <div className="flex flex-wrap gap-1.5">
-                {insights.length ? (
-                  insights.map((ins: any, i: number) => (
-                    <Badge key={i} variant="secondary">
-                      {ins.type}
-                      {ins.args?.window ? ` • ${ins.args.window}` : ""}
-                      {ins.args?.field ? ` • ${ins.args.field}` : ""}
-                      {ins.args?.by ? ` • by ${ins.args.by}` : ""}
-                    </Badge>
-                  ))
-                ) : (
-                  <span className="text-muted-foreground">None</span>
-                )}
-              </div>
+              {insights.length ? (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {insights.map((ins: any, i: number) => (
+                    <InsightPreviewCard key={i} spec={ins} />
+                  ))}
+                </div>
+              ) : (
+                <span className="text-muted-foreground">None</span>
+              )}
             </Section>
 
             <Section
@@ -370,32 +366,27 @@ export default function ResponseViewPlan({
                             >
                               {groupStatus}
                             </Badge>
-                            {isComposio &&
-                            remoteActionsEnabled &&
-                            groupStatus !== "Ready" ? (
-                              groupStatus === "Needs auth" ? (
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  className="h-7 px-2.5 text-sm"
-                                  onClick={() =>
-                                    setOpenSlug(items[0]?.slug || "")
-                                  }
-                                >
-                                  Connect
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 px-2.5 text-sm"
-                                  onClick={() =>
-                                    setOpenSlug(targetConfigureSlug)
-                                  }
-                                >
-                                  Configure
-                                </Button>
-                              )
+                            {isComposio ? (
+                              <Button
+                                size="sm"
+                                className="h-7 px-2.5 text-sm"
+                                variant={
+                                  groupStatus === "Ready"
+                                    ? "secondary"
+                                    : "default"
+                                }
+                                onClick={() =>
+                                  setOpenSlug(
+                                    groupStatus === "Ready"
+                                      ? targetConfigureSlug
+                                      : items[0]?.slug || ""
+                                  )
+                                }
+                              >
+                                {groupStatus === "Ready"
+                                  ? "Connected (Manage)"
+                                  : "Connect"}
+                              </Button>
                             ) : null}
                           </div>
                           <div className="flex flex-col gap-1.5">
@@ -407,9 +398,6 @@ export default function ResponseViewPlan({
                                 <div className="flex min-w-0 flex-col">
                                   <div className="truncate text-sm font-medium">
                                     {item.label}
-                                  </div>
-                                  <div className="text-muted-foreground truncate font-mono text-[11px]">
-                                    {item.toolSlug || item.slug}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5">
@@ -449,17 +437,6 @@ export default function ResponseViewPlan({
               )}
             </Section>
           </div>
-
-          <div className="flex justify-end pt-2">
-            <Button
-              size="sm"
-              className="gap-1"
-              onClick={onSave}
-              disabled={saved || !onSave}
-            >
-              <Save className="h-3.5 w-3.5" /> {saved ? "Saved" : "Save view"}
-            </Button>
-          </div>
         </CardContent>
       </Card>
 
@@ -477,3 +454,5 @@ export default function ResponseViewPlan({
     </>
   )
 }
+
+// mini chart removed; using InsightPreviewCard

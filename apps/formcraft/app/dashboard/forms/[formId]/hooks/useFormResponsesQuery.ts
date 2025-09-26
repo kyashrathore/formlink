@@ -44,13 +44,23 @@ interface UseFormResponsesQueryResult {
   insights?: Array<Record<string, unknown>>
 }
 
+function normalizeFilterValue(value: unknown): unknown {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const v = value as Record<string, unknown>
+    if (Array.isArray(v.includes)) return v.includes
+    if (Array.isArray(v.in)) return v.in
+    if ("eq" in v) return (v as any).eq
+  }
+  return value
+}
+
 function buildSearchParam(formVersionId: string, filters: FilterItem[]) {
   const search: Record<string, unknown> = {}
   if (formVersionId) search.form_version_id = formVersionId
   const provided = new Set<string>()
   filters.forEach(({ id, value }) => {
     if (value !== undefined && value !== null) {
-      search[id] = value
+      search[id] = normalizeFilterValue(value)
       provided.add(id)
     }
   })

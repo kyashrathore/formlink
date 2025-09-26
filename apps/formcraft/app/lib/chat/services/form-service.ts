@@ -111,6 +111,103 @@ export class FormService {
     }
   }
 
+  // Ensure a Personal Organization and Personal Workspace exist for this user.
+  // Returns the workspace_id for use when creating new forms.
+  private async ensurePersonalOrgAndWorkspace(userId: string): Promise<string> {
+    const serviceClient = await createGuestServerClient()
+    const svcAny = serviceClient as any
+
+    // 1) Ensure Personal Organization
+    const ORG_NAME = "Personal"
+    let orgId: string | null = null
+
+    {
+      const { data: existingOrg, error: orgFetchErr } = await svcAny
+        .from("organizations")
+        .select("org_id")
+        .eq("created_by", userId)
+        .eq("name", ORG_NAME)
+        .maybeSingle()
+
+      if (orgFetchErr) {
+        logger.error("[FormService] Failed to query Personal org", {
+          userId,
+          error: orgFetchErr.message,
+        })
+        throw new Error(`Failed to query personal org: ${orgFetchErr.message}`)
+      }
+
+      if (existingOrg) {
+        orgId = existingOrg.org_id
+      } else {
+        const { data: insertedOrg, error: orgInsErr } = await svcAny
+          .from("organizations")
+          .insert({ name: ORG_NAME, created_by: userId })
+          .select("org_id")
+          .single()
+
+        if (orgInsErr || !insertedOrg) {
+          logger.error("[FormService] Failed to create Personal org", {
+            userId,
+            error: orgInsErr?.message,
+          })
+          throw new Error(
+            `Failed to create personal org: ${orgInsErr?.message}`
+          )
+        }
+        orgId = insertedOrg.org_id
+      }
+    }
+
+    // 2) Ensure Personal Workspace under that org
+    const WS_NAME = "Personal"
+    let workspaceId: string | null = null
+
+    {
+      const { data: existingWs, error: wsFetchErr } = await svcAny
+        .from("workspaces")
+        .select("workspace_id")
+        .eq("org_id", orgId!)
+        .eq("name", WS_NAME)
+        .maybeSingle()
+
+      if (wsFetchErr) {
+        logger.error("[FormService] Failed to query Personal workspace", {
+          userId,
+          orgId,
+          error: wsFetchErr.message,
+        })
+        throw new Error(
+          `Failed to query personal workspace: ${wsFetchErr.message}`
+        )
+      }
+
+      if (existingWs) {
+        workspaceId = existingWs.workspace_id
+      } else {
+        const { data: insertedWs, error: wsInsErr } = await svcAny
+          .from("workspaces")
+          .insert({ name: WS_NAME, created_by: userId, org_id: orgId! })
+          .select("workspace_id")
+          .single()
+
+        if (wsInsErr || !insertedWs) {
+          logger.error("[FormService] Failed to create Personal workspace", {
+            userId,
+            orgId,
+            error: wsInsErr?.message,
+          })
+          throw new Error(
+            `Failed to create personal workspace: ${wsInsErr?.message}`
+          )
+        }
+        workspaceId = insertedWs.workspace_id
+      }
+    }
+
+    return workspaceId!
+  }
+
   async createNewForm(
     formId: string,
     userId: string
@@ -120,12 +217,14 @@ export class FormService {
     const shortId = nanoid()
     const timestamp = new Date().toISOString()
     await this.ensureUserProfile(userId)
+    const workspaceId = await this.ensurePersonalOrgAndWorkspace(userId)
 
     const { error: formsInsertError } = await this.supabase
       .from("forms")
       .insert({
         id: formId,
         user_id: userId,
+        workspace_id: workspaceId,
         short_id: shortId,
         agent_state: {
           formId,

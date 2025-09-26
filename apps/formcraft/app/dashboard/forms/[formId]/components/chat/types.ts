@@ -5,6 +5,7 @@ export interface ChatPanelProps {
   layoutId?: string
   showSuggestions?: boolean
   initialMessage?: string
+  initialModel?: string
 }
 
 export interface FormattedLogEvent {

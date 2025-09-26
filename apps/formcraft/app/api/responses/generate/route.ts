@@ -1,9 +1,10 @@
 import { getModel } from "@/app/lib/ai/provider"
+import { generateObject } from "@/app/lib/ai/tracing"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import { verifyUserCanAccessFormVersion } from "@/app/lib/middleware/authorization"
 import { faker } from "@faker-js/faker"
 import { createServerClient } from "@formlink/db"
-import { generateObject } from "ai"
+import { loadPrompt } from "@formlink/prompts"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
@@ -379,43 +380,24 @@ export async function POST(req: NextRequest) {
     let dataGenerationSchema: z.infer<typeof DataGenerationSchemaResponse>
 
     try {
+      const system = await loadPrompt("responses/data-generation-rules.md", {
+        questions: questions.map((q) => ({
+          id: q.id,
+          label: q.label || q.title,
+          type: q.name || q.type,
+          format: q.format,
+          display: q.display,
+          options: q.options,
+          config: q.config,
+          required: q.required,
+          validations: q.validations,
+        })),
+      })
       const { object } = await generateObject({
         model: MODEL,
         schema: DataGenerationSchemaResponse,
-        system: `You are a form data analyst. Analyze each question and produce precise data-generation rules per question.
-
-For every question, infer and output:
-1) dataType: one of {name, email, phone, url, number, date, dateRange, address, choice, multiChoice, rating, scale, text, paragraph, boolean, country, city, state, zipcode, jobTitle, company, department, color, product, feedback, file, signature}.
-2) constraints: include any that apply: {min, max, minLength, maxLength, options, format, pattern, required, multiSelect, minSelections, maxSelections, yearRange:{min,max}, biasTowards, category, examples}.
-3) Keep constraints faithful to the question’s configuration. Do not invent options for choice fields.
-
-Examples guidance (context-aware):
-- Provide up to 10 short, diverse, realistic example answers in constraints.examples for questions that accept free text (text, paragraph, feedback, jobTitle, company, product, project/description-style prompts, etc.).
-- Use the question’s label, description, and nearby context to tailor tone and content.
-- Do not copy the question text; produce plausible answers. Keep examples concise
-- Do not add examples for strict choice/multiChoice fields unless they are free-text by design.
-
-Be specific about constraints when applicable:
-- Age: min=18, max=100
-- Experience years: min=0, max=50
-- Ratings: typically 1–5 or 1–10; biasTowards may be high/low/positive/negative/neutral/middle
-- URLs: categorize as 'portfolio', 'github', 'linkedin', or 'general'
-- Dates: birth dates (20–80 years ago) vs recent dates (last 30 days), etc.
-
-Also, identify any simple correlations between questions when obvious (e.g., seniority aligns with years of experience), but keep this concise.`,
-        prompt: JSON.stringify({
-          questions: questions.map((q) => ({
-            id: q.id,
-            label: q.label || q.title,
-            type: q.name || q.type,
-            format: q.format,
-            display: q.display,
-            options: q.options,
-            config: q.config,
-            required: q.required,
-            validations: q.validations,
-          })),
-        }),
+        system,
+        prompt: "",
       })
 
       dataGenerationSchema = object

@@ -14,6 +14,9 @@ export const TOOL_DESCRIPTIONS = {
   getFormContext:
     "Retrieves the current structure (title, description, questions with their IDs, types, and key configurations) of an existing form. Use this when the user wants to modify an existing form and you need its current state. Do NOT use this as a pre-check for new form creation—call createForm instead.",
 
-  responseIntelligence:
-    "Generate a stateless Responses Intelligence plan (JSON) for the Responses view. Prefer using this tool when chat metadata indicates intent = 'response_intelligence' (passed in options) or when the user clearly asks to analyze/filter/sort responses, surface insights, or propose actions. Return a plan that specifies RPC submission/answer filters, UI columns/sort, and optional insight specs.",
+  createResponseView:
+    "Create a Responses View (RI plan JSON) for the Responses tab. Use when the user asks to create a new responses view/dashboard/insights plan or when no existing plan is in context. Return a full plan: rpc submission/answer filters, UI columns/sort, and optional insight specs.",
+
+  updateResponseView:
+    "Update/refine an existing Responses View (RI plan JSON). Use when the user asks to tweak/adjust an existing view (e.g., change filters, columns, or insights). Requires a currentPlan in planContext; otherwise ask for it or create a new view instead.",
 }

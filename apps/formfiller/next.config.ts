@@ -7,7 +7,12 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   outputFileTracingRoot: path.join(__dirname, "../../"),
-  transpilePackages: ["@formlink/ui", "@formlink/db", "@formlink/schema"],
+  transpilePackages: [
+    "@formlink/ui",
+    "@formlink/db",
+    "@formlink/schema",
+    "@formlink/prompts",
+  ],
   experimental: {
     browserDebugInfoInTerminal: true,
   },

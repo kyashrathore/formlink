@@ -46,6 +46,41 @@ SET default_tablespace = '';
 SET default_table_access_method = "heap";
 
 
+-- Organizations: top-level container (owner-scoped today)
+CREATE TABLE IF NOT EXISTS "public"."organizations" (
+    "org_id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "name" "text" NOT NULL,
+    "slug" "text",
+    "created_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "organizations_pkey" PRIMARY KEY ("org_id")
+);
+
+ALTER TABLE "public"."organizations" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."organizations" IS 'Top-level container; one organization can have many workspaces.';
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='organizations' AND indexname='organizations_slug_key'
+  ) THEN
+    CREATE UNIQUE INDEX "organizations_slug_key" ON "public"."organizations" ("slug");
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_type = 'UNIQUE'
+      AND table_schema = 'public'
+      AND table_name = 'organizations'
+      AND constraint_name = 'organizations_created_by_name_key'
+  ) THEN
+    ALTER TABLE "public"."organizations"
+      ADD CONSTRAINT "organizations_created_by_name_key" UNIQUE ("created_by", "name");
+  END IF;
+END $$;
 CREATE TABLE IF NOT EXISTS "public"."brands" (
     "brand_id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
@@ -166,6 +201,7 @@ CREATE TABLE IF NOT EXISTS "public"."forms" (
     "current_draft_version_id" "uuid",
     "short_id" "text",
     "agent_state" "jsonb",
+    "workspace_id" "uuid" NOT NULL,
     CONSTRAINT "forms_pkey" PRIMARY KEY ("id"),
     CONSTRAINT "forms_current_draft_version_id_key" UNIQUE ("current_draft_version_id"),
     CONSTRAINT "forms_current_published_version_id_key" UNIQUE ("current_published_version_id"),
@@ -177,6 +213,73 @@ ALTER TABLE "public"."forms" OWNER TO "postgres";
 
 
 COMMENT ON TABLE "public"."forms" IS 'Represents the high-level form entity.';
+
+-- Minimal multi-tenant future-proofing: workspaces + link from forms
+-- Create workspaces table (owner-scoped; membership to be added later)
+CREATE TABLE IF NOT EXISTS "public"."workspaces" (
+    "workspace_id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "org_id" "uuid" NOT NULL,
+    "name" "text" NOT NULL,
+    "created_by" "uuid",
+    "created_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "updated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    CONSTRAINT "workspaces_pkey" PRIMARY KEY ("workspace_id")
+);
+
+ALTER TABLE "public"."workspaces" OWNER TO "postgres";
+
+COMMENT ON TABLE "public"."workspaces" IS 'Lightweight container to group forms; owner-scoped for now.';
+COMMENT ON COLUMN "public"."forms"."workspace_id" IS 'Optional scope; when set, form belongs to this workspace.';
+
+-- Unique personal workspace per user by name, to enable idempotent upsert
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_type = 'UNIQUE'
+      AND table_schema = 'public'
+      AND table_name = 'workspaces'
+      AND constraint_name = 'workspaces_created_by_name_key'
+  ) THEN
+    ALTER TABLE "public"."workspaces"
+      ADD CONSTRAINT "workspaces_created_by_name_key" UNIQUE ("created_by", "name");
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_type = 'UNIQUE'
+      AND table_schema = 'public'
+      AND table_name = 'workspaces'
+      AND constraint_name = 'workspaces_org_id_name_key'
+  ) THEN
+    ALTER TABLE "public"."workspaces"
+      ADD CONSTRAINT "workspaces_org_id_name_key" UNIQUE ("org_id", "name");
+  END IF;
+END $$;
+
+-- FK: workspaces.org_id → organizations.org_id
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_type = 'FOREIGN KEY'
+      AND table_schema = 'public'
+      AND table_name = 'workspaces'
+      AND constraint_name = 'workspaces_org_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY "public"."workspaces"
+      ADD CONSTRAINT "workspaces_org_id_fkey"
+      FOREIGN KEY ("org_id") REFERENCES "public"."organizations"("org_id") ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='workspaces' AND indexname='workspaces_org_id_idx'
+  ) THEN
+    CREATE INDEX "workspaces_org_id_idx" ON "public"."workspaces" USING btree ("org_id");
+  END IF;
+END $$;
 
 
 
@@ -565,11 +668,49 @@ BEGIN
         fs_inner.testmode
     FROM form_submissions fs_inner
     WHERE
-      (submission_filters->>'form_version_id' IS NULL OR fs_inner.form_version_id = (submission_filters->>'form_version_id')::uuid)
-      AND (submission_filters->>'status' IS NULL OR fs_inner.status = (submission_filters->>'status')::public.submission_status)
-      AND (submission_filters->>'user_id' IS NULL OR fs_inner.user_id = (submission_filters->>'user_id')::uuid)
-      AND (submission_filters->>'created_at' IS NULL OR fs_inner.created_at >= (submission_filters->>'created_at')::timestamptz)
-      AND (submission_filters->>'testmode' IS NULL OR fs_inner.testmode = (submission_filters->>'testmode')::boolean)
+      -- form_version_id equality
+      ((submission_filters->>'form_version_id') IS NULL OR fs_inner.form_version_id = (submission_filters->>'form_version_id')::uuid)
+      -- status equality or inclusion
+      AND (
+        (submission_filters->'status') IS NULL OR
+        (jsonb_typeof(submission_filters->'status') = 'string' AND fs_inner.status = (submission_filters->>'status')::public.submission_status) OR
+        (jsonb_typeof(submission_filters->'status') = 'array' AND fs_inner.status::text IN (
+          SELECT jsonb_array_elements_text(submission_filters->'status')
+        ))
+      )
+      -- user_id equality
+      AND ((submission_filters->>'user_id') IS NULL OR fs_inner.user_id = (submission_filters->>'user_id')::uuid)
+      -- created_at: string lower-bound OR object { since, before, between:[start,end] }
+      AND (
+        (submission_filters->'created_at') IS NULL OR
+        (jsonb_typeof(submission_filters->'created_at') = 'string' AND fs_inner.created_at >= (submission_filters->>'created_at')::timestamptz) OR
+        (jsonb_typeof(submission_filters->'created_at') = 'object' AND
+          ((NOT (submission_filters->'created_at' ? 'since')) OR fs_inner.created_at >= (submission_filters->'created_at'->>'since')::timestamptz) AND
+          ((NOT (submission_filters->'created_at' ? 'before')) OR fs_inner.created_at < (submission_filters->'created_at'->>'before')::timestamptz) AND
+          ((NOT (submission_filters->'created_at' ? 'between')) OR (
+            fs_inner.created_at >= (submission_filters->'created_at'->'between'->>0)::timestamptz AND
+            fs_inner.created_at <= (submission_filters->'created_at'->'between'->>1)::timestamptz
+          ))
+        )
+      )
+      -- completed_at: object support similar to created_at (optional)
+      AND (
+        (submission_filters->'completed_at') IS NULL OR
+        (jsonb_typeof(submission_filters->'completed_at') = 'string' AND fs_inner.completed_at >= (submission_filters->>'completed_at')::timestamptz) OR
+        (jsonb_typeof(submission_filters->'completed_at') = 'object' AND
+          ((NOT (submission_filters->'completed_at' ? 'since')) OR fs_inner.completed_at >= (submission_filters->'completed_at'->>'since')::timestamptz) AND
+          ((NOT (submission_filters->'completed_at' ? 'before')) OR fs_inner.completed_at < (submission_filters->'completed_at'->>'before')::timestamptz) AND
+          ((NOT (submission_filters->'completed_at' ? 'between')) OR (
+            fs_inner.completed_at >= (submission_filters->'completed_at'->'between'->>0)::timestamptz AND
+            fs_inner.completed_at <= (submission_filters->'completed_at'->'between'->>1)::timestamptz
+          ))
+        )
+      )
+      -- testmode boolean (allow string or boolean)
+      AND (
+        (submission_filters->'testmode') IS NULL OR
+        (jsonb_typeof(submission_filters->'testmode') IN ('boolean','string') AND fs_inner.testmode = (submission_filters->>'testmode')::boolean)
+      )
   ),
   relevant_filter_data AS (
     -- Pre-processes answer_filters to get question_id and their filter_criteria (JSONB values).
@@ -578,7 +719,7 @@ BEGIN
     WHERE answer_filters IS NOT NULL AND answer_filters != '{}'::jsonb
   ),
   answer_conditions AS (
-    -- Identifies submissions and question_ids that match answer filter criteria.
+    -- Identifies submissions and question_ids that match answer filter criteria, supporting advanced operators.
     SELECT DISTINCT
       a.submission_id,
       a.question_id
@@ -586,17 +727,72 @@ BEGIN
       form_answers a
       JOIN relevant_filter_data rfd ON a.question_id = rfd.question_id
       LEFT JOIN LATERAL jsonb_array_elements(
-          CASE
-              WHEN jsonb_typeof(rfd.filter_criteria) = 'array' THEN rfd.filter_criteria
-              ELSE NULL
-          END
+        CASE WHEN jsonb_typeof(rfd.filter_criteria) = 'array' THEN rfd.filter_criteria ELSE NULL END
       ) AS arr_elem(val) ON TRUE
+      LEFT JOIN LATERAL jsonb_array_elements(
+        CASE WHEN jsonb_typeof(rfd.filter_criteria) = 'object' AND jsonb_typeof(rfd.filter_criteria->'in') = 'array' THEN rfd.filter_criteria->'in' ELSE NULL END
+      ) AS in_elem(val) ON TRUE
+      LEFT JOIN LATERAL jsonb_array_elements(
+        CASE WHEN jsonb_typeof(rfd.filter_criteria) = 'object' AND jsonb_typeof(rfd.filter_criteria->'includes') = 'array' THEN rfd.filter_criteria->'includes' ELSE NULL END
+      ) AS inc_elem(val) ON TRUE
+      LEFT JOIN LATERAL jsonb_array_elements(
+        CASE WHEN jsonb_typeof(rfd.filter_criteria) = 'object' AND jsonb_typeof(rfd.filter_criteria->'all') = 'array' THEN rfd.filter_criteria->'all' ELSE NULL END
+      ) AS all_elem(val) ON TRUE
     WHERE
       (
-        (jsonb_typeof(rfd.filter_criteria) = 'array' AND a.answer_value = arr_elem.val) OR
+        -- Basic array equals any element
+        (jsonb_typeof(rfd.filter_criteria) = 'array' AND (
+          a.answer_value = arr_elem.val OR
+          (jsonb_typeof(a.answer_value) = 'array' AND EXISTS (
+            SELECT 1 FROM jsonb_array_elements(a.answer_value) av WHERE av.value = arr_elem.val
+          ))
+        )) OR
+        -- Simple equality
         (jsonb_typeof(rfd.filter_criteria) = 'string' AND a.answer_value = rfd.filter_criteria) OR
-        (jsonb_typeof(rfd.filter_criteria) IN ('number', 'boolean') AND a.answer_value = rfd.filter_criteria) OR
-        (jsonb_typeof(rfd.filter_criteria) = 'null' AND (a.answer_value IS NULL OR a.answer_value = 'null'::jsonb))
+        (jsonb_typeof(rfd.filter_criteria) IN ('number','boolean') AND a.answer_value = rfd.filter_criteria) OR
+        (jsonb_typeof(rfd.filter_criteria) = 'null' AND (a.answer_value IS NULL OR a.answer_value = 'null'::jsonb)) OR
+        -- Object operators
+        (jsonb_typeof(rfd.filter_criteria) = 'object' AND (
+          -- eq
+          (rfd.filter_criteria ? 'eq' AND a.answer_value = rfd.filter_criteria->'eq') OR
+          -- in/includes (match if scalar equals any or array answer overlaps)
+          (rfd.filter_criteria ? 'in' AND (
+            a.answer_value = in_elem.val OR
+            (jsonb_typeof(a.answer_value) = 'array' AND EXISTS (
+              SELECT 1 FROM jsonb_array_elements(a.answer_value) av WHERE av.value = in_elem.val
+            ))
+          )) OR
+          (rfd.filter_criteria ? 'includes' AND (
+            a.answer_value = inc_elem.val OR
+            (jsonb_typeof(a.answer_value) = 'array' AND EXISTS (
+              SELECT 1 FROM jsonb_array_elements(a.answer_value) av WHERE av.value = inc_elem.val
+            ))
+          )) OR
+          -- all (for array answers)
+          (rfd.filter_criteria ? 'all' AND jsonb_typeof(a.answer_value) = 'array' AND NOT EXISTS (
+            SELECT 1 FROM jsonb_array_elements(rfd.filter_criteria->'all') req
+            WHERE NOT EXISTS (
+              SELECT 1 FROM jsonb_array_elements(a.answer_value) av WHERE av.value = req.value
+            )
+          )) OR
+          -- contains (substring match for text answers)
+          (rfd.filter_criteria ? 'contains' AND jsonb_typeof(a.answer_value) = 'string' AND (
+            (a.answer_value #>> '{}') ILIKE ('%' || (rfd.filter_criteria->>'contains') || '%')
+          )) OR
+          -- Numeric comparisons
+          ((rfd.filter_criteria ? 'gte' OR rfd.filter_criteria ? 'gt' OR rfd.filter_criteria ? 'lte' OR rfd.filter_criteria ? 'lt' OR rfd.filter_criteria ? 'between') AND (
+            CASE
+              WHEN jsonb_typeof(a.answer_value) = 'number' THEN TRUE
+              ELSE FALSE
+            END
+          ) AND (
+            (rfd.filter_criteria ? 'gte' AND (a.answer_value #>> '{}')::numeric >= (rfd.filter_criteria->>'gte')::numeric) OR
+            (rfd.filter_criteria ? 'gt'  AND (a.answer_value #>> '{}')::numeric >  (rfd.filter_criteria->>'gt')::numeric) OR
+            (rfd.filter_criteria ? 'lte' AND (a.answer_value #>> '{}')::numeric <= (rfd.filter_criteria->>'lte')::numeric) OR
+            (rfd.filter_criteria ? 'lt'  AND (a.answer_value #>> '{}')::numeric <  (rfd.filter_criteria->>'lt')::numeric) OR
+            (rfd.filter_criteria ? 'between' AND (a.answer_value #>> '{}')::numeric >= (rfd.filter_criteria->'between'->>0)::numeric AND (a.answer_value #>> '{}')::numeric <= (rfd.filter_criteria->'between'->>1)::numeric)
+          ))
+        ))
       )
   ),
   submissions_meeting_filter_criteria AS (
@@ -890,6 +1086,29 @@ ALTER TABLE ONLY "public"."submission_messages"
 ALTER TABLE ONLY "public"."tasks"
     ADD CONSTRAINT "tasks_form_id_fkey" FOREIGN KEY ("form_id") REFERENCES "public"."forms"("id") ON DELETE CASCADE;
 
+-- FK and index for forms.workspace_id (set null on workspace delete for safety)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_type = 'FOREIGN KEY'
+      AND table_schema = 'public'
+      AND table_name = 'forms'
+      AND constraint_name = 'forms_workspace_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY "public"."forms"
+      ADD CONSTRAINT "forms_workspace_id_fkey"
+      FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("workspace_id") ON DELETE CASCADE;
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes WHERE schemaname='public' AND tablename='forms' AND indexname='forms_workspace_id_idx'
+  ) THEN
+    CREATE INDEX "forms_workspace_id_idx" ON "public"."forms" USING btree ("workspace_id");
+  END IF;
+END $$;
+
 
 
 ALTER TABLE ONLY "public"."usage_history"
@@ -899,6 +1118,8 @@ ALTER TABLE ONLY "public"."usage_history"
 ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.form_versions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.forms ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.workspaces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 
 -- Owner-scoped policies to cover SELECT/INSERT/UPDATE (delete policies already exist)
 -- forms: rows owned by user_id
@@ -987,6 +1208,78 @@ DO $$ BEGIN
   END IF;
 END $$;
 
+-- workspaces: rows owned by created_by (owner-scoped; membership will come later)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='workspaces' AND policyname='workspaces_select_own'
+  ) THEN
+    CREATE POLICY "workspaces_select_own" ON public.workspaces
+      FOR SELECT TO authenticated
+      USING (created_by = auth.uid());
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='workspaces' AND policyname='workspaces_insert_own'
+  ) THEN
+    CREATE POLICY "workspaces_insert_own" ON public.workspaces
+      FOR INSERT TO authenticated
+      WITH CHECK (created_by = auth.uid());
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='workspaces' AND policyname='workspaces_update_own'
+  ) THEN
+    CREATE POLICY "workspaces_update_own" ON public.workspaces
+      FOR UPDATE TO authenticated
+      USING (created_by = auth.uid())
+      WITH CHECK (created_by = auth.uid());
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='workspaces' AND policyname='workspaces_delete_own'
+  ) THEN
+    CREATE POLICY "workspaces_delete_own" ON public.workspaces
+      FOR DELETE TO authenticated
+      USING (created_by = auth.uid());
+  END IF;
+END $$;
+
+-- organizations: rows owned by created_by (owner-scoped for now)
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='organizations' AND policyname='organizations_select_own'
+  ) THEN
+    CREATE POLICY "organizations_select_own" ON public.organizations
+      FOR SELECT TO authenticated
+      USING (created_by = auth.uid());
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='organizations' AND policyname='organizations_insert_own'
+  ) THEN
+    CREATE POLICY "organizations_insert_own" ON public.organizations
+      FOR INSERT TO authenticated
+      WITH CHECK (created_by = auth.uid());
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='organizations' AND policyname='organizations_update_own'
+  ) THEN
+    CREATE POLICY "organizations_update_own" ON public.organizations
+      FOR UPDATE TO authenticated
+      USING (created_by = auth.uid())
+      WITH CHECK (created_by = auth.uid());
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='organizations' AND policyname='organizations_delete_own'
+  ) THEN
+    CREATE POLICY "organizations_delete_own" ON public.organizations
+      FOR DELETE TO authenticated
+      USING (created_by = auth.uid());
+  END IF;
+END $$;
+
 
 CREATE POLICY "Allow users to delete their own brands" ON "public"."brands" FOR DELETE TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "created_by"));
 
@@ -999,3 +1292,77 @@ CREATE POLICY "Allow users to delete their own form versions" ON "public"."form_
 
 
 CREATE POLICY "Allow users to delete their own forms" ON "public"."forms" FOR DELETE TO "authenticated" USING ((( SELECT "auth"."uid"() AS "uid") = "user_id"));
+
+-- Response Intelligence cache: small KV for AI summaries etc.
+CREATE TABLE IF NOT EXISTS public.ri_ai_cache (
+  id text PRIMARY KEY,
+  value jsonb NOT NULL,
+  meta jsonb NOT NULL,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Helper function: increment daily message count for a user
+CREATE OR REPLACE FUNCTION public.increment_daily_message_count(user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE public.users
+  SET daily_message_count = COALESCE(daily_message_count, 0) + 1
+  WHERE id = increment_daily_message_count.user_id;
+END;
+$$;
+
+-- Subscriptions: per-user subscription state (Polar/Billing)
+CREATE TABLE IF NOT EXISTS "public"."user_subscriptions" (
+    "id" uuid DEFAULT gen_random_uuid() NOT NULL,
+    "user_id" uuid,
+    "external_customer_id" text,
+    "plan_type" text NOT NULL,
+    "status" text NOT NULL,
+    "current_period_end" timestamp with time zone,
+    "created_at" timestamp with time zone,
+    "updated_at" timestamp with time zone,
+    CONSTRAINT "user_subscriptions_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE "public"."user_subscriptions" OWNER TO "postgres";
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_type = 'FOREIGN KEY'
+      AND table_schema = 'public'
+      AND table_name = 'user_subscriptions'
+      AND constraint_name = 'user_subscriptions_user_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY "public"."user_subscriptions"
+      ADD CONSTRAINT "user_subscriptions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Subscription event log
+CREATE TABLE IF NOT EXISTS "public"."subscription_logs" (
+    "id" uuid DEFAULT gen_random_uuid() NOT NULL,
+    "user_id" uuid,
+    "action" text NOT NULL,
+    "old_status" text,
+    "new_status" text,
+    "created_at" timestamp with time zone DEFAULT now(),
+    CONSTRAINT "subscription_logs_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE "public"."subscription_logs" OWNER TO "postgres";
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.table_constraints
+    WHERE constraint_type = 'FOREIGN KEY'
+      AND table_schema = 'public'
+      AND table_name = 'subscription_logs'
+      AND constraint_name = 'subscription_logs_user_id_fkey'
+  ) THEN
+    ALTER TABLE ONLY "public"."subscription_logs"
+      ADD CONSTRAINT "subscription_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id");
+  END IF;
+END $$;

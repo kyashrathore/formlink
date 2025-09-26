@@ -3,10 +3,11 @@ import { getModel } from "@/app/lib/ai/provider"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
 import { verifyGuestUserLimits } from "@/app/lib/middleware/authorization"
 import {
-  CREATE_FORM_REPAIR_SYSTEM_PROMPT,
-  CREATE_FORM_SYSTEM_PROMPT,
-} from "@/app/lib/prompts"
-import { createServerClient, SupabaseClient } from "@formlink/db"
+  createGuestServerClient,
+  createServerClient,
+  SupabaseClient,
+} from "@formlink/db"
+import { loadPrompt } from "@formlink/prompts"
 import { Form, FormSchema } from "@formlink/schema"
 import { generateObject } from "ai"
 import { customAlphabet } from "nanoid"
@@ -18,8 +19,7 @@ const nanoid = customAlphabet(
   10
 )
 
-const createFormSystemPrompt = CREATE_FORM_SYSTEM_PROMPT
-const createFormRepairSystemPrompt = CREATE_FORM_REPAIR_SYSTEM_PROMPT
+// Prompts loaded dynamically
 
 async function getFormSchemaById(
   formId: string,
@@ -188,11 +188,12 @@ export async function POST(req: NextRequest) {
     }): Promise<string> => {
       maxRepairTries--
 
+      const repairSystem = await loadPrompt("form/create-form-repair.md")
       const { object: repairedSchema }: { object: Form } = await generateObject(
         {
           model: getModel(),
           schema: FormSchema,
-          system: createFormRepairSystemPrompt as string,
+          system: repairSystem,
           experimental_repairText:
             maxRepairTries > 0 ? repairFunction : undefined,
           prompt: `
@@ -204,17 +205,79 @@ export async function POST(req: NextRequest) {
       )
       return JSON.stringify(repairedSchema)
     }
-
+    const createSystem = await loadPrompt("form/create-form.md")
     const { object: initialSchema }: { object: Form } = await generateObject({
       model: getModel(),
       schema: FormSchema,
       experimental_repairText: repairFunction,
-      system: createFormSystemPrompt as string,
+      system: createSystem,
       prompt: promptContent,
     })
+    // Ensure Personal Organization and Workspace exist for this user (service role)
+    const serviceClient = await createGuestServerClient()
+    const ORG_NAME = "Personal"
+    const WS_NAME = "Personal"
+
+    // Personal Org
+    let orgId: string
+    {
+      const { data: existingOrg } = await serviceClient
+        .from("organizations")
+        .select("org_id")
+        .eq("created_by", userId)
+        .eq("name", ORG_NAME)
+        .maybeSingle()
+      if (existingOrg) {
+        orgId = existingOrg.org_id
+      } else {
+        const { data: insertedOrg, error } = await serviceClient
+          .from("organizations")
+          .insert({ name: ORG_NAME, created_by: userId })
+          .select("org_id")
+          .single()
+        if (error || !insertedOrg) {
+          return NextResponse.json(
+            { error: error?.message || "Failed to create organization" },
+            { status: 500 }
+          )
+        }
+        orgId = insertedOrg.org_id
+      }
+    }
+
+    // Personal Workspace
+    let workspaceId: string
+    {
+      const { data: existingWs } = await serviceClient
+        .from("workspaces")
+        .select("workspace_id")
+        .eq("org_id", orgId)
+        .eq("name", WS_NAME)
+        .maybeSingle()
+      if (existingWs) {
+        workspaceId = existingWs.workspace_id
+      } else {
+        const { data: insertedWs, error } = await serviceClient
+          .from("workspaces")
+          .insert({ name: WS_NAME, org_id: orgId, created_by: userId })
+          .select("workspace_id")
+          .single()
+        if (error || !insertedWs) {
+          return NextResponse.json(
+            { error: error?.message || "Failed to create workspace" },
+            { status: 500 }
+          )
+        }
+        workspaceId = insertedWs.workspace_id
+      }
+    }
     const { data: formInsertData, error: formInsertError } = await supabase
       .from("forms")
-      .insert({ user_id: userId, short_id: nanoid(7) })
+      .insert({
+        user_id: userId,
+        short_id: nanoid(7),
+        workspace_id: workspaceId,
+      })
       .select("id")
       .single()
 

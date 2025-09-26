@@ -1,7 +1,8 @@
 import { getModel } from "@/app/lib/ai/provider"
+import { generateObject } from "@/app/lib/ai/tracing"
 import logger from "@/app/lib/logger"
 import { RIPlanResponseSchema } from "@/app/lib/ri/types"
-import { generateObject } from "ai"
+import { loadPrompt } from "@formlink/prompts"
 import { z } from "zod"
 
 export function autoFixRIPlan(obj: unknown, error: z.ZodError) {
@@ -206,17 +207,31 @@ export function autoFixRIPlan(obj: unknown, error: z.ZodError) {
 
 export async function repairRIPlanWithAI(
   data: unknown,
-  error: z.ZodError
+  error: z.ZodError,
+  generationContext?: {
+    system_prompt?: string
+    user_prompt?: unknown
+    model?: string
+    schema_name?: string
+    schema_version?: string
+    timestamp?: string
+  }
 ): Promise<unknown | null> {
   // Fast, low-latency repair model via Vercel
-  const REPAIR_MODEL = getModel("cerebras/gpt-oss-120b", "vercel")
+  const REPAIR_MODEL = getModel(
+    process.env.AI_GATEWAY_DEFAULT_MODEL || "openai/gpt-4o-mini",
+    "vercel"
+  )
   const errorDetails = error.errors.map((issue) => ({
     path: issue.path.join("."),
     message: issue.message,
     code: issue.code,
   }))
-  const system = `You are a strict JSON repair agent for Response Intelligence plans.\n\n- Only output the corrected JSON object that validates RIPlanResponseSchema.\n- Do not invent unsupported keys.\n- Apply minimal changes required to satisfy the errors.\n- Args whitelist per type:\n  - count: label?, title?, description?, layout?, layout_variant?\n  - trend: field?, window?, by?, chart?, title?, description?, layout?, layout_variant?\n  - breakdown: field, by?, topN?, stacked?, chart?, title?, description?, layout?, layout_variant?\n  - metric: field, agg, by?, format?, title?, description?, layout?, layout_variant?\n  - text|summary: title?, description?, content?, layout?, layout_variant?`
-  const prompt = `Fix the JSON to satisfy these schema errors.\n\nErrors:\n${JSON.stringify(errorDetails, null, 2)}\n\nJSON:\n${JSON.stringify(data, null, 2)}`
+  const system = await loadPrompt("ri/plan-repair.md", {
+    errors_json: errorDetails,
+    json_payload: data,
+    generation_context: generationContext || {},
+  })
 
   // Try up to 3 times with the fast repair model
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -225,7 +240,7 @@ export async function repairRIPlanWithAI(
         model: REPAIR_MODEL,
         schema: RIPlanResponseSchema,
         system,
-        prompt,
+        prompt: "",
       })
       return object
     } catch (repairError) {

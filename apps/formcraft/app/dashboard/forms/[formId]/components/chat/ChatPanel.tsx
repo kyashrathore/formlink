@@ -29,6 +29,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   formId,
   userId,
   initialMessage,
+  initialModel,
 }) => {
   // Group all store hooks together at the start to maintain consistent order
   const { agentState, eventsLog, processEvent, setInitialPrompt } =
@@ -53,7 +54,14 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
   // All state hooks together
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
-  const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
+  const [selectedModel, setSelectedModel] = useState(
+    initialModel || MODEL_DEFAULT
+  )
+  useEffect(() => {
+    if (initialModel && initialModel !== selectedModel) {
+      setSelectedModel(initialModel)
+    }
+  }, [initialModel])
   const [storedInitialMessage, setStoredInitialMessage] = useState<
     string | undefined
   >(() => initialMessage)

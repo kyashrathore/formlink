@@ -1,5 +1,6 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText } from "ai";
+import { loadPrompt } from "@formlink/prompts";
 
 export interface BranchingParams {
   journeyScript: string;
@@ -25,25 +26,13 @@ export async function decideNextQuestion({
     const model = provider("google/gemini-2.5-flash");
 
     const validQuestionIds = questions.map((q) => q.id);
-    const system = `You are an AI form flow director. Analyze responses and determine the next question per the journey script's branching logic.
-
-Rules:
-- Only return IDs from the provided VALID QUESTION IDS list.
-- If no branching applies, return the next question in sequence after the current one that is not yet answered.
-- Respond with JSON: {"nextQuestionId":"..."}`;
-
-    const prompt = `
-JOURNEY SCRIPT\n${journeyScript}
-
-CURRENT QUESTION ID: ${currentQuestionId}
-
-USER ANSWER HISTORY:
-${JSON.stringify(answerHistory, null, 2)}
-
-VALID QUESTION IDS:
-${validQuestionIds.join(", ")}
-
-Return JSON {"nextQuestionId":"..."} only.`;
+    const system = await loadPrompt("filler/branching-system.md");
+    const prompt = await loadPrompt("filler/branching-user.md", {
+      journey_script: journeyScript,
+      current_question_id: currentQuestionId,
+      answer_history: answerHistory,
+      valid_ids: validQuestionIds.join(", "),
+    });
 
     const { text } = await generateText({ model, system, prompt });
 

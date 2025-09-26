@@ -87,15 +87,16 @@ function Home({ forms, user }: HomeProps) {
   }, [])
 
   const handleStartFormCreation = useCallback(
-    (message: string) => {
+    (message: string, model: string) => {
       if (!formIdForAgentPanel) return
 
       setIsNavigating(true)
       analytics.formCreationStarted("ai_chat")
       startTransition(() => {
-        router.push(
-          `/dashboard/forms/${formIdForAgentPanel}?initialPrompt=${encodeURIComponent(message)}`
-        )
+        const url = `/dashboard/forms/${formIdForAgentPanel}?initialPrompt=${encodeURIComponent(
+          message
+        )}&model=${encodeURIComponent(model)}`
+        router.push(url)
       })
     },
     [formIdForAgentPanel, router]

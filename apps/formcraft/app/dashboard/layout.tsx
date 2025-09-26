@@ -5,5 +5,12 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  return <DashboardLayoutClient>{children}</DashboardLayoutClient>
+  return (
+    <div
+      id="dashboard-root"
+      className="h-dvh overflow-hidden overscroll-contain"
+    >
+      <DashboardLayoutClient>{children}</DashboardLayoutClient>
+    </div>
+  )
 }

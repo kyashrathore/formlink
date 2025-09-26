@@ -1,10 +1,11 @@
 import { getToolSchema } from "@/app/lib/actions/schema-registry"
 import { getModel } from "@/app/lib/ai/provider"
+import { generateObject } from "@/app/lib/ai/tracing"
 import logger from "@/app/lib/logger"
 import { requireAuth } from "@/app/lib/middleware/auth"
 import { verifyUserOwnsForm } from "@/app/lib/middleware/authorization"
 import { createServerClient } from "@formlink/db"
-import { generateObject } from "ai"
+import { loadPrompt } from "@formlink/prompts"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { z } from "zod"
@@ -140,19 +141,24 @@ export async function POST(request: Request) {
       rationale: z.string().optional(),
     })
 
+    const system = await loadPrompt("actions/schema-suggestion.md", {
+      slug,
+      tool_schema: schema,
+      questions,
+    })
     const { object } = await generateObject({
       model,
       schema: Output,
       temperature: 0,
-      system: `You are an integration assistant. Propose a parameter object for the given tool using the provided tool JSON schema and available form questions.
-Rules:
-- Return an object { params, rationale? }.
-- Make params conform to the tool schema (exact key names/shape) as closely as possible.
-- For string fields, use templates with placeholders like {{answer:QUESTION_ID}}.
-- For objects/arrays, construct practical structures and place placeholders where helpful.
-- If a required identifier cannot be inferred, leave an empty string and explain in rationale.
-Respond with JSON only.`,
-      prompt: JSON.stringify({ slug, toolSchema: schema, questions }),
+      system,
+      prompt: "",
+      experimental_telemetry: {
+        isEnabled: true,
+        metadata: {
+          query: "weather",
+          location: "San Francisco",
+        },
+      },
     })
 
     if (!object || typeof object !== "object") {
