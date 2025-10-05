@@ -129,11 +129,14 @@ export async function preSaveAnswer(
     const supabase = await createServerClient(null, "service");
 
     // Persist answer
-    await supabase.from("form_answers").upsert({
-      submission_id: submissionId,
-      question_id: questionId,
-      answer_value: value,
-    });
+    await supabase.from("form_answers").upsert(
+      {
+        submission_id: submissionId,
+        question_id: questionId,
+        answer_value: value,
+      },
+      { onConflict: "submission_id,question_id" },
+    );
 
     // Touch submission updated time
     await supabase

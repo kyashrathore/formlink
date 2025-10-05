@@ -6,9 +6,11 @@ export interface FormResponse {
   user_id: string
   created_at: string
   completed_at: string | null
+  last_updated_at?: string | null
   status: string
   testmode: boolean
   answers: Record<string, unknown>
+  sidecar?: Record<string, unknown>
 }
 
 interface FormResponsesApiResponse {

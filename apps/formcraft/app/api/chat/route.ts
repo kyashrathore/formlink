@@ -56,7 +56,28 @@ export async function POST(req: NextRequest) {
     } = validateChatRequest(body)
     // Normalize selected model: accept either top-level `selectedModel` or `options.model`
     const selectedModel = body?.selectedModel || (options as any)?.model
-    const normalizedOptions = { ...(options as any), model: selectedModel }
+    // Allow toggling single-pass via query param; default depends on model:
+    // - cerebras/gpt-oss-120b (or unspecified → defaults to cerebras): singlePass=true
+    // - all other models: singlePass=false
+    const url = new URL(req.url)
+    const qpSingle = url.searchParams.get("singlePass")
+    let resolvedSinglePass: boolean
+    if (qpSingle != null) {
+      resolvedSinglePass = qpSingle === "true" || qpSingle === "1"
+    } else if (typeof (options as any)?.singlePass === "boolean") {
+      resolvedSinglePass = Boolean((options as any)?.singlePass)
+    } else {
+      const modelStr =
+        typeof selectedModel === "string" ? selectedModel : undefined
+      // Default to single-pass if model is cerebras/gpt-oss-120b or not specified (app default is cerebras)
+      const isCerebras120b = !modelStr || modelStr.includes("gpt-oss-120b")
+      resolvedSinglePass = isCerebras120b
+    }
+    const normalizedOptions = {
+      ...(options as any),
+      model: selectedModel,
+      singlePass: resolvedSinglePass,
+    }
     logger.info("[POST /api/chat] Request validated", {
       reqId,
       formId: initialFormId,
@@ -67,6 +88,7 @@ export async function POST(req: NextRequest) {
       ),
       maxOutputTokens: (normalizedOptions as any)?.maxOutputTokens,
       model: (normalizedOptions as any)?.model,
+      singlePass: Boolean((normalizedOptions as any)?.singlePass),
     })
 
     const userId = authResult.user.id

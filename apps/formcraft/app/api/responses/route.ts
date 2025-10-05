@@ -181,6 +181,7 @@ export async function GET(request: NextRequest) {
       "user_id",
       "created_at",
       "completed_at",
+      "last_updated_at",
       "testmode",
     ]
     const submissionFilters: Record<string, unknown> = {}
@@ -803,9 +804,17 @@ export async function GET(request: NextRequest) {
       page_size,
       hasInsights: Boolean(insights && insights.length),
     })
+    const rows = Array.isArray(result?.data)
+      ? (result!.data as any[]).map((entry: any) => ({
+          ...entry,
+          answers: entry?.answers ?? {},
+          sidecar: entry?.sidecar ?? {},
+        }))
+      : []
+
     return NextResponse.json({
       success: true,
-      data: result?.data || [],
+      data: rows,
       page,
       pageSize: page_size,
       totalCount: result?.total_count || 0,

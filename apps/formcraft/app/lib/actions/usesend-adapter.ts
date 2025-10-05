@@ -40,9 +40,15 @@ function getClient() {
 
 export async function sendEmail(params: SendEmailParams) {
   const usesend = getClient()
-  const { data, error } = await usesend.emails.send(params)
+  const defaultFrom =
+    process.env.USE_SEND_DEFAULT_FROM || "notifications@formlink.app"
+  const payload: SendEmailParams = {
+    ...(params || ({} as any)),
+    from: ((params as any)?.from as string) || defaultFrom,
+  }
+  const { data, error } = await usesend.emails.send(payload)
   if (error) {
-    logger.error?.("[usesend] email send failed", { error, params })
+    logger.error?.("[usesend] email send failed", { error, params: payload })
     throw new ActionExecutionError(error.message || "useSend send failed", {
       status: 502,
       provider: "usesend",

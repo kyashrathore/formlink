@@ -476,12 +476,15 @@ CREATE TABLE public.response_actions_log (
     started_at timestamptz,
     completed_at timestamptz,
     provider public.action_provider NOT NULL DEFAULT 'usesend',
+    view_id uuid,
     connected_account_id text,
     idempotency_key character varying(255),
     provider_response jsonb,
     params jsonb,
     result jsonb,
-    error_message text
+    error_message text,
+    source text,
+    tools_applied jsonb
 );
 
 -- (removed) actions_config: replaced by tool_connections (global auth) and
@@ -664,8 +667,10 @@ BEGIN
         fs_inner.user_id,
         fs_inner.created_at,
         fs_inner.completed_at,
+        fs_inner.last_updated_at,
         fs_inner.status,
-        fs_inner.testmode
+        fs_inner.testmode,
+        fs_inner.metadata -> 'sidecar' AS sidecar
     FROM form_submissions fs_inner
     WHERE
       -- form_version_id equality
@@ -703,6 +708,19 @@ BEGIN
           ((NOT (submission_filters->'completed_at' ? 'between')) OR (
             fs_inner.completed_at >= (submission_filters->'completed_at'->'between'->>0)::timestamptz AND
             fs_inner.completed_at <= (submission_filters->'completed_at'->'between'->>1)::timestamptz
+          ))
+        )
+      )
+      -- last_updated_at: object support similar to created_at (optional)
+      AND (
+        (submission_filters->'last_updated_at') IS NULL OR
+        (jsonb_typeof(submission_filters->'last_updated_at') = 'string' AND fs_inner.last_updated_at >= (submission_filters->>'last_updated_at')::timestamptz) OR
+        (jsonb_typeof(submission_filters->'last_updated_at') = 'object' AND
+          ((NOT (submission_filters->'last_updated_at' ? 'since')) OR fs_inner.last_updated_at >= (submission_filters->'last_updated_at'->>'since')::timestamptz) AND
+          ((NOT (submission_filters->'last_updated_at' ? 'before')) OR fs_inner.last_updated_at < (submission_filters->'last_updated_at'->>'before')::timestamptz) AND
+          ((NOT (submission_filters->'last_updated_at' ? 'between')) OR (
+            fs_inner.last_updated_at >= (submission_filters->'last_updated_at'->'between'->>0)::timestamptz AND
+            fs_inner.last_updated_at <= (submission_filters->'last_updated_at'->'between'->>1)::timestamptz
           ))
         )
       )
@@ -855,9 +873,11 @@ BEGIN
       qs.user_id::TEXT AS user_id,
       qs.created_at,
       qs.completed_at,
+      qs.last_updated_at,
       qs.status::TEXT AS status,
       qs.testmode,
-      COALESCE(aa.submission_answers, '{}'::jsonb) AS answers
+      COALESCE(aa.submission_answers, '{}'::jsonb) AS answers,
+      COALESCE(qs.sidecar, '{}'::jsonb) AS sidecar
     FROM qualified_submissions qs
     LEFT JOIN aggregated_answers aa ON qs.original_submission_id = aa.submission_id
     ORDER BY qs.created_at DESC

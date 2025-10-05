@@ -1,7 +1,8 @@
 "use client"
 
-import ResponseViewPlan from "@/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan"
+import LifecyclePlanDrawer from "@/app/dashboard/forms/[formId]/components/responses/LifecyclePlanDrawer"
 import { requiresParamsForSlug } from "@/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan/utils"
+import ViewPlanDrawer from "@/app/dashboard/forms/[formId]/components/responses/ViewPlanDrawer"
 import { Form } from "@formlink/schema"
 import {
   AlertDialog,
@@ -18,12 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -44,11 +39,13 @@ import {
 } from "@tanstack/react-table"
 import React, { useEffect, useMemo, useState } from "react"
 import { useActionTools } from "../../hooks/useActionTools"
+import { useAutomationsConfig } from "../../hooks/useAutomationsConfig"
 import { useFormResponsesQuery } from "../../hooks/useFormResponsesQuery"
 import {
   generateFilterFieldsFromForm,
   generateTableColumnsFromForm,
 } from "../../lib/responses/generateFilterFieldsFromForm"
+import { useAutomationsPlanStore } from "../../stores/useAutomationsPlanStore"
 import type { ResponseViewsState } from "../../stores/useResponseViewsStore"
 import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
 import DataTable from "../data-table/data-table"
@@ -139,6 +136,12 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
   useEffect(() => {
     if (isEphemeralPlan) setShowPlan(true)
   }, [isEphemeralPlan])
+  // Lifecycle drawer state
+  const lifecyclePlan = useAutomationsPlanStore((s) => s.plan)
+  const lifecycleOpen = useAutomationsPlanStore((s) => s.open)
+  const setLifecycleOpen = useAutomationsPlanStore((s) => s.setOpen)
+  const clearLifecyclePlan = useAutomationsPlanStore((s) => s.clear)
+  const { config: lifecycleConfig } = useAutomationsConfig(form?.id)
   // Always show the plan card whenever a plan exists; dismiss removes the ephemeral view
 
   const columns = React.useMemo(
@@ -323,14 +326,24 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
               Response View
             </Button>
           ) : null}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setLifecycleOpen(true)}
+          >
+            Submission Automations
+          </Button>
         </div>
       </div>
+      {/** Removed redundant Submission Automations summary card on default view */}
       {showPlan || isEphemeralPlan ? (
-        <PlanPreviewForRightPanel
+        <ViewPlanDrawer
           formId={form.id}
-          onDismiss={() => {
-            setShowPlan(false)
+          open={true}
+          onOpenChange={(o) => {
+            if (!o) setShowPlan(false)
           }}
+          onDismiss={() => setShowPlan(false)}
         />
       ) : null}
       {isDefaultView && renderResponseCards()}
@@ -354,15 +367,6 @@ const Responses: React.FC<ResponsesProps> = ({ form }) => {
         }}
       />
 
-      {!isLoading && totalCount === 0 && (
-        <div className="mt-4 flex h-40 items-center justify-center rounded-md border border-dashed">
-          <p className="text-muted-foreground">
-            No responses found for this form yet.
-          </p>
-        </div>
-      )}
-
-      {}
       {!isLoading && (
         <>
           <div className="mb-2 hidden">
@@ -481,6 +485,19 @@ fetch('/api/views/VIEW_ID/generate-hook?framework=react')
       )}
 
       {/* Removed ActionsExecutionDialog in favor of a compact dropdown menu */}
+
+      {/* Lifecycle Plan Drawer (component) */}
+      <LifecyclePlanDrawer
+        formId={form.id}
+        open={Boolean(lifecycleOpen)}
+        onOpenChange={(o) => {
+          if (!o) clearLifecyclePlan()
+          setLifecycleOpen(Boolean(o))
+        }}
+        lifecycleConfig={lifecycleConfig as any}
+        plan={lifecyclePlan as any}
+        onDismiss={clearLifecyclePlan}
+      />
     </div>
   )
 }
@@ -679,276 +696,4 @@ function MoreActionsSubmenu({ formId }: { formId: string }) {
   )
 }
 
-function PlanPreviewForRightPanel({
-  formId,
-  onDismiss,
-}: {
-  formId: string
-  onDismiss?: () => void
-}) {
-  const [open, setOpen] = useState(true)
-  const { renderPlan, renderView } = useResponseViewsStore((s) => {
-    const activeId = s.activeViewIdMap[formId] || "default"
-    const activeView = s.views.find(
-      (v) => v.id === activeId && v.formId === formId
-    )
-    if (activeView?.plan) {
-      return { renderPlan: activeView.plan, renderView: activeView }
-    }
-    const ephemeral = [...s.views]
-      .reverse()
-      .find((v) => v.formId === formId && !v.saved && v.plan)
-    if (ephemeral) return { renderPlan: ephemeral.plan, renderView: ephemeral }
-    return { renderPlan: undefined, renderView: activeView }
-  })
-
-  const plan = renderPlan
-  const viewMeta = renderView
-  const saved = Boolean(renderView?.saved)
-  // Lock body scroll while the plan drawer is open to avoid double scrollbars
-  useEffect(() => {
-    if (!open) return
-    const prevHtml = document.documentElement.style.overflow
-    const prevBody = document.body.style.overflow
-    document.documentElement.style.overflow = "hidden"
-    document.body.style.overflow = "hidden"
-    return () => {
-      document.documentElement.style.overflow = prevHtml
-      document.body.style.overflow = prevBody
-    }
-  }, [open])
-
-  const handleSave = async () => {
-    if (!viewMeta || viewMeta.saved) return
-    try {
-      // Compute configured action slugs at save time (intersection of plan actions and configured configs)
-      const suggestedSlugs: string[] = Array.from(
-        new Set(
-          ((plan?.plan?.actions as any[]) || [])
-            .map((a: any) => a?.action_key)
-            .filter(Boolean)
-        )
-      )
-      // Transitional: store suggested slugs as-is; readiness now computed from view params + auth
-      const configuredSlugs: string[] = suggestedSlugs
-
-      const res = await fetch(`/api/forms/${formId}/views`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: viewMeta.name,
-          description: plan?.plan?.meta?.rationale,
-          columns: viewMeta.columns,
-          filters: viewMeta.filters,
-          sort: viewMeta.sort,
-          insights_spec: (plan?.plan?.ui?.insights_spec as any[]) || [],
-          actionSlugs: configuredSlugs,
-        }),
-        credentials: "include",
-      })
-      let data: any = null
-      let bodyText: string | null = null
-      try {
-        data = await res.json()
-      } catch {
-        try {
-          bodyText = await res.text()
-        } catch {}
-      }
-      if (!res.ok || !data?.view?.id) {
-        const msg =
-          (data && (data.error || data.message)) ||
-          (bodyText && bodyText.slice(0, 200)) ||
-          `Failed to save view (${res.status})`
-        throw new Error(msg)
-      }
-
-      const newId = data.view.id as string
-      useResponseViewsStore.setState((state) => {
-        const idx = state.views.findIndex((v) => v.id === viewMeta.id)
-        if (idx === -1) return state
-        const existing = state.views[idx]
-        if (!existing) return state
-        const nextViews = [...state.views]
-        nextViews[idx] = {
-          ...existing,
-          id: newId,
-          saved: true,
-        }
-        const nextActive = { ...state.activeViewIdMap, [formId]: newId }
-        const nextStatus: ResponseViewsState["lastPlanStatusMap"] = {
-          ...state.lastPlanStatusMap,
-          [formId]: { correlationId: existing.correlationId, status: "saved" },
-        }
-        return {
-          views: nextViews,
-          activeViewIdMap: nextActive,
-          lastPlanStatusMap: nextStatus,
-        }
-      })
-
-      toast({
-        title: "View saved",
-        description: `Saved "${viewMeta.name}"`,
-        status: "success",
-      })
-    } catch (error) {
-      toast({
-        title: "Failed to save view",
-        description: error instanceof Error ? error.message : String(error),
-        status: "error",
-      })
-    }
-  }
-
-  if (!plan && !viewMeta) return null
-  const viewName = plan?.plan?.meta?.view_name || viewMeta?.name || "Smart View"
-
-  return (
-    <Drawer
-      open={open}
-      onOpenChange={(o) => {
-        setOpen(o)
-        if (!o) onDismiss?.()
-      }}
-      direction="right"
-    >
-      <DrawerContent className="p-0 data-[vaul-drawer-direction=right]:sm:max-w-xl">
-        <DrawerHeader className="bg-background sticky top-0 z-10 border-b px-4 py-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <DrawerTitle className="text-base font-semibold">
-                {viewName}
-              </DrawerTitle>
-              {saved ? (
-                <span className="text-xs text-emerald-600">Saved</span>
-              ) : (
-                <span className="text-muted-foreground text-xs">Unsaved</span>
-              )}
-            </div>
-            <DrawerClose asChild>
-              <Button size="icon" variant="ghost" aria-label="Close plan">
-                ×
-              </Button>
-            </DrawerClose>
-          </div>
-        </DrawerHeader>
-        <div className="flex h-[calc(100vh-56px)] flex-col">
-          <div className="flex-1 overflow-y-auto">
-            {plan || viewMeta ? (
-              <ResponseViewPlan
-                plan={
-                  plan || {
-                    plan_version: "ri.v1",
-                    correlationId: "view",
-                    plan: {
-                      meta: {
-                        view_name: viewMeta?.name || "Smart View",
-                        rationale: viewMeta?.description || undefined,
-                      },
-                      rpc: {
-                        submission_filters: Object.fromEntries(
-                          (viewMeta?.filters || []).map((f: any) => [
-                            f.id,
-                            f.value,
-                          ])
-                        ),
-                        answer_filters: {},
-                      },
-                      ui: {
-                        columns: viewMeta?.columns || [],
-                        sort: viewMeta?.sort || undefined,
-                        insights_spec: viewMeta?.insights || [],
-                      },
-                      actions: (viewMeta?.actionSlugs || []).map((slug) => ({
-                        action_key: slug,
-                        params: {},
-                      })),
-                    },
-                  }
-                }
-                saved={saved}
-                formId={formId}
-                view={viewMeta as any}
-                onDismiss={undefined}
-                hideHeader
-              />
-            ) : null}
-          </div>
-          <DrawerFooter className="border-t p-3">
-            <div className="ml-auto flex gap-2">
-              {!saved ? (
-                <Button size="sm" onClick={handleSave}>
-                  Save View
-                </Button>
-              ) : null}
-              {saved && viewMeta ? (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="destructive">
-                      Delete View
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete View</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure? This cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="flex justify-end gap-2">
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={async () => {
-                          try {
-                            const res = await fetch(
-                              `/api/forms/${formId}/views/${viewMeta.id}`,
-                              {
-                                method: "DELETE",
-                                credentials: "include",
-                              }
-                            )
-                            if (!res.ok) {
-                              const text = await res.text().catch(() => "")
-                              throw new Error(
-                                text || `Failed to delete view (${res.status})`
-                              )
-                            }
-                            useResponseViewsStore.setState((state) => {
-                              const nextViews = state.views.filter(
-                                (v) => v.id !== viewMeta.id
-                              )
-                              const nextActive = {
-                                ...state.activeViewIdMap,
-                                [formId]: "default",
-                              }
-                              return {
-                                views: nextViews,
-                                activeViewIdMap: nextActive,
-                              }
-                            })
-                            onDismiss?.()
-                            toast({ title: "View deleted", status: "success" })
-                          } catch (e) {
-                            toast({
-                              title: "Failed to delete view",
-                              description:
-                                e instanceof Error ? e.message : String(e),
-                              status: "error",
-                            })
-                          }
-                        }}
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </div>
-                  </AlertDialogContent>
-                </AlertDialog>
-              ) : null}
-            </div>
-          </DrawerFooter>
-        </div>
-      </DrawerContent>
-    </Drawer>
-  )
-}
+// (moved) PlanPreviewForRightPanel has been refactored into ViewPlanDrawer component.

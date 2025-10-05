@@ -1,5 +1,5 @@
 import { headers } from "next/headers";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 // Types used inline within this file
 import { FormValidator } from "@/lib/validation/FormValidator";
 import { createUIMessageStreamResponse } from "ai";
@@ -20,6 +20,8 @@ import {
   trackServerEvent,
   ValidationResult,
 } from "./utils";
+import { runSubmissionJob } from "@/app/lib/intel/submission-job";
+import logger from "@/app/lib/logger";
 
 // Input processing utilities
 function processUserInput(requestData: any): {
@@ -341,6 +343,21 @@ export async function POST(req: Request) {
       "[chat-assist] Next unanswered question:",
       nextQuestion?.id || "ALL_ANSWERED",
     );
+
+    if (!nextQuestion && activeSubmissionId) {
+      after(() =>
+        runSubmissionJob({
+          submissionId: activeSubmissionId,
+          formVersionId: formSchema.version_id ?? null,
+          trigger: "completed",
+        }).catch((error: unknown) => {
+          logger.error("[Lifecycle] chat-assist job failed", {
+            submissionId: activeSubmissionId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }),
+      );
+    }
 
     // Save user message - find the last user message from the request
     if (sanitizedInput && messages.length > 0) {

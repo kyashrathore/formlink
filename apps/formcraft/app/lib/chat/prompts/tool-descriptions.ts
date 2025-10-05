@@ -19,4 +19,7 @@ export const TOOL_DESCRIPTIONS = {
 
   updateResponseView:
     "Update/refine an existing Responses View (RI plan JSON). Use when the user asks to tweak/adjust an existing view (e.g., change filters, columns, or insights). Requires a currentPlan in planContext; otherwise ask for it or create a new view instead.",
+
+  proposeLifecycleAutomation:
+    "Propose lifecycle automations for new submissions. Always use this when the user asks for Submission Hooks and/or Automation Actions (e.g., 'when a submission comes in', 'auto check spam', 'notify/email/slack/hubspot'), even if the Responses tab is active or ri_requested=true. Return only curated action slugs in allowedActions and put hooks in enabledHooks; emit a lifecycle_automation_plan event (do not create or update a Response View).",
 }

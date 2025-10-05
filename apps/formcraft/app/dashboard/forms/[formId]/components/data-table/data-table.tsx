@@ -53,23 +53,33 @@ export function DataTable<TData, TValue>({
                     key={headerGroup.id}
                     className="hover:bg-transparent"
                   >
-                    {headerGroup.headers.map((header, idx) => (
-                      <TableHead
-                        key={header.id}
-                        className={
-                          idx === 0
-                            ? "bg-muted/50 sticky left-0 z-30"
-                            : undefined
-                        }
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
-                            )}
-                      </TableHead>
-                    ))}
+                    {headerGroup.headers.map((header, idx) => {
+                      const isSidecar = Boolean(
+                        (header.column.columnDef.meta as any)?.isSidecar
+                      )
+                      const headerClasses = [
+                        idx === 0
+                          ? "bg-muted/50 sticky left-0 z-30"
+                          : undefined,
+                        isSidecar ? "bg-primary/5 text-primary" : undefined,
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
+
+                      return (
+                        <TableHead
+                          key={header.id}
+                          className={headerClasses || undefined}
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                        </TableHead>
+                      )
+                    })}
                   </TableRow>
                 ))}
               </TableHeader>
@@ -80,21 +90,31 @@ export function DataTable<TData, TValue>({
                       key={row.id}
                       data-state={row.getIsSelected() && "selected"}
                     >
-                      {row.getVisibleCells().map((cell, idx) => (
-                        <TableCell
-                          key={cell.id}
-                          className={
-                            idx === 0
-                              ? "bg-background sticky left-0 z-10"
-                              : undefined
-                          }
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </TableCell>
-                      ))}
+                      {row.getVisibleCells().map((cell, idx) => {
+                        const isSidecar = Boolean(
+                          (cell.column.columnDef.meta as any)?.isSidecar
+                        )
+                        const cellClasses = [
+                          idx === 0
+                            ? "bg-background sticky left-0 z-10"
+                            : undefined,
+                          isSidecar ? "bg-primary/5" : undefined,
+                        ]
+                          .filter(Boolean)
+                          .join(" ")
+
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            className={cellClasses || undefined}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        )
+                      })}
                     </TableRow>
                   ))
                 ) : (
