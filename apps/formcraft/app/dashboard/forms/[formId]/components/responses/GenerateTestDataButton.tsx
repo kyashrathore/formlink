@@ -1,7 +1,6 @@
 "use client"
 
-import { Button } from "@formlink/ui"
-import { Loader } from "@formlink/ui/ui/loader"
+import { Button, Loader } from "@formlink/ui"
 import { useState } from "react"
 
 export default function GenerateTestDataButton({
@@ -40,7 +39,7 @@ export default function GenerateTestDataButton({
     >
       {loading ? (
         <>
-          <Loader className="mr-2" size={14} /> Generating…
+          <Loader className="mr-2" /> Generating…
         </>
       ) : (
         "Generate 100 Test Responses"

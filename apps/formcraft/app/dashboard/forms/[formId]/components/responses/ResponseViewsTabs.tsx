@@ -20,11 +20,20 @@ export default function ResponseViewsTabs() {
         value={activeViewId}
         onValueChange={(val) => setActiveView(val, form || null)}
       >
-        <TabsList className="flex flex-wrap">
+        {/* Remove fixed height from TabsList (override with h-auto) */}
+        <TabsList className="flex h-auto flex-wrap">
           {filteredViews.map((v) => {
             return (
-              <div key={v.id} className="mr-1 inline-flex items-center">
-                <TabsTrigger value={v.id} className="px-3 py-1.5 text-sm">
+              // Ensure inner chip wrapper has radius similar to parent and clips child
+              <div
+                key={v.id}
+                className="mr-1 inline-flex items-center overflow-hidden rounded-lg"
+              >
+                {/* Restore rounded corners on active state for single/lone chip visuals */}
+                <TabsTrigger
+                  value={v.id}
+                  className="rounded-lg px-3 py-1.5 text-sm data-[state=active]:rounded-lg"
+                >
                   {v.name}
                 </TabsTrigger>
               </div>

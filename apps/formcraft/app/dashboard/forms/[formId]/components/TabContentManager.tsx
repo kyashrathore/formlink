@@ -1,12 +1,43 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import { usePanelState } from "../hooks/usePanelState"
 import { useFormEditorStore } from "../stores/useFormEditorStore"
-import FormTabContent from "./FormTabContent"
-import PreviewTabContent from "./PreviewTabContent"
-import ResponsesTabContent from "./ResponsesTabContent"
-import SettingsTabContent from "./SettingsTabContent"
-import ShareTabContent from "./ShareTabContent"
+
+// Code-split heavy tabs so only the active one loads.
+// Keep Form tab (default) eager; others lazy via dynamic imports to reduce initial JS parse/exec.
+const FormTabContent = dynamic(
+  () => import("@/app/dashboard/forms/[formId]/components/FormTabContent"),
+  { ssr: false }
+)
+const PreviewTabContent = dynamic(
+  () => import("@/app/dashboard/forms/[formId]/components/PreviewTabContent"),
+  {
+    ssr: false,
+    loading: () => <div className="p-4" aria-busy="true" />,
+  }
+)
+const ResponsesTabContent = dynamic(
+  () => import("@/app/dashboard/forms/[formId]/components/ResponsesTabContent"),
+  {
+    ssr: false,
+    loading: () => <div className="p-4" aria-busy="true" />,
+  }
+)
+const SettingsTabContent = dynamic(
+  () => import("@/app/dashboard/forms/[formId]/components/SettingsTabContent"),
+  {
+    ssr: false,
+    loading: () => <div className="p-4" aria-busy="true" />,
+  }
+)
+const ShareTabContent = dynamic(
+  () => import("@/app/dashboard/forms/[formId]/components/ShareTabContent"),
+  {
+    ssr: false,
+    loading: () => <div className="p-4" aria-busy="true" />,
+  }
+)
 
 interface TabContentManagerProps {
   formId: string

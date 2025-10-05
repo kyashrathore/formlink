@@ -2,22 +2,20 @@
 
 import type { RIPlanResponse } from "@/app/lib/ri/types"
 import type { Form } from "@formlink/schema"
-import { Badge } from "@formlink/ui"
 import {
+  Badge,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@formlink/ui/ui/card"
-import {
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
-} from "@formlink/ui/ui/chart"
+} from "@formlink/ui"
 import * as React from "react"
 import {
   Area,
