@@ -23,6 +23,7 @@ interface ChatRequestOptions {
   model?: string
   temperature?: number
   maxOutputTokens?: number
+  singlePass?: boolean
 }
 
 async function ensureFormExists(
@@ -82,7 +83,10 @@ export async function handleChatRequest(
         const tools = createChatTools(toolContext)
         const intent = (options as any)?.intent || "general"
         const riFlag = Boolean((options as any)?.responseIntelligence)
-        const system = await loadPrompt("chat/form-creation-system.md", {
+        const systemTemplate = (options as any)?.singlePass
+          ? "chat/form-creation-system_single-pass_v1.md"
+          : "chat/form-creation-system.md"
+        const system = await loadPrompt(systemTemplate, {
           session_form_id: currentFormId,
           session_intent: intent,
           ri_requested: riFlag,
