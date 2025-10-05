@@ -71,3 +71,22 @@ Assist a solo dev. Priorities: clarity, leverage, momentum. Output must be high-
 - Don't use iife in React component's JSX, alway define it in function body and then call
 
 - Add actionable, searchable TODOs for gaps (e.g., “sync migrations to prod”).
+
+## 15) React & State
+
+- Always define React state before effects; keep state at top of the function body.
+- When a function/component accepts >2–3 props, define a separate props type/interface.
+- For >2–3 props, destructure props inside the function body, not in the parameter list.
+- Remove all debugging logs that are gated to run in non‑production environments before merging.
+- Prefer `useReducer` or `zustand` when state is complex/large.
+- Avoid using `setInterval`/`setTimeout` hacks as race‑condition workarounds; fix root causes.
+- No function definitions inside `useEffect`. If component state is referenced, define helpers outside the component or memoize with `useMemo`/`useCallback` above the effect.
+- Prefer `useQuery`. When using `fetch`, use `await`; only resort to `.then`/`.catch` as a last option. If try/catch or promise logic grows, split into focused helper functions.
+- Extract complex imperative code (e.g., loops) into small helper functions defined outside the React component.
+- Define constants outside components and use UPPER_SNAKE_CASE variable names.
+- Use `"@formlink/ui"` to import UI components instead of deep/direct component paths.
+
+## 16) JSX & Events
+
+- Avoid large anonymous inline handlers in JSX. Define named handlers with `useCallback` (stable deps) or hoist pure helpers outside the component. For list rendering, prefer small memoized row components over complex inline callbacks.
+- When slightly large JSX is rendered inside JSX, extract it into a separate component with a clear props interface and memoize when helpful. Keep render functions small and readable.
