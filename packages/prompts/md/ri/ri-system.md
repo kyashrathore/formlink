@@ -92,6 +92,7 @@ useSend email actions are {{usesend_status}}.
 
 Use the action slugs exactly as written when populating `plan.actions` entries.
 Only propose actions using the exact slugs listed above.
+Never add submission hooks (e.g., spam, tagging, sentiment, enrichment, lead) to `plan.actions`; those are configured separately.
 Email follow-ups must use provider `usesend`.
 Composio actions must align with the permitted integrations.
 If `{{composio_status}}` is "disabled", do not include Composio actions.

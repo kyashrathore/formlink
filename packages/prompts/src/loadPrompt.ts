@@ -123,26 +123,37 @@ export async function loadPrompt(
 ): Promise<string> {
   const filePath = resolveIdToFile(idOrPath);
   const template = await readTemplate(filePath);
-  // Ensure guards variable is available by default
-  try {
-    if (!GUARDS_CACHE) {
-      const guardsPath = resolveIdToFile("_guards.md");
-      GUARDS_CACHE = await readTemplate(guardsPath);
+
+  // Opt-in guardrails: include only when caller requests
+  const includeGuards = Boolean((params as any)?.include_guards === true);
+
+  let guardsContent = "";
+  let refusalContent = "";
+  if (includeGuards) {
+    try {
+      if (!GUARDS_CACHE) {
+        const guardsPath = resolveIdToFile("_guards.md");
+        GUARDS_CACHE = await readTemplate(guardsPath);
+      }
+      if (!REFUSAL_CACHE) {
+        const refusalPath = resolveIdToFile("_refusal.md");
+        REFUSAL_CACHE = await readTemplate(refusalPath);
+      }
+    } catch {
+      // If guard files are missing, fall back to empty strings
+      if (!GUARDS_CACHE) GUARDS_CACHE = "";
+      if (!REFUSAL_CACHE) REFUSAL_CACHE = "";
     }
-    if (!REFUSAL_CACHE) {
-      const refusalPath = resolveIdToFile("_refusal.md");
-      REFUSAL_CACHE = await readTemplate(refusalPath);
-    }
-  } catch {
-    if (!GUARDS_CACHE) GUARDS_CACHE = "";
-    if (!REFUSAL_CACHE) REFUSAL_CACHE = "";
+    guardsContent = GUARDS_CACHE || "";
+    refusalContent = REFUSAL_CACHE || "";
   }
-  const withGuards = {
-    guards: GUARDS_CACHE,
-    refusal: REFUSAL_CACHE,
+
+  const withContext = {
+    guards: guardsContent,
+    refusal: refusalContent,
     ...params,
   };
-  return renderTemplateString(template, withGuards, options);
+  return renderTemplateString(template, withContext, options);
 }
 
 export function resolvePromptPath(idOrPath: string): string {
