@@ -1,90 +1,268 @@
 # REPO_CONTEXT
 
-Last updated: 2025-09-23
+Last updated: 2025-10-01
 
-## Overview of recent infra/codebase changes
+## Mental Model (Zoomed Out)
 
-- Centralized AI prompts:
-  - New package `@formlink/prompts` with `md/` templates and a strict `loadPrompt(id, params)` renderer using `{{var}}` slots. No string concatenation at call sites; pass all dynamic values via params. See usage in RI system and summaries.
-  - Next apps transpile this package (see `next.config.ts`).
-  - Reusable guard rules live in `packages/prompts/md/_guards.md` and are injected into templates via `{{guards}}`. All system prompts should start with:
+The repository is a Turbo/PNPM monorepo for the Formlink platform. Two production Next.js applications (`formcraft` for admins/builders and `formfiller` for respondents) sit alongside a Storybook catalogue (`ui-docs`). Shared packages provide the design system, Zod schemas, Supabase clients, AI prompt templates, and lint/TypeScript baselines. Supabase serves as the single persistent backend, with lifecycle automation handled by a submission-intelligence pipeline that enriches responses and executes actions through a reusable runner.
 
-    `You MUST adhere to the following guards:` then `{{guards}}` on the next line.
+```
+Formlink Monorepo
+├─ Apps
+│  ├─ formcraft (admin/builder Next.js app)
+│  ├─ formfiller (public respondent Next.js app)
+│  └─ ui-docs (UI showcase)
+├─ Shared Packages
+│  ├─ @formlink/ui (design system & AI widgets)
+│  ├─ @formlink/schema (Zod models)
+│  ├─ @formlink/db (Supabase clients & types)
+│  ├─ @formlink/prompts (guarded AI prompts)
+│  └─ configs (eslint, tsconfig, integrations)
+├─ Data Layer (Supabase schema + generated types)
+├─ Automation/AI (submission job + action runner)
+└─ Tooling (Turbo tasks, scripts, quality gates)
+```
 
-  - New templates used by the create‑form flow:
-    - `form/enhanced-metadata.md` → returns `{ title, description, questionDetails[], journeyScript }` for the first phase.
-    - `form/question-schema.md` → per‑question schema generation.
+## Apps
 
-- Supabase DB types now include two new tables to match `packages/db/supabase/schema.sql`:
-  - `tool_connections` – global provider auth per user/toolkit.
-  - `submission_action_logs` – sidecar mapping of actions per submission.
-    Consumers can use:
-  - `supabase.from("tool_connections")...`
-  - `supabase.from("submission_action_logs").upsert(rows, { onConflict: "submission_id,action_log_id" })`.
+### formcraft — Builder/Admin Portal (`apps/formcraft`)
 
-- Next.js sitemap build resilience:
-  - `apps/formcraft/app/sitemap.ts` now wraps the Notion fetch in `try/catch`.
-  - On failure (e.g., CI without network), it logs a warning and returns static routes only.
-  - Runtime blog pages continue to fetch normally.
+Purpose: core control plane for creators. Provides form authoring, AI-assisted workflows, response intelligence dashboards, lifecycle automation configuration, subscription management, and marketing pages.
 
-- Type-check scope in `apps/formcraft/tsconfig.json`:
-  - `.next` folder is excluded from type-checking to avoid transient generated types.
+Key directories:
 
-### UI Refactor: ResponseViewPlan Setup Dialog
+- `app/api/**` — Next.js route handlers exposing internal/external APIs (responses, actions, lifecycle, forms, auth helpers).
+- `app/dashboard/**` — authenticated workspace UI; `forms/[formId]/` is the primary surface with tabbed sub-areas (Design, Form, Chat, Responses, Settings, Share).
+- `app/dashboard/layout.tsx` — shared server header injected for all dashboard routes (SSR user menu, consistent top-right avatar); individual pages provide their own bodies below the fixed header.
+- `app/dashboard/forms/[formId]/components/` — feature-specific UI modules (builder panels, response tables, automation dialogs, charting, lifecycle planner).
+- `app/lib/` — shared server/client utilities: action runner, submission intelligence pipeline (`intel/submission-job`), AI orchestration helpers, feature flag logic, analytics, Supabase wrappers, SSE utilities.
+- `app/hooks/` — React hooks for stateful client behavior (queries, editors, keyboard shortcuts).
+- `app/actions/` — server actions coordinating Supabase operations and AI flows.
 
-- Split `apps/formcraft/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan/SetupDialog.tsx` into smaller parts for readability and maintainability.
-- New files under `.../ResponseViewPlan/SetupDialogParts/`:
-  - `helpers.ts` — shared utilities (path get/set, flatten, token helpers, Sheets range parsing, `finalizeSuggestion`).
-  - `IncludedActionsList.tsx` — status + toolkit + included actions list.
-  - `AuthSteps.tsx` — Composio OAuth 2-step UI and logic.
-  - `ParamsConfigurator.tsx` — schema-driven params UI, AI suggestion, mapping, and save flow.
-- `SetupDialog.tsx` now orchestrates state and renders the three parts. The previous inlined params UI is disabled (kept as a commented legacy block for reference) and replaced by `ParamsConfigurator`.
-- No behavior changes intended; validated with `pnpm type-check` and `pnpm lint --filter=formcraft`.
+Important patterns:
 
-### Response Intelligence: Filter Encoding + Backend Support
+- React 19 with server components + client wrappers; `ReactQueryClientProvider` wires TanStack Query.
+- Fixed shared header on dashboard via `app/components/layout/header.tsx` rendered in `app/dashboard/layout.tsx`; avoid duplicating user menus in pages.
+- TanStack Table + Query for response grids under `components/data-table`.
+- AI planning surfaces (ResponseViewPlan) rely on prompt templates from `@formlink/prompts` and the lifecycle runner.
+- Subscription and auth flows integrate Supabase Auth and third-party providers (Polar, Composio).
 
-- RI system prompt now documents filter encoding for both primitives and advanced operators.
-  - Primitives: equality (scalar) and inclusion (array of scalars) for `answer_filters`; scalar and array for `status` in `submission_filters`.
-  - Timestamps: `created_at`/`completed_at` accept `{ since?, before?, between?: [start,end] }` (ISO strings).
-  - Advanced operators for answer filters: `{ eq, in|includes, all, contains, gte, lte, gt, lt, between }`.
-- Backend updates:
-  - `/api/responses` no longer coerces `status` arrays to a single value.
-  - SQL RPC `public.get_filtered_submissions` supports:
-    - `status` arrays (IN).
-    - `created_at`/`completed_at` operator objects.
-    - Answer filter objects for `eq/in/includes/all/contains/gte/lte/gt/lt/between`.
-  - Table toolbar shows a compact summary of applied non-facet filters.
+### formfiller — Respondent Runtime (`apps/formfiller`)
 
-Note: Client normalizes legacy `{includes:[...]}` to arrays for compatibility.
+Purpose: public-facing application rendering published forms (classic, AI chat, preview). Handles submission saves, completion flow, and immediate feedback.
 
-## Migrations strategy
+Key directories:
 
-We consolidated on a single canonical schema file:
+- `app/[formId]/**` — dynamic route responsible for form rendering modes, staging AI assist, and multi-step navigation.
+- `app/api/forms/[formId]/save-answers` — main submission endpoint; after saving, calls lifecycle job via internal API.
+- `app/api/ai/chat-assist` — orchestrates AI-assisted filling, also triggers lifecycle job on completion.
+- `app/lib/` — shared utilities, analytics, Supabase client bootstrap for runtime.
+- `components/`, `hooks/`, `contexts/` — UI and state containers (e.g., drag/drop rearrangement, progress tracking, global form state).
 
-- Source of truth: `packages/db/supabase/schema.sql`.
-- Local dev reset command (root):
-  - `pnpm db:hard-reset` – re-creates local Supabase, loads `schema.sql`, and notifies PgREST.
-- Generated Types:
-  - `pnpm db:gen-types` – writes to `packages/db/src/types/database.types.ts`.
+Important patterns:
 
-Notes:
+- Heavy reuse of `@formlink/ui` widgets and `@formlink/schema` validation to align with builder definitions.
+- Uses Supabase SSR helpers for authenticated preview flows.
+- Schedules background intelligence via `after()` pipeline, ensuring respondent UX remains fast.
 
-- Several historical migration files were removed from version control in favor of the single schema.
-- For stateful environments, plan a one-time reset or manual DDL reconciliation when adopting the new schema.
+### ui-docs — Component Reference (`apps/ui-docs`)
 
-## Forward-compatible multi-tenancy (minimal)
+Purpose: isolates design system documentation (Storybook/MDX) for designers and engineers testing components outside the main apps.
 
-- We added lightweight multi-tenancy containers:
-  - `public.organizations(org_id uuid pk, name text, slug?, created_by uuid, created_at, updated_at)` with owner RLS (created_by = auth.uid()).
-  - `public.workspaces(workspace_id uuid pk, org_id uuid NOT NULL, name text, created_by uuid, created_at, updated_at)` with owner RLS. Unique: `(org_id, name)`.
-  - `forms.workspace_id uuid NOT NULL` with FK to `workspaces` (`ON DELETE CASCADE`) and index `forms_workspace_id_idx`.
-- Today: RLS and most code continue to use `forms.user_id` for authorization; new forms are created under a Personal Organization → Personal Workspace automatically.
-- Later: introduce membership tables (`organization_members` and optionally `workspace_members`) and expand RLS to membership checks. Better Auth Organizations can map 1→1 to `organizations`.
+Key notes:
 
-## Turbo outputs
+- Pulls from `@formlink/ui` exports directly to verify build outputs.
+- Useful sandbox when extending shared UI before integrating into formcraft/formfiller.
 
-We added `turbo.json` with `build` outputs for both library (`dist/**`) and Next apps (`.next/**`) to improve cache behavior and silence output warnings.
+## Shared Packages
 
-## Linting adjustments
+### @formlink/ui (`packages/ui`)
 
-To unblock CI while type-hardening continues, both app ESLint configs treat unused vars as warnings, with `^_` naming to intentionally ignore args/vars. We will raise strictness once warnings are reduced.
+- Structure: `src/ui/**` (primitive components), `src/ai-elements/**` (AI tooling surfaces), `src/components/**` (mid-level composites), `src/hooks/**`, `src/lib/**`, and `src/styles/globals.css`.
+- Tech: Tailwind 4, Radix primitives, shadcn patterns, motion/Framer integration, TanStack utilities.
+- Build: `tsup` for JS bundles, `tsc` for type declarations; exports configured for tree-shaking and CSS opt-in.
+- Testing: Jest + Testing Library, with optional visual regression hooks (jest-image-snapshot config present).
+
+### @formlink/schema (`packages/schema`)
+
+- Provides Zod schemas for forms/questions/settings, discriminated unions for question types, type guards, and validation helpers.
+- Consumed by both apps to ensure consistent form definition and runtime validation; also referenced in AI prompts for schema enforcement.
+- Tests under `src/__tests__` cover schema edge cases.
+
+### @formlink/db (`packages/db`)
+
+- Wraps Supabase clients for browser/server usage (`supabase/client.ts`, `supabase/server.ts`, `supabase/server-guest.ts`).
+- Re-exports Supabase types and generated database typings (`src/types`).
+- Build via `tsup`; includes `.env` for local supabase CLI usage.
+
+### @formlink/prompts (`packages/prompts`)
+
+- Organized under `md/**` with guard templates (`_guards.md`) and scenario-specific prompts (form creation, insights, lifecycle orchestration).
+- Loader enforces parameter substitution (`{{placeholder}}`) and guardrail preamble.
+- AI features across apps reference prompts by ID rather than duplicating strings.
+
+### Tooling Packages
+
+- `packages/eslint-config` and `packages/typescript-config` centralize lint/TS rules; both apps/packages extend these to stay aligned.
+- `packages/integrations/composio` reserved for automation toolkits; scaffold currently minimal but provides namespace for future connectors.
+- `packages/prompts`, `packages/schema`, and `packages/ui` form the triad consumed by all frontends; ensure any breaking change propagates through Turbo tasks.
+
+## Data & Backend Services
+
+### Supabase as Source of Truth
+
+- Schema: maintained in `packages/db/supabase/schema.sql`. Includes forms, form_versions, form_submissions, response_views, response_actions_log, tool_connections, lifecycle state (`forms.agent_state.lifecycle_v1`), and multi-tenancy scaffolding (`organizations`, `workspaces`).
+- Generated Types: refresh with `pnpm db:gen-types` → writes to `packages/db/src/types/database.types.ts` for type-safe queries.
+- Local Dev: `pnpm db:hard-reset` runs Supabase CLI, reloads schema, and notifies PgREST; ensure Docker or Supabase local env is running.
+- Remote Coordination: background jobs and Next routes use Supabase service role keys (via environment) while maintaining RLS constraints.
+
+### Backend Execution Paths
+
+- API Routes (`apps/formcraft/app/api/**`): handle CRUD for forms/responses/actions, serve internal lifecycle endpoints, expose integration webhooks, and guard via Supabase auth or signed tokens.
+- Server Actions (`apps/formcraft/app/actions/**`): incremental adoption for co-locating data mutations with UI; primarily used for builder flows.
+- Shared Utilities (`apps/formcraft/app/lib/api.ts`, `lib/routes.ts`): centralize fetchers, Supabase RPC invocations, and error handling.
+
+### Submission Intelligence Pipeline
+
+- Location: `apps/formcraft/app/lib/intel/submission-job/` (`runner.ts`, `orchestrator.ts`, `executor.ts`, `sidecar.ts`, `tool-*.ts`).
+- Flow: `runSubmissionJob({ submissionId, versionId, trigger })` → fetch submission/answers (Sense) → orchestrate heuristics/AI (Decide) → execute actions via Action Runner (Act) → persist sidecar metadata (`form_submissions.metadata.sidecar`) and log telemetry (Surface).
+- Tools: modular helpers for spam detection, scoring, enrichment, tagging; easily swappable with AI-powered implementations.
+- Guardrails: respects lifecycle configuration (`forms.agent_state.lifecycle_v1`), testmode skips, idempotency via action logs.
+
+### Action Runner
+
+- Location: `apps/formcraft/app/lib/actions/runner.ts`.
+- Responsibilities: Accept normalized action descriptors, materialize provider clients (Usesend, Composio, etc.), enforce throttles/guardrails, log executions to `response_actions_log` with idempotency keys, and return structured results.
+- Consumers: manual bulk actions, view-based automations, lifecycle submission jobs, API endpoints.
+
+### Analytics & Telemetry
+
+- `apps/formcraft/app/lib/analytics.ts` and `analytics/` directory manage event emission (PostHog, internal logging) for both builder and runtime experiences.
+- Sidecar metadata exposes derived insights to the dashboard for filtering and charting (`components/responses/charts`).
+
+## Cross-App Flow
+
+1. Respondent interacts with `formfiller`; submissions are written to Supabase.
+2. `formfiller` schedules a background job (via `/api/internal/lifecycle`) after saves/completions.
+3. `formcraft`'s submission-intelligence runner enriches data, persists sidecar fields, and triggers allowed actions.
+4. Response dashboards surface sidecar metadata and provide manual/bulk action controls backed by the same runner.
+
+Additional touchpoints:
+
+- Shared Supabase clients ensure both apps respect the same auth/session handling.
+- `@formlink/ui` components keep visual/stylistic parity between creator preview and responder runtime.
+- Prompt templates align AI narratives between builder (planning) and respondent (assist) journeys.
+
+## Tooling & Operations
+
+- Turbo tasks (`turbo.json`) coordinate `dev`, `build`, `lint`, `type-check`, and `test` across workspaces.
+- Monorepo relies on PNPM (`pnpm-workspace.yaml`) with scripts for DB resets (`pnpm db:hard-reset`), type generation, and repo-wide quality checks.
+- Each workspace defines its own lint/type-check commands while inheriting shared config packages, keeping CI consistent.
+
+Additional guidance:
+
+- Preferred commands: `pnpm dev` (runs Turbo dev for filtered apps), `pnpm -w lint`, `pnpm -w type-check`, `pnpm test` where applicable.
+- Husky/lint-staged enforce Prettier on staged files; follow import ordering rules (prettier sort plugin).
+- CI expectations: zero lint/type errors; run targeted tests when modifying shared packages or critical flows.
+- Environment: `.env.local` files per app contain Supabase keys, AI provider credentials, Composio tokens; never commit secrets.
+
+### Component API Notes
+
+- ActionsManagerCard (`apps/formcraft/app/dashboard/forms/[formId]/components/responses/ActionsManagerCard.tsx`)
+  - Props: `formId: string`, `mode: "lifecycle" | "view"`, `actions?: { slug: string; provider: "usesend" | "composio"; params?: Record<string, unknown> }[]`
+  - Change: Previously accepted a `plan` and internally derived proposed actions. Now accepts a flat `actions[]` list for proposed items. It still reads configured actions from lifecycle config (lifecycle mode) or active view (view mode) and renders the union.
+
+- SetupDrawer (`apps/formcraft/app/dashboard/forms/[formId]/components/responses/ResponseViewPlan/SetupDrawer.tsx`)
+  - Refactor (2025-10-06):
+    - Props typed via `SetupDrawerProps`; destructuring moved inside function body.
+    - All React state defined before effects; debug logs removed.
+    - Network work moved to TanStack Query: questions + schema keys via `useQuery` with `await` fetches.
+    - Complex schema key extraction isolated to pure helpers (`extractKeysFromSchemaJson`, curated fallbacks for HubSpot).
+    - Auto-suggestion logic extracted into a `useCallback` and invoked from small effects (no inline function defs inside effects).
+    - Polling constants hoisted (`POLL_INTERVAL_MS`, `POLL_TIMEOUT_MS`).
+
+### Developer Workflow Checklist
+
+1. **Install**: `pnpm install` (workspace aware).
+2. **Run Supabase locally** if touching backend: `pnpm -C packages/db dlx supabase start --workdir ./supabase` or use `pnpm db:hard-reset` for clean state.
+3. **Launch apps**: `pnpm dev:craft` (builder) and/or `pnpm dev:fill` (responder); `pnpm dev:all` runs both in parallel.
+4. **Type/Lint**: run before commit; treat failures as blockers.
+5. **Testing**: `pnpm --filter @formlink/ui test` for UI lib, targeted jest commands when modifying components; integration tests live under `apps/formfiller/integration-tests`.
+6. **Docs**: authoritative design docs live in `docs/` (see below).
+
+### Key Conventions
+
+- **Imports**: prefer path aliases (`@/app/...`, `@formlink/ui/...`) defined in `tsconfig.json` files; avoid deep relative paths.
+- **Styling**: Tailwind utility classes with `tailwind-merge`; global theming via `next-themes`.
+- **State**: TanStack Query for async data, Zustand for local stores (e.g., builder state machine under `app/dashboard/forms/[formId]/stores`).
+- **Forms**: `react-hook-form` + Zod resolvers; question schemas defined centrally.
+- **AI**: use prompt loader + guard rails; do not concatenate strings or bypass guard templates.
+- **Error Handling**: server routes throw typed errors; UI surfaces toasts (`sonner`) or inline banners.
+
+## Domain Reference
+
+### Form Authoring
+
+- Builder UI: `components/form/` and `components/design/` provide drag/drop editing, AI suggestions (`FormGenerationExample`, `ChatDesignPanel`).
+- Versioning: forms reference `form_versions` in Supabase; API routes manage drafts/published states.
+- Settings & Share: `components/settings/`, `components/share/` handle metadata, theme overrides, embeds.
+
+### Responses & Intelligence
+
+- Responses tab: `components/responses/Responses.tsx` integrates table, filters, actions, insights.
+- Data fetching: `hooks/useFormResponsesQuery.ts` wraps RPC `get_filtered_submissions`; filters generated via `lib/responses/generateFilterFieldsFromForm.tsx`.
+- View planning: `components/responses/ResponseViewPlan` orchestrates AI plan, Submission Actions dialog (`SubmissionActionsDialog.tsx`), setup wizard.
+- Automation plan: chat can emit a dedicated lifecycle plan event; UI renders a standalone card (no view created) in a right-hand drawer.
+- Charts & Insights: `components/responses/charts` and `insights` render aggregated metrics (TanStack, Recharts).
+
+### Automations & Actions
+
+- Submission Automations (Per submission): form‑level lifecycle stored under `forms.agent_state.lifecycle_v1`. UI label “Submission Automations” with “Submission Hooks”, “Actions to Run”, and “Automation Rules”.
+  - Config: `GET/PUT /api/forms/[formId]/lifecycle`.
+  - JSON: `enabledHooks` (subset of `spam|enrichment|lead|tags`), `allowedActions`, `guardrails`, `orchestratorPrompt`. Back‑compat: `enabledTools` accepted and mapped to `enabledHooks`.
+  - Back‑compat guardrails: older rows may store `guardrails: null`; API/runner normalize this to `{}` before merging with defaults to avoid crashes.
+  - Execution: lifecycle job (`lib/intel/submission-job`) runs on save/completion.
+- Response View Bulk Actions (Manual): configured per view; execute on selection/filter. Not part of Submission Automations.
+- Action execution: `app/api/actions/execute` → `lib/actions/runner.ts` (shared by manual/view/lifecycle paths).
+- Future triggers research documented in `docs/automation_triggers_v1.md` (deferred).
+
+### AI Prompting & Agents
+
+- Prompt templates: `packages/prompts/md/**`; new prompts must include guard header referencing `_guards.md`.
+- Agents: `app/lib/agents/**` organizes orchestrators and reasoning helpers; `app/lib/ai/**` encapsulates provider routing (OpenAI, OpenRouter, Braintrust).
+- Submission intelligence design tracked in `docs/submission_intelligence_job_v1.md` (latest plan) and `docs/submission_automations_concepts_v1.md` (naming).
+  - Chat tool: `proposeLifecycleAutomation` emits `data-agent_event` `type: "lifecycle_automation_plan"`.
+  - Event wiring: `components/chat/ChatPanel.tsx` (opens drawer via `useAutomationsPlanStore`).
+  - UI: `components/responses/SubmissionAutomationsCard.tsx` applies proposed `allowedActions`, `enabledHooks`, and `orchestratorPrompt` via `useAutomationsConfig`.
+
+### Multi-Tenancy & Auth
+
+- Supabase tables `organizations` and `workspaces` provide tenant scoping; current UI still primary-user centric but data model ready for expansion.
+- Auth flows: `app/auth/**` handles Supabase auth UI and server helpers; `app/providers/**` wires providers (theme, query, analytics).
+- Feature flags: `app/lib/feature-flags.ts` centralizes toggles.
+
+### Logging & Monitoring
+
+- `app/lib/logger.ts` (formcraft) and `apps/formfiller/app/lib/logger.ts` (runtime) provide structured logging wrappers.
+- Response/action logs accessible via Supabase tables; UI surfaces history in responses tooling.
+
+## Documentation & Further Reading
+
+- `docs/submission_intelligence_job_v1.md` — authoritative background job specification (verify latest before edits).
+- `docs/automation_triggers_v1.md` — future-state trigger DSL research.
+- `docs/` folder holds additional context; keep synchronized when architecture evolves.
+- `AGENTS.md` — operational rules for AI agents collaborating on the repo.
+
+## Quick Start for Contributors & Agents
+
+1. Read this file end-to-end to internalize architecture.
+2. Skim schema.sql for data model awareness.
+3. Run `pnpm dev:craft` and `pnpm dev:fill` to observe both surfaces; log in via Supabase auth.
+4. When implementing features:
+   - Identify target domain (builder, runtime, shared).
+   - Locate corresponding directory (see above) and review existing patterns.
+   - Update prompts via loader (no ad-hoc strings).
+   - Extend schema definitions first, then UI/backend.
+5. Validate with lint/type-check/tests and document any new behaviors under `docs/`.
+
+This context should equip both humans and AI agents to reason about Formlink’s architecture, locate relevant modules quickly, and implement features while respecting existing contracts and guardrails.
