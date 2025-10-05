@@ -11,10 +11,10 @@
   },
   "iconLibrary": "lucide",
   "aliases": {
-    "components": "@formlink/ui/ui",
+    "components": "@formlink/ui",
     "utils": "@formlink/ui/lib/utils",
     "hooks": "@formlink/ui/hooks",
     "lib": "@formlink/ui/lib",
-    "ui": "@formlink/ui/ui"
+    "ui": "@formlink/ui"
   }
 }

@@ -10,6 +10,7 @@ export * from "./ui/breadcrumb";
 export * from "./ui/button";
 export * from "./ui/calendar";
 export * from "./ui/card";
+export * from "./ui/chart";
 export * from "./ui/checkbox";
 export * from "./ui/code-block";
 export * from "./ui/code-editor";
@@ -28,9 +29,9 @@ export * from "./ui/menubar";
 export * from "./ui/popover";
 export * from "./ui/progress";
 export * from "./ui/radio-group";
+export * from "./ui/scoped-drawer";
 export * from "./ui/scroll-area";
 export * from "./ui/select";
-export * from "./ui/select-with-search";
 export * from "./ui/separator";
 export * from "./ui/sheet";
 export * from "./ui/sidebar";
@@ -44,7 +45,6 @@ export * from "./ui/toast";
 export * from "./ui/toggle";
 export * from "./ui/toggle-group";
 export * from "./ui/tooltip";
-export * from "./ui/chart";
 
 // Motion components
 export * from "./motion/morphing-dialog";
@@ -97,18 +97,18 @@ export * from "./hooks/ui/useTheme";
 
 // Individual unified components (for advanced usage)
 export { UnifiedAddressInput } from "./form/modes/unified/UnifiedAddressInput";
+export { UnifiedCountryList } from "./form/modes/unified/UnifiedCountryList";
+export { UnifiedCountrySelect } from "./form/modes/unified/UnifiedCountrySelect";
 export { UnifiedDatePicker } from "./form/modes/unified/UnifiedDatePicker";
+export { UnifiedDropdownMultiSelect } from "./form/modes/unified/UnifiedDropdownMultiSelect";
+export { UnifiedDropdownSelect } from "./form/modes/unified/UnifiedDropdownSelect";
 export { UnifiedFileUpload } from "./form/modes/unified/UnifiedFileUpload";
+export { UnifiedLikert } from "./form/modes/unified/UnifiedLikert";
 export { UnifiedLinearScale } from "./form/modes/unified/UnifiedLinearScale";
 export { UnifiedMultiSelect } from "./form/modes/unified/UnifiedMultiSelect";
+export { UnifiedPhoneInput } from "./form/modes/unified/UnifiedPhoneInput";
 export { UnifiedRanking } from "./form/modes/unified/UnifiedRanking";
 export { UnifiedRating } from "./form/modes/unified/UnifiedRating";
-export { UnifiedLikert } from "./form/modes/unified/UnifiedLikert";
-export { UnifiedPhoneInput } from "./form/modes/unified/UnifiedPhoneInput";
-export { UnifiedCountrySelect } from "./form/modes/unified/UnifiedCountrySelect";
-export { UnifiedDropdownSelect } from "./form/modes/unified/UnifiedDropdownSelect";
-export { UnifiedDropdownMultiSelect } from "./form/modes/unified/UnifiedDropdownMultiSelect";
-export { UnifiedCountryList } from "./form/modes/unified/UnifiedCountryList";
 export { UnifiedSignature } from "./form/modes/unified/UnifiedSignature";
 
 // Context provider for mode management

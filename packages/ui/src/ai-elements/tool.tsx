@@ -13,7 +13,6 @@ import {
   ChevronDownIcon,
   CircleIcon,
   Loader2,
-  WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
@@ -97,8 +96,7 @@ export const ToolHeader = ({
     )}
     {...props}
   >
-    <div className="flex items-center gap-2">
-      <WrenchIcon className="size-4 text-muted-foreground" />
+    <div className="flex items-center gap-2 text-left">
       <span className="font-medium text-sm">{type}</span>
       {getStatusBadge(state)}
     </div>
