@@ -6,15 +6,13 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@formlink/ui/ui/card"
-import {
   ChartConfig,
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "@formlink/ui/ui/chart"
+} from "@formlink/ui"
 import type { PolarAngleAxisProps } from "recharts"
 import {
   PolarAngleAxis,

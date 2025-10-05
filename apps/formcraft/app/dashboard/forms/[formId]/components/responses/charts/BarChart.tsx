@@ -6,13 +6,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@formlink/ui/ui/card"
-import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@formlink/ui/ui/chart"
+} from "@formlink/ui"
 import React from "react"
 import {
   Bar,

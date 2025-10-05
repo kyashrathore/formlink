@@ -7,24 +7,19 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@formlink/ui/ui/card"
-import {
   ChartConfig,
   ChartContainer,
   ChartLegend,
   ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
-} from "@formlink/ui/ui/chart"
-import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@formlink/ui/ui/select"
+} from "@formlink/ui"
 import { TrendingUp } from "lucide-react"
-import React from "react"
 import {
   Area,
   CartesianGrid,
