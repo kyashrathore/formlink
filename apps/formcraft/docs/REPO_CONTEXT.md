@@ -20,3 +20,16 @@ Prompt Guards
   - formfiller: `formfiller/app/api/ai/chat-assist/route.ts: loadPrompt('filler/form-assistant-system.md', { include_guards: true, ... })`
 - Internal calls (all other `loadPrompt` usages) do not pass this flag and should render without guardrails if the template honors the `include_guards` variable.
 - Follow-up: Ensure the prompts templates conditionally include guards via `{{#include_guards}}…{{/include_guards}}` (or equivalent) and do not auto-inject guards globally.
+
+- Single-Pass Generation (default)
+
+- The single-pass form creation mode is enabled by default.
+- Disable via either:
+  - Request body: `options.singlePass: false`
+  - Query string: `/api/chat?singlePass=false`
+- Behavior:
+  - Uses `packages/prompts/md/form/create-form.md` with `FormSchema` to generate the full form in one AI call.
+  - Synthesizes standard `data-agent_event` stream events so the UI remains compatible:
+    - `agent_initialized`, `state_snapshot` (metadata), `agent_warning` (question count), `question_schema_generated` per question, `state_snapshot` (final), `agent_finalized`.
+  - Finalizes to DB via `finalizeForm` (version insert + form update) and writes a brief assistant summary message.
+  - The legacy workflow/tool-based streaming path is used only when single-pass is disabled.

@@ -95,19 +95,15 @@ const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
           checked={enabled}
           onChange={(e) => handleToggle(e.target.checked)}
         />
-        <Label htmlFor={`enable-${label.replace(/\s+/g, "-").toLowerCase()}`}>
-          {enabledText}
-        </Label>
+        <Label htmlFor={`enable-${label}`}>{enabledText}</Label>
       </div>
       {enabled && (
         <div className="space-y-2">
-          <Label htmlFor={`input-${label.replace(/\s+/g, "-").toLowerCase()}`}>
-            {label}
-          </Label>
+          <Label htmlFor={`input-${label}`}>{label}</Label>
           {editing ? (
             <div className="flex flex-col gap-2">
               <Input
-                id={`input-${label.replace(/\s+/g, "-").toLowerCase()}`}
+                id={`input-${label}`}
                 value={value}
                 onChange={(e) => {
                   setValue(e.target.value)

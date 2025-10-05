@@ -13,6 +13,25 @@ import { DataTableColumnHeader } from "../../components/data-table/data-table-co
 import type { FilterFieldType } from "../../components/data-table/dataTableStore"
 import type { FormResponse } from "../../hooks/useFormResponsesQuery"
 
+function formatSidecarValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value
+      .slice(0, 3)
+      .map((entry) => String(entry))
+      .join(", ")
+  }
+  if (value && typeof value === "object") {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return "[object]"
+    }
+  }
+  if (typeof value === "boolean") return value ? "true" : "false"
+  if (value == null) return "—"
+  return String(value)
+}
+
 export function generateFilterFieldsFromForm(form: Form): FilterFieldType[] {
   const questionFilters: FilterFieldType[] = !form?.questions?.length
     ? []
@@ -78,6 +97,13 @@ export function generateFilterFieldsFromForm(form: Form): FilterFieldType[] {
       label: "Created Time",
       type: "timerange" as const,
       defaultOpen: true,
+      commandDisabled: false,
+    },
+    {
+      value: "last_updated_at",
+      label: "Last Updated",
+      type: "timerange" as const,
+      defaultOpen: false,
       commandDisabled: false,
     },
     {
@@ -162,6 +188,44 @@ export function generateTableColumnsFromForm(
       header: ({ column }) => (
         <DataTableColumnHeader column={column} title="Test" />
       ),
+    },
+    {
+      accessorKey: "sidecar",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Sidecar" />
+      ),
+      cell: ({ row }) => {
+        const sidecar = (row.original as FormResponse).sidecar || {}
+        const entries = Object.entries(sidecar)
+        if (!entries.length) {
+          return <span className="text-muted-foreground">—</span>
+        }
+
+        const chips = entries.slice(0, 4).map(([key, value]) => (
+          <Badge
+            key={key}
+            variant="outline"
+            className="border-border/60 bg-secondary/40 text-xs font-medium capitalize"
+          >
+            {key}: {formatSidecarValue(value)}
+          </Badge>
+        ))
+
+        const extra = entries.length - chips.length
+
+        return (
+          <div className="flex flex-wrap gap-1">
+            {chips}
+            {extra > 0 ? (
+              <Badge variant="secondary" className="text-xs font-medium">
+                +{extra}
+              </Badge>
+            ) : null}
+          </div>
+        )
+      },
+      enableSorting: false,
+      meta: { isSidecar: true },
     },
   ]
 

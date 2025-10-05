@@ -43,6 +43,12 @@
     ]
   },
   "packageManager": "pnpm@10.10.0",
+  "pnpm": {
+    "overrides": {
+      "@types/react": "^19.1.11",
+      "@types/react-dom": "^19.1.7"
+    }
+  },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.0",
     "class-variance-authority": "^0.7.1",

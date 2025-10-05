@@ -5,6 +5,7 @@ import {
   createResponseViewTool,
   updateResponseViewTool,
 } from "./response-intelligence/index"
+import { proposeLifecycleAutomationTool } from "./submission-automations/index"
 import { updateFormTool } from "./update-form"
 
 export function createChatTools(context: ChatToolContext) {
@@ -14,5 +15,6 @@ export function createChatTools(context: ChatToolContext) {
     getFormContext: getFormContextTool(context),
     createResponseView: createResponseViewTool(context),
     updateResponseView: updateResponseViewTool(context),
+    proposeLifecycleAutomation: proposeLifecycleAutomationTool(context),
   }
 }

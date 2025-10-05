@@ -16,7 +16,7 @@ export function Section({
 }) {
   return (
     <div className={cn("mt-4 mb-2 space-y-2", className)}>
-      <div className="text-foreground flex items-center gap-2 text-base font-semibold">
+      <div className="text-foreground flex items-center gap-2 text-sm font-semibold">
         {icon}
         {title}
       </div>

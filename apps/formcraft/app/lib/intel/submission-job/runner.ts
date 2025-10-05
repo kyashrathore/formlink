@@ -8,6 +8,7 @@ import type {
   LifecycleGuardrails,
   LifecycleOrchestratorInput,
   LifecycleOrchestratorOutput,
+  SubmissionHook,
   SubmissionLifecycleTrigger,
 } from "./types"
 import { SUBMISSION_HOOKS } from "./types"
@@ -69,19 +70,19 @@ function normalizeLifecycleConfig(raw: unknown): LifecycleConfig | null {
   }
 
   // Preserve enabledHooks and sanitize to allowed set. Back-compat: map enabledTools -> enabledHooks
-  let enabledHooks: typeof SUBMISSION_HOOKS | undefined
+  let enabledHooks: SubmissionHook[] | undefined
   const rawEnabledHooks = Array.isArray((obj as any).enabledHooks)
     ? ((obj as any).enabledHooks as unknown[])
     : Array.isArray((obj as any).enabledTools)
-    ? ((obj as any).enabledTools as unknown[])
-    : undefined
+      ? ((obj as any).enabledTools as unknown[])
+      : undefined
 
   if (rawEnabledHooks) {
     const allowed = new Set<string>(SUBMISSION_HOOKS as readonly string[])
     const cleaned = rawEnabledHooks
       .filter((v): v is string => typeof v === "string")
       .map((v) => v.trim())
-      .filter((v) => allowed.has(v)) as unknown as typeof SUBMISSION_HOOKS
+      .filter((v) => allowed.has(v)) as unknown as SubmissionHook[]
     if (cleaned.length) enabledHooks = cleaned
   }
 

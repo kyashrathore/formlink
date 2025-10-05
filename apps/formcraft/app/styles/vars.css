@@ -1,0 +1,8 @@
+/* Formcraft app-only CSS variables */
+:root {
+  /* Single source of truth for header height within this app */
+  --header-height: var(--spacing-app-header, 56px);
+  /* Backward-compat for existing usage in dashboard/layout.tsx */
+  --h-app-header: var(--header-height);
+}
+

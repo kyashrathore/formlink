@@ -1,16 +1,9 @@
-import { randomUUID } from "node:crypto"
-import {
-  getComposioClient,
-  isComposioEnabled,
-} from "@/app/lib/actions/composio-client"
-import { ActionExecutionError } from "@/app/lib/actions/errors"
+import { executeActionWithLogging } from "@/app/lib/actions/runner"
 import { validateActionParameters } from "@/app/lib/actions/schema-registry"
-import { sendEmail } from "@/app/lib/actions/usesend-adapter"
 import logger from "@/app/lib/logger"
 import { requireAuth } from "@/app/lib/middleware/auth"
 import { verifyUserOwnsForm } from "@/app/lib/middleware/authorization"
 import { createServerClient } from "@formlink/db"
-import type { Json } from "@formlink/db"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { z } from "zod"
@@ -28,44 +21,6 @@ const requestSchema = z.object({
   action: actionSchema,
   viewId: z.string().uuid().optional(),
 })
-
-function toJson(value: unknown): Json {
-  if (
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return value
-  }
-  if (Array.isArray(value)) {
-    return value.map((entry) => toJson(entry))
-  }
-  if (typeof value === "object") {
-    const result: Record<string, Json> = {}
-    for (const [key, nested] of Object.entries(
-      value as Record<string, unknown>
-    )) {
-      result[key] = toJson(nested)
-    }
-    return result
-  }
-  return String(value)
-}
-
-function scrubParams(params: Record<string, unknown>): Json {
-  const scrubbed: Record<string, Json> = {}
-  const secretKeys = ["apiKey", "token", "authorization", "password", "secret"]
-  for (const [key, value] of Object.entries(params || {})) {
-    const lower = key.toLowerCase()
-    if (secretKeys.some((secret) => lower.includes(secret))) {
-      scrubbed[key] = value ? "[redacted]" : null
-    } else {
-      scrubbed[key] = toJson(value)
-    }
-  }
-  return scrubbed
-}
 
 export async function POST(request: Request) {
   let auth
@@ -110,8 +65,7 @@ export async function POST(request: Request) {
   const supabase = await createServerClient(cookieStore)
 
   let mergedParams: Record<string, unknown> = { ...(action.params || {}) }
-
-  let connectedAccountId: string | null = null
+  let toolkit: string | null = null
   if (action.kind === "composio") {
     // If a view is provided, fetch view params and validate required fields
     if (parsed.data.viewId) {
@@ -293,182 +247,59 @@ export async function POST(request: Request) {
     // Resolve toolkit from curated actions and fetch global tool connection
     const { CURATED_ACTIONS } = await import("@/app/lib/actions/registry")
     const match = CURATED_ACTIONS.find((a) => a.slug === action.slug)
-    const toolkit = match?.toolkit || null
-    if (toolkit) {
-      const { data: connRow, error: connError } = await supabase
-        .from("tool_connections")
-        .select("connected_account_id, auth_status")
-        .eq("user_id", auth.user.id)
-        .eq("provider", "composio")
-        .eq("toolkit", toolkit)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      if (connError && connError.code !== "PGRST116") {
-        logger.warn?.("[actions] failed to read tool connection", {
-          error: connError.message,
-        })
-      }
-      connectedAccountId = connRow?.connected_account_id ?? null
-    }
+    toolkit = match?.toolkit || null
   }
 
-  let existingLogId: string | null = null
-  if (action.idempotencyKey) {
-    const { data: existingLog, error: selectError } = await supabase
-      .from("response_actions_log")
-      .select("id, status, provider_response")
-      .eq("form_id", formId)
-      .eq("action_name", action.slug)
-      .eq("idempotency_key", action.idempotencyKey)
-      .maybeSingle()
-
-    if (selectError && selectError.code !== "PGRST116") {
-      logger.error?.("[actions] failed to check idempotency", {
-        error: selectError.message,
-      })
-    }
-
-    if (existingLog) {
-      if (existingLog.status === "completed") {
-        return NextResponse.json({
-          success: true,
-          status: "duplicate",
-          providerResponse: existingLog.provider_response,
-        })
-      }
-      if (
-        existingLog.status === "running" ||
-        existingLog.status === "pending"
-      ) {
-        return NextResponse.json(
-          { success: false, error: "Action is already in progress" },
-          { status: 409 }
-        )
-      }
-      existingLogId = existingLog.id
-    }
-  }
-
-  const logId = existingLogId || randomUUID()
   const provider = action.kind === "email" ? "usesend" : "composio"
 
-  const { error: upsertError } = await supabase
-    .from("response_actions_log")
-    .upsert(
-      {
-        id: logId,
-        form_id: formId,
-        action_name: action.slug,
-        submission_ids: submissionIds,
-        user_id: auth.user.id,
-        status: "running",
-        started_at: new Date().toISOString(),
-        provider,
-        idempotency_key: action.idempotencyKey ?? null,
-        params: scrubParams(mergedParams),
-        connected_account_id: connectedAccountId,
-      },
-      { onConflict: "id" }
-    )
+  const result = await executeActionWithLogging({
+    supabase,
+    formId,
+    userId: auth.user.id,
+    authUserId: auth.user.id,
+    submissionIds,
+    source: "manual",
+    action: {
+      slug: action.slug,
+      kind: action.kind,
+      provider,
+      params: mergedParams,
+      idempotencyKey: action.idempotencyKey ?? null,
+      viewId: parsed.data.viewId ?? null,
+      toolsApplied: null,
+      toolkit,
+    },
+  })
 
-  if (upsertError) {
-    logger.error?.("[actions] failed to upsert log", {
-      error: upsertError.message,
-    })
+  if (result.success && result.status === "completed") {
+    try {
+      const rows = submissionIds.map((sid) => ({
+        submission_id: sid,
+        action_log_id: result.logId,
+      }))
+      if (rows.length) {
+        await supabase
+          .from("submission_action_logs")
+          .upsert(rows as any, { onConflict: "submission_id,action_log_id" })
+      }
+    } catch (err) {
+      logger.warn?.("[actions] failed to record submission_action_logs", {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
   }
 
-  // Record per-submission linkages (sidecar rows) for activity views
-  try {
-    const rows = submissionIds.map((sid) => ({
-      submission_id: sid,
-      action_log_id: logId,
-    }))
-    if (rows.length) {
-      await supabase
-        .from("submission_action_logs")
-        .upsert(rows as any, { onConflict: "submission_id,action_log_id" })
-    }
-  } catch (err) {
-    logger.warn?.("[actions] failed to record submission_action_logs", {
-      error: err instanceof Error ? err.message : String(err),
-    })
-  }
-
-  try {
-    if (action.kind === "email") {
-      const result = await sendEmail(action.params as any)
-      await supabase
-        .from("response_actions_log")
-        .update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          result: result
-            ? toJson({ emailId: (result as { emailId?: string })?.emailId })
-            : null,
-        })
-        .eq("id", logId)
-
-      return NextResponse.json({
-        success: true,
-        status: "completed",
-        provider: "usesend",
-        result,
-      })
-    }
-
-    if (!isComposioEnabled()) {
-      throw new ActionExecutionError("Composio integration disabled", {
-        status: 503,
-        provider: "composio",
-      })
-    }
-
-    const client = getComposioClient()
-    const execution = await client.executeTool({
-      toolSlug: action.slug,
-      userId: auth.user.id,
-      args: mergedParams,
-    })
-
-    await supabase
-      .from("response_actions_log")
-      .update({
-        status: "completed",
-        completed_at: new Date().toISOString(),
-        provider_response: execution?.data ? toJson(execution.data) : null,
-        result: execution?.data ? toJson(execution.data) : null,
-      })
-      .eq("id", logId)
-
-    // No per-form auth status update; tool connections are global
-
+  if (result.success) {
     return NextResponse.json({
       success: true,
-      status: "completed",
-      provider: "composio",
-      providerReference: execution?.providerReference,
-      result: execution?.data,
+      status: result.status,
+      provider,
+      result: result.result,
     })
-  } catch (error) {
-    const status =
-      error instanceof ActionExecutionError && error.status ? error.status : 500
-    const message =
-      error instanceof Error ? error.message : "Action execution failed"
-
-    logger.error?.("[actions] execution failed", {
-      error: message,
-    })
-
-    await supabase
-      .from("response_actions_log")
-      .update({
-        status: "failed",
-        completed_at: new Date().toISOString(),
-        error_message: message,
-      })
-      .eq("id", logId)
-
-    return NextResponse.json({ success: false, error: message }, { status })
   }
+
+  return NextResponse.json(
+    { success: false, error: result.error },
+    { status: result.status }
+  )
 }

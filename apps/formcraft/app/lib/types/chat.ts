@@ -218,6 +218,9 @@ export interface ChatRequest {
     model?: string
     temperature?: number
     maxOutputTokens?: number
+    // When true, generate the full form in a single AI call
+    // and stream synthesized events to the UI.
+    singlePass?: boolean
   }
 }
 

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { revalidateTag } from "next/cache";
 import { createServerClient, SupabaseClient, Database } from "@formlink/db";
 import { saveAllFormAnswers, saveIndividualFormAnswer } from "./utils";
@@ -8,6 +8,8 @@ import type {
   WebhookPayload,
   QuestionResponse,
 } from "@/lib/types";
+import logger from "@/app/lib/logger";
+import { runSubmissionJob } from "@/app/lib/intel/submission-job";
 
 async function handleIntegration(
   supabase: SupabaseClient<Database>,
@@ -137,6 +139,25 @@ export async function POST(req: NextRequest) {
             ? "completed"
             : "in_progress")) === "completed",
         !!testmode,
+      );
+
+      const resolvedStatus =
+        submissionStatus ||
+        (allResponses && Object.keys(allResponses).length > 0
+          ? "completed"
+          : "in_progress");
+
+      after(() =>
+        runSubmissionJob({
+          submissionId,
+          formVersionId: versionId,
+          trigger: resolvedStatus === "completed" ? "completed" : "partial",
+        }).catch((error: unknown) => {
+          logger.error("[Lifecycle] submission job failed", {
+            submissionId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }),
       );
 
       // Invalidate summary caches for this form via tag

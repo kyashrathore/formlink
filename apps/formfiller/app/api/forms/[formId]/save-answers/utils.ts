@@ -25,13 +25,16 @@ export async function saveIndividualFormAnswer(
     return;
   }
 
-  const { error: saveError } = await supabase.from("form_answers").upsert([
-    {
-      submission_id: submissionId,
-      question_id: questionId,
-      answer_value: answerValue as any,
-    },
-  ]);
+  const { error: saveError } = await supabase.from("form_answers").upsert(
+    [
+      {
+        submission_id: submissionId,
+        question_id: questionId,
+        answer_value: answerValue as any,
+      },
+    ],
+    { onConflict: "submission_id,question_id" },
+  );
 
   if (saveError) {
     console.error("Error saving response to DB:", saveError);
@@ -78,7 +81,7 @@ export async function saveAllFormAnswers(
 
   const { error: saveError } = await supabase
     .from("form_answers")
-    .upsert(answerUpserts);
+    .upsert(answerUpserts, { onConflict: "submission_id,question_id" });
 
   if (saveError) {
     console.error("Error bulk saving responses to DB:", saveError);

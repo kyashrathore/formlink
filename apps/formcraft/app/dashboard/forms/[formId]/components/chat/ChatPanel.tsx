@@ -1,17 +1,19 @@
 import { MODEL_DEFAULT } from "@/app/lib/config"
 import { FormGenerationEventHandler } from "@/app/lib/handlers/FormGenerationEventHandler"
+import type { LifecyclePlanProposal } from "@/app/lib/lifecycle/plan-types"
 import type { RIPlanResponse } from "@/app/lib/ri/types"
 import { useChat } from "@ai-sdk/react"
-import { Button, PromptSuggestion, toast } from "@formlink/ui"
+import { Button, PromptSuggestion } from "@formlink/ui"
 import { Suggestion, Suggestions } from "@formlink/ui/ai-elements"
 import { DefaultChatTransport } from "ai"
 import { AlertTriangle } from "lucide-react"
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import { useChatHistoryQuery } from "../../hooks/useChatHistoryQuery"
 import { usePanelState } from "../../hooks/usePanelState"
 import { applyRIPlanToUI } from "../../lib/responses/ri-adapter"
 import { AgentEvent } from "../../lib/types/agent-events"
+import { useAutomationsPlanStore } from "../../stores/useAutomationsPlanStore"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
 import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
@@ -164,6 +166,20 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               }
             } catch (e) {
               console.error("Failed to apply RI plan", e)
+            }
+            return
+          }
+
+          // Intercept Lifecycle Automation plan events; do NOT create a Response View
+          if (raw?.type === "lifecycle_automation_plan" && raw?.plan) {
+            try {
+              const plan = raw.plan as LifecyclePlanProposal
+              const { setActiveMainTab } = usePanelState.getState() as any
+              if (setActiveMainTab) setActiveMainTab("responses")
+              // Store the lifecycle plan and open the drawer via store
+              useAutomationsPlanStore.getState().set(plan, true)
+            } catch (e) {
+              console.error("Failed to process lifecycle plan", e)
             }
             return
           }

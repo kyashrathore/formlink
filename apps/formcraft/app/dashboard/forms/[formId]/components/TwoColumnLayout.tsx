@@ -85,7 +85,10 @@ export default function TwoColumnLayout({
       )}
 
       {}
-      <div className="bg-card border-border flex-1 overflow-hidden rounded-lg border shadow-sm">
+      <div
+        id="right-panel-root"
+        className="bg-card border-border relative flex-1 overflow-hidden rounded-lg border shadow-sm"
+      >
         {rightPanel}
       </div>
     </div>

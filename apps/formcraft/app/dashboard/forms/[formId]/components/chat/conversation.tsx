@@ -116,6 +116,27 @@ const VisibleMessage = ({
                       ? part.toolName
                       : getToolName(part)
 
+                const prettyToolName = (() => {
+                  const map: Record<string, string> = {
+                    createResponseView: "Create Response View",
+                    updateResponseView: "Update Response View",
+                    responseIntelligence: "Response Intelligence",
+                    proposeLifecycleAutomation: "Submission Automations",
+                    "submission-automations": "Submission Automations",
+                  }
+                  if (map[toolName]) return map[toolName]
+                  // Generic humanizer: split camelCase/snake_case to Title Case
+                  const cleaned = String(toolName)
+                    .replace(/[_-]+/g, " ")
+                    .replace(/([a-z])([A-Z])/g, "$1 $2")
+                    .trim()
+                  return cleaned
+                    .split(" ")
+                    .filter(Boolean)
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(" ")
+                })()
+
                 const rawState =
                   part.state ??
                   (isInvocation ? part.toolInvocation?.state : undefined) ??
@@ -147,7 +168,7 @@ const VisibleMessage = ({
                 return (
                   <div key={`tool-${partIndex}`} className="my-2">
                     <Tool state={state}>
-                      <ToolHeader type={toolName} state={state} />
+                      <ToolHeader type={prettyToolName} state={state} />
                       <ToolContent>
                         {(state === "input-streaming" ||
                           state === "input-available") &&
@@ -156,11 +177,14 @@ const VisibleMessage = ({
                           )}
 
                         {(() => {
-                          const isResponseTool =
-                            toolName === "createResponseView" ||
-                            toolName === "updateResponseView" ||
-                            toolName === "responseIntelligence"
-                          const hideOutput = isResponseTool
+                          const hideOutputTools = new Set([
+                            "createResponseView",
+                            "updateResponseView",
+                            "responseIntelligence",
+                            "proposeLifecycleAutomation",
+                            "submission-automations",
+                          ])
+                          const hideOutput = hideOutputTools.has(toolName)
                           const finalResult = hideOutput ? undefined : result
                           const finalError = hideOutput ? undefined : errorText
                           if (
@@ -180,9 +204,19 @@ const VisibleMessage = ({
                           if (displaySummaryMessage) {
                             return <ToolLogs logs={displaySummaryMessage} />
                           }
-                          const doneLabel = isResponseTool
-                            ? "✓ Response Plan generated"
-                            : `✓ Completed ${toolName}`
+                          let doneLabel = `✓ Completed ${prettyToolName}`
+                          if (
+                            toolName === "createResponseView" ||
+                            toolName === "updateResponseView" ||
+                            toolName === "responseIntelligence"
+                          ) {
+                            doneLabel = "✓ Response Plan generated"
+                          } else if (
+                            toolName === "proposeLifecycleAutomation" ||
+                            toolName === "submission-automations"
+                          ) {
+                            doneLabel = "✓ Submission Automations plan ready"
+                          }
                           return (
                             <div className="text-muted-foreground p-4 text-xs">
                               {doneLabel}

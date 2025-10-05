@@ -1,0 +1,40 @@
+# Keep uploads lean for Vercel CLI.
+# Intentionally DO NOT ignore the entire `.next` dir so prebuilt deploys work.
+
+# VCS
+.git
+.gitignore
+.gitattributes
+
+# Package managers / local stores
+**/.pnpm-store
+**/node_modules
+
+# Next.js
+**/.next/cache
+
+# Turbo
+**/.turbo
+
+# Storybook
+**/storybook-static
+
+# Common build outputs (library packages)
+**/dist
+**/build
+
+# Logs and misc
+**/*.log
+**/.DS_Store
+**/Thumbs.db
+
+# Coverage
+**/coverage
+**/.nyc_output
+
+# Local env files (use Vercel env vars instead)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
