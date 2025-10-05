@@ -1,16 +1,28 @@
-import DashboardLayoutClient from "./DashboardLayoutClient"
+import { Header } from "@/app/components/layout/header"
+import type { Metadata } from "next"
 
-interface DashboardLayoutProps {
-  children: React.ReactNode
+export const metadata: Metadata = {
+  title: {
+    default: "Dashboard | Formlink.ai",
+    template: "%s | Formlink.ai",
+  },
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  // Shared server header across all dashboard routes.
+  // Body applies padding-top to clear the fixed header height.
   return (
-    <div
-      id="dashboard-root"
-      className="h-dvh overflow-hidden overscroll-contain"
-    >
-      <DashboardLayoutClient>{children}</DashboardLayoutClient>
+    <div className="bg-background min-h-dvh">
+      {/* Top fixed header (SSR) */}
+      <Header className="z-[60]" />
+
+      {/* Main area below header. h-app-header is the fixed header height. */}
+      {/* TODO(formcraft): unify header height token (CSS var or theme) and reuse here. */}
+      <div className="pt-[var(--h-app-header,3.5rem)]">{children}</div>
     </div>
   )
 }

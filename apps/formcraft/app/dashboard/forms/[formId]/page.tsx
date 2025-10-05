@@ -1,9 +1,6 @@
 "use client"
 
-import FormlinkLogo from "@/app/components/FormlinkLogo"
-import UserMenu from "@/app/components/layout/user-menu"
 import { useAuth } from "@/app/hooks/useAuth"
-import Link from "next/link"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import {
   Suspense,
@@ -236,7 +233,7 @@ function TestUIPageContent() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
+      <div className="flex min-h-[calc(100dvh-var(--header-height,var(--spacing-app-header,56px)))] items-center justify-center">
         <div className="text-muted-foreground">Loading...</div>
       </div>
     )
@@ -293,18 +290,7 @@ function TestUIPageContent() {
   )
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden">
-      {}
-      <div className="flex flex-shrink-0 items-center justify-between px-6">
-        <Link
-          href="/dashboard"
-          className="text-foreground hover:text-primary flex items-center text-xl font-semibold transition-colors"
-        >
-          <FormlinkLogo /> Formlink
-        </Link>
-        {userData && <UserMenu user={userData} />}
-      </div>
-
+    <div className="flex h-[calc(100dvh-var(--header-height,var(--spacing-app-header,56px)))] flex-col overflow-hidden">
       <div className="flex-1 overflow-hidden">
         <TwoColumnLayout
           leftPanel={leftPanel}
@@ -343,7 +329,7 @@ export default function TestUIPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex h-screen items-center justify-center">
+        <div className="flex min-h-[calc(100dvh-var(--header-height,var(--spacing-app-header,56px)))] items-center justify-center">
           <div className="text-muted-foreground">Loading...</div>
         </div>
       }

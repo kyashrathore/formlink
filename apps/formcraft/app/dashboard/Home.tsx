@@ -23,8 +23,6 @@ import { useRouter } from "next/navigation"
 import { startTransition, useCallback, useEffect, useState } from "react"
 import { v4 as uuidv4 } from "uuid"
 import FormlinkLogo from "../components/FormlinkLogo"
-import { AppInfo } from "../components/layout/app-info"
-import UserMenu from "../components/layout/user-menu"
 import { DashboardChat } from "./components/DashboardChat"
 import { FormWithVersions } from "./types"
 
@@ -191,21 +189,7 @@ function Home({ forms, user }: HomeProps) {
                 )}
               </SidebarMenu>
             </SidebarContent>
-            {!isLoggedIn ? (
-              <div className="flex items-center gap-4">
-                <AppInfo />
-                <Link
-                  href="/auth"
-                  className="font-base text-muted-foreground hover:text-foreground text-base transition-colors"
-                >
-                  Login
-                </Link>
-              </div>
-            ) : (
-              <div className="flex items-center gap-4 p-2">
-                {userData && <UserMenu user={userData} />}
-              </div>
-            )}
+            {/* Footer area intentionally empty: shared Header now provides user menu/login. */}
           </Sidebar>
           <SidebarInset>
             <DashboardChat
