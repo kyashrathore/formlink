@@ -31,7 +31,7 @@ export async function getFormSchemaById(
   if (formError || !formData) {
     if (formError && (formError as any).code !== "PGRST116") {
       console.error(
-        `Supabase error fetching form ${formIdOrShortId}:`,
+        `[forms] Supabase error fetching form ${formIdOrShortId}:`,
         (formError as any).message,
       );
     }
@@ -63,7 +63,7 @@ export async function getFormSchemaById(
   if (versionError || !versionData) {
     if (versionError && (versionError as any).code !== "PGRST116") {
       console.error(
-        `Supabase error fetching ${versionStatus} version ${versionId} for form ${formIdOrShortId}:`,
+        `[forms] Supabase error fetching ${versionStatus} version ${versionId} for form ${formIdOrShortId}:`,
         (versionError as any).message,
       );
     }
@@ -162,8 +162,7 @@ export async function getFormSchemaById(
     const validationResult = FormSchema.safeParse(formSchemaResult);
     if (!validationResult.success) {
       console.error(
-        `Server Schema Validation Error for form ${formData.id} (version ${versionData.version_id}):`,
-        JSON.stringify(validationResult.error.errors, null, 2),
+        `[forms] Server Schema Validation Error for form ${formData.id} (version ${versionData.version_id})`,
       );
       return null;
     }
@@ -182,7 +181,7 @@ export async function getFormSchemaById(
   } catch (err) {
     console.error(
       `Error constructing form schema object for version ${versionId}:`,
-      err,
+      err instanceof Error ? err.message : err,
     );
     return null;
   }

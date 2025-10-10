@@ -71,7 +71,7 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
             status: "in_progress",
           });
         } catch (error) {
-          console.error("Failed to create initial submission record:", error);
+          // previously logged initial submission creation error; logs removed.
         }
       }
 
@@ -213,7 +213,6 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
       const { formId, submissionId, questionResponses, formSchema } = get();
 
       if (!formId || !submissionId) {
-        console.error("Cannot submit form: formId or submissionId missing");
         return false;
       }
 
@@ -244,7 +243,6 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
         } catch {}
         return true;
       } catch (error) {
-        console.error("Failed to submit form:", error);
         return false;
       }
     },
@@ -255,7 +253,6 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
     ): Promise<string | null> => {
       const { formId, submissionId } = get();
       if (!formId || !submissionId) {
-        console.error("formId or submissionId not available for upload.");
         return null;
       }
 
@@ -286,7 +283,6 @@ export const useAppFormStore = create<AppFormState & AppFormActions>()(
 
         return result.url;
       } catch (error) {
-        console.error("Error uploading file:", error);
         // Throw the error so the UI can handle it properly
         throw error;
       }

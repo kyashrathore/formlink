@@ -108,6 +108,8 @@ type ChatProps = {
   isLoading?: boolean
   showSuggestions?: boolean
   onInputChange?: (input: string) => void
+  initialModel?: string
+  onModelChange?: (model: string) => void
 }
 
 export default function Chat({
@@ -115,9 +117,18 @@ export default function Chat({
   isLoading,
   showSuggestions,
   onInputChange,
+  initialModel,
+  onModelChange,
 }: ChatProps) {
   const [input, setInput] = useState("")
-  const [selectedModel, setSelectedModel] = useState(MODEL_DEFAULT)
+  const [selectedModel, setSelectedModel] = useState(
+    initialModel || MODEL_DEFAULT
+  )
+  React.useEffect(() => {
+    if (initialModel && initialModel !== selectedModel) {
+      setSelectedModel(initialModel)
+    }
+  }, [initialModel, selectedModel])
 
   const handleSubmit = useCallback(() => {
     if (!input.trim() || isLoading) return
@@ -140,7 +151,10 @@ export default function Chat({
       onSubmit={handleSubmit}
       isSubmitting={isLoading}
       selectedModel={selectedModel}
-      onSelectModel={setSelectedModel}
+      onSelectModel={(m) => {
+        setSelectedModel(m)
+        onModelChange?.(m)
+      }}
       status={isLoading ? "streaming" : "ready"}
       // These props are not used in the current implementation
       hasMessages={false}

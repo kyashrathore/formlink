@@ -17,6 +17,7 @@ import {
   UnifiedRating,
   UnifiedSignature,
 } from "@formlink/ui";
+import { debugLog } from "./utils/debug";
 
 function toStringVal(v: QuestionResponse): string | null {
   if (v == null) return null;
@@ -115,7 +116,6 @@ export default function ChatQuestionInputSwitcher(
     uploadedFile,
     onFileSelect,
   } = props;
-
   const typeObj = question.type as unknown as {
     name?: string;
     format?: string;
@@ -126,8 +126,9 @@ export default function ChatQuestionInputSwitcher(
   const t = typeObj.name ?? "";
   const ADVANCE_DELAY = 250;
 
-  // Render function to avoid conditional hook calls
-  const renderComponent = () => {
+  // Render content based on question type
+  // Wrapped in a function but always returned in a stable container div
+  const renderInput = () => {
     // Text and variants
     if (t === "text") {
       const format = typeObj.format;
@@ -179,6 +180,12 @@ export default function ChatQuestionInputSwitcher(
       const options = typeObj.options || [];
       const display: "radio" | "dropdown" =
         (typeObj.display as "radio" | "dropdown") || "radio";
+      debugLog("Render singleChoice", {
+        qid: question.id,
+        display,
+        optionCount: options.length,
+        response,
+      });
       if (display === "dropdown") {
         return (
           <UnifiedDropdownSelect
@@ -236,6 +243,7 @@ export default function ChatQuestionInputSwitcher(
           value={toStringArray(response)}
           onChange={(arr: string[]) => onAnswer(arr)}
           onSubmit={onNext}
+          showKeyboardHints
         />
       );
     }
@@ -397,5 +405,5 @@ export default function ChatQuestionInputSwitcher(
     return null;
   };
 
-  return renderComponent();
+  return <div>{renderInput()}</div>;
 }

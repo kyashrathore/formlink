@@ -27,22 +27,9 @@ function FormPageContent({
   // Load and apply themes from database
   const themeLoader = useThemeLoader(formSchema);
 
-  // Log theme loading status for debugging
+  // Removed debug logs for theme loading status
   React.useEffect(() => {
-    if (!themeLoader.isLoading) {
-      if (themeLoader.themeApplied) {
-        console.info("[Formlink][FormPageClient] theme applied", {
-          formId: formSchema.id,
-          vars: themeLoader.appliedVariables.length,
-        });
-      } else if (themeLoader.error) {
-        console.error("[Formlink][FormPageClient] theme load failed", {
-          formId: formSchema.id,
-          error: themeLoader.error,
-        });
-      } else {
-      }
-    }
+    // no-op: previously logged theme load results
   }, [
     themeLoader.isLoading,
     themeLoader.themeApplied,

@@ -3,8 +3,9 @@
 import { Message } from "@formlink/ui";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
+import React from "react";
 
-export function MessageLoading() {
+function MessageLoadingComponent() {
   return (
     <Message
       from="assistant"
@@ -49,3 +50,5 @@ export function MessageLoading() {
     </Message>
   );
 }
+
+export const MessageLoading = React.memo(MessageLoadingComponent);

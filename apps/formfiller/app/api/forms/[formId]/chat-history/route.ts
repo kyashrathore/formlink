@@ -43,8 +43,8 @@ export async function GET(
         .maybeSingle();
 
       if (submissionErr) {
-        // Log and proceed (non-blocking)
-        console.warn(
+        // Proceed (non-blocking); log minimal message
+        console.error(
           "[chat-history] Failed to verify submission ownership:",
           submissionErr.message,
         );
@@ -54,7 +54,10 @@ export async function GET(
         completedAt = submissionRec.completed_at;
       }
     } catch (verifyErr) {
-      console.warn("[chat-history] Ownership verify exception:", verifyErr);
+      console.error(
+        "[chat-history] Ownership verify exception:",
+        verifyErr instanceof Error ? verifyErr.message : verifyErr,
+      );
     }
 
     // Fetch messages for this submission
@@ -67,7 +70,7 @@ export async function GET(
     if (error) {
       console.error(
         "[chat-history] Error fetching submission_messages:",
-        error,
+        error.message,
       );
       return NextResponse.json(
         { error: "Failed to fetch chat history" },
@@ -107,7 +110,7 @@ export async function GET(
     if (answersError) {
       console.error(
         "[chat-history] Error fetching form_answers:",
-        answersError,
+        answersError.message,
       );
     }
 
@@ -132,7 +135,10 @@ export async function GET(
       { status: 200 },
     );
   } catch (err) {
-    console.error("[chat-history] Unexpected error:", err);
+    console.error(
+      "[chat-history] Unexpected error:",
+      err instanceof Error ? err.message : err,
+    );
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

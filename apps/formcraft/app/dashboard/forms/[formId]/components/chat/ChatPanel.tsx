@@ -711,6 +711,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             }
             showSuggestions={false}
             onInputChange={handleInputChange}
+            initialModel={selectedModel}
+            onModelChange={setSelectedModel}
           />
         </div>
       )}

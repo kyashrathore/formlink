@@ -69,6 +69,7 @@
     "fast-xml-parser": "^4.4.1",
     "immer": "^10.1.1",
     "jsonata": "^2.0.6",
+    "jsonrepair": "^3.13.1",
     "lodash.debounce": "^4.0.8",
     "lucide-react": "^0.298.0",
     "marked": "^15.0.12",

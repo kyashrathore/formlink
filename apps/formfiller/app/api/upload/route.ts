@@ -66,8 +66,7 @@ export async function POST(request: Request) {
       .upload(filePath, file);
 
     if (uploadError) {
-      console.error("Supabase upload error:", uploadError);
-      console.error("Upload error details:", uploadError);
+      console.error("[upload] Supabase upload error:", uploadError.message);
       return NextResponse.json(
         {
           error: uploadError.message || "Failed to upload file to storage",
@@ -118,7 +117,7 @@ export async function POST(request: Request) {
       .insert(attachmentData);
 
     if (dbError) {
-      console.error("Supabase db insert error:", dbError);
+      console.error("[upload] Supabase db insert error:", dbError.message);
       return NextResponse.json({ error: dbError.message }, { status: 500 });
     }
 
@@ -131,7 +130,10 @@ export async function POST(request: Request) {
       fileSize: file.size,
     });
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error(
+      "[upload] Upload error:",
+      error instanceof Error ? error.message : error,
+    );
     const errorMessage =
       error instanceof Error ? error.message : "An unexpected error occurred";
     return NextResponse.json({ error: errorMessage }, { status: 500 });

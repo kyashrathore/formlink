@@ -1,22 +1,24 @@
 "use client";
 
+import { useChatStore } from "@/components/chat/store/useChatStore";
+import { useChatMessages, useChatStatus } from "@ai-sdk-tools/store";
 import { UIMessage as MessageType } from "@ai-sdk/react";
 import { Form } from "@formlink/schema";
 import {
   Conversation as AIConversation,
-  Message as AIMessage,
   ConversationContent,
   ConversationScrollButton,
-  MessageContent,
 } from "@formlink/ui/ai-elements";
-import { useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
+import { useSlotBridge } from "./hooks/useSlotBridge";
 import { MessageAssistant } from "./message-assistant";
 import { MessageLoading } from "./message-loading";
+import { MessageUser } from "./message-user";
+
+// Not using slot token to drive spinner; status is authoritative.
 
 type ConversationProps = {
   data?: Form | null;
-  messages: MessageType[];
-  status?: "streaming" | "ready" | "submitted" | "error";
   handleFileUpload?: (questionId: string, file: File) => Promise<void>;
   onSubmitSelection?: (
     questionId: string,
@@ -24,59 +26,110 @@ type ConversationProps = {
     displayText: string,
   ) => Promise<void>;
   introBlock?: React.ReactNode;
+  onToolResult?: (toolName: string, result: any) => void;
+  onFirstAssistant?: () => void;
 };
 
-export function Conversation({
-  messages,
-  status = "ready",
+//
+
+const ConversationComponent = ({
   handleFileUpload,
   onSubmitSelection,
   introBlock,
-}: ConversationProps) {
+  onToolResult,
+  onFirstAssistant,
+}: ConversationProps) => {
+  // Localized subscriptions to the chat store
+  const messages = useChatMessages();
+  const status = useChatStatus();
+
   const initialMessageCount = useRef(messages.length);
 
   // Filter out hidden messages
-  const visibleMessages = messages.filter((msg) => {
-    const msgWithHidden = msg as MessageType & { hidden?: boolean };
-    return !msgWithHidden.hidden;
-  });
+  const visibleMessages = useMemo(() => {
+    return messages.filter((msg) => {
+      const msgWithHidden = msg as MessageType & { hidden?: boolean };
+      return !msgWithHidden.hidden;
+    });
+  }, [messages]);
+
+  const lastAssistant = useMemo(() => {
+    return [...visibleMessages].reverse().find((m) => m.role === "assistant");
+  }, [visibleMessages]);
+  const firstAssistantSeenRef = useRef(false);
+  useEffect(() => {
+    if (firstAssistantSeenRef.current) return;
+    const hasAssistant = visibleMessages.some((m) => m.role === "assistant");
+    if (hasAssistant) {
+      firstAssistantSeenRef.current = true;
+      onFirstAssistant?.();
+    }
+  }, [visibleMessages, onFirstAssistant]);
+  const lastAssistantIndex = useMemo(() => {
+    for (let i = visibleMessages.length - 1; i >= 0; i--) {
+      if (visibleMessages[i]?.role === "assistant") return i;
+    }
+    return -1;
+  }, [visibleMessages]);
+
+  const showLoading = status !== "ready";
+  // Intentionally reduce log spam; uncomment if needed
+  // debugLog("Conversation status", { status, lastAssistantId: (lastAssistant as any)?.id, showLoading });
+
+  // Bridge slot token → set currentQuestionId in Zustand (localized here)
+  useSlotBridge({ messages: visibleMessages });
+
+  // Keep global chatHistoryMessages in sync with the UI-visible list
+  const setChatHistoryMessages = useChatStore((s) => s.setChatHistoryMessages);
+  const lastHistorySigRef = useRef<string>("");
+  useEffect(() => {
+    const sig = visibleMessages
+      .map(
+        (m: any) =>
+          `${m.id}:${m.role}:${Array.isArray(m.parts) ? m.parts.length : 0}`,
+      )
+      .join("#");
+    if (sig !== lastHistorySigRef.current) {
+      setChatHistoryMessages(visibleMessages);
+      lastHistorySigRef.current = sig;
+    }
+  }, [visibleMessages, setChatHistoryMessages]);
+
+  // Removed live tool application; tools are applied in onFinish for stability.
 
   return (
     <AIConversation className="relative flex h-[calc(75vh)] w-full overflow-y-auto overflow-x-hidden">
       <ConversationContent className="flex w-full flex-col items-center">
         {visibleMessages.length === 0 && status !== "streaming" && introBlock}
         {visibleMessages?.map((message, index) => {
-          const isLast =
+          const msgKey = String(
+            (message as any)?.id ??
+              `mi-${index}-${message.role}-${Array.isArray((message as any)?.parts) ? (message as any).parts.length : 0}`,
+          );
+          const isLastMessage =
             index === visibleMessages.length - 1 && status !== "submitted";
           const hasScrollAnchor =
-            isLast && messages.length > initialMessageCount.current;
+            isLastMessage && messages.length > initialMessageCount.current;
+          const isLastAssistant =
+            message.role === "assistant" && index === lastAssistantIndex;
 
           if (message.role === "user") {
             return (
-              <AIMessage
-                key={message.id}
-                from="user"
-                className="w-full max-w-3xl"
-              >
-                <MessageContent>
-                  {message.parts?.map((part: any, i: number) => {
-                    if (part.type === "text") {
-                      return <div key={i}>{part.text}</div>;
-                    }
-                    return null;
-                  })}
-                </MessageContent>
-              </AIMessage>
+              <MessageUser
+                key={msgKey}
+                id={String(message.id)}
+                message={message}
+                hasScrollAnchor={hasScrollAnchor}
+              />
             );
           }
 
           if (message.role === "assistant") {
-            // Use the existing MessageAssistant component to preserve question rendering
             return (
               <MessageAssistant
-                key={message.id}
+                key={msgKey}
                 message={message}
-                isLast={isLast}
+                isLast={isLastAssistant}
                 hasScrollAnchor={hasScrollAnchor}
                 handleFileUpload={handleFileUpload}
                 onSubmitSelection={onSubmitSelection}
@@ -86,11 +139,25 @@ export function Conversation({
 
           return null;
         })}
-        {(status === "submitted" || status === "streaming") && (
-          <MessageLoading />
-        )}
+        {showLoading && <MessageLoading />}
       </ConversationContent>
       <ConversationScrollButton />
     </AIConversation>
   );
+};
+
+function areConversationPropsEqual(
+  prev: ConversationProps,
+  next: ConversationProps,
+): boolean {
+  if (prev.handleFileUpload !== next.handleFileUpload) return false;
+  if (prev.onSubmitSelection !== next.onSubmitSelection) return false;
+  if (prev.onToolResult !== next.onToolResult) return false;
+  if (prev.introBlock !== next.introBlock) return false;
+  return true;
 }
+
+export const Conversation = React.memo(
+  ConversationComponent,
+  areConversationPropsEqual,
+);

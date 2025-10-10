@@ -130,9 +130,9 @@ function ChartCard({
   const description =
     (args?.description as string | undefined) ?? getDescription(type, args)
   const isTextSpec = type === "text" || type === "summary"
-  const [summaries, setSummaries] = React.useState< 
+  const [summaries, setSummaries] = React.useState<
     Array<{ title?: string; content: string }>
-  >([] )
+  >([])
   const [loading, setLoading] = React.useState<boolean>(false)
   const content = String(args?.content || "").trim()
 
@@ -280,7 +280,7 @@ function ChartCard({
                         <ChartTooltipContent
                           labelKey="day"
                           nameKey="name"
-                          formatter={(val: number) => (
+                          formatter={(val: any) => (
                             <span className="flex w-full items-center justify-between gap-2">
                               <span className="text-muted-foreground">
                                 Responses
@@ -327,7 +327,7 @@ function ChartCard({
                         <ChartTooltipContent
                           labelKey="day"
                           nameKey="name"
-                          formatter={(val: number) => (
+                          formatter={(val: any) => (
                             <span className="flex w-full items-center justify-between gap-2">
                               <span className="text-muted-foreground">
                                 Responses
@@ -368,7 +368,7 @@ function ChartCard({
                         <ChartTooltipContent
                           labelKey="day"
                           nameKey="name"
-                          formatter={(val: number) => (
+                          formatter={(val: any) => (
                             <span className="flex w-full items-center justify-between gap-2">
                               <span className="text-muted-foreground">
                                 Responses
@@ -411,7 +411,7 @@ function ChartCard({
       data.reduce((set: Set<string>, d: any) => {
         Object.keys(d.series || {}).forEach((k) => set.add(k))
         return set
-      }, new Set<string>()) 
+      }, new Set<string>())
     )
     const config: ChartConfig = {}
     seriesKeys.forEach((k, idx) => {
@@ -466,7 +466,7 @@ function ChartCard({
                       <ChartTooltipContent
                         labelKey="day"
                         nameKey="name"
-                        formatter={(val: number) => (
+                        formatter={(val: any) => (
                           <span className="flex w-full items-center justify-between gap-2">
                             <span className="text-muted-foreground">
                               Responses
@@ -515,7 +515,7 @@ function ChartCard({
                       <ChartTooltipContent
                         labelKey="day"
                         nameKey="name"
-                        formatter={(val: number) => (
+                        formatter={(val: any) => (
                           <span className="flex w-full items-center justify-between gap-2">
                             <span className="text-muted-foreground">
                               Responses
@@ -566,7 +566,7 @@ function ChartCard({
                       <ChartTooltipContent
                         labelKey="day"
                         nameKey="name"
-                        formatter={(val: number) => (
+                        formatter={(val: any) => (
                           <span className="flex w-full items-center justify-between gap-2">
                             <span className="text-muted-foreground">
                               Responses
@@ -674,7 +674,13 @@ function ChartCard({
                       <ChartTooltipContent
                         labelKey="name"
                         nameKey="name"
-                        formatter={(val: number, name: string, _item: any, _idx: number, payload: any) => {
+                        formatter={(
+                          val: any,
+                          name: any,
+                          _item?: any,
+                          _idx?: number,
+                          payload?: any
+                        ) => {
                           const payloadName = Array.isArray(payload)
                             ? payload[0]?.name
                             : typeof payload === "object" && payload !== null
@@ -841,7 +847,13 @@ function ChartCard({
                         <ChartTooltipContent
                           labelKey="name"
                           nameKey="name"
-                          formatter={(val: number, name: string, _item: any, _idx: number, payload: any) => {
+                          formatter={(
+                            val: any,
+                            name: any,
+                            _item?: any,
+                            _idx?: number,
+                            payload?: any
+                          ) => {
                             const payloadName = Array.isArray(payload)
                               ? payload[0]?.name
                               : typeof payload === "object" && payload !== null
@@ -889,7 +901,7 @@ function ChartCard({
       data.reduce((set: Set<string>, d: any) => {
         Object.keys(d.series || {}).forEach((k) => set.add(k))
         return set
-      }, new Set<string>()) 
+      }, new Set<string>())
     )
     const config: ChartConfig = {}
     seriesKeys.forEach((k, idx) => {
@@ -932,7 +944,13 @@ function ChartCard({
                     <ChartTooltipContent
                       labelKey="name"
                       nameKey="name"
-                      formatter={(val: number, name: string, _item: any, _idx: number, payload: any) => {
+                      formatter={(
+                        val: any,
+                        name: any,
+                        _item?: any,
+                        _idx?: number,
+                        payload?: any
+                      ) => {
                         const payloadName = Array.isArray(payload)
                           ? payload[0]?.name
                           : typeof payload === "object" && payload !== null

@@ -46,18 +46,7 @@ export default async function PreviewPage({
         />
       ) : null}
       <script dangerouslySetInnerHTML={{ __html: initialThemeScript }} />
-      <script
-        // diagnostics: log SSR theme presence in preview iframe before hydration
-        dangerouslySetInnerHTML={{
-          __html: `try{(function(){
-            var st=document.getElementById('initial-formlink-theme');
-            var len=st&&st.textContent?st.textContent.length:0;
-            var hasDark=st&&/\.dark\s*\{/.test(st.textContent||'');
-            var vsn = (function(){try{var fs=${JSON.stringify(formSchema)};return fs.version_id===fs.current_draft_version_id?'draft':'published';}catch{return 'unknown'}})();
-            console.info('[Formlink][SSR][Preview] injected', { cssLength: len, hasDark: !!hasDark, themeMode: ${JSON.stringify(themeMode)}, versionStatus: vsn });
-          })()}catch(e){console.warn('[Formlink][SSR][Preview] diag error',e)};`,
-        }}
-      />
+      {/* diagnostics script removed (logs) */}
       <PreviewPageClient
         formSchema={formSchema}
         isTestSubmission={isTestSubmission}

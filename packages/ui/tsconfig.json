@@ -4,15 +4,19 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"],
-      "@formlink/ui/*": ["./src/*"]
+      "@formlink/ui/*": ["./src/ui/*", "./src/*"]
     },
     "outDir": "./dist",
     "rootDir": "./src"
   },
-  "include": [
-    "src/**/*",
-    "!src/base/**/*",
-    ".storybook/**/*.ts"
-  ],
-  "exclude": ["node_modules", "dist", "src/base/**/*", "**/*.stories.tsx"]
+  "include": ["src/**/*", "!src/base/**/*", ".storybook/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/base/**/*",
+    "**/*.stories.tsx",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/__tests__/**/*"
+  ]
 }

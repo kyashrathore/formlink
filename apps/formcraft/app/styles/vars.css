@@ -5,4 +5,3 @@
   /* Backward-compat for existing usage in dashboard/layout.tsx */
   --h-app-header: var(--header-height);
 }
-

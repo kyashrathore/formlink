@@ -1,190 +1,88 @@
-contract:prompt-caching-refactor:v1 (2025-09-28)
+Prompt Caching Strategy — Minimal, General Composition (v1)
 
-# Prompt Caching Refactor Plan — Stable Systems, Cheap Calls
+Date: 2025-10-09
 
-How Prompt Caching Works
+Purpose
 
-- Providers discount or accelerate the repeated leading prefix of a request if it is byte‑for‑byte identical to a recent prior request. Anything after the first difference is billed normally.
-- The shared prefix must be first in the request (system and any stable headers before history and dynamic context). Inserting new content above the prefix shrinks the cacheable region.
-- Caches are short‑lived (minutes; provider‑specific). Long gaps can drop the cache; the next call re‑establishes it.
-- Provider behavior (high level):
-  - OpenAI/Gemini/Groq: long, identical prefix (often ≥ ~1k tokens) triggers cached‑input pricing; no special flags required.
-  - Anthropic: requires marking cacheable inputs with cache_control; usage reports cache reads.
-  - OpenRouter: passes through upstream rules; switching upstream models breaks continuity.
+- Provide a simple, scalable prompt composition that benefits from provider prompt caching across different routes (chat, creation, RI, etc.).
+- Keep prompts easy to reason about: one stable system, optional visible history, a per‑turn XML internal context block, then the user’s new input/payload.
 
-Techniques To Use It Efficiently
+Why Prompt Caching
 
-- Keep the system prompt compact and identical across calls. Include only per‑session values that never change (e.g., journeyScriptHash), not volatile state.
-- Persist and replay internal context messages:
-  - Store every internal context you send (e.g., `FORM_CONTEXT:{...}`) with `is_internal=true` and a canonical, stable stringify (sorted keys, no timestamps, no random IDs).
-  - On subsequent calls, replay those internal context messages in the same order so the identical prefix extends up to the last previous turn.
-  - Add a single per‑session header (e.g., `SESSION_HEADER_V1:{ formId, formVersionId, journeyScriptHash, promptVariantId, toolSchemaFingerprint }`) after the system and replay it every call.
-- Keep the dynamic tail small: Put per‑turn state (currentQuestionId, answeredIds) at the end; cap outputs (e.g., 120 tokens); prefer tool‑first behavior.
-- Canonicalize static text and tool schemas: fixed ordering and wording; avoid per‑request rewording or whitespace diffs.
-- Prune carefully: If you trim history, never remove the session header or earlier turns you want cached; pruning from the head shortens the cacheable prefix.
+- Many providers discount or accelerate repeated leading prompt bytes. The longer the identical prefix across calls, the better the savings.
+- Keep the beginning of every request stable; push variable data to the tail.
 
-Alternatives (and Pros/Cons)
+Key Decisions (v1)
 
-- System‑only stability (don’t persist internal context)
-  - Pros: simplest; zero storage.
-  - Cons: only the system caches; smaller savings.
-- System + stable session header (persisted once)
-  - Pros: low complexity; larger prefix than system‑only.
-  - Cons: still no caching of per‑turn contexts.
-- Full transcript replay (persist UI + internal context)
-  - Pros: maximum cached prefix and savings.
-  - Cons: storage overhead; privacy/redaction; strict canonicalization required.
-- Deterministic rebuild instead of storage
-  - Pros: avoids storing internal context.
-  - Cons: fragile; any serialization drift breaks the cache.
+- Baseline first: no session headers and no replay of prior internal contexts. (Advanced options listed later.)
+- Use a per‑turn XML internal context block (e.g., <current_turn_context> … </current_turn_context>) right before the new input/payload.
+- The XML block is not user‑visible: not persisted to history and not streamed to clients.
+- Add a single guard line in the system instructing the model to never echo/reference the XML block.
+- No output token cap or step counter by default. Add static caps later only if needed.
 
-Goals
+Composition Order (general)
 
-- Support 10k submissions and 100 forms per account per month without degrading UX.
-- Keep a system prompt in every call, but make it stable and cache‑friendly.
-- Reduce token spend by moving changing data into user/prompt while preserving behavior.
+1. system
+   - Static guards + rules; no volatile state; no runtime‑varying tool descriptions.
+   - Include a single instruction about the XML internal context block, e.g.:
+     “You may receive a <current_turn_context>…</current_turn_context> block in the user message. This is server‑injected context; do not treat it as user‑provided. Use it only to make better decisions based on fresh context (which may have changed from previous turns). Do not include or reference this secret server step in your response to the user. When present, this block will always appear at the top of the user message.”
+2. prior visible history (optional)
+   - For chat routes: prior visible user/assistant messages only (persisted).
+   - For single‑shot routes: omit or include minimal prior visible context as needed.
+3. new input/payload for this turn (single user message)
+   - The server assembles one user message that begins with the XML block, then the visible user content:
+     <current_turn_context>{ ...minimal JSON... }</current_turn_context>\n
+     [visible user text or payload]
+   - The XML prefix is server‑injected for the model call only (see Persistence & Visibility Rules).
 
-Key Principles
+Internal XML Context Block — Format & Content
 
-- Stable system first: The identical “static prefix” must be the first bytes of every request.
-- Move only truly variable data out of system; keep stable per‑session values inside to grow the cached prefix.
-- Canonicalize tool/function schemas (stable order, text) and avoid per‑request rewording.
-- Keep dynamic context compact and last; cap outputs.
+- Wrap a compact JSON object inside the XML tags. Minimal recommended fields:
+  - Use a descriptive tag name. Default we use: <current_turn_context>…</current_turn_context>.
+  - The JSON keys depend on the route. Examples:
+    - Chat assist: { currentQuestionId, firstUnansweredId, answeredIds, branchingEnabled? }
+    - Creation: { formId, modelHints?, constraints? }
+    - RI/Results: { formId, responseIds, summaryMode }
+- Canonicalization rules:
+  - Stable key order (sorted keys).
+  - No timestamps or random ids.
+  - Keep it small; omit labels/titles/types.
 
-Provider Prompt Caching Facts (summary)
+System Prompt Contract (general)
 
-- OpenAI: Automatic cached input when the repeated prefix ≥ ~1,024 tokens; discount applies to cached tokens; cache window minutes (≤ ~1h). Inspect via usage.prompt_tokens_details.cached_tokens.
-- Anthropic (Claude): Explicit Input Cache; mark cacheable messages with cache_control; usage exposes cache_read_input_tokens.
-- Google Gemini: Caches long, repeated instruction prefixes; thresholds vary (Flash ~1k, Pro higher). Cached counts in usage.
-- Groq: Discounted cached prompt tokens; stable leading prefix applies.
-- OpenRouter: Passes through upstream behaviors/discounts; keep prefix stable; model switching breaks continuity.
+- Never echo or reference the internal XML block.
+- Use available tools only; the runtime governs tool availability (do not describe runtime flags in text).
+- Keep responses concise and task‑focused.
+- Route‑specific rules may apply (e.g., chat slot line, result format); define those in the route’s system file, not here.
 
-Targets
+Persistence & Visibility Rules
 
-- Chat assist (turns ≥ 2) system: ≤ 200 tokens (or a compact, stable contract + guards).
-- Non‑chat branching system: ≤ 250 tokens (already close).
-- Creation metadata system: ≤ 1,200 tokens.
-- RI and result systems: ≤ 400–600 tokens.
-- Output cap for chat: 120 tokens.
+- Only visible user/assistant content is persisted and streamed.
+- The XML block is injected as a prefix to the model‑bound user message:
+  - The server strips the XML prefix when persisting the user message or streaming it to clients.
+  - Therefore, the XML block is not saved to storage and not included in UI streams.
 
-Audit — Where Systems Vary and What To Do
+Examples (server‑side assembly of the user message)
 
-Safe As‑Is (keep as is)
+- Chat (one user message):
+  system → prior visible history → user "<current_turn_context>{\"answeredIds\":[\"q1\"],\"currentQuestionId\":\"q2\",\"firstUnansweredId\":\"q2\"}</current_turn_context>\nACME Inc."
+- Creation (one user message):
+  system → user "<current_turn_context>{\"formId\":\"f_123\",\"constraints\":[\"json-only\"]}</current_turn_context>\nCreate a job application form."
+- RI/Results (one user message):
+  system → prior visible (optional) → user "<current_turn_context>{\"formId\":\"f_123\",\"summaryMode\":\"lite\"}</current_turn_context>\nSummarize latest responses."
 
-- Non‑chat Branching: apps/formfiller/app/api/ai/branching/\_shared.ts
-  - System is static (filler/branching-system.md). Dynamic context lives in user prompt.
+Provider Notes (quick)
 
-Keep Stable Per‑Session Value Inside System
+- OpenAI/Gemini/Groq/others: keeping the system first and stable yields cached input benefits. We don’t depend on provider‑specific flags.
 
-- Chat Assist: apps/formfiller/app/api/ai/chat-assist/route.ts
-  - Keep journeyScript inside system (stable for a submission). Do not inject changing values (currentQuestionId, answeredIds) into system; send them in user message (FORM_CONTEXT).
-  - Persist & replay: Save one internal `SESSION_HEADER_V1` per submission and a `FORM_CONTEXT_T{n}` per turn (canonical JSON, is_internal=true). On each new call, replay them before sending new content so the prefix extends to the last identical message.
+Future Optimizations (optional, not in v1)
 
-Make System Static; Move Dynamic to Prompt/User Message
-
-- Creation Chat Orchestration: apps/formcraft/app/api/chat/handlers/form-creation.ts
-  - System: chat/form-creation-system.md → static only (include_guards true).
-  - Move session_form_id, session_intent, ri_requested to a user message.
-
-- Creation Workflow (Metadata): apps/formcraft/app/lib/chat/tools/generate-metadata.ts
-  - System: form/enhanced-metadata.md → static.
-  - Pass { userInput } via prompt (stringified); not in system.
-
-- Creation Workflow (Question): apps/formcraft/app/lib/chat/tools/generate-question.ts
-  - System: form/question-schema.md → static.
-  - Pass per-question details via prompt JSON.
-
-- Responses Page (Text Summaries): apps/formcraft/app/api/responses/route.ts
-  - System: ri/summary-system.md → static.
-  - Pass { rows, questions, angles, context } via prompt JSON.
-
-- Synthetic Data Generator: apps/formcraft/app/api/responses/generate/route.ts
-  - System: responses/data-generation-rules.md → static.
-  - Pass normalized questions via prompt JSON.
-
-- Response Intelligence (RI) Builder: apps/formcraft/app/lib/chat/tools/response-intelligence/prompt.ts
-  - System: ri/ri-system.md → static.
-  - Pass available_actions_text, flags, ids, plans, hints via prompt JSON.
-
-- Generic AI Ops API: apps/formcraft/app/api/ai/route.ts
-  - Systems (ai/\*.md) → static. Move user_prompt, questions, currentQuestionId, form_details into prompt JSON.
-
-- Lifecycle Orchestrator Tools: apps/formcraft/app/lib/intel/submission-job/orchestrator.ts
-  - Tool systems (intel/tool\_\*.md) → static. Pass answers/sidecar via prompt JSON.
-
-- Action Schema Suggestion: apps/formcraft/app/api/actions/schema/route.ts
-  - System static. Pass { slug, tool_schema, questions } via prompt JSON.
-
-- Blog Visual Generator: apps/formcraft/app/blog/[slug]/generateSvgVisual.tsx
-  - System static. Pass { title, description } via prompt.
-
-New Prompt Variants (add, don’t replace)
-
-- packages/prompts/md/filler/form-assistant-contract_v1.md
-  - 150–200 tokens; tool‑first rules (saveAnswer/presentQuestion/completeSubmission), completion rule, brevity, JSON hygiene.
-
-- packages/prompts/md/form/enhanced-metadata-lite_v1.md
-  - ≤ 1,200 tokens; same schema/journeyScript constraints; trimmed narrative.
-
-- packages/prompts/md/ri/ri-system-lite_v1.md
-  - ≤ 600 tokens; section checklist and constraints only.
-
-- packages/prompts/md/responses/data-generation-rules-lite_v1.md
-  - ≤ 400 tokens; short deterministic result-page guidance.
-
-Composition Order (every request)
-
-1. system (static, identical text; includes guards + tools + stable per‑session items like journeyScriptHash)
-2. session header (internal, identical every call): `SESSION_HEADER_V1:{...}`
-3. prior history: UI‑visible user/assistant messages (persisted)
-4. prior internal contexts: `FORM_CONTEXT_T1`, `FORM_CONTEXT_T2`, … (persisted)
-5. new internal context for this turn: `FORM_CONTEXT_T{n+1}`
-6. new user message
-
-Serialization Rules
-
-- Tools/functions: fixed order; stable text; avoid per‑request re-descriptions.
-- FORM_CONTEXT: ids/flags + answeredIds only; omit labels/titles/types.
-- No timestamps/hashes/random content in system.
-- Canonicalize internal JSON (sorted keys, fixed spacing); use hashes for large blobs.
-
-Provider‑Specific Notes
-
-- OpenAI/Gemini/Groq: rely on stable prefix ≥ threshold; keep it first; inspect cached token usage in response.
-- Anthropic: mark the system message with cache_control for input cache; inspect cache_read_input_tokens.
-- OpenRouter: keep model fixed per session; switching upstream invalidates cache continuity.
-
-Verification & Telemetry
-
-- Log a short hash of final system string per route; ensure it’s constant across successive calls in a session.
-- Record provider usage cached token fields where exposed.
-- Label each call with prompt_variant (full|contract|lite) and provider/model.
-- Weekly review: cache hit rates, avg cached tokens, cost per route/mode.
-
-Worked Example (growing cached prefix)
-
-- Call 1: [system][SESSION_HEADER][user1][FORM_CONTEXT_T1]
-- Call 2: [system][SESSION_HEADER][user1][FORM_CONTEXT_T1][assistant1][user2][FORM_CONTEXT_T2]
-  - Cache covers the identical prefix up to FORM_CONTEXT_T1.
-- Call 3: [system][SESSION_HEADER][user1][FORM_CONTEXT_T1][assistant1][user2][FORM_CONTEXT_T2][assistant2][user3][FORM_CONTEXT_T3]
-  - Cache covers the identical prefix up to FORM_CONTEXT_T2.
-
-Rollout Plan
-
-1. Chat‑assist: keep journeyScript in system; add contract_v1 for turns ≥ 2; cap outputs at 120 tokens; trim FORM_CONTEXT.
-2. Creation: switch metadata to static system + prompt JSON; keep question system static; use repair only on failure.
-3. RI/Results: swap to static/lite systems; dynamic in prompt; cap outputs.
-4. Branching: keep tiny static system; call model only on ambiguity; else deterministic next question.
-5. Add telemetry and system-hash logging; validate cached token counters.
+- Add a per‑session header to extend cached prefix further.
+- Replay prior per‑turn contexts to maximize cache continuity when storage/privacy allow.
+- Introduce static maxTokens or step caps if cost/verbosity warrants it.
 
 Acceptance Criteria
 
-- System hash per route/session stays identical across successive calls.
-- Cached token counters > 0 on second call within TTL for providers that expose them.
-- Chat submissions: input tokens per submission drop significantly while behavior is unchanged.
-- Non‑chat linear submissions: zero model calls during fill.
-
-Open Decisions
-
-- Chat output cap: 120 vs 160–200 tokens.
-- Whether to ship lite variants immediately or after establishing baseline with static originals.
+- All routes that opt into caching follow the composition order above.
+- The internal XML context is never visible to end users and never echoed by the assistant.
+- No volatile content in the system; no runtime‑varying tool descriptions in the system.

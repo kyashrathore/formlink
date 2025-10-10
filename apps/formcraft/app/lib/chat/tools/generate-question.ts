@@ -1,6 +1,7 @@
 import { generateObject } from "@/app/lib/ai/tracing"
 import { loadPrompt } from "@formlink/prompts"
 import { Question, QuestionSchema } from "@formlink/schema"
+import { jsonrepair } from "jsonrepair"
 import { getModel } from "../../ai/provider"
 import { createAgentEvent } from "../../types/agent-events"
 
@@ -95,7 +96,8 @@ export async function generateQuestion(
       if (remainingRepairs-- <= 0) return null
       let parsed: any = null
       try {
-        parsed = JSON.parse(text)
+        const fixed = jsonrepair(text)
+        parsed = JSON.parse(fixed)
       } catch {
         parsed = text
       }

@@ -3,7 +3,6 @@ import { APP_NAME } from "@/app/lib/config"
 import { createServerClient, Database } from "@formlink/db"
 import { cookies } from "next/headers"
 import Link from "next/link"
-import React from "react"
 import FormlinkLogo from "../FormlinkLogo"
 import { AppInfo } from "./app-info"
 import UserMenu from "./user-menu"
@@ -33,7 +32,7 @@ export async function Header({ className }: { className?: string }) {
   return (
     <header
       className={cn(
-        "h-app-header bg-background fixed top-0 right-0 left-0 z-50 border-b",
+        "h-app-header bg-background border-border fixed top-0 right-0 left-0 z-50 h-12 border-b",
         className
       )}
     >

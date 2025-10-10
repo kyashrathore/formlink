@@ -87,19 +87,7 @@ export default async function FormPage({
         />
       ) : null}
       <script dangerouslySetInnerHTML={{ __html: initialThemeScript }} />
-      <script
-        // diagnostics: log SSR theme presence before hydration
-        dangerouslySetInnerHTML={{
-          __html: `try{(function(){
-            var st=document.getElementById('initial-formlink-theme');
-            var len=st&&st.textContent?st.textContent.length:0;
-            var hasDark=st&&/\.dark\s*\{/.test(st.textContent||'');
-            var fs=${JSON.stringify(formSchema)};
-            var vsn = (function(){try{return fs.version_id===fs.current_draft_version_id?'draft':'published';}catch{return 'unknown'}})();
-            console.info('[Formlink][SSR][Public] injected', { cssLength: len, hasDark: !!hasDark, themeMode: ${JSON.stringify(themeMode)}, versionStatus: vsn, brandId: fs.brand_id || null });
-          })()}catch(e){console.warn('[Formlink][SSR][Public] diag error',e)};`,
-        }}
-      />
+      {/* diagnostics script removed (logs) */}
       <FormPageClient
         formSchema={formSchema}
         isTestSubmission={isTestSubmission}

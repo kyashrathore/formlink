@@ -63,8 +63,10 @@ export async function POST(req: Request) {
       success: true,
     });
   } catch (error) {
-    console.error("Branching API error:", error);
-
+    console.error(
+      "[branching] API error:",
+      error instanceof Error ? error.message : error,
+    );
     return NextResponse.json(
       {
         error: "Internal server error",

@@ -1,8 +1,9 @@
 "use client";
 
 import { Conversation } from "@/components/chat/conversation";
+import { AiIntroScreen } from "@/components/chat/AiIntroScreen";
 import { useChatStore } from "@/components/chat/store/useChatStore";
-import { useChat } from "@ai-sdk/react";
+import { useChat } from "@ai-sdk-tools/store";
 import { Form } from "@formlink/schema";
 import { Alert, AlertDescription, Button } from "@formlink/ui";
 import {
@@ -15,7 +16,7 @@ import {
 import { DefaultChatTransport } from "ai";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useFormSession } from "../../hooks/useFormSession";
 import { useRedirect } from "../../hooks/useRedirect";
 import { apiConfig, apiServices } from "../../lib/api-config";
@@ -24,6 +25,9 @@ import type {
   QueryDataForForm,
   QuestionResponse,
 } from "../../lib/types";
+import { shallow } from "zustand/shallow";
+import { debugLog } from "@/components/chat/utils/debug";
+// Chat state is managed by @ai-sdk-tools/store globally to avoid prop-driven re-renders
 
 type FormAIComponentProps = {
   formId: string;
@@ -38,11 +42,12 @@ export default function FormAIComponent({
   isTestSubmission,
   queryDataForForm,
 }: FormAIComponentProps) {
-  const store = useChatStore();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showRetry, setShowRetry] = useState(false);
   const [isInFallbackMode] = useState(false);
   const [input, setInput] = useState("");
+  const [introDismissed, setIntroDismissed] = useState(false);
+  const [awaitingFirstResponse, setAwaitingFirstResponse] = useState(false);
 
   // Convert queryDataForForm to proper QuestionResponse format
   const normalizeQueryData = (
@@ -79,7 +84,65 @@ export default function FormAIComponent({
     currentInputs,
     setChatHistoryMessages,
     setCurrentInput,
-  } = store;
+    setCurrentQuestionId,
+    submissionId: storeSubmissionId,
+    formId: storeFormId,
+  } = useChatStore(
+    (state) => ({
+      formDisplayState: state.formDisplayState,
+      currentQuestionId: state.currentQuestionId,
+      chatHistoryMessages: state.chatHistoryMessages,
+      processAssistantResponse: state.processAssistantResponse,
+      setFormDisplayState: state.setFormDisplayState,
+      setLastError: state.setLastError,
+      currentInputs: state.currentInputs,
+      setChatHistoryMessages: state.setChatHistoryMessages,
+      setCurrentInput: state.setCurrentInput,
+      setCurrentQuestionId: state.setCurrentQuestionId,
+      submissionId: state.submissionId,
+      formId: state.formId,
+    }),
+    shallow,
+  );
+
+  const submissionId = storeSubmissionId;
+
+  // Helper to apply a single tool result consistently (reused across live processing and final onFinish)
+  const applyToolResult = React.useCallback(
+    (toolName: string, result: any) => {
+      if (!result || typeof toolName !== "string") return;
+
+      const validToolNames = ["saveAnswer", "completeSubmission"];
+      if (!validToolNames.includes(toolName)) {
+        return;
+      }
+
+      try {
+        if (toolName === "saveAnswer") {
+          if (
+            result?.saved &&
+            typeof result?.questionId === "string" &&
+            result?.questionId.trim() &&
+            result?.value !== undefined
+          ) {
+            setCurrentInput(result.questionId, result.value);
+          }
+          if (
+            typeof result?.nextQuestionId === "string" &&
+            result.nextQuestionId.trim()
+          ) {
+            setCurrentQuestionId(result.nextQuestionId);
+          }
+        } else if (toolName === "completeSubmission") {
+          setFormDisplayState("completed");
+          // Don't clear persisted state - allow refreshing completed forms to show history
+        }
+      } catch {
+        // swallow applyToolResult errors; UI shows status via state
+      }
+    },
+    [setCurrentInput, setCurrentQuestionId, setFormDisplayState],
+  );
 
   // Debug: Check what URL is being used
   const chatAssistUrl = apiConfig.getChatAssistUrl();
@@ -89,53 +152,15 @@ export default function FormAIComponent({
       api: chatAssistUrl,
     }),
     onFinish: (data: any) => {
+      debugLog("chat-onFinish", {
+        partsCount: Array.isArray(data?.message?.parts)
+          ? data.message.parts.length
+          : Array.isArray((data as any)?.parts)
+            ? (data as any).parts.length
+            : undefined,
+      });
       const message = data.message || data;
       processAssistantResponse();
-
-      // Helper to apply a single tool result consistently
-      const applyToolResult = (toolName: string, result: any) => {
-        if (!result || typeof toolName !== "string") return;
-
-        // Validate tool name is expected
-        const validToolNames = [
-          "saveAnswer",
-          "presentQuestion",
-          "completeSubmission",
-        ];
-        if (!validToolNames.includes(toolName)) {
-          console.warn(`Unknown tool name: ${toolName}`);
-          return;
-        }
-
-        try {
-          if (toolName === "saveAnswer") {
-            if (
-              result?.saved &&
-              typeof result?.questionId === "string" &&
-              result?.questionId.trim() &&
-              result?.value !== undefined
-            ) {
-              setCurrentInput(result.questionId, result.value);
-            }
-            if (
-              typeof result?.nextQuestionId === "string" &&
-              result.nextQuestionId.trim()
-            ) {
-              store.setCurrentQuestionId(result.nextQuestionId);
-            }
-          } else if (toolName === "presentQuestion") {
-            const qid = result?.questionId;
-            if (typeof qid === "string" && qid.trim()) {
-              store.setCurrentQuestionId(qid);
-            }
-          } else if (toolName === "completeSubmission") {
-            setFormDisplayState("completed");
-            // Don't clear persisted state - allow refreshing completed forms to show history
-          }
-        } catch (error) {
-          console.error(`Error applying tool result for ${toolName}:`, error);
-        }
-      };
 
       // Prefer AI SDK v5 parts[] shape
       const parts = Array.isArray(message?.parts) ? message.parts : [];
@@ -143,7 +168,7 @@ export default function FormAIComponent({
       if (parts.length > 0) {
         parts.forEach((part: any) => {
           try {
-            // tool parts look like: { type: "tool-saveAnswer" | "tool-presentQuestion" | "tool-completeSubmission", state, input, output }
+            // tool parts look like: { type: "tool-saveAnswer" | "tool-completeSubmission", state, input, output }
             if (
               typeof part?.type === "string" &&
               part.type.startsWith("tool-")
@@ -152,8 +177,8 @@ export default function FormAIComponent({
               const result = part.output ?? part.result;
               applyToolResult(toolName, result);
             }
-          } catch (error) {
-            console.error("Error processing part:", part, error);
+          } catch {
+            // swallow part processing errors
           }
         });
       }
@@ -168,8 +193,8 @@ export default function FormAIComponent({
                 toolCall.result ?? toolCall.output,
               );
             }
-          } catch (error) {
-            console.error("Error processing toolInvocation:", toolCall, error);
+          } catch {
+            // swallow tool invocation errors
           }
         });
       }
@@ -178,7 +203,7 @@ export default function FormAIComponent({
       setShowRetry(false);
     },
     onError: (error: ChatError) => {
-      console.error("Chat error:", error);
+      debugLog("chat-onError", { message: error?.message });
 
       // Handle different error types
       if (error.message?.includes("Rate limit")) {
@@ -200,109 +225,142 @@ export default function FormAIComponent({
   });
 
   const chatResult = chat;
-  const { messages, setMessages, sendMessage, status } = chatResult;
+  const { setMessages, sendMessage, status } = chatResult;
 
-  // Inject a one-time welcome assistant message when no history is present
-  const hasWelcomeInjectedRef = useRef(false);
+  // Keep FormAIComponent detached from chat message updates to avoid re-rendering the whole tree.
+
   useEffect(() => {
-    if (isLoading) return;
-    if (hasWelcomeInjectedRef.current) return;
-    const noHistory = (chatHistoryMessages?.length ?? 0) === 0;
-    if (noHistory && messages.length === 0) {
-      const title = formSchema?.title || "Welcome";
-      const desc =
-        typeof formSchema?.description === "string"
-          ? formSchema.description
-          : "";
-      const endings = [
-        "Shall we begin?",
-        "Are you ready to get started?",
-        "Ready to begin?",
-        "Shall we get started?",
-        "Let's begin!",
-      ];
-      const ending = endings[Math.floor(Math.random() * endings.length)];
-      const base = desc
-        ? `Hello! Welcome to ${title}. ${desc}`
-        : `Hello! Welcome to ${title}.`;
-      const text = `${base} ${ending}`;
-      const welcomeMsg: any = {
-        id: "welcome",
-        role: "assistant",
-        parts: [{ type: "text", text }],
-      };
-      setMessages([welcomeMsg]);
-      setChatHistoryMessages([welcomeMsg]);
-      hasWelcomeInjectedRef.current = true;
+    debugLog("chat-status", { status });
+  }, [status]);
+
+  // Slot bridging is handled inside Conversation to localize reactivity.
+
+  // Log status changes only when they change (reduce noise)
+  const prevStatusRef = React.useRef<typeof status | null>(null);
+  React.useEffect(() => {
+    if (prevStatusRef.current !== status) {
+      debugLog("status-change", { from: prevStatusRef.current, to: status });
+      prevStatusRef.current = status;
     }
-  }, [
-    isLoading,
-    chatHistoryMessages,
-    messages.length,
-    setMessages,
-    setChatHistoryMessages,
-    formSchema,
-  ]);
+  }, [status]);
+
+  const lifecycleLogRef = React.useRef<{
+    status: string;
+    lastAssistantId: string | null;
+    lastAssistantHasSlot: boolean;
+    messageCount: number;
+  }>({
+    status,
+    lastAssistantId: null,
+    lastAssistantHasSlot: false,
+    messageCount: 0,
+  });
+
+  React.useEffect(() => {
+    const nextSnapshot = {
+      status,
+      lastAssistantId: null,
+      lastAssistantHasSlot: false,
+      messageCount: 0,
+    };
+    const prevSnapshot = lifecycleLogRef.current;
+    if (
+      prevSnapshot.status !== nextSnapshot.status ||
+      prevSnapshot.lastAssistantId !== nextSnapshot.lastAssistantId ||
+      prevSnapshot.lastAssistantHasSlot !== nextSnapshot.lastAssistantHasSlot ||
+      prevSnapshot.messageCount !== nextSnapshot.messageCount
+    ) {
+      debugLog("chat-lifecycle", nextSnapshot);
+      lifecycleLogRef.current = nextSnapshot;
+    }
+  }, [status]);
+
+  // Live-apply tool results while streaming to keep UI state in sync without
+  // waiting for onFinish (prevents spinners from lingering and renders inputs ASAP).
+  const processedToolKeysRef = React.useRef<Set<string>>(new Set());
+  // Live tool application moved into Conversation (localizes updates to message subtree).
+
+  // Welcome assistant injection disabled for AI intro + hidden-start flow.
 
   // Direct selection submission helper
-  async function submitSelection(
-    questionId: string,
-    value: QuestionResponse,
-    displayText: string,
-  ): Promise<void> {
-    // 1) optimistic local update
-    setCurrentInput(questionId, value);
+  const submitSelection = React.useCallback(
+    async function submitSelection(
+      questionId: string,
+      value: QuestionResponse,
+      displayText: string,
+    ): Promise<void> {
+      debugLog("sendMessage:submitSelection", {
+        questionId,
+        displayText,
+      });
+      // 1) optimistic local update
+      setCurrentInput(questionId, value);
 
-    // 2) assemble body (ensure responses include the latest value)
-    const updatedResponses = { ...currentInputs, [questionId]: value };
-    const body = {
-      userInput: value, // structured value (string/number/object), not used for chat rendering
-      submissionBehavior: "auto" as const,
-      currentQuestionId: store.currentQuestionId, // authoritative from last tool
-      justSavedAnswer: { questionId, value },
-      formSchema, // keep as-is for now
-      responses: updatedResponses,
-      submissionId: store.submissionId,
-      userId: null,
+      // 2) assemble body (ensure responses include the latest value)
+      const updatedResponses = { ...currentInputs, [questionId]: value };
+      const body = {
+        userInput: value, // structured value (string/number/object), not used for chat rendering
+        submissionBehavior: "auto" as const,
+        currentQuestionId,
+        justSavedAnswer: { questionId, value },
+        formSchema, // keep as-is for now
+        responses: updatedResponses,
+        submissionId,
+        userId: null,
+        isTestSubmission,
+        initiate: false,
+        suppressUserMessagePersistence: false,
+        startMode: null,
+      };
+
+      // 3) guarded send with small delay for UX parity
+      await new Promise<void>((resolve, reject) => {
+        const DELAY_MS = 250;
+        setTimeout(() => {
+          try {
+            setFormDisplayState("chatting_ai_loading");
+            // Track last user-visible text for retry UX
+            lastUserTextRef.current = displayText;
+            Promise.resolve(
+              sendMessage(
+                { parts: [{ type: "text", text: displayText }] },
+                { body },
+              ),
+            )
+              .then(() => resolve())
+              .catch(reject);
+          } catch (err) {
+            reject(err as any);
+          }
+        }, DELAY_MS);
+      });
+    },
+    [
+      setCurrentInput,
+      currentInputs,
+      currentQuestionId,
+      formSchema,
+      submissionId,
       isTestSubmission,
-    };
+      setFormDisplayState,
+      sendMessage,
+    ],
+  );
 
-    // 3) guarded send with small delay for UX parity
-    await new Promise<void>((resolve, reject) => {
-      const DELAY_MS = 250;
-      setTimeout(() => {
-        try {
-          setFormDisplayState("chatting_ai_loading");
-          Promise.resolve(
-            sendMessage(
-              { parts: [{ type: "text", text: displayText }] },
-              { body },
-            ),
-          )
-            .then(() => resolve())
-            .catch(reject);
-        } catch (err) {
-          reject(err as any);
-        }
-      }, DELAY_MS);
-    });
-  }
+  // Keep lightweight: let Conversation sync message history as it renders.
 
+  // After history fetch, hydrate chat messages once
+  const hasHydratedFromHistoryRef = useRef(false);
   useEffect(() => {
-    const historyLastMsg = chatHistoryMessages.at(-1);
-    const newMsg = messages.at(-1);
-
-    if (historyLastMsg?.id !== newMsg?.id) {
-      setChatHistoryMessages(messages);
-    }
-  }, [messages, setChatHistoryMessages, chatHistoryMessages]);
-
-  // After history fetch, hydrate chat messages if chat is empty
-  useEffect(() => {
-    if (!isLoading && messages.length === 0 && chatHistoryMessages.length > 0) {
+    if (
+      !isLoading &&
+      chatHistoryMessages.length > 0 &&
+      !hasHydratedFromHistoryRef.current
+    ) {
       setMessages(chatHistoryMessages);
+      hasHydratedFromHistoryRef.current = true;
     }
-  }, [isLoading, messages, chatHistoryMessages, setMessages]);
+  }, [isLoading, chatHistoryMessages, setMessages]);
 
   async function handleAISubmit(e?: React.FormEvent | React.KeyboardEvent) {
     e?.preventDefault();
@@ -313,20 +371,25 @@ export default function FormAIComponent({
     // Capture and clear immediately for snappy UX
     const userText = input;
     setInput("");
+    lastUserTextRef.current = userText;
 
     const body = {
       userInput: userText,
       submissionBehavior: "manualUnclear" as const,
-      currentQuestionId: store.currentQuestionId ?? null, // do not guess from parts
+      currentQuestionId: currentQuestionId ?? null,
       formSchema,
       responses: currentInputs,
-      submissionId: store.submissionId,
+      submissionId,
       userId: null,
       isTestSubmission,
+      initiate: false,
+      suppressUserMessagePersistence: false,
+      startMode: null,
     };
 
     setFormDisplayState("chatting_ai_loading");
     try {
+      debugLog("sendMessage:manualUnclear", { textLen: userText.length });
       await sendMessage(
         { parts: [{ type: "text", text: userText }] },
         { body },
@@ -339,89 +402,107 @@ export default function FormAIComponent({
   }
 
   // File upload handler that calls submitSelection directly
-  async function handleFileUploadWithSubmission(
-    questionId: string,
-    file: File | File[],
-  ): Promise<void> {
-    // Handle case where file is passed as an array (from onFileSelect callback)
-    const actualFile: File = Array.isArray(file)
-      ? (file[0] as File)
-      : (file as File);
+  const handleFileUploadWithSubmission = React.useCallback(
+    async function handleFileUploadWithSubmission(
+      questionId: string,
+      file: File | File[],
+    ): Promise<void> {
+      // Handle case where file is passed as an array (from onFileSelect callback)
+      const actualFile: File = Array.isArray(file)
+        ? (file[0] as File)
+        : (file as File);
 
-    if (!store.formId || !store.submissionId) {
-      setErrorMessage("Cannot upload file: missing form or submission ID.");
-      return;
-    }
+      if (!formId || !submissionId) {
+        setErrorMessage("Cannot upload file: missing form or submission ID.");
+        return;
+      }
 
-    setFormDisplayState("uploading_file");
+      setFormDisplayState("uploading_file");
 
-    const formData = new FormData();
-    formData.append("file", actualFile);
-    formData.append("formId", store.formId);
-    formData.append("submissionId", store.submissionId);
-    formData.append("questionId", questionId);
+      const formData = new FormData();
+      formData.append("file", actualFile);
+      formData.append("formId", formId);
+      formData.append("submissionId", submissionId);
+      formData.append("questionId", questionId);
 
-    try {
-      const result = await apiServices.uploadFile(formData);
-      const { url, fileName, fileSize } = result;
+      try {
+        const result = await apiServices.uploadFile(formData);
+        const { url, fileName, fileSize } = result;
 
-      const fileDetails = {
-        url: url,
-        name: fileName,
-        size: fileSize,
-      };
+        const fileDetails = {
+          url: url,
+          name: fileName,
+          size: fileSize,
+        };
 
-      // Call submitSelection directly instead of using the trigger flag
-      await submitSelection(
-        questionId,
-        fileDetails,
-        `Uploaded file: ${fileName}`,
-      );
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "An unknown error occurred during file upload.",
-      );
-      // Reset UI state on upload failure; success path transitions via submitSelection/onFinish
-      setFormDisplayState("chatting_ai_ready");
-    } finally {
-      // Do not override chat state here; submitSelection/onFinish manage it
-    }
-  }
+        // Call submitSelection directly instead of using the trigger flag
+        await submitSelection(
+          questionId,
+          fileDetails,
+          `Uploaded file: ${fileName}`,
+        );
+      } catch (error) {
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "An unknown error occurred during file upload.",
+        );
+        // Reset UI state on upload failure; success path transitions via submitSelection/onFinish
+        setFormDisplayState("chatting_ai_ready");
+      } finally {
+        // Do not override chat state here; submitSelection/onFinish manage it
+      }
+    },
+    [
+      formId,
+      submissionId,
+      setFormDisplayState,
+      setErrorMessage,
+      submitSelection,
+    ],
+  );
 
-  const handleRetry = async () => {
+  const lastUserTextRef = useRef<string | null>(null);
+
+  const handleRetry = React.useCallback(async () => {
     setErrorMessage(null);
     setShowRetry(false);
-    // Resend the last message if available
-    if (messages.length > 0) {
-      const lastUserMessage = [...messages]
-        .reverse()
-        .find((m) => m.role === "user");
-      if (lastUserMessage) {
-        const retryText = (lastUserMessage as any).content || "";
-        const body = {
-          userInput: retryText,
-          submissionBehavior: "manualUnclear",
-          currentQuestionId: store.currentQuestionId ?? null,
-          formSchema,
-          responses: currentInputs,
-          submissionId: store.submissionId,
-          userId: null,
-          isTestSubmission,
-        };
-        try {
-          await sendMessage(
-            { parts: [{ type: "text", text: retryText }] },
-            { body },
-          );
-        } catch (error) {
-          console.error("Failed to retry message:", error);
-          setErrorMessage("Failed to resend message. Please try again.");
-        }
+    // Retry the last explicitly sent user text (tracked locally)
+    if (lastUserTextRef.current) {
+      const retryText = lastUserTextRef.current;
+      const body = {
+        userInput: retryText,
+        submissionBehavior: "manualUnclear",
+        currentQuestionId: currentQuestionId ?? null,
+        formSchema,
+        responses: currentInputs,
+        submissionId,
+        userId: null,
+        isTestSubmission,
+        initiate: false,
+        suppressUserMessagePersistence: false,
+        startMode: null,
+      };
+      try {
+        await sendMessage(
+          { parts: [{ type: "text", text: retryText }] },
+          { body },
+        );
+      } catch {
+        setErrorMessage("Failed to resend message. Please try again.");
       }
+    } else {
+      setErrorMessage("No previous message to retry.");
     }
-  };
+  }, [
+    currentInputs,
+    currentQuestionId,
+    formSchema,
+    isTestSubmission,
+    sendMessage,
+    setErrorMessage,
+    submissionId,
+  ]);
 
   const isFormSaved = formDisplayState === "saved";
   const isFormCompleted = formDisplayState === "completed";
@@ -441,7 +522,7 @@ export default function FormAIComponent({
   // One-shot kickoff/resume after isLoading (no auto-start message)
   useEffect(() => {
     if (isLoading) return;
-    if (!store.submissionId) return;
+    if (!submissionId) return;
 
     const hasHistory = (chatHistoryMessages?.length ?? 0) > 0;
 
@@ -457,7 +538,7 @@ export default function FormAIComponent({
     }
   }, [
     isLoading,
-    store.submissionId,
+    submissionId,
     formDisplayState,
     currentQuestionId,
     chatHistoryMessages,
@@ -466,21 +547,29 @@ export default function FormAIComponent({
 
   // Explicit chat start handler: trigger backend but hide the synthetic user message
   const handleChatStart = async () => {
-    if (!sendMessage || !store.submissionId) return;
+    if (!sendMessage || !submissionId) return;
     hasStartedRef.current = true;
+    setIntroDismissed(true);
     hasInitiatedRef.current = true;
+    setAwaitingFirstResponse(true);
+    const startModeValue: "start" | "resume" =
+      chatHistoryMessages.length > 0 ? "resume" : "start";
     const submissionBody = {
       userInput: "Start the form",
       submissionBehavior: "auto" as const,
       currentQuestionId: null,
       formSchema,
       responses: {},
-      submissionId: store.submissionId,
+      submissionId,
       userId: null,
       isTestSubmission,
+      initiate: true,
+      suppressUserMessagePersistence: true,
+      startMode: startModeValue,
     };
     setFormDisplayState("chatting_ai_loading");
     try {
+      lastUserTextRef.current = "Start the form";
       await sendMessage(
         { parts: [{ type: "text", text: "Start the form" }] },
         { body: submissionBody },
@@ -496,18 +585,16 @@ export default function FormAIComponent({
         }
         return arr;
       });
-    } catch (error) {
-      console.error("Failed to start chat:", error);
+    } catch {
       setFormDisplayState("idle");
       hasInitiatedRef.current = false;
     }
   };
 
-  // Calculate isChatActive (avoid auto-activating during initial loading)
-  const hasHistory = chatHistoryMessages.length > 0 || messages.length > 0;
-  const isChatActive = true; // Always render chat
+  // Always render chat UI
+  const isChatActive = true;
 
-  if (!store.submissionId) {
+  if (!submissionId) {
     return (
       <div className="flex items-center justify-center h-full">
         <span>Loading form...</span>
@@ -516,6 +603,9 @@ export default function FormAIComponent({
   }
 
   const showThankYou = isFormSaved || isFormCompleted;
+
+  const noHistory = (chatHistoryMessages?.length ?? 0) === 0;
+  const introPending = !introDismissed && !isLoading && noHistory;
 
   return (
     <div className="flex flex-col h-full">
@@ -557,16 +647,24 @@ export default function FormAIComponent({
             <div className="relative flex flex-col h-full w-full overflow-hidden">
               <div className="overflow-hidden">
                 <Conversation
-                  messages={messages}
-                  status={status}
                   data={null}
                   handleFileUpload={handleFileUploadWithSubmission}
                   onSubmitSelection={submitSelection}
+                  onToolResult={applyToolResult}
+                  onFirstAssistant={() => setAwaitingFirstResponse(false)}
+                  introBlock={
+                    introPending ? (
+                      <AiIntroScreen
+                        formSchema={formSchema}
+                        onStart={handleChatStart}
+                      />
+                    ) : undefined
+                  }
                 />
               </div>
 
               <AnimatePresence>
-                {!showThankYou && (
+                {!showThankYou && !introPending && !awaitingFirstResponse && (
                   <motion.div key="prompt-input">
                     <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm">
                       <div className="lg:max-w-3xl md:max-w-3xl mx-auto w-full">
@@ -590,7 +688,7 @@ export default function FormAIComponent({
                                   disabled={
                                     !input.trim() ||
                                     status === "streaming" ||
-                                    !store.submissionId
+                                    !submissionId
                                   }
                                   status={status}
                                   aria-label="Send answer"

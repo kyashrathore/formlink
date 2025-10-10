@@ -9,6 +9,7 @@ import { sanitizeAgentEventForSerialization } from "@/app/lib/utils/serializatio
 import { loadPrompt } from "@formlink/prompts"
 import { Form, FormSchema, type Settings } from "@formlink/schema"
 import { tool } from "ai"
+import { jsonrepair } from "jsonrepair"
 import { TOOL_DESCRIPTIONS } from "../prompts"
 import { ChatToolContext, FormCreationResult } from "../types"
 import { finalizeForm } from "./finalize-form"
@@ -220,14 +221,66 @@ async function processFormCreationSinglePass({
     error: unknown
   }): Promise<string> => {
     repairAttempts--
-    const repairSystem = await loadPrompt("form/create-form-repair.md")
+    // Parse the possibly-invalid JSON text to provide back to the repair prompt
+    let parsedPayload: any = null
+    try {
+      parsedPayload = JSON.parse(text)
+    } catch {
+      parsedPayload = text
+    }
+
+    // Normalize error(s) into the shape expected by the repair prompt
+    const errors_json: Array<{ path: string; message: string; code: string }> =
+      (() => {
+        const e: any = error as any
+        if (e && Array.isArray(e.errors)) {
+          return e.errors.map((iss: any) => ({
+            path: Array.isArray(iss.path)
+              ? iss.path.join(".")
+              : String(iss.path ?? ""),
+            message: String(iss.message ?? "Validation error"),
+            code: String(iss.code ?? "unknown"),
+          }))
+        }
+        if (e && Array.isArray(e.issues)) {
+          return e.issues.map((iss: any) => ({
+            path: Array.isArray(iss.path)
+              ? iss.path.join(".")
+              : String(iss.path ?? ""),
+            message: String(iss.message ?? "Validation error"),
+            code: String(iss.code ?? "unknown"),
+          }))
+        }
+        return [
+          {
+            path: Array.isArray((e as any)?.path)
+              ? (e as any).path.join(".")
+              : "",
+            message:
+              (e as any)?.message ||
+              (e instanceof Error ? e.message : String(e)),
+            code: (e as any)?.code || "unknown",
+          },
+        ]
+      })()
+
+    const repairSystem = await loadPrompt("form/create-form-repair.md", {
+      errors_json,
+      json_payload: parsedPayload,
+      generation_context: {
+        model: String(getModel(selectedModel)),
+        schema_name: "FormSchema",
+        timestamp: new Date().toISOString(),
+      },
+    })
+
     const { object: repaired }: { object: Form } = await generateObject({
       model: getModel(selectedModel) as any,
       schema: FormSchema,
       system: repairSystem,
       experimental_repairText:
         repairAttempts > 0 ? async (p) => repairFunction(p) : undefined,
-      prompt: `Repair the following JSON schema based on the error: ${JSON.stringify(error)}\nOriginal prompt: ${prompt}\nErroneous json:\n${text}`,
+      prompt: "",
     })
     return JSON.stringify(repaired)
   }

@@ -1,18 +1,17 @@
 "use client";
 
-import React from "react";
+import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import {
-  BaseMultiSelect,
-  type BaseMultiSelectProps,
-} from "../../primitives/BaseMultiSelect";
+import React from "react";
+import { useIsMobile } from "../../../hooks/ui/use-mobile";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
-import { ArrowRight } from "lucide-react";
-import { getChatAnimations } from "../shared/animations";
-import { getTypeFormAnimations } from "../shared/animations";
 import { filterMultiSelectContainerProps } from "../../primitives/patches/accessibility-fixes";
-import { useIsMobile } from "../../../hooks/ui/use-mobile";
+import {
+  useBaseMultiSelect,
+  type BaseMultiSelectProps,
+} from "../../primitives/useBaseMultiSelect";
+import { getChatAnimations, getTypeFormAnimations } from "../shared/animations";
 
 export type FormMode = "chat" | "typeform";
 
@@ -43,21 +42,22 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
     ...baseProps
   } = props;
 
+  // ALL HOOKS MUST BE CALLED UNCONDITIONALLY AT THE TOP
   const isMobile = useIsMobile();
 
-  const base = BaseMultiSelect<string>({
+  const base = useBaseMultiSelect<string>({
     enableShortcuts: true,
     enableArrowNavigation: true,
     ...baseProps,
     value: baseProps.value || [],
   });
 
+  // Search filtering for large lists (primarily Typeform mode)
+  const [query, setQuery] = React.useState("");
+
   // Safe access with fallbacks
   const options = base.options || [];
   const selectedValues = base.value || [];
-
-  // Track if form has been submitted (chat mode only)
-  const [isSubmitted, setIsSubmitted] = React.useState(false);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
     // Let base handle navigation, only handle Enter for submission
@@ -70,29 +70,17 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
       selectedValues.length > 0
     ) {
       e.preventDefault();
-      if (mode === "chat") {
-        setIsSubmitted(true);
-      }
       onSubmit();
     }
   };
 
   const handleSubmit = () => {
     if (onSubmit && selectedValues.length > 0) {
-      if (mode === "chat") {
-        setIsSubmitted(true);
-      }
       onSubmit();
     }
   };
 
-  // Chat mode: Hide component after submission (show null)
-  if (mode === "chat" && isSubmitted) {
-    return null;
-  }
-
   // Search filtering for large lists (primarily Typeform mode)
-  const [query, setQuery] = React.useState("");
   const isSearchActive =
     (enableSearch ?? options.length >= searchableThreshold) &&
     mode === "typeform";
@@ -102,6 +90,8 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
     if (!q) return options;
     return options.filter((opt) => String(opt.label).toLowerCase().includes(q));
   }, [options, isSearchActive, query]);
+
+  // no local hidden state; parent controls visibility
 
   if (mode === "typeform") {
     // TypeForm layout and behavior
@@ -248,7 +238,6 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
     );
   }
 
-  // Chat layout and behavior
   return (
     <div
       {...filterMultiSelectContainerProps(base.getContainerProps())}

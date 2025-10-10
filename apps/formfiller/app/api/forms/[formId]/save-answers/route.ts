@@ -23,9 +23,9 @@ async function handleIntegration(
     .single();
 
   if (formError) {
-    console.error(
-      `[API] Error fetching form_versions for webhook: ${formError.message}`,
-    );
+    logger.error("[save-answers] Error fetching form_versions for webhook", {
+      error: formError.message,
+    });
     return; // Early return on error
   }
 
@@ -76,14 +76,16 @@ async function handleIntegration(
           body: JSON.stringify(webhookPayload), // Use the new standardized payload
         });
         if (!response.ok) {
-          console.error(
-            `[API] Webhook call to ${webhookUrl} failed with status ${response.status}: ${await response.text()}`,
-          );
+          logger.error("[save-answers] Webhook call failed", {
+            url: webhookUrl,
+            status: response.status,
+          });
         }
       } catch (e) {
-        console.error(
-          `[API] Webhook call to ${webhookUrl} threw an error: ${e instanceof Error ? e.message : String(e)}`,
-        );
+        logger.error("[save-answers] Webhook call exception", {
+          url: webhookUrl,
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     }
   }
@@ -179,7 +181,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, partial: false });
     }
   } catch (error) {
-    console.error("Error in save-answers API:", error);
+    logger.error("[save-answers] API error", {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",

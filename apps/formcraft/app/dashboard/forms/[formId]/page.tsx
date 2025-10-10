@@ -55,10 +55,10 @@ function TestUIPageContent() {
   const router = useRouter()
   const params = useParams()
   const searchParams = useSearchParams()
-  const initialModel = useMemo(
-    () => searchParams.get("model") || undefined,
-    [searchParams]
-  )
+  const storeInitialModel = useFormGenerationStore((s) => s.initialModel)
+  const initialModel =
+    storeInitialModel ||
+    useMemo(() => searchParams.get("model") || undefined, [searchParams])
 
   const formIdFromUrl = params.formId as string
   // Defer formId creation - only use real IDs, not sentinels like "new"
@@ -169,8 +169,9 @@ function TestUIPageContent() {
       window.history.replaceState({}, "", newUrl)
     }
     if (initialModelFromUrl) {
-      // No global store for model; pass down via props from current URL read
-      // Cleanup already handled above by replacing to pathname
+      // Persist initial model in store to survive StrictMode remounts
+      useFormGenerationStore.getState().setInitialModel(initialModelFromUrl)
+      // Cleanup already handled above by replacing to pathname when prompt present
     }
   }, [searchParams])
 

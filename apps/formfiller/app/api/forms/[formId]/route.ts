@@ -16,10 +16,10 @@ async function getFormSchemaById(
     .single();
 
   if (formError || !formData) {
-    if (formError && formError.code !== "PGRST116") {
+    if (formError && (formError as any).code !== "PGRST116") {
       console.error(
-        `Supabase error fetching form ${formId}:`,
-        formError.message,
+        `[forms] Supabase error fetching form ${formId}:`,
+        (formError as any).message,
       );
     }
     return null;
@@ -39,10 +39,10 @@ async function getFormSchemaById(
     .single();
 
   if (versionError || !versionData) {
-    if (versionError && versionError.code !== "PGRST116") {
+    if (versionError && (versionError as any).code !== "PGRST116") {
       console.error(
-        `Supabase error fetching ${versionStatus} version ${versionId} for form ${formId}:`,
-        versionError.message,
+        `[forms] Supabase error fetching ${versionStatus} version ${versionId} for form ${formId}:`,
+        (versionError as any).message,
       );
     }
     return null;
@@ -60,8 +60,8 @@ async function getFormSchemaById(
     return formSchemaResult;
   } catch (castError) {
     console.error(
-      `Error constructing form schema object for version ${versionId}:`,
-      castError,
+      `[forms] Error constructing form schema object for version ${versionId}:`,
+      castError instanceof Error ? castError.message : castError,
     );
     return null;
   }
@@ -104,7 +104,7 @@ export async function GET(
     const validationResult = FormSchema.safeParse(formSchema);
     if (!validationResult.success) {
       console.error(
-        `API Schema Validation Error for form ${formId} (version ${formSchema.version_id}):`,
+        `[forms] API Schema Validation Error for form ${formId} (version ${formSchema.version_id}):`,
         validationResult.error.errors,
       );
 
@@ -117,7 +117,10 @@ export async function GET(
     // Default: return full schema
     return NextResponse.json(validationResult.data);
   } catch (error) {
-    console.error(`API Error fetching form schema for ${formId}:`, error);
+    console.error(
+      `[forms] API Error fetching form schema for ${formId}:`,
+      error instanceof Error ? error.message : error,
+    );
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },

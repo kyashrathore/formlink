@@ -97,7 +97,7 @@ This guide gives a first-time QA engineer the full surface area of Formlink, how
 
 ## Form Filler – AI Conversation Mode
 
-- `FormAIComponent` relies on AI SDK tool invocations (`saveAnswer`, `presentQuestion`, `completeSubmission`); watch the chat store update accordingly.
+- `FormAIComponent` now listens for AI SDK tool invocations (`saveAnswer`, `completeSubmission`) and slot tokens; verify `useSlotBridge` updates store.currentQuestionId/presentedQuestionMessageId as soon as a slot streams.
 - `useFormSession` hydrates previous answers via `/api/forms/:id/chat-history`, enabling resume flows for in-progress submissions.
 - Error states surface as alerts with retry options—test rate-limit and network failures to ensure friendly messaging.
 - Test mode submissions (links with `formlinkai_testmode=true`) should create `testmode=true` rows for easy cleanup.

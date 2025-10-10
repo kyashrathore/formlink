@@ -1,9 +1,25 @@
-import type { Variants, AnimationProps } from "motion/react";
+import type {
+  Variants,
+  Target,
+  TargetAndTransition,
+  VariantLabels,
+  Transition,
+} from "motion/react";
+import { cubicBezier } from "motion";
 
-export type AnimationConfig = Pick<
-  AnimationProps,
-  "initial" | "animate" | "exit" | "transition" | "whileHover" | "whileTap"
->;
+// Local, library-agnostic typing for animation configs used across UI.
+// We intentionally avoid importing Motion's prop types to prevent
+// breaking changes across minor versions in CI.
+// Narrow types to Motion's public types so spreading into
+// motion elements satisfies `HTMLMotionProps` without casts.
+export type AnimationConfig = {
+  initial?: Target;
+  animate?: boolean | TargetAndTransition | VariantLabels;
+  exit?: TargetAndTransition;
+  transition?: Transition;
+  whileHover?: TargetAndTransition | VariantLabels;
+  whileTap?: TargetAndTransition | VariantLabels;
+};
 
 // TypeForm-style staggered animations for options
 export function getTypeFormAnimations(
@@ -29,7 +45,7 @@ export function getTypeFormAnimations(
     transition: {
       duration: 0.3,
       delay: index * 0.05, // Stagger effect
-      ease: [0.23, 1, 0.32, 1], // Smooth easing
+      ease: cubicBezier(0.23, 1, 0.32, 1), // Smooth easing
     },
   };
 
@@ -62,7 +78,7 @@ export const questionEnterAnimation: AnimationConfig = {
   },
   transition: {
     duration: 0.5,
-    ease: [0.23, 1, 0.32, 1],
+    ease: cubicBezier(0.23, 1, 0.32, 1),
   },
 };
 
@@ -74,7 +90,7 @@ export const questionExitAnimation: AnimationConfig = {
   },
   transition: {
     duration: 0.3,
-    ease: [0.23, 1, 0.32, 1],
+    ease: cubicBezier(0.23, 1, 0.32, 1),
   },
 };
 
@@ -135,7 +151,7 @@ export const slideUpAnimation: AnimationConfig = {
   exit: { y: "100%", opacity: 0 },
   transition: {
     duration: 0.3,
-    ease: [0.23, 1, 0.32, 1],
+    ease: cubicBezier(0.23, 1, 0.32, 1),
   },
 };
 

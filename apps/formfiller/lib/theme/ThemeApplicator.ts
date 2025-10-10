@@ -90,7 +90,6 @@ export class ThemeApplicator {
         error instanceof Error
           ? error.message
           : "Unknown error applying shadcn variables";
-      console.error("Shadcn variable application failed:", error);
     }
 
     return result;

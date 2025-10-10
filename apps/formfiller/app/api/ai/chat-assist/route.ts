@@ -1,10 +1,16 @@
-import { headers } from "next/headers";
-import { NextResponse, after } from "next/server";
-// Types used inline within this file
+import { getModel } from "@/app/lib/ai/provider";
 import { FormValidator } from "@/lib/validation/FormValidator";
-import { createUIMessageStreamResponse } from "ai";
-import { streamAIResponse } from "./_lib/ai";
 import { loadPrompt } from "@formlink/prompts";
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  stepCountIs,
+  streamText,
+  type ToolSet,
+} from "ai";
+import { headers } from "next/headers";
+import { NextResponse } from "next/server";
 import {
   ensureSubmissionExists,
   hydrateEffectiveResponses,
@@ -14,77 +20,152 @@ import {
 import { createAITools } from "./_lib/tools";
 import { ChatAssistBodySchema } from "./schema";
 import {
-  AIContext,
   Question,
   sanitizeUserInput,
   trackServerEvent,
   ValidationResult,
 } from "./utils";
-import { runSubmissionJob } from "@/app/lib/intel/submission-job";
-import logger from "@/app/lib/logger";
 
-// Input processing utilities
-function processUserInput(requestData: any): {
-  messages: any[];
-  body: any;
-  userInput: string;
-} {
-  const messages = Array.isArray(requestData.messages)
-    ? requestData.messages
-    : [];
-  const body = requestData.body || requestData;
+const STREAM_STEP_LIMIT = 10;
 
-  const lastUserMessage = [...messages]
-    .reverse()
-    .find((msg: any) => msg.role === "user");
-  const userInput = lastUserMessage?.content || body.userInput || "";
-
-  return { messages, body, userInput };
+function formatUserText(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (value === null || value === undefined) {
+    return "";
+  }
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
 }
 
-// Context building utilities - currently unused but may be needed for debugging
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function buildAIContext(
-  sanitizedInput: string,
-  submissionBehavior: "auto" | "manualClear" | "manualUnclear" | null,
+function normalizeBehavior(
+  value: unknown,
+): "auto" | "manualClear" | "manualUnclear" | null {
+  if (
+    value === "auto" ||
+    value === "manualClear" ||
+    value === "manualUnclear"
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function findFirstUnanswered(
   formSchema: any,
-  currentQuestionId: string | null,
-  responses: Record<string, any>,
-  validationResult: ValidationResult | undefined,
-  justSavedAnswer: any,
-): AIContext {
-  return {
-    userInput: sanitizedInput,
-    submissionBehavior,
-    formSchema,
-    currentQuestionId,
-    responses,
-    validationResult,
-    justSavedAnswer,
-    progress: {
-      answered: Object.keys(responses).length,
-      total: formSchema.questions.length,
-      percentage: Math.round(
-        (Object.keys(responses).length / formSchema.questions.length) * 100,
-      ),
-    },
-    journeyScript: formSchema.settings?.journeyScript,
-  };
+  responses: Record<string, unknown>,
+): string | null {
+  if (!Array.isArray(formSchema?.questions)) {
+    return null;
+  }
+  return (
+    formSchema.questions.find(
+      (q: Question) =>
+        !Object.prototype.hasOwnProperty.call(responses || {}, q.id),
+    )?.id ?? null
+  );
 }
 
-// Error response utilities
-function createErrorResponse(error: string, status = 500) {
-  return new Response(JSON.stringify({ error, fallback: true }), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+function stabilizeObject<T>(input: T): T {
+  if (Array.isArray(input)) {
+    return input.map((item) => stabilizeObject(item)) as T;
+  }
+  if (input && typeof input === "object") {
+    const sortedEntries = Object.keys(input as Record<string, unknown>)
+      .sort()
+      .map((key) => {
+        const value = (input as Record<string, unknown>)[key];
+        return [key, stabilizeObject(value)];
+      });
+    return Object.fromEntries(sortedEntries) as T;
+  }
+  return input;
+}
+
+function injectXmlContext(
+  messages: any[],
+  xmlBlock: string,
+  fallbackText: string,
+): any[] {
+  const cloned = messages.map((message) => ({
+    ...message,
+    parts: Array.isArray(message.parts)
+      ? message.parts.map((part: any) => ({ ...part }))
+      : message.parts,
+  }));
+  let lastUserIndex = -1;
+  for (let i = cloned.length - 1; i >= 0; i -= 1) {
+    if (cloned[i]?.role === "user") {
+      lastUserIndex = i;
+      break;
+    }
+  }
+
+  const blockWithNewline = `${xmlBlock}\n`;
+
+  if (lastUserIndex >= 0) {
+    const target = cloned[lastUserIndex];
+    const existingParts = Array.isArray(target.parts) ? [...target.parts] : [];
+    const firstTextIndex = existingParts.findIndex(
+      (part) => part?.type === "text",
+    );
+    if (firstTextIndex >= 0) {
+      const originalText = existingParts[firstTextIndex]?.text ?? "";
+      existingParts[firstTextIndex] = {
+        ...existingParts[firstTextIndex],
+        text: `${blockWithNewline}${originalText}`,
+      };
+    } else {
+      existingParts.unshift({
+        type: "text",
+        text: `${blockWithNewline}${fallbackText}`,
+      });
+    }
+    target.parts = existingParts;
+  } else {
+    cloned.push({
+      id: `server-user-${Date.now()}`,
+      role: "user",
+      parts: [{ type: "text", text: `${blockWithNewline}${fallbackText}` }],
+    });
+  }
+
+  return cloned;
+}
+
+function sanitizeUserMessageForPersistence(message: any): any {
+  if (!message) return message;
+  if (Array.isArray(message.parts)) {
+    const sanitizedParts = message.parts.map((part: any) => {
+      if (part?.type === "text" && typeof part.text === "string") {
+        const text = part.text.replace(
+          /<current_turn_context>[\s\S]*?<\/current_turn_context>\n?/,
+          "",
+        );
+        return { ...part, text };
+      }
+      return part;
+    });
+    return { ...message, parts: sanitizedParts };
+  }
+  if (typeof message.content === "string") {
+    const updated = message.content.replace(
+      /<current_turn_context>[\s\S]*?<\/current_turn_context>\n?/,
+      "",
+    );
+    return { ...message, content: updated };
+  }
+  return message;
 }
 
 export async function POST(req: Request) {
   const startTime = Date.now();
 
   try {
-    // Extract request data and headers
     const headersList = await headers();
     const ip =
       headersList.get("x-forwarded-for") ||
@@ -93,17 +174,19 @@ export async function POST(req: Request) {
     const userAgent = headersList.get("user-agent") || "unknown";
     const requestData = await req.json();
 
-    // Process input and validate request
-    const { messages, body, userInput } = processUserInput(requestData);
+    const messages = Array.isArray(requestData?.messages)
+      ? requestData.messages
+      : [];
+    const body = requestData?.body || requestData || {};
 
-    // Extract and validate request body data (typed via Zod)
-    const parsedResult = ChatAssistBodySchema.safeParse(body);
-    if (!parsedResult.success) {
+    const parsed = ChatAssistBodySchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Invalid request body", issues: parsedResult.error.flatten() },
+        { error: "Invalid request body", issues: parsed.error.flatten() },
         { status: 400 },
       );
     }
+
     const {
       submissionBehavior,
       currentQuestionId,
@@ -113,47 +196,18 @@ export async function POST(req: Request) {
       userId,
       justSavedAnswer,
       isTestSubmission = false,
-    } = parsedResult.data;
+      initiate = false,
+      suppressUserMessagePersistence = false,
+      startMode = null,
+      userInput,
+    } = parsed.data;
 
-    const submissionBehaviorNorm:
-      | "auto"
-      | "manualClear"
-      | "manualUnclear"
-      | null =
-      typeof submissionBehavior === "string" &&
-      (submissionBehavior === "auto" ||
-        submissionBehavior === "manualClear" ||
-        submissionBehavior === "manualUnclear")
-        ? submissionBehavior
-        : null;
+    const submissionBehaviorNorm = normalizeBehavior(submissionBehavior);
+    const partialSubmission = Boolean(formSchema?.settings?.partialSubmission);
 
-    // Effective responses may be updated by server pre-save path for auto/manualClear
-    let effectiveResponses = responses as Record<string, any>;
-    // If server computes a next question (e.g., after pre-save), expose it via response headers
-    let serverNextQuestionId: string | null = null;
+    const formattedUserText = formatUserText(userInput);
+    const sanitizedUserText = sanitizeUserInput(formattedUserText);
 
-    // Sanitize user input based on question type
-    let sanitizedInput = userInput;
-    if (currentQuestionId) {
-      const currentQuestion = formSchema.questions.find(
-        (q: Question) => q.id === currentQuestionId,
-      );
-      if (currentQuestion) {
-        const needsSanitization =
-          currentQuestion.type.name === "text" ||
-          !["address", "multipleChoice", "fileUpload", "ranking"].includes(
-            currentQuestion.type.name,
-          );
-
-        if (needsSanitization && typeof userInput === "string") {
-          sanitizedInput = sanitizeUserInput(userInput);
-        }
-      }
-    } else if (typeof userInput === "string") {
-      sanitizedInput = sanitizeUserInput(userInput);
-    }
-
-    // Ensure submission exists in database
     const activeSubmissionId = await ensureSubmissionExists(
       submissionId,
       formSchema,
@@ -163,323 +217,261 @@ export async function POST(req: Request) {
       userAgent,
     );
 
-    // Hydrate effective responses from server DB to avoid stale client state
-    effectiveResponses = await hydrateEffectiveResponses(
+    let effectiveResponses = await hydrateEffectiveResponses(
       activeSubmissionId,
       responses,
     );
 
-    // Determine server-derived active question and normalize currentQuestionId for manualUnclear
-    const serverActiveQuestionId =
-      formSchema.questions.find(
-        (q: Question) =>
-          !Object.prototype.hasOwnProperty.call(effectiveResponses, q.id),
-      )?.id ?? null;
+    const answeredIds = Object.keys(effectiveResponses || {});
+    const fallbackQuestionId = findFirstUnanswered(
+      formSchema,
+      effectiveResponses,
+    );
+
+    const questionIdFromBehavior =
+      submissionBehaviorNorm === "manualUnclear"
+        ? currentQuestionId || fallbackQuestionId
+        : currentQuestionId;
 
     let effectiveCurrentQuestionId =
-      currentQuestionId ?? serverActiveQuestionId;
+      questionIdFromBehavior || fallbackQuestionId;
 
-    if (submissionBehaviorNorm === "manualUnclear") {
-      const invalidOrAnswered =
-        !effectiveCurrentQuestionId ||
-        !formSchema.questions.some(
-          (q: Question) => q.id === effectiveCurrentQuestionId,
-        ) ||
-        Object.prototype.hasOwnProperty.call(
-          effectiveResponses,
-          effectiveCurrentQuestionId,
-        );
-      if (invalidOrAnswered) {
-        effectiveCurrentQuestionId = serverActiveQuestionId;
-      }
-    }
+    const currentQuestion = formSchema?.questions?.find(
+      (q: Question) => q.id === effectiveCurrentQuestionId,
+    );
 
-    // Pre-validate submission if behavior indicates an answer
+    const candidateAnswerValue =
+      justSavedAnswer && justSavedAnswer.questionId === currentQuestionId
+        ? justSavedAnswer.value
+        : sanitizedUserText;
+
     let validationResult: ValidationResult | undefined;
+
     if (
       (submissionBehaviorNorm === "auto" ||
         submissionBehaviorNorm === "manualClear") &&
-      currentQuestionId
+      currentQuestion
     ) {
-      const currentQuestion = formSchema.questions.find(
-        (q: Question) => q.id === currentQuestionId,
+      validationResult = FormValidator.validate(
+        candidateAnswerValue,
+        currentQuestion,
       );
-
-      if (currentQuestion) {
-        validationResult = FormValidator.validate(
-          sanitizedInput,
-          currentQuestion,
+      if (
+        validationResult.isValid &&
+        validationResult.normalizedValue !== undefined
+      ) {
+        const cross = FormValidator.validateCrossField(
+          currentQuestion.id,
+          validationResult.normalizedValue,
+          effectiveResponses,
+          formSchema,
         );
-
-        if (
-          validationResult.isValid &&
-          validationResult.normalizedValue !== undefined
-        ) {
-          const crossFieldValidation = FormValidator.validateCrossField(
-            currentQuestionId,
-            validationResult.normalizedValue,
-            responses,
-            formSchema,
-          );
-          if (!crossFieldValidation.isValid) {
-            validationResult = crossFieldValidation;
-          }
+        if (!cross.isValid) {
+          validationResult = cross;
         }
       }
     }
 
-    // Server-side pre-save for auto/manualClear to avoid tool roundtrip + ensure persistence
-    if (
-      submissionBehaviorNorm &&
+    const shouldPersistImmediately =
+      partialSubmission &&
       (submissionBehaviorNorm === "auto" ||
         submissionBehaviorNorm === "manualClear") &&
-      currentQuestionId
-    ) {
-      const currentQuestion = formSchema.questions.find(
-        (q: Question) => q.id === currentQuestionId,
+      currentQuestion;
+
+    if (shouldPersistImmediately && currentQuestion && currentQuestionId) {
+      let valueToPersist: unknown =
+        justSavedAnswer?.value ??
+        validationResult?.normalizedValue ??
+        candidateAnswerValue;
+
+      const validation = FormValidator.validate(
+        valueToPersist,
+        currentQuestion,
       );
-
-      // Prefer value from justSavedAnswer, else use normalized validated input or sanitized text
-      let valueToPersist: any =
-        justSavedAnswer &&
-        Object.prototype.hasOwnProperty.call(justSavedAnswer, "value")
-          ? (justSavedAnswer as any).value
-          : (validationResult?.normalizedValue ?? sanitizedInput);
-
-      // Validate against question config if available
-      let validatedOk = true;
-      if (currentQuestion) {
-        const v = FormValidator.validate(valueToPersist, currentQuestion);
-        if (!v.isValid) {
-          validatedOk = false;
-        } else if (v.normalizedValue !== undefined) {
-          valueToPersist = v.normalizedValue;
-        }
+      if (!validation.isValid) {
+        validationResult = validation;
+      } else if (validation.normalizedValue !== undefined) {
+        valueToPersist = validation.normalizedValue;
       }
 
-      if (validatedOk) {
+      if (!validationResult || validationResult.isValid) {
         const saved = await preSaveAnswer(
           activeSubmissionId,
           currentQuestionId,
           valueToPersist,
         );
-
         if (saved) {
-          // Update effective responses locally
           effectiveResponses = {
             ...effectiveResponses,
             [currentQuestionId]: valueToPersist,
           };
-
-          // Compute next unanswered question (linear for now; branching integration can hook here)
-          const nextQ = formSchema.questions.find(
-            (q: Question) =>
-              !Object.prototype.hasOwnProperty.call(effectiveResponses, q.id),
-          );
-          serverNextQuestionId = nextQ?.id ?? null;
         }
       }
-    }
-
-    // Server-side pre-save for manualUnclear when client currentQuestionId is stale/invalid/already answered
-    if (
-      submissionBehaviorNorm === "manualUnclear" &&
-      effectiveCurrentQuestionId
+    } else if (
+      !partialSubmission &&
+      currentQuestion &&
+      (submissionBehaviorNorm === "auto" ||
+        submissionBehaviorNorm === "manualClear") &&
+      currentQuestionId
     ) {
-      const activeQuestion = formSchema.questions.find(
+      const valueToApply =
+        justSavedAnswer?.value ??
+        validationResult?.normalizedValue ??
+        candidateAnswerValue;
+      effectiveResponses = {
+        ...effectiveResponses,
+        [currentQuestionId]: valueToApply,
+      };
+    }
+
+    const nextQuestionId = findFirstUnanswered(formSchema, effectiveResponses);
+
+    if (
+      effectiveCurrentQuestionId &&
+      !formSchema?.questions?.some(
         (q: Question) => q.id === effectiveCurrentQuestionId,
-      );
-
-      let valueToPersist: any = sanitizedInput;
-      let validatedOk = true;
-
-      if (activeQuestion) {
-        const v = FormValidator.validate(valueToPersist, activeQuestion);
-        if (!v.isValid) {
-          validatedOk = false;
-        } else if (v.normalizedValue !== undefined) {
-          valueToPersist = v.normalizedValue;
-        }
-      }
-
-      if (validatedOk) {
-        const saved = await preSaveAnswer(
-          activeSubmissionId,
-          effectiveCurrentQuestionId,
-          valueToPersist,
-        );
-
-        if (saved) {
-          effectiveResponses = {
-            ...effectiveResponses,
-            [effectiveCurrentQuestionId]: valueToPersist,
-          };
-
-          const nextQ2 = formSchema.questions.find(
-            (q: Question) =>
-              !Object.prototype.hasOwnProperty.call(effectiveResponses, q.id),
-          );
-          serverNextQuestionId = nextQ2?.id ?? null;
-        }
-      }
+      )
+    ) {
+      effectiveCurrentQuestionId = nextQuestionId;
     }
 
-    // Build AI context (for logging/debugging if needed)
-    // const context = buildAIContext(
-    //   sanitizedInput,
-    //   submissionBehaviorNorm,
-    //   formSchema,
-    //   effectiveCurrentQuestionId ?? null,
-    //   effectiveResponses,
-    //   validationResult,
-    //   justSavedAnswer,
-    // );
+    const questionSummaries = Array.isArray(formSchema?.questions)
+      ? formSchema.questions.map((q: Question) => ({
+          id: q.id,
+          title: q.title ?? null,
+          type: q.type?.name ?? null,
+          required: Boolean(q.validations?.required),
+          mightBranchOffNext: Boolean(q.mightBranchOffNext),
+        }))
+      : [];
 
-    const answeredQuestions = Object.keys(effectiveResponses || {});
-    const nextQuestion = formSchema.questions.find(
-      (q: Question) => !answeredQuestions.includes(q.id),
-    );
-    console.error(
-      "[chat-assist] Next unanswered question:",
-      nextQuestion?.id || "ALL_ANSWERED",
-    );
-
-    if (!nextQuestion && activeSubmissionId) {
-      after(() =>
-        runSubmissionJob({
-          submissionId: activeSubmissionId,
-          formVersionId: formSchema.version_id ?? null,
-          trigger: "completed",
-        }).catch((error: unknown) => {
-          logger.error("[Lifecycle] chat-assist job failed", {
-            submissionId: activeSubmissionId,
-            error: error instanceof Error ? error.message : String(error),
-          });
-        }),
-      );
-    }
-
-    // Save user message - find the last user message from the request
-    if (sanitizedInput && messages.length > 0) {
-      const lastUserMessage = [...messages]
-        .reverse()
-        .find((msg: any) => msg.role === "user");
-
-      if (lastUserMessage) {
-        await saveSubmissionMessage(
-          activeSubmissionId,
-          lastUserMessage,
-          userId ?? undefined,
-        );
-      }
-    }
-
-    // Track metrics
-    trackServerEvent("api.form_assist.request", {
-      formId: formSchema.id,
-      submissionBehavior: submissionBehaviorNorm || "none",
-      hasValidationResult: !!validationResult,
+    const contextPayload = stabilizeObject({
+      submissionBehavior: submissionBehaviorNorm,
+      partialSubmission,
+      currentQuestionId: effectiveCurrentQuestionId,
+      firstUnansweredId: nextQuestionId,
+      mustCompleteNow: nextQuestionId === null,
+      answeredIds,
+      initiate,
+      startMode,
+      branchingEnabled: Boolean(formSchema?.settings?.branching?.enabled),
+      journeyScript: String(formSchema?.settings?.journeyScript || ""),
+      responses: effectiveResponses,
+      questions: questionSummaries,
+      submissionId: activeSubmissionId,
+      formId: formSchema?.id ?? null,
     });
 
-    // Create AI tools and build system prompt
+    const xmlBlock = `<current_turn_context>${JSON.stringify(
+      contextPayload,
+    )}</current_turn_context>`;
+
+    const modelMessages = injectXmlContext(
+      messages,
+      xmlBlock,
+      sanitizedUserText,
+    );
+
     const tools = createAITools({
       submissionId: activeSubmissionId,
       userId: userId ?? undefined,
       formSchema,
       responses: effectiveResponses,
-    });
+      partialSubmission,
+    }) as ToolSet;
 
     const systemPrompt = await loadPrompt("filler/form-assistant-system.md", {
-      journey_script: String(formSchema.settings?.journeyScript || ""),
-      // Include guardrails only for user-facing chat-assist endpoint
+      journey_script: String(formSchema?.settings?.journeyScript || ""),
       include_guards: true,
     });
 
-    // Stream AI response
-    try {
-      // Ensure at least one valid message for the model
-      // Messages can have either 'content' or 'parts' format
-      const aiMessages = (Array.isArray(messages) ? messages : []).filter(
-        (m: any) => m && m.role && (m.content || m.parts),
-      );
-      if (aiMessages.length === 0) {
-        aiMessages.push({
-          role: "user",
-          parts: [{ type: "text", text: sanitizedInput || "Start the form" }],
-        });
-      }
+    const model = getModel();
 
-      // Inject minimal, structured form context so the model can choose correct tool/question IDs
-      const minimalContext = {
-        submissionBehavior: submissionBehaviorNorm,
-        currentQuestionId: effectiveCurrentQuestionId ?? null,
-        firstUnansweredId: nextQuestion?.id ?? null,
-        answeredIds: Object.keys(effectiveResponses || {}),
-        justSavedAnswer: justSavedAnswer ?? null,
-        responses: effectiveResponses || {},
-        branchingEnabled: Boolean(formSchema.settings?.branching?.enabled),
-        journeyScript: String(formSchema.settings?.journeyScript || ""),
-        questions: Array.isArray(formSchema?.questions)
-          ? formSchema.questions.map((q: any) => ({
-              id: q.id,
-              title: q.title ?? null,
-              type: q.type?.name ?? null,
-              required: !!q.validations?.required,
-              mightBranchOffNext: Boolean(q.mightBranchOffNext),
-            }))
-          : [],
-      };
-      aiMessages.push({
-        role: "user",
-        parts: [
-          {
-            type: "text",
-            text: `FORM_CONTEXT:${JSON.stringify(minimalContext)}`,
+    const uiStream = await createUIMessageStream({
+      async execute({ writer }) {
+        const response = await streamText({
+          model,
+          system: systemPrompt,
+          messages: convertToModelMessages(modelMessages),
+          tools,
+          stopWhen: stepCountIs(STREAM_STEP_LIMIT),
+          onFinish: async ({ toolCalls }) => {
+            const duration = Date.now() - startTime;
+            trackServerEvent("api.form_assist.duration", {
+              duration,
+              formId: formSchema.id,
+              toolCallCount: toolCalls?.length || 0,
+            });
+            toolCalls?.forEach((call) => {
+              trackServerEvent("tool.usage", {
+                toolName: call.toolName,
+                formId: formSchema.id,
+              });
+            });
           },
-        ],
-      });
+        });
 
-      const stream = await streamAIResponse(
-        aiMessages,
-        systemPrompt,
-        tools,
-        activeSubmissionId,
-        formSchema,
-        userId ?? undefined,
-        startTime,
-      );
+        writer.merge(response.toUIMessageStream());
+      },
+      originalMessages: messages,
+      onError: (error) => {
+        console.error(
+          "[chat-assist] Stream error:",
+          error instanceof Error ? error.message : error,
+        );
+        return `Error: ${error instanceof Error ? error.message : "Unknown error"}`;
+      },
+      onFinish: async ({ messages: finishedMessages }) => {
+        const assistantMessages = finishedMessages.filter(
+          (message: any) => message.role === "assistant",
+        );
+        const lastAssistant = assistantMessages[assistantMessages.length - 1];
+        if (lastAssistant) {
+          await saveSubmissionMessage(
+            activeSubmissionId,
+            lastAssistant,
+            userId ?? undefined,
+          );
+        }
+      },
+    });
 
-      return createUIMessageStreamResponse({ stream });
-    } catch (aiError) {
-      console.error("AI processing failed:", {
-        error: aiError,
-        message: aiError instanceof Error ? aiError.message : "Unknown error",
-        name: aiError instanceof Error ? aiError.name : "Unknown",
-        stack: aiError instanceof Error ? aiError.stack : undefined,
-      });
-
-      // Return appropriate fallback response
-      if (validationResult && !validationResult.isValid) {
-        return createErrorResponse(
-          `There was an issue with your input: ${validationResult.error}. Please try again.`,
+    if (!suppressUserMessagePersistence) {
+      const lastUserMessage = [...messages]
+        .reverse()
+        .find((msg: any) => msg.role === "user");
+      if (lastUserMessage) {
+        const sanitizedMessage =
+          sanitizeUserMessageForPersistence(lastUserMessage);
+        await saveSubmissionMessage(
+          activeSubmissionId,
+          sanitizedMessage,
+          userId ?? undefined,
         );
       }
-
-      return createErrorResponse(
-        "I'm having trouble processing your request. Please try again in a moment.",
-      );
     }
-  } catch (error) {
-    console.error("Form assist API critical error:", {
-      error,
-      message: error instanceof Error ? error.message : "Unknown error",
-      name: error instanceof Error ? error.name : "Unknown",
-      stack: error instanceof Error ? error.stack : undefined,
+
+    trackServerEvent("api.form_assist.request", {
+      formId: formSchema.id,
+      submissionBehavior: submissionBehaviorNorm || "none",
+      partialSubmission,
     });
+
+    const resp = createUIMessageStreamResponse({ stream: uiStream });
+    return resp;
+  } catch (error) {
+    console.error(
+      "[chat-assist] Critical error:",
+      error instanceof Error ? error.message : error,
+    );
     trackServerEvent("api.form_assist.critical_error");
 
-    return createErrorResponse(
-      error instanceof Error ? error.message : "Internal server error",
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Internal server error",
+        fallback: true,
+      },
+      { status: 500 },
     );
   }
 }

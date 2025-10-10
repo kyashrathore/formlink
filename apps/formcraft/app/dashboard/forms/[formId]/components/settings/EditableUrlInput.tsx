@@ -93,7 +93,9 @@ const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
           id={`enable-${label.replace(/\s+/g, "-").toLowerCase()}`}
           type="checkbox"
           checked={enabled}
-          onChange={(e) => handleToggle(e.target.checked)}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            handleToggle(e.target.checked)
+          }
         />
         <Label htmlFor={`enable-${label.replace(/\s+/g, "-").toLowerCase()}`}>
           {enabledText}
@@ -109,7 +111,7 @@ const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
               <Input
                 id={`input-${label.replace(/\s+/g, "-").toLowerCase()}`}
                 value={value}
-                onChange={(e) => {
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                   setValue(e.target.value)
                   if (error) setError(null)
                 }}

@@ -430,6 +430,9 @@ export async function triggerWebhook(url: string, data: WebhookData) {
       signal: AbortSignal.timeout(5000), // 5 second timeout
     });
   } catch (error) {
-    console.error("Webhook failed:", error);
+    console.error(
+      "[chat-assist] Webhook failed:",
+      error instanceof Error ? error.message : error,
+    );
   }
 }

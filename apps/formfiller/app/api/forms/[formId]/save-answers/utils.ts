@@ -21,7 +21,10 @@ export async function saveIndividualFormAnswer(
     });
 
   if (submissionError) {
-    console.error("Error upserting form_submission record:", submissionError);
+    console.error(
+      "[save-answers] Error upserting form_submission record:",
+      submissionError.message,
+    );
     return;
   }
 
@@ -37,7 +40,10 @@ export async function saveIndividualFormAnswer(
   );
 
   if (saveError) {
-    console.error("Error saving response to DB:", saveError);
+    console.error(
+      "[save-answers] Error saving response to DB:",
+      saveError.message,
+    );
   }
 }
 
@@ -61,8 +67,8 @@ export async function saveAllFormAnswers(
 
   if (submissionError) {
     console.error(
-      "Error upserting form_submission record as completed:",
-      submissionError,
+      "[save-answers] Error upserting form_submission record as completed:",
+      submissionError.message,
     );
     return;
   }
@@ -84,6 +90,9 @@ export async function saveAllFormAnswers(
     .upsert(answerUpserts, { onConflict: "submission_id,question_id" });
 
   if (saveError) {
-    console.error("Error bulk saving responses to DB:", saveError);
+    console.error(
+      "[save-answers] Error bulk saving responses to DB:",
+      saveError.message,
+    );
   }
 }

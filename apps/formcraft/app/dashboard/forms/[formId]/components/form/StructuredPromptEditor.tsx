@@ -388,7 +388,7 @@ const StructuredPromptEditor: React.FC<StructuredPromptEditorProps> = ({
                 }
               }}
               autoFocus
-              className="bg-background border-input focus:ring-ring focus:ring-offset-background w-full resize-none rounded-md border px-2 py-1 text-sm font-normal transition-all focus:ring-2 focus:ring-offset-1 focus:outline-none"
+              className="bg-background border-input focus:ring-ring focus:ring-offset-background w-full resize-none rounded-md px-2 py-1 text-sm font-normal transition-all focus:ring-2 focus:ring-offset-1 focus:outline-none"
               defaultValue={stripCdata(node.content)}
               style={{
                 minHeight: editingHeights[node.id]

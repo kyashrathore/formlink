@@ -5,6 +5,7 @@ import { Message as MessageContainer, MessageContent } from "@formlink/ui";
 import { UIMessage as MessageType } from "@ai-sdk/react";
 import { cn } from "@/lib/utils";
 import { motion } from "motion/react";
+import React from "react";
 
 type MessageUserProps = {
   hasScrollAnchor?: boolean;
@@ -12,7 +13,11 @@ type MessageUserProps = {
   id: string;
 };
 
-export function MessageUser({ hasScrollAnchor, message }: MessageUserProps) {
+function partsSignature(parts: any[] = []): string {
+  return parts.map((p, i) => `${i}:${p?.type}`).join("|");
+}
+
+function MessageUserComponent({ hasScrollAnchor, message }: MessageUserProps) {
   return (
     <MessageContainer
       from="user"
@@ -78,3 +83,27 @@ export function MessageUser({ hasScrollAnchor, message }: MessageUserProps) {
     </MessageContainer>
   );
 }
+
+function areMessageUserPropsEqual(
+  prev: MessageUserProps,
+  next: MessageUserProps,
+) {
+  if (prev.hasScrollAnchor !== next.hasScrollAnchor) return false;
+  // Narrow comparisons to id/role/parts signature to avoid false positives
+  const prevMsg = prev.message as any;
+  const nextMsg = next.message as any;
+  if (prevMsg?.id !== nextMsg?.id) return false;
+  if (prevMsg?.role !== nextMsg?.role) return false;
+  const prevSig = partsSignature(
+    Array.isArray(prevMsg?.parts) ? prevMsg.parts : [],
+  );
+  const nextSig = partsSignature(
+    Array.isArray(nextMsg?.parts) ? nextMsg.parts : [],
+  );
+  return prevSig === nextSig;
+}
+
+export const MessageUser = React.memo(
+  MessageUserComponent,
+  areMessageUserPropsEqual,
+);

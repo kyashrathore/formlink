@@ -7,7 +7,8 @@ import {
 } from "@/app/providers/posthog-provider";
 import { Suspense } from "react";
 
-const inter = Inter({ subsets: ["latin"] });
+// Use Google-hosted Inter at build time; Next will self-host the files.
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "Create Forms by Chatting - No Coding or Drag-and-Drop Needed.",

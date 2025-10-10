@@ -2,9 +2,11 @@ import type { FileData, QuestionResponse } from "@/lib/types";
 import { fileDataToFile } from "@/lib/utils";
 import { AddressData, Question } from "@formlink/schema";
 // Replace generic registry-based InputContainer with explicit Chat switcher
-import ChatQuestionInputSwitcher from "./ChatQuestionInputSwitcher";
 import React from "react";
+import { shallow } from "zustand/shallow";
+import ChatQuestionInputSwitcher from "./ChatQuestionInputSwitcher";
 import { useChatStore } from "./store/useChatStore";
+import { debugLog } from "./utils/debug";
 
 interface QuestionWrapperProps {
   questionId: string;
@@ -168,25 +170,64 @@ const formatResponse = (
   }
 };
 
-export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
+const QuestionWrapperComponent: React.FC<QuestionWrapperProps> = ({
   questionId,
+  messageId,
   isLast,
   variant,
   handleFileUpload,
   onSubmitSelection,
 }) => {
-  const store = useChatStore();
   const { formSchema, currentInputs, setCurrentInput, currentQuestionId } =
-    store;
+    useChatStore(
+      (state) => ({
+        formSchema: state.formSchema,
+        currentInputs: state.currentInputs,
+        setCurrentInput: state.setCurrentInput,
+        currentQuestionId: state.currentQuestionId,
+      }),
+      shallow,
+    );
 
   const question = formSchema?.questions.find((q) => q.id === questionId);
   const response = currentInputs[questionId];
+
+  const hasAnswer = React.useCallback(
+    (val: QuestionResponse, q: Question): boolean => {
+      if (val === undefined || val === null) return false;
+      if (Array.isArray(val)) return val.length > 0; // empty arrays are unanswered
+      if (typeof val === "string") return val.trim().length > 0;
+      if (typeof val === "number") return true;
+      if (typeof val === "boolean") return true;
+      if (typeof val === "object") {
+        if (q.type.name === "address") {
+          const obj = val as Record<string, unknown>;
+          return Object.values(obj).some(
+            (v) => typeof v === "string" && v.trim().length > 0,
+          );
+        }
+        if (q.type.name === "fileUpload") {
+          // FileUpload can be File, FileData, or array variants
+          const anyVal = val as any;
+          if (anyVal instanceof File) return true;
+          if (Array.isArray(anyVal)) return anyVal.length > 0;
+          if (anyVal && typeof anyVal === "object" && "url" in anyVal)
+            return true;
+          return false;
+        }
+        return true;
+      }
+      return false;
+    },
+    [],
+  );
 
   // Local preview state to keep the input visible briefly after selection
   const [isPreviewing, setIsPreviewing] = React.useState(false);
   const previewTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+
   const requestPreview = React.useCallback((ms: number) => {
     if (previewTimerRef.current) clearTimeout(previewTimerRef.current);
     setIsPreviewing(true);
@@ -201,140 +242,94 @@ export const QuestionWrapper: React.FC<QuestionWrapperProps> = ({
 
   if (!question) return null;
 
-  // For multi-select: need special handling because values can be selected before submission
-  const isMultiSelect = question.type.name === "multipleChoice";
+  // Simplified visibility rules: show input only for last assistant row until local submit.
+  const hasResp = hasAnswer(response ?? null, question);
+  const [isSubmitted, setIsSubmitted] = React.useState(false);
+  const showInput = variant === "assistant" && Boolean(isLast) && !isSubmitted;
+  const showUserSummary = variant === "user" && hasResp;
+  debugLog("QuestionWrapper visibility", {
+    isLast,
+    isSubmitted,
+    showInput,
+    showUserSummary,
+  });
 
-  // For address: need special handling because partial data doesn't mean submission
-  const isAddress = question.type.name === "address";
+  // Define response variables BEFORE any early returns to avoid undefined references
+  const responseAsFile =
+    response instanceof File
+      ? response
+      : Array.isArray(response) &&
+          response.length > 0 &&
+          response[0] instanceof File
+        ? response[0] // Extract the File from array
+        : response && typeof response === "object" && "url" in response
+          ? fileDataToFile(response as FileData)
+          : Array.isArray(response) &&
+              response.length > 0 &&
+              response[0] &&
+              typeof response[0] === "object" &&
+              "url" in response[0]
+            ? fileDataToFile(response[0] as FileData)
+            : null;
 
-  // For ranking: need special handling because ranking in progress doesn't mean submission
-  const isRanking = question.type.name === "ranking";
+  // For non-file question types, pass the response directly (not responseAsFile which is for files)
+  const isFileType = question.type.name === "fileUpload";
+  const currentResponseValue: QuestionResponse = isFileType
+    ? responseAsFile
+    : (response ?? null);
 
-  // For tel (phone): do not hide input just because a partial value exists (e.g., after selecting country)
-  const isTel =
-    question.type.name === "text" &&
-    (question.type as unknown as { format?: string }).format === "tel";
-
-  // For file upload: need special handling because file selection doesn't mean submission
-  const isFileUpload = question.type.name === "fileUpload";
-
-  // A multi-select is considered "submitted" when:
-  // 1. It has a response AND
-  // 2. Either it's not the last message OR it's not the current question being interacted with
-  const isMultiSelectSubmitted =
-    isMultiSelect && response && (!isLast || currentQuestionId !== questionId);
-
-  // An address is considered "submitted" when:
-  // 1. It has a response AND
-  // 2. It's not the current question being interacted with
-  const isAddressSubmitted =
-    isAddress && response && currentQuestionId !== questionId;
-
-  // A ranking is considered "submitted" when:
-  // 1. It has a response AND
-  // 2. It's not the current question being interacted with
-  const isRankingSubmitted =
-    isRanking && response && currentQuestionId !== questionId;
-
-  // A file upload is considered "submitted" when:
-  // 1. It has a response AND
-  // 2. It's not the current question being interacted with
-  const isFileUploadSubmitted =
-    isFileUpload && response && currentQuestionId !== questionId;
-
-  // A tel input is considered "submitted" only when it's not the current question
-  const isTelSubmitted = isTel && response && currentQuestionId !== questionId;
-
-  // Hide input if:
-  // - For address: has been explicitly submitted (not just filled)
-  // - For multi-select: has been submitted (not just selected)
-  // - For ranking: has been explicitly submitted (not just ranked)
-  // - For file upload: has been explicitly submitted (not just selected)
-  // - For other types: has any response
-  const baseShouldHideInput =
-    response &&
-    (isAddress
-      ? isAddressSubmitted
-      : isMultiSelect
-        ? isMultiSelectSubmitted
-        : isRanking
-          ? isRankingSubmitted
-          : isFileUpload
-            ? isFileUploadSubmitted
-            : isTel
-              ? isTelSubmitted
-              : true);
-  const shouldHideInput = baseShouldHideInput && !isPreviewing;
-
-  if (shouldHideInput) {
-    if (variant === "user") {
-      return (
-        <div className="bg-muted/50 px-4 py-2 rounded-lg inline-block">
-          <span className="text-sm">{formatResponse(question, response)}</span>
-        </div>
-      );
-    }
-    // Show nothing on assistant side for answered questions
-    return null;
-  }
-
-  if (isLast && variant === "assistant") {
-    // Note: When presentQuestion tool explicitly calls this component,
-    // we should always render input components regardless of question type
-    // The old logic that skipped basic text questions is disabled for tool-based rendering
-    const responseAsFile =
-      response instanceof File
-        ? response
-        : Array.isArray(response) &&
-            response.length > 0 &&
-            response[0] instanceof File
-          ? response[0] // Extract the File from array
-          : response && typeof response === "object" && "url" in response
-            ? fileDataToFile(response as FileData)
-            : Array.isArray(response) &&
-                response.length > 0 &&
-                response[0] &&
-                typeof response[0] === "object" &&
-                "url" in response[0]
-              ? fileDataToFile(response[0] as FileData)
-              : null;
-
-    // For non-file question types, pass the response directly (not responseAsFile which is for files)
-    const isFileType = question.type.name === "fileUpload";
-    const currentResponseValue: QuestionResponse = isFileType
-      ? responseAsFile
-      : (response ?? null);
-
+  // For user variant, render a compact summary bubble if we have an answer.
+  if (!showInput && showUserSummary) {
     return (
-      <div className="mt-2 sm:mt-3">
-        <ChatQuestionInputSwitcher
-          question={question}
-          response={currentResponseValue}
-          onAnswer={(value: QuestionResponse) => {
-            setCurrentInput(question.id, value);
-          }}
-          onPreviewSelection={requestPreview}
-          onNext={() => {
-            const currentValue =
-              useChatStore.getState().currentInputs[question.id];
-            if (currentValue && onSubmitSelection) {
-              const formattedResponse = formatResponse(question, currentValue);
-              onSubmitSelection(question.id, currentValue, formattedResponse);
-            }
-          }}
-          onFileUpload={handleFileUpload}
-          uploadedFile={responseAsFile}
-          onFileSelect={(file: File | null) => {
-            if (file && handleFileUpload) {
-              handleFileUpload(question.id, file);
-            } else {
-              setCurrentInput(question.id, null);
-            }
-          }}
-        />
+      <div className="bg-muted/50 px-4 py-2 rounded-lg inline-block">
+        <span className="text-sm">
+          {formatResponse(question, (response ?? null) as QuestionResponse)}
+        </span>
       </div>
     );
   }
 
-  return null;
+  if (!showInput) return null;
+
+  return (
+    <div className="mt-2 sm:mt-3">
+      <ChatQuestionInputSwitcher
+        question={question}
+        response={currentResponseValue}
+        onAnswer={(value: QuestionResponse) => {
+          setCurrentInput(question.id, value);
+        }}
+        onPreviewSelection={requestPreview}
+        onNext={() => {
+          setIsSubmitted(true);
+          const currentValue =
+            useChatStore.getState().currentInputs[question.id];
+          if (currentValue && onSubmitSelection) {
+            const formattedResponse = formatResponse(question, currentValue);
+            onSubmitSelection(question.id, currentValue, formattedResponse);
+          }
+        }}
+        onFileUpload={handleFileUpload}
+        uploadedFile={responseAsFile}
+        onFileSelect={(file: File | null) => {
+          if (file && handleFileUpload) {
+            handleFileUpload(question.id, file);
+          } else {
+            setCurrentInput(question.id, null);
+          }
+        }}
+      />
+    </div>
+  );
 };
+
+export const QuestionWrapper = React.memo(
+  QuestionWrapperComponent,
+  (prev, next) =>
+    prev.questionId === next.questionId &&
+    prev.messageId === next.messageId &&
+    prev.isLast === next.isLast &&
+    prev.variant === next.variant &&
+    prev.handleFileUpload === next.handleFileUpload &&
+    prev.onSubmitSelection === next.onSubmitSelection,
+);

@@ -18,7 +18,6 @@ export async function decideNextQuestion({
   try {
     const apiKey = process.env.OPENROUTER_API_KEY || "";
     if (!apiKey) {
-      console.warn("OPENROUTER_API_KEY not set; falling back to linear order");
       return nextUnansweredLinear(answerHistory, questions);
     }
 
@@ -51,7 +50,10 @@ export async function decideNextQuestion({
     // Last fallback: linear
     return nextUnansweredLinear(answerHistory, questions);
   } catch (e) {
-    console.error("decideNextQuestion error:", e);
+    console.error(
+      "[branching] decideNextQuestion error:",
+      e instanceof Error ? e.message : e,
+    );
     return nextUnansweredLinear(answerHistory, questions);
   }
 }

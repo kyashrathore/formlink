@@ -31,11 +31,7 @@ async function computeDerivedFields(
           const value = await expr.evaluate(responsesWithComputedFields);
           responsesWithComputedFields[computed.field_id] = value;
         } catch (err) {
-          console.error(
-            "Error evaluating computedFromResponses jsonata:",
-            computed,
-            err,
-          );
+          // previously logged jsonata evaluation error; logs removed.
         }
       }
     }
@@ -61,7 +57,6 @@ function saveAnswerToApi(
   const { formId, versionId, submissionId, isTestSubmission } =
     apiConfiguration;
   if (!formId || !versionId || !submissionId) {
-    console.warn("Missing IDs for saveAnswerToApi");
     return;
   }
   fetch(apiConfig.getSaveAnswersUrl(formId), {
@@ -94,13 +89,11 @@ async function validateSubmissionExists(
       .maybeSingle();
 
     if (error) {
-      console.warn(`Error checking submission existence: ${error.message}`);
       return false;
     }
 
     return !!data;
   } catch (err) {
-    console.warn(`Exception checking submission existence:`, err);
     return false;
   }
 }
@@ -123,6 +116,8 @@ interface ChatState {
   versionId: string | null;
   formId: string | null;
   currentQuestionId: string | null;
+  // The assistant message id that presented the current active question
+  presentedQuestionMessageId: string | null;
   formDisplayState: FormDisplayState;
   lastError: string | null;
   chatHistoryMessages: MessageType[];
@@ -154,6 +149,7 @@ interface ChatState {
   setLastError: (errorMsg: string) => void;
   setChatHistoryMessages: (messages: MessageType[]) => void;
   setCurrentInput: (questionId: string, value: QuestionResponse) => void;
+  setPresentedQuestionMessageId: (messageId: string | null) => void;
   clearPersistedState: () => void;
   restartForm: () => void;
   setEphemeralUploadedFile: (file: File | null) => void;
@@ -179,6 +175,7 @@ export const useChatStore = create<ChatState>()(
       versionId: null,
       formId: null,
       currentQuestionId: null,
+      presentedQuestionMessageId: null,
       formDisplayState: "idle",
       lastError: null,
       chatHistoryMessages: [],
@@ -299,11 +296,8 @@ export const useChatStore = create<ChatState>()(
                 isTestSubmission: isTestSubmission,
                 status: "in_progress",
               }),
-            }).catch((error) => {
-              console.error(
-                "Failed to create initial submission record:",
-                error,
-              );
+            }).catch(() => {
+              // previously logged initial submission creation failure; logs removed.
             });
           }
         }
@@ -472,6 +466,9 @@ export const useChatStore = create<ChatState>()(
           },
         })),
 
+      setPresentedQuestionMessageId: (messageId) =>
+        set({ presentedQuestionMessageId: messageId }),
+
       clearPersistedState: () => {
         // Clear only the persisted fields to reset localStorage
         set({
@@ -562,7 +559,7 @@ export const useChatStore = create<ChatState>()(
         if (uuidRegex.test(newSubmissionId)) {
           set({ submissionId: newSubmissionId });
         } else {
-          console.error(`Invalid submission ID format: ${newSubmissionId}`);
+          // invalid submission ID format; logs removed.
         }
       },
 

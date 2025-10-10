@@ -25,10 +25,6 @@ export function useRedirect(
           window.location.href = redirectUrl;
           // If redirect succeeds, the component typically unmounts, so no need to set isActuallyRedirecting to false.
         } catch (e) {
-          console.error(
-            `[useRedirect] Error during window.location.href assignment to "${redirectUrl}":`,
-            e,
-          );
           setIsActuallyRedirecting(false); // Reset on error to allow potential re-attempts or UI updates.
         }
       }, delay);

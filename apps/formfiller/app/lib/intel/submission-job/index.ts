@@ -13,9 +13,6 @@ export async function runSubmissionJob(
   options: RunSubmissionJobOptions,
 ): Promise<void> {
   if (!DEFAULT_ENDPOINT) {
-    if (process.env.NODE_ENV === "development") {
-      console.warn("[Lifecycle] FORMCRAFT_LIFECYCLE_ENDPOINT not configured.");
-    }
     return;
   }
 
@@ -29,8 +26,6 @@ export async function runSubmissionJob(
       body: JSON.stringify(options),
     });
   } catch (error) {
-    if (process.env.NODE_ENV === "development") {
-      console.error("[Lifecycle] failed to trigger lifecycle job", error);
-    }
+    // previously logged lifecycle job trigger failures; logs removed.
   }
 }

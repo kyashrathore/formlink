@@ -3,7 +3,13 @@ import tseslint from "typescript-eslint";
 
 export default [
   {
-    ignores: ["dist/**", "node_modules/**", "**/*.stories.*", "jest.config.js"],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "**/*.stories.*",
+      "jest.config.js",
+      "@formlink/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

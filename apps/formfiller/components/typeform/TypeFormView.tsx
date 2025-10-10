@@ -136,7 +136,7 @@ export default function TypeFormView({
           return true; // Successfully branched
         }
       } catch (error) {
-        console.error("AI branching failed:", error);
+        // swallow branching errors; default navigation will run
       }
 
       return false; // Branching failed, use default navigation
@@ -207,7 +207,7 @@ export default function TypeFormView({
         setShowConfetti(true);
         setActiveQuestionIndex(formSchema.questions.length);
       } else {
-        console.error("Failed to submit form");
+        // swallow submit failure; UI can handle via callbacks
       }
       endNav();
     }
@@ -455,7 +455,6 @@ export default function TypeFormView({
       const errorMessage =
         error instanceof Error ? error.message : "File upload failed";
       alert(`Upload Error: ${errorMessage}`);
-      console.error("File upload error:", error);
     } finally {
       setIsLoading(false);
     }

@@ -2,12 +2,13 @@
 
 import { analytics } from "@/app/lib/analytics"
 import { APP_NAME } from "@/app/lib/config"
-import { Database } from "@formlink/db"
 import {
+  Badge,
   CardTitle,
   Sidebar,
   SidebarContent,
   SidebarHeader,
+  SidebarInput,
   SidebarInset,
   SidebarMenu,
   SidebarMenuButton,
@@ -16,24 +17,27 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@formlink/ui"
-import { format } from "date-fns"
+import { formatDistanceToNow } from "date-fns"
 import { motion } from "motion/react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { startTransition, useCallback, useEffect, useState } from "react"
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 import { v4 as uuidv4 } from "uuid"
 import FormlinkLogo from "../components/FormlinkLogo"
 import { DashboardChat } from "./components/DashboardChat"
 import { FormWithVersions } from "./types"
 
-function formatDate(dateString?: string | null) {
+function formatRelative(dateString?: string | null) {
   if (!dateString) return "N/A"
   const date = new Date(dateString)
-  try {
-    return format(date, "PP p")
-  } catch {
-    return "N/A"
-  }
+  if (isNaN(date.getTime())) return "N/A"
+  return formatDistanceToNow(date, { addSuffix: true })
 }
 
 interface User {
@@ -77,6 +81,24 @@ function Home({ forms, user }: HomeProps) {
   )
 
   const [isNavigating, setIsNavigating] = useState(false)
+  // Client-side search for forms
+  const [query, setQuery] = useState("")
+  const onQueryChange = useCallback<React.ChangeEventHandler<HTMLInputElement>>(
+    (e) => setQuery(e.target.value),
+    []
+  )
+  const filteredForms = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return forms
+    return forms.filter((f) => {
+      const t = (
+        f.published_version?.title ||
+        f.draft_version?.title ||
+        "Untitled Form"
+      ).toLowerCase()
+      return t.includes(q)
+    })
+  }, [forms, query])
 
   useEffect(() => {
     // Create a new form ID when component mounts
@@ -99,14 +121,6 @@ function Home({ forms, user }: HomeProps) {
     },
     [formIdForAgentPanel, router]
   )
-
-  const userData = user
-    ? ({
-        ...user,
-        profile_image: user.user_metadata?.avatar_url,
-        display_name: user.user_metadata?.full_name,
-      } as Database["public"]["Tables"]["users"]["Row"])
-    : null
 
   return (
     <motion.div
@@ -135,56 +149,80 @@ function Home({ forms, user }: HomeProps) {
                 <SidebarTrigger />
               )}
             </div>
-            <SidebarHeader className="flex items-start justify-center p-4">
+            <SidebarHeader>
               {isSidebarExpanded && (
-                <CardTitle className="text-md">Your Forms</CardTitle>
+                <>
+                  <CardTitle className="text-md">Your Forms</CardTitle>
+                  <SidebarInput
+                    placeholder="Search forms..."
+                    value={query}
+                    onChange={onQueryChange}
+                  />
+                </>
               )}
             </SidebarHeader>
             <SidebarContent>
-              <SidebarMenu className="space-y-1 p-2">
-                {forms.length > 0 ? (
-                  forms.map((form) => (
-                    <SidebarMenuItem key={form.id}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={false}
-                        size="default"
-                        tooltip={
+              <SidebarMenu className="space-y-1 p-1">
+                {(filteredForms.length > 0 ? filteredForms : []).map((form) => (
+                  <SidebarMenuItem key={form.id}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={false}
+                      size="default"
+                      tooltip={
+                        form.published_version
+                          ? form.published_version.title
+                          : form.draft_version?.title || "Untitled Form"
+                      }
+                      className="hover:bg-secondary h-auto p-0"
+                    >
+                      <Link
+                        prefetch={true}
+                        href={`/dashboard/forms/${form.id}`}
+                        aria-label={
                           form.published_version
                             ? form.published_version.title
                             : form.draft_version?.title || "Untitled Form"
                         }
-                        className="h-12 py-2"
+                        className="group/item flex w-full items-start gap-3 rounded-md px-3 py-1"
                       >
-                        <Link
-                          prefetch={true}
-                          href={`/dashboard/forms/${form.id}`}
-                          className="flex w-full items-center gap-2"
-                        >
-                          {" "}
-                          {}
-                          {isSidebarExpanded && (
-                            <div className="flex flex-col">
-                              <span className="leading-tight font-medium">
+                        {isSidebarExpanded && (
+                          <div className="flex w-full flex-col">
+                            <span className="group-hover/item:text-primary text-sm leading-tight font-medium break-words transition-colors">
+                              {form.published_version
+                                ? form.published_version.title
+                                : form.draft_version?.title || "Untitled Form"}
+                            </span>
+                            <div className="text-muted-foreground mt-1 flex items-center gap-2 text-xs">
+                              <Badge
+                                variant={
+                                  form.published_version
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="shrink-0 text-[10px] uppercase"
+                              >
+                                {form.published_version ? "Published" : "Draft"}
+                              </Badge>
+                              <span>
                                 {form.published_version
-                                  ? form.published_version.title
-                                  : form.draft_version?.title ||
-                                    "Untitled Form"}
-                              </span>
-                              <span className="text-xs leading-tight text-gray-500">
-                                {form.published_version
-                                  ? `Published: ${formatDate(form.published_version.published_at)}`
-                                  : `Draft: ${formatDate(form.draft_version?.updated_at)}`}
+                                  ? `Published ${formatRelative(form.published_version.published_at)}`
+                                  : `Updated ${formatRelative(form.draft_version?.updated_at)}`}
                               </span>
                             </div>
-                          )}
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))
-                ) : (
+                          </div>
+                        )}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+                {filteredForms.length === 0 && (
                   <p className="p-2 text-sm text-gray-500">
-                    {isSidebarExpanded ? "No forms yet." : ""}
+                    {isSidebarExpanded
+                      ? query
+                        ? "No matching forms."
+                        : "No forms yet."
+                      : ""}
                   </p>
                 )}
               </SidebarMenu>

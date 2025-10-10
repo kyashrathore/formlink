@@ -284,7 +284,7 @@ export default function ClassicFormView({
       if (success) {
         setShowConfetti(true);
       } else {
-        console.error("Failed to submit form");
+        // submit failed; UI surface handled by upstream
       }
     },
     [
@@ -521,7 +521,6 @@ export default function ClassicFormView({
       </UIForm>
     );
   } catch (error) {
-    console.error("ClassicFormView error:", error);
     return <div>Error loading classic form: {String(error)}</div>;
   }
 }

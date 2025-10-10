@@ -1,6 +1,25 @@
 # REPO_CONTEXT
 
-Last updated: 2025-10-01
+Last updated: 2025-10-10
+
+Recent change
+
+- Fix: Single-pass form creation repair now supplies required prompt variables to `form/create-form-repair.md` (`errors_json`, `json_payload`, `generation_context`). This prevents `loadPrompt: missing variables` errors during JSON repair in `apps/formcraft/app/lib/chat/tools/create-form.ts`.
+- Enhancement: Pre-repair invalid JSON text with `jsonrepair` before schema repair. Applied in `apps/formcraft/app/lib/chat/tools/create-form.ts: repairFunction` and `apps/formcraft/app/lib/chat/tools/generate-question.ts: repairFunction` to reduce failures from malformed JSON strings. Installed dependency in `apps/formcraft`.
+- UI primitives: Renamed `BaseMultiSelect` (hook-using function) to `useBaseMultiSelect` and updated all call sites (`packages/ui/src/form/modes/unified/UnifiedMultiSelect.tsx`) and re-exports (`packages/ui/src/form/primitives/base/index.ts`). Rationale: it’s a custom hook and must be called unconditionally at the top level; the new name makes this contract explicit and prevents conditional invocation leading to hook count mismatches.
+- Security/Privacy: Removed ad-hoc debug/info logs and any logs that could emit PII (e.g., `contextPayload`, full responses). Retained/restored essential error logs with redacted messages in server routes. Touched: `apps/formfiller/app/api/ai/chat-assist/**`, branching routes, upload/save-answers/forms/chat-history APIs, and `lib/getFormSchema.ts`.
+
+Logging policy
+
+- Remove debug/info/trace logs from production code paths.
+- Keep error logs for operational visibility; log only messages/identifiers that are non‑PII.
+- Never log full user inputs, responses, or identifiers like `submissionId` together with content.
+- Prefer structured, redacted telemetry (PostHog via `trackServerEvent`).
+- Client `debugLog` shim remains a noop; see `apps/formfiller/components/chat/utils/debug.ts`.
+
+Planned work
+
+- Formfiller multilanguage (i18n) plan: docs/formfiller_i18n_plan_v1.md
 
 ## Mental Model (Zoomed Out)
 
@@ -80,7 +99,10 @@ Key notes:
 
 - Structure: `src/ui/**` (primitive components), `src/ai-elements/**` (AI tooling surfaces), `src/components/**` (mid-level composites), `src/hooks/**`, `src/lib/**`, and `src/styles/globals.css`.
 - Tech: Tailwind 4, Radix primitives, shadcn patterns, motion/Framer integration, TanStack utilities.
-- Build: `tsup` for JS bundles, `tsc` for type declarations; exports configured for tree-shaking and CSS opt-in.
+- Build: `tsup` for JS bundles, `tsc` for type declarations; exports configured for tree-shaking and CSS opt-in. The `build` script runs both JS and type declaration emits to ensure app type-checking has package types in CI.
+
+TODO: Verify CI caches don’t skip `packages/ui` type emit; if necessary, add an explicit Turbo `type-check` task for `@formlink/ui` and wire it as a dependency for app builds.
+
 - Testing: Jest + Testing Library, with optional visual regression hooks (jest-image-snapshot config present).
 
 ### @formlink/schema (`packages/schema`)
@@ -100,6 +122,7 @@ Key notes:
 - Organized under `md/**` with guard templates (`_guards.md`) and scenario-specific prompts (form creation, insights, lifecycle orchestration).
 - Loader enforces parameter substitution (`{{placeholder}}`) and guardrail preamble.
 - AI features across apps reference prompts by ID rather than duplicating strings.
+- Respondent chat slot embedding policy (strict): every assistant turn that surfaces a new input must end with a single slot token `::PresentQuestionInputComponent qId="<questionId>"::` on its own line (no trailing text). Slots are the sole authority for wiring inline inputs; no auxiliary presentQuestion tool remains.
 
 ### Tooling Packages
 
@@ -161,10 +184,14 @@ Additional touchpoints:
 
 Additional guidance:
 
-- Preferred commands: `pnpm dev` (runs Turbo dev for filtered apps), `pnpm -w lint`, `pnpm -w type-check`, `pnpm test` where applicable.
+- Preferred commands: `pnpm dev` (runs Turbo dev for filtered apps), `pnpm typecheck` (repo-wide), `pnpm -w lint`, `pnpm test` where applicable.
 - Husky/lint-staged enforce Prettier on staged files; follow import ordering rules (prettier sort plugin).
 - CI expectations: zero lint/type errors; run targeted tests when modifying shared packages or critical flows.
 - Environment: `.env.local` files per app contain Supabase keys, AI provider credentials, Composio tokens; never commit secrets.
+
+Documentation Index (selected)
+
+- Chat runtime data flow (AI-assisted inputs): docs/chat-runtime-data-flow_v1.md
 
 ### Component API Notes
 
@@ -200,6 +227,10 @@ Additional guidance:
 - **Error Handling**: server routes throw typed errors; UI surfaces toasts (`sonner`) or inline banners.
 
 ## Domain Reference
+
+### Custom Domains
+
+- Design: docs/custom_domains_v1.md — Data model, APIs, middleware, and builder UI for mapping user-owned domains to specific forms (1:1). Includes DNS verification, provider activation, and runtime Host-based routing.
 
 ### Form Authoring
 

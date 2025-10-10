@@ -109,13 +109,6 @@ export default function PreviewPageClient({
   // Send ready message to parent when component mounts
   useEffect(() => {
     if (!hasNotifiedReady.current && typeof window !== "undefined") {
-      console.info("[Formlink][PreviewFrame] mount", {
-        formId: initialFormSchema.id,
-        hasOverrides: Boolean(initialFormSchema.settings?.theme_overrides),
-        shadcnLength:
-          (initialFormSchema.settings?.theme_overrides as any)?.shadcn_css
-            ?.length || 0,
-      });
       const readyMessage: PreviewReadyMessage = {
         type: "FORMFILLER_PREVIEW_READY",
         formId: initialFormSchema.id,
@@ -184,14 +177,10 @@ export default function PreviewPageClient({
             result.appliedDarkVariables,
             result.warnings,
           );
-          console.warn(
-            `Applied ${result.appliedRootVariables.length} root variables and ${result.appliedDarkVariables.length} dark variables`,
-          );
 
           // Force a reflow to ensure CSS variables are applied
           void document.documentElement.offsetHeight;
         } else {
-          console.error("Shadcn CSS application failed:", result);
           sendShadcnAppliedMessage(
             false,
             result.error || "Shadcn CSS application failed",
@@ -201,12 +190,8 @@ export default function PreviewPageClient({
           );
         }
 
-        // Log warnings if any
-        if (result.warnings.length > 0) {
-          console.warn("Shadcn CSS application warnings:", result.warnings);
-        }
+        // Warnings previously logged; logs removed
       } catch (error) {
-        console.error("Failed to apply shadcn CSS:", error);
         sendShadcnAppliedMessage(
           false,
           error instanceof Error ? error.message : "Unknown error",
@@ -224,7 +209,6 @@ export default function PreviewPageClient({
     function handleMessage(event: MessageEvent<IncomingMessage>) {
       // Validate origin
       if (!validateOrigin(event.origin)) {
-        console.warn(`Blocked message from untrusted origin: ${event.origin}`);
         return;
       }
 
@@ -240,17 +224,11 @@ export default function PreviewPageClient({
           break;
 
         case "FORMCRAFT_SHADCN_CSS_UPDATE":
-          console.info("[Formlink][PreviewFrame] css update received", {
-            length: payload.cssText?.length || 0,
-          });
           applyShadcnCSS(payload.cssText);
           break;
 
         case "FORMCRAFT_THEME_MODE_UPDATE": {
           const next = payload.mode;
-          console.info("[Formlink][PreviewFrame] theme mode update", {
-            mode: next,
-          });
           const root = document.documentElement;
           root.classList.remove("light", "dark");
           if (next === "dark") root.classList.add("dark");

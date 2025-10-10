@@ -26,6 +26,9 @@ export const ChatAssistBodySchema = z.object({
   userId: z.string().optional().nullable(),
   isTestSubmission: z.boolean().optional().default(false),
   messages: z.any().optional(),
+  initiate: z.boolean().optional().default(false),
+  suppressUserMessagePersistence: z.boolean().optional().default(false),
+  startMode: z.enum(["start", "resume"]).optional().nullable(),
 });
 
 export type ChatAssistBody = z.infer<typeof ChatAssistBodySchema>;

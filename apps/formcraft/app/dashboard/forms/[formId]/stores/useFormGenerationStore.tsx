@@ -24,6 +24,7 @@ interface FormGenerationState {
   completedTaskCount: number
   questionTaskCount: number | null
   initialPrompt: string | null
+  initialModel: string | null
   generatedQuestions: any[]
   formMetadata: {
     title?: string
@@ -45,6 +46,7 @@ interface FormGenerationActions {
   processEvent: (event: AgentEvent) => void
   resetStore: (keepFormId?: boolean) => void
   setInitialPrompt: (prompt: string | null) => void
+  setInitialModel: (model: string | null) => void
   addGeneratedQuestion: (question: any) => void
   setFormMetadata: (metadata: { title?: string; description?: string }) => void
   setQuestionProgress: (current: number, total: number) => void
@@ -69,6 +71,7 @@ const formGenerationStore: StateCreator<
   completedTaskCount: 0,
   questionTaskCount: null,
   initialPrompt: null,
+  initialModel: null,
   generatedQuestions: [],
   formMetadata: null,
   isFormGenerating: false,
@@ -268,6 +271,7 @@ const formGenerationStore: StateCreator<
       completedTaskCount: 0,
       questionTaskCount: null,
       initialPrompt: null,
+      initialModel: null,
       generatedQuestions: [],
       formMetadata: null,
       isFormGenerating: false,
@@ -281,6 +285,10 @@ const formGenerationStore: StateCreator<
 
   setInitialPrompt: (prompt: string | null) => {
     set({ initialPrompt: prompt })
+  },
+
+  setInitialModel: (model: string | null) => {
+    set({ initialModel: model })
   },
 
   addGeneratedQuestion: (question: any) => {
@@ -335,6 +343,7 @@ export const useFormGenerationStore = create<
     name: "form-generation-store",
     partialize: (state) => ({
       initialPrompt: state.initialPrompt,
+      initialModel: state.initialModel,
       formId: state.formId,
     }),
   })

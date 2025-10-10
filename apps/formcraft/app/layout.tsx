@@ -7,23 +7,24 @@ import {
 import { ReactQueryClientProvider } from "@/app/ReactQueryClientProvider"
 import { Toaster } from "@formlink/ui"
 import "@formlink/ui/globals.css"
-import "./styles/vars.css"
 import type { Metadata } from "next"
 import { ThemeProvider } from "next-themes"
 import { Inter, Poppins } from "next/font/google"
 import Script from "next/script"
 import { Suspense } from "react"
+import "./styles/vars.css"
 import "./view-transitions.css"
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
 })
-
 const poppins = Poppins({
   variable: "--font-poppins",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
+  display: "swap",
 })
 
 export const metadata: Metadata = {
@@ -48,6 +49,13 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          async
+          crossOrigin="anonymous"
+          src="https://tweakcn.com/live-preview.min.js"
+        />
+      </head>
       <body
         className={`${inter.variable} ${poppins.variable} scroll-smooth antialiased`}
       >

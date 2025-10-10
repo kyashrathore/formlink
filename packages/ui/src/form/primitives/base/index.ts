@@ -1,6 +1,6 @@
 export * from "../BaseTextInput";
 export * from "../BaseSelect";
-export * from "../BaseMultiSelect";
+export * from "../useBaseMultiSelect";
 export * from "../BaseRating";
 export * from "../BaseDatePicker";
 export * from "../BaseFileUpload";
