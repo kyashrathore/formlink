@@ -89,7 +89,7 @@ export interface BaseRankingReturn extends BasePrimitiveReturn<string[]> {
   setAnnouncement: (message: string) => void;
 }
 
-export function BaseRanking(props: BaseRankingProps): BaseRankingReturn {
+export function useBaseRanking(props: BaseRankingProps): BaseRankingReturn {
   const {
     value,
     onChange,
@@ -550,3 +550,5 @@ export function BaseRanking(props: BaseRankingProps): BaseRankingReturn {
     setAnnouncement,
   };
 }
+
+// Back-compat alias

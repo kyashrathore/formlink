@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@formlink/ui/lib/utils";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import React from "react";
 // Simplified: rely on Radix Portal + absolute positioning; remove rAF/observers and debug logs

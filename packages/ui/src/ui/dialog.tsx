@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@formlink/ui/lib/utils";
 import { X } from "@phosphor-icons/react/X";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import * as React from "react";

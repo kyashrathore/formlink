@@ -2,9 +2,9 @@
 
 import React from "react";
 import {
-  BaseLinearScale,
+  useBaseLinearScale,
   LinearScaleConfig,
-} from "../../primitives/BaseLinearScale";
+} from "../../primitives/useBaseLinearScale";
 import { cn } from "../../../lib/utils";
 import { useIsMobile } from "../../../hooks/ui/use-mobile";
 
@@ -48,7 +48,7 @@ export function UnifiedLinearScale({
     errors,
     isTouched,
     containerProps,
-  } = BaseLinearScale({
+  } = useBaseLinearScale({
     value,
     onChange,
     disabled,

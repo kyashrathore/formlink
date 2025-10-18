@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import React from "react";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
-import { BaseAddress } from "../../primitives";
+import { useBaseAddress } from "../../primitives";
 
 export type FormMode = "chat" | "typeform";
 
@@ -52,7 +52,7 @@ export function UnifiedAddressInput(props: UnifiedAddressInputProps) {
   } = props;
 
   // Use BaseAddress primitive for all field state management and validation
-  const addressPrimitive = BaseAddress({
+  const addressPrimitive = useBaseAddress({
     value,
     onChange,
     disabled,

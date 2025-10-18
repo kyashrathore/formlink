@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
-import { BaseRanking } from "../../primitives";
+import { useBaseRanking } from "../../primitives";
 import { Option as SelectOption } from "../../primitives/types";
 import { cn } from "../../../lib/utils";
 import { ChevronDown, GripVertical, ArrowRight } from "lucide-react";
@@ -181,7 +181,7 @@ export function UnifiedRanking({
   const hasSubmittedRef = useRef(false);
 
   // Use BaseRanking for core logic with mode-specific configuration
-  const ranking = BaseRanking({
+  const ranking = useBaseRanking({
     value,
     onChange,
     options,

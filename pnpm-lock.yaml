@@ -128,7 +128,7 @@ importers:
         version: 3.1.3
       "@openrouter/ai-sdk-provider":
         specifier: ^1.1.2
-        version: 1.2.0(ai@5.0.60(zod@3.25.76))(zod@3.25.76)
+        version: 1.2.0(ai@5.0.76(zod@3.25.76))(zod@3.25.76)
       "@phosphor-icons/react":
         specifier: ^2.1.10
         version: 2.1.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -176,7 +176,7 @@ importers:
         version: 1.2.3(@types/react-dom@19.2.0(@types/react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       "@supabase/supabase-js":
         specifier: ^2.55.0
-        version: 2.75.0
+        version: 2.75.1
       "@tanstack/react-query":
         specifier: ^5.74.3
         version: 5.90.2(react@19.2.0)
@@ -191,7 +191,7 @@ importers:
         version: 1.13.1(@opentelemetry/api-logs@0.57.2)(@opentelemetry/api@1.9.0)(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/resources@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))
       ai:
         specifier: ^5.0.52
-        version: 5.0.60(zod@3.25.76)
+        version: 5.0.76(zod@3.25.76)
       ajv:
         specifier: ^8.17.1
         version: 8.17.1
@@ -432,7 +432,7 @@ importers:
         version: 5.2.2(react-hook-form@7.64.0(react@19.2.0))
       "@openrouter/ai-sdk-provider":
         specifier: ^1.1.2
-        version: 1.2.0(ai@5.0.60(zod@3.25.76))(zod@3.25.76)
+        version: 1.2.0(ai@5.0.76(zod@3.25.76))(zod@3.25.76)
       "@phosphor-icons/react":
         specifier: ^2.1.7
         version: 2.1.10(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -477,7 +477,7 @@ importers:
         version: 1.2.8(@types/react-dom@19.2.0(@types/react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       "@supabase/ssr":
         specifier: ^0.5.2
-        version: 0.5.2(@supabase/supabase-js@2.75.0)
+        version: 0.5.2(@supabase/supabase-js@2.75.1)
       "@types/hast":
         specifier: ^3.0.4
         version: 3.0.4
@@ -492,7 +492,7 @@ importers:
         version: 10.0.0
       ai:
         specifier: ^5.0.22
-        version: 5.0.60(zod@3.25.76)
+        version: 5.0.76(zod@3.25.76)
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.6)
@@ -644,10 +644,10 @@ importers:
     dependencies:
       "@supabase/ssr":
         specifier: latest
-        version: 0.7.0(@supabase/supabase-js@2.75.0)
+        version: 0.7.0(@supabase/supabase-js@2.75.1)
       "@supabase/supabase-js":
         specifier: latest
-        version: 2.75.0
+        version: 2.75.1
     devDependencies:
       "@formlink/eslint-config":
         specifier: workspace:*
@@ -835,8 +835,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7
       ai:
-        specifier: ^4.3.19
-        version: 4.3.19(react@19.2.0)(zod@3.25.76)
+        specifier: ^5.0.76
+        version: 5.0.76(zod@3.25.76)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -990,7 +990,7 @@ importers:
         version: 4.1.14
       ts-jest:
         specifier: ^29.1.2
-        version: 29.4.4(@babel/core@7.28.0)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.0))(jest-util@29.7.0)(jest@29.7.0(@types/node@20.19.19)(babel-plugin-macros@3.1.0))(typescript@5.9.3)
+        version: 29.4.4(@babel/core@7.28.0)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.0))(esbuild@0.25.8)(jest-util@29.7.0)(jest@29.7.0(@types/node@20.19.19)(babel-plugin-macros@3.1.0))(typescript@5.9.3)
       tsup:
         specifier: ^8.0.2
         version: 8.5.0(jiti@2.6.1)(postcss@8.5.6)(tsx@4.20.6)(typescript@5.9.3)(yaml@2.8.0)
@@ -1032,6 +1032,15 @@ packages:
     resolution:
       {
         integrity: sha512-v9i3GPEo4t3fGcSkQkc07xM6KJN75VUv7C1Mqmmsu2xD8lQwnQfsrgAXyNuWe20yGY0eHuheSPDZhiqsGKtH1g==,
+      }
+    engines: { node: ">=18" }
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  "@ai-sdk/gateway@2.0.0":
+    resolution:
+      {
+        integrity: sha512-Gj0PuawK7NkZuyYgO/h5kDK/l6hFOjhLdTq3/Lli1FTl47iGmwhH1IZQpAL3Z09BeFYWakcwUmn02ovIm2wy9g==,
       }
     engines: { node: ">=18" }
     peerDependencies:
@@ -1091,6 +1100,15 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  "@ai-sdk/provider-utils@3.0.12":
+    resolution:
+      {
+        integrity: sha512-ZtbdvYxdMoria+2SlNarEk6Hlgyf+zzcznlD55EAl+7VZvJaSg2sqPvwArY7L6TfDEDJsnCq0fdhBSkYo0Xqdg==,
+      }
+    engines: { node: ">=18" }
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   "@ai-sdk/provider@1.1.3":
     resolution:
       {
@@ -1104,19 +1122,6 @@ packages:
         integrity: sha512-6o7Y2SeO9vFKB8lArHXehNuusnpddKPk7xqL7T2/b+OvXMRIXUO1rR4wcv1hAFUAT9avGZshty3Wlua/XA7TvA==,
       }
     engines: { node: ">=18" }
-
-  "@ai-sdk/react@1.2.12":
-    resolution:
-      {
-        integrity: sha512-jK1IZZ22evPZoQW3vlkZ7wvjYGYF+tRBKXtrcolduIkQ/m/sOAVcVeVDUDvh1T91xCnWCdUGCPZg2avZ90mv3g==,
-      }
-    engines: { node: ">=18" }
-    peerDependencies:
-      react: ^18 || ^19 || ^19.0.0-rc
-      zod: ^3.23.8
-    peerDependenciesMeta:
-      zod:
-        optional: true
 
   "@ai-sdk/react@2.0.60":
     resolution:
@@ -5860,16 +5865,16 @@ packages:
       typescript:
         optional: true
 
-  "@supabase/auth-js@2.75.0":
+  "@supabase/auth-js@2.75.1":
     resolution:
       {
-        integrity: sha512-J8TkeqCOMCV4KwGKVoxmEBuDdHRwoInML2vJilthOo7awVCro2SM+tOcpljORwuBQ1vHUtV62Leit+5wlxrNtw==,
+        integrity: sha512-zktlxtXstQuVys/egDpVsargD9hQtG20CMdtn+mMn7d2Ulkzy2tgUT5FUtpppvCJtd9CkhPHO/73rvi5W6Am5A==,
       }
 
-  "@supabase/functions-js@2.75.0":
+  "@supabase/functions-js@2.75.1":
     resolution:
       {
-        integrity: sha512-18yk07Moj/xtQ28zkqswxDavXC3vbOwt1hDuYM3/7xPnwwpKnsmPyZ7bQ5th4uqiJzQ135t74La9tuaxBR6e7w==,
+        integrity: sha512-xO+01SUcwVmmo67J7Htxq8FmhkYLFdWkxfR/taxBOI36wACEUNQZmroXGPl4PkpYxBO7TaDsRHYGxUpv9zTKkg==,
       }
 
   "@supabase/node-fetch@2.6.15":
@@ -5879,16 +5884,16 @@ packages:
       }
     engines: { node: 4.x || >=6.0.0 }
 
-  "@supabase/postgrest-js@2.75.0":
+  "@supabase/postgrest-js@2.75.1":
     resolution:
       {
-        integrity: sha512-YfBz4W/z7eYCFyuvHhfjOTTzRrQIvsMG2bVwJAKEVVUqGdzqfvyidXssLBG0Fqlql1zJFgtsPpK1n4meHrI7tg==,
+        integrity: sha512-FiYBD0MaKqGW8eo4Xqu7/100Xm3ddgh+3qHtqS18yQRoglJTFRQCJzY1xkrGS0JFHE2YnbjL6XCiOBXiG8DK4Q==,
       }
 
-  "@supabase/realtime-js@2.75.0":
+  "@supabase/realtime-js@2.75.1":
     resolution:
       {
-        integrity: sha512-B4Xxsf2NHd5cEnM6MGswOSPSsZKljkYXpvzKKmNxoUmNQOfB7D8HOa6NwHcUBSlxcjV+vIrYKcYXtavGJqeGrw==,
+        integrity: sha512-lBIJ855bUsBFScHA/AY+lxIFkubduUvmwbagbP1hq0wDBNAsYdg3ql80w8YmtXCDjkCwlE96SZqcFn7BGKKJKQ==,
       }
 
   "@supabase/ssr@0.5.2":
@@ -5907,16 +5912,16 @@ packages:
     peerDependencies:
       "@supabase/supabase-js": ^2.43.4
 
-  "@supabase/storage-js@2.75.0":
+  "@supabase/storage-js@2.75.1":
     resolution:
       {
-        integrity: sha512-wpJMYdfFDckDiHQaTpK+Ib14N/O2o0AAWWhguKvmmMurB6Unx17GGmYp5rrrqCTf8S1qq4IfIxTXxS4hzrUySg==,
+        integrity: sha512-WdGEhroflt5O398Yg3dpf1uKZZ6N3CGloY9iGsdT873uWbkQKoP0wG8mtx98dh0fhj6dAlzBqOAvnlV12cJfzA==,
       }
 
-  "@supabase/supabase-js@2.75.0":
+  "@supabase/supabase-js@2.75.1":
     resolution:
       {
-        integrity: sha512-8UN/vATSgS2JFuJlMVr51L3eUDz+j1m7Ww63wlvHLKULzCDaVWYzvacCjBTLW/lX/vedI2LBI4Vg+01G9ufsJQ==,
+        integrity: sha512-GEPVBvjQimcMd9z5K1eTKTixTRb6oVbudoLQ9JKqTUJnR6GQdBU4OifFZean1AnHfsQwtri1fop2OWwsMv019w==,
       }
 
   "@swc/helpers@0.5.15":
@@ -6448,12 +6453,6 @@ packages:
     resolution:
       {
         integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==,
-      }
-
-  "@types/diff-match-patch@1.0.36":
-    resolution:
-      {
-        integrity: sha512-xFdR6tkm0MWvBfO8xXCSsinYxHcqkQUlcHeSpMC2ukzOb6lwQAfDmW+Qt0AvlGd8HpsS28qKsB+oPeJn9I39jg==,
       }
 
   "@types/doctrine@0.0.9":
@@ -7118,10 +7117,10 @@ packages:
       "@aws-sdk/credential-provider-web-identity":
         optional: true
 
-  "@vercel/oidc@3.0.1":
+  "@vercel/oidc@3.0.3":
     resolution:
       {
-        integrity: sha512-V/YRVrJDqM6VaMBjRUrd6qRMrTKvZjHdVdEmdXsOZMulTa3iK98ijKTc3wldBmst6W5rHpqMoKllKcBAHgN7GQ==,
+        integrity: sha512-yNEQvPcVrK9sIe637+I0jD6leluPxzwJKx/Haw6F4H77CdDsszUn5V3o96LPziXkSNE2B83+Z3mjqGKBK/R6Gg==,
       }
     engines: { node: ">= 20" }
 
@@ -7368,23 +7367,19 @@ packages:
       }
     engines: { node: ">= 14" }
 
-  ai@4.3.19:
-    resolution:
-      {
-        integrity: sha512-dIE2bfNpqHN3r6IINp9znguYdhIOheKW2LDigAMrgt/upT3B8eBGPSCblENvaZGoq+hxaN9fSMzjWpbqloP+7Q==,
-      }
-    engines: { node: ">=18" }
-    peerDependencies:
-      react: ^18 || ^19 || ^19.0.0-rc
-      zod: ^3.23.8
-    peerDependenciesMeta:
-      react:
-        optional: true
-
   ai@5.0.60:
     resolution:
       {
         integrity: sha512-80U/3kmdBW6g+JkLXpz/P2EwkyEaWlPlYtuLUpx/JYK9F7WZh9NnkYoh1KvUi1Sbpo0NyurBTvX0a2AG9mmbDA==,
+      }
+    engines: { node: ">=18" }
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
+  ai@5.0.76:
+    resolution:
+      {
+        integrity: sha512-ZCxi1vrpyCUnDbtYrO/W8GLvyacV9689f00yshTIQ3mFFphbD7eIv40a2AOZBv3GGRA7SSRYIDnr56wcS/gyQg==,
       }
     engines: { node: ">=18" }
     peerDependencies:
@@ -9260,12 +9255,6 @@ packages:
     resolution:
       {
         integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==,
-      }
-
-  diff-match-patch@1.0.5:
-    resolution:
-      {
-        integrity: sha512-IayShXAgj/QMXgB0IWmKx+rOPuGMhqm5w6jvFxmVenXKIzRqTAAsbBPT3kWQeGANj3jGgvcvv4yK6SxqYmikgw==,
       }
 
   diff-sequences@29.6.3:
@@ -12066,14 +12055,6 @@ packages:
         integrity: sha512-OCzaRMK8HobtX8fp37uIVmL8CY1IGc/a6gLsDqz3quExFR09/U78HUzWYr7T31UEB6+Eu0/8dkVD5fFDOl9a8w==,
       }
     engines: { node: ">= 8" }
-
-  jsondiffpatch@0.6.0:
-    resolution:
-      {
-        integrity: sha512-3QItJOXp2AP1uv7waBkao5nCvhEv+QmJAd38Ybq7wNI74Q+BBmnLn4EDKz6yI9xGAIQoUF87qHt+kc1IVxB4zQ==,
-      }
-    engines: { node: ^18.0.0 || >=20.0.0 }
-    hasBin: true
 
   jsonfile@4.0.0:
     resolution:
@@ -17115,7 +17096,7 @@ snapshots:
       "@emotion/styled": 11.14.1(@emotion/react@11.14.0(@types/react@19.2.0)(react@19.2.0))(@types/react@19.2.0)(react@19.2.0)
       "@mui/icons-material": 7.3.4(@mui/material@7.3.4(@emotion/react@11.14.0(@types/react@19.2.0)(react@19.2.0))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.0)(react@19.2.0))(@types/react@19.2.0)(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(@types/react@19.2.0)(react@19.2.0)
       "@mui/material": 7.3.4(@emotion/react@11.14.0(@types/react@19.2.0)(react@19.2.0))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.0)(react@19.2.0))(@types/react@19.2.0)(react@19.2.0))(@types/react@19.2.0)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      ai: 5.0.60(zod@3.25.76)
+      ai: 5.0.76(zod@3.25.76)
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
       react-json-view-lite: 2.5.0(react@19.2.0)
@@ -17136,7 +17117,14 @@ snapshots:
     dependencies:
       "@ai-sdk/provider": 2.0.0
       "@ai-sdk/provider-utils": 3.0.10(zod@3.25.76)
-      "@vercel/oidc": 3.0.1
+      "@vercel/oidc": 3.0.3
+      zod: 3.25.76
+
+  "@ai-sdk/gateway@2.0.0(zod@3.25.76)":
+    dependencies:
+      "@ai-sdk/provider": 2.0.0
+      "@ai-sdk/provider-utils": 3.0.12(zod@3.25.76)
+      "@vercel/oidc": 3.0.3
       zod: 3.25.76
 
   "@ai-sdk/mistral@1.2.8(zod@3.25.76)":
@@ -17177,6 +17165,13 @@ snapshots:
       eventsource-parser: 3.0.6
       zod: 3.25.76
 
+  "@ai-sdk/provider-utils@3.0.12(zod@3.25.76)":
+    dependencies:
+      "@ai-sdk/provider": 2.0.0
+      "@standard-schema/spec": 1.0.0
+      eventsource-parser: 3.0.6
+      zod: 3.25.76
+
   "@ai-sdk/provider@1.1.3":
     dependencies:
       json-schema: 0.4.0
@@ -17184,16 +17179,6 @@ snapshots:
   "@ai-sdk/provider@2.0.0":
     dependencies:
       json-schema: 0.4.0
-
-  "@ai-sdk/react@1.2.12(react@19.2.0)(zod@3.25.76)":
-    dependencies:
-      "@ai-sdk/provider-utils": 2.2.8(zod@3.25.76)
-      "@ai-sdk/ui-utils": 1.2.11(zod@3.25.76)
-      react: 19.2.0
-      swr: 2.3.4(react@19.2.0)
-      throttleit: 2.1.0
-    optionalDependencies:
-      zod: 3.25.76
 
   "@ai-sdk/react@2.0.60(react@19.2.0)(zod@3.25.76)":
     dependencies:
@@ -19742,9 +19727,9 @@ snapshots:
 
   "@notionhq/client@3.1.3": {}
 
-  "@openrouter/ai-sdk-provider@1.2.0(ai@5.0.60(zod@3.25.76))(zod@3.25.76)":
+  "@openrouter/ai-sdk-provider@1.2.0(ai@5.0.76(zod@3.25.76))(zod@3.25.76)":
     dependencies:
-      ai: 5.0.60(zod@3.25.76)
+      ai: 5.0.76(zod@3.25.76)
       zod: 3.25.76
 
   "@opentelemetry/api-logs@0.57.2":
@@ -20853,11 +20838,11 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
-  "@supabase/auth-js@2.75.0":
+  "@supabase/auth-js@2.75.1":
     dependencies:
       "@supabase/node-fetch": 2.6.15
 
-  "@supabase/functions-js@2.75.0":
+  "@supabase/functions-js@2.75.1":
     dependencies:
       "@supabase/node-fetch": 2.6.15
 
@@ -20865,11 +20850,11 @@ snapshots:
     dependencies:
       whatwg-url: 5.0.0
 
-  "@supabase/postgrest-js@2.75.0":
+  "@supabase/postgrest-js@2.75.1":
     dependencies:
       "@supabase/node-fetch": 2.6.15
 
-  "@supabase/realtime-js@2.75.0":
+  "@supabase/realtime-js@2.75.1":
     dependencies:
       "@supabase/node-fetch": 2.6.15
       "@types/phoenix": 1.6.6
@@ -20879,29 +20864,29 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  "@supabase/ssr@0.5.2(@supabase/supabase-js@2.75.0)":
+  "@supabase/ssr@0.5.2(@supabase/supabase-js@2.75.1)":
     dependencies:
-      "@supabase/supabase-js": 2.75.0
+      "@supabase/supabase-js": 2.75.1
       "@types/cookie": 0.6.0
       cookie: 0.7.2
 
-  "@supabase/ssr@0.7.0(@supabase/supabase-js@2.75.0)":
+  "@supabase/ssr@0.7.0(@supabase/supabase-js@2.75.1)":
     dependencies:
-      "@supabase/supabase-js": 2.75.0
+      "@supabase/supabase-js": 2.75.1
       cookie: 1.0.2
 
-  "@supabase/storage-js@2.75.0":
+  "@supabase/storage-js@2.75.1":
     dependencies:
       "@supabase/node-fetch": 2.6.15
 
-  "@supabase/supabase-js@2.75.0":
+  "@supabase/supabase-js@2.75.1":
     dependencies:
-      "@supabase/auth-js": 2.75.0
-      "@supabase/functions-js": 2.75.0
+      "@supabase/auth-js": 2.75.1
+      "@supabase/functions-js": 2.75.1
       "@supabase/node-fetch": 2.6.15
-      "@supabase/postgrest-js": 2.75.0
-      "@supabase/realtime-js": 2.75.0
-      "@supabase/storage-js": 2.75.0
+      "@supabase/postgrest-js": 2.75.1
+      "@supabase/realtime-js": 2.75.1
+      "@supabase/storage-js": 2.75.1
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
@@ -21242,8 +21227,6 @@ snapshots:
       "@types/ms": 2.1.0
 
   "@types/deep-eql@4.0.2": {}
-
-  "@types/diff-match-patch@1.0.36": {}
 
   "@types/doctrine@0.0.9": {}
 
@@ -21649,7 +21632,7 @@ snapshots:
 
   "@vercel/functions@1.6.0": {}
 
-  "@vercel/oidc@3.0.1": {}
+  "@vercel/oidc@3.0.3": {}
 
   "@vercel/otel@1.13.1(@opentelemetry/api-logs@0.57.2)(@opentelemetry/api@1.9.0)(@opentelemetry/instrumentation@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/resources@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-logs@0.57.2(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@1.30.1(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.30.1(@opentelemetry/api@1.9.0))":
     dependencies:
@@ -21816,23 +21799,19 @@ snapshots:
 
   agent-base@7.1.4: {}
 
-  ai@4.3.19(react@19.2.0)(zod@3.25.76):
-    dependencies:
-      "@ai-sdk/provider": 1.1.3
-      "@ai-sdk/provider-utils": 2.2.8(zod@3.25.76)
-      "@ai-sdk/react": 1.2.12(react@19.2.0)(zod@3.25.76)
-      "@ai-sdk/ui-utils": 1.2.11(zod@3.25.76)
-      "@opentelemetry/api": 1.9.0
-      jsondiffpatch: 0.6.0
-      zod: 3.25.76
-    optionalDependencies:
-      react: 19.2.0
-
   ai@5.0.60(zod@3.25.76):
     dependencies:
       "@ai-sdk/gateway": 1.0.33(zod@3.25.76)
       "@ai-sdk/provider": 2.0.0
       "@ai-sdk/provider-utils": 3.0.10(zod@3.25.76)
+      "@opentelemetry/api": 1.9.0
+      zod: 3.25.76
+
+  ai@5.0.76(zod@3.25.76):
+    dependencies:
+      "@ai-sdk/gateway": 2.0.0(zod@3.25.76)
+      "@ai-sdk/provider": 2.0.0
+      "@ai-sdk/provider-utils": 3.0.12(zod@3.25.76)
       "@opentelemetry/api": 1.9.0
       zod: 3.25.76
 
@@ -23033,8 +23012,6 @@ snapshots:
     dependencies:
       dequal: 2.0.3
 
-  diff-match-patch@1.0.5: {}
-
   diff-sequences@29.6.3: {}
 
   diffie-hellman@5.0.3:
@@ -23411,7 +23388,7 @@ snapshots:
       "@typescript-eslint/parser": 8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3)
       eslint: 9.37.0(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.37.0(jiti@2.6.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1))
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.37.0(jiti@2.6.1))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.37.0(jiti@2.6.1))
       eslint-plugin-react: 7.37.5(eslint@9.37.0(jiti@2.6.1))
@@ -23431,7 +23408,7 @@ snapshots:
       "@typescript-eslint/parser": 8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3)
       eslint: 9.37.0(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.37.0(jiti@2.6.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1))
       eslint-plugin-import: 2.32.0(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-typescript@3.10.1)(eslint@9.37.0(jiti@2.6.1))
       eslint-plugin-jsx-a11y: 6.10.2(eslint@9.37.0(jiti@2.6.1))
       eslint-plugin-react: 7.37.5(eslint@9.37.0(jiti@2.6.1))
@@ -23455,7 +23432,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.37.0(jiti@2.6.1)):
+  eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1)):
     dependencies:
       "@nolyfill/is-core-module": 1.0.39
       debug: 4.4.1
@@ -23470,14 +23447,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1)):
+  eslint-module-utils@2.12.1(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1)):
     dependencies:
       debug: 3.2.7
     optionalDependencies:
       "@typescript-eslint/parser": 8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3)
       eslint: 9.37.0(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0)(eslint@9.37.0(jiti@2.6.1))
+      eslint-import-resolver-typescript: 3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1))
     transitivePeerDependencies:
       - supports-color
 
@@ -23492,7 +23469,7 @@ snapshots:
       doctrine: 2.1.0
       eslint: 9.37.0(jiti@2.6.1)
       eslint-import-resolver-node: 0.3.9
-      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0)(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1))
+      eslint-module-utils: 2.12.1(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint-import-resolver-node@0.3.9)(eslint-import-resolver-typescript@3.10.1(eslint-plugin-import@2.32.0(@typescript-eslint/parser@8.45.0(eslint@9.37.0(jiti@2.6.1))(typescript@5.9.3))(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1)))(eslint@9.37.0(jiti@2.6.1))
       hasown: 2.0.2
       is-core-module: 2.16.1
       is-glob: 4.0.3
@@ -25274,12 +25251,6 @@ snapshots:
   json5@2.2.3: {}
 
   jsonata@2.1.0: {}
-
-  jsondiffpatch@0.6.0:
-    dependencies:
-      "@types/diff-match-patch": 1.0.36
-      chalk: 5.4.1
-      diff-match-patch: 1.0.5
 
   jsonfile@4.0.0:
     optionalDependencies:
@@ -27961,7 +27932,7 @@ snapshots:
 
   ts-interface-checker@0.1.13: {}
 
-  ts-jest@29.4.4(@babel/core@7.28.0)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.0))(jest-util@29.7.0)(jest@29.7.0(@types/node@20.19.19)(babel-plugin-macros@3.1.0))(typescript@5.9.3):
+  ts-jest@29.4.4(@babel/core@7.28.0)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.28.0))(esbuild@0.25.8)(jest-util@29.7.0)(jest@29.7.0(@types/node@20.19.19)(babel-plugin-macros@3.1.0))(typescript@5.9.3):
     dependencies:
       bs-logger: 0.2.6
       fast-json-stable-stringify: 2.1.0
@@ -27979,6 +27950,7 @@ snapshots:
       "@jest/transform": 29.7.0
       "@jest/types": 29.6.3
       babel-jest: 29.7.0(@babel/core@7.28.0)
+      esbuild: 0.25.8
       jest-util: 29.7.0
 
   tsconfig-paths-webpack-plugin@4.2.0:

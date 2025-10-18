@@ -1,11 +1,10 @@
 "use client";
 
 import React from "react";
-import { cn } from "../../../lib/utils";
+import { cn } from "@formlink/ui/lib/utils";
 import { Award } from "lucide-react";
-import { Button } from "../../../ui/button";
-import { ConfettiElements } from "./ConfettiElements";
-import { useFormMode } from "../../context/FormModeContext";
+import { Button } from "@formlink/ui";
+import { useFormMode } from "@/contexts/FormModeContext";
 
 export interface CompletionScreenProps {
   isMobileView?: boolean;
@@ -38,7 +37,7 @@ export function CompletionScreen({
         className,
       )}
     >
-      {showConfetti && <ConfettiElements />}
+      {/* Optionally add confetti visuals here */}
       <div className="space-y-4 text-center z-10">
         <h2 className={cn("font-bold", isMobileView ? "text-xl" : "text-2xl")}>
           {title || "Form Completed!"}

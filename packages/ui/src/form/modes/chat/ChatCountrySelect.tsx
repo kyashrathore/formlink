@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { BaseSelect } from "../../primitives/BaseSelect";
+import { useBaseSelect } from "../../primitives/useBaseSelect";
 import { Button } from "../../../ui/button";
 import { cn } from "../../../lib/utils";
 import { Check } from "lucide-react";
@@ -62,7 +62,7 @@ export function ChatCountrySelect({
     }));
   }, []);
 
-  const base = BaseSelect({
+  const base = useBaseSelect({
     options,
     value,
     onChange,

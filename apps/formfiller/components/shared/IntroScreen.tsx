@@ -1,11 +1,10 @@
 "use client";
 
 import React from "react";
-import { Button } from "../../../ui/button";
+import { Button } from "@formlink/ui";
 import { ArrowRight } from "lucide-react";
-// Note: Using any for compatibility with both schema and UI types
-import { useFormMode } from "../../context/FormModeContext";
-import { cn } from "../../../lib/utils";
+import { useFormMode } from "@/contexts/FormModeContext";
+import { cn } from "@formlink/ui/lib/utils";
 
 export interface IntroScreenProps {
   formSchema: { title?: string; description?: string };
@@ -19,9 +18,7 @@ export function IntroScreen({
   className,
 }: IntroScreenProps) {
   const { mode } = useFormMode();
-
   if (!formSchema) return null;
-
   return (
     <div
       className={cn(
@@ -38,11 +35,9 @@ export function IntroScreen({
         >
           {formSchema.title}
         </h1>
-
         {formSchema.description && (
           <p className="text-muted-foreground mb-8">{formSchema.description}</p>
         )}
-
         <Button
           size="lg"
           className="w-full"

@@ -45,6 +45,9 @@ export interface BaseRatingProps extends BasePrimitiveProps<number> {
    * Auto-submit on change (default: true for backward compatibility)
    */
   autoSubmitOnChange?: boolean;
+  // Accessibility controls (for wrapper-specific semantics)
+  a11yContainerRole?: "radiogroup" | "group" | "none";
+  a11yIncludeValueAria?: boolean;
 }
 
 export interface BaseRatingReturn extends BasePrimitiveReturn<number> {
@@ -80,7 +83,7 @@ export interface BaseRatingReturn extends BasePrimitiveReturn<number> {
   getItemProps: (value: number) => React.HTMLAttributes<HTMLElement>;
 }
 
-export function BaseRating(props: BaseRatingProps): BaseRatingReturn {
+export function useBaseRating(props: BaseRatingProps): BaseRatingReturn {
   const {
     value,
     onChange,
@@ -101,6 +104,8 @@ export function BaseRating(props: BaseRatingProps): BaseRatingReturn {
     onSubmit,
     enableKeyboard = true,
     autoSubmitOnChange = true,
+    a11yContainerRole = "radiogroup",
+    a11yIncludeValueAria = true,
   } = props;
 
   const [errors, setErrors] = useState<ValidationError[]>([]);
@@ -332,11 +337,15 @@ export function BaseRating(props: BaseRatingProps): BaseRatingReturn {
     "aria-invalid": errors.length > 0,
     "aria-required": required,
     "aria-disabled": disabled,
-    "aria-valuemin": min,
-    "aria-valuemax": max,
-    "aria-valuenow": value,
-    "aria-valuetext": `${value} out of ${max}`,
-    role: "radiogroup",
+    ...(a11yIncludeValueAria
+      ? {
+          "aria-valuemin": min,
+          "aria-valuemax": max,
+          "aria-valuenow": value,
+          "aria-valuetext": `${value} out of ${max}`,
+        }
+      : {}),
+    ...(a11yContainerRole !== "none" ? { role: a11yContainerRole } : {}),
   };
 
   return {
@@ -356,3 +365,5 @@ export function BaseRating(props: BaseRatingProps): BaseRatingReturn {
     getItemProps,
   };
 }
+
+// Back-compat alias

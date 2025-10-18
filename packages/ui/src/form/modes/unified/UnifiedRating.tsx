@@ -4,8 +4,10 @@ import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
-import { BaseRating, type BaseRatingProps } from "../../primitives/BaseRating";
-import { filterRatingContainerProps } from "../../primitives/patches/accessibility-fixes";
+import {
+  useBaseRating as BaseRating,
+  type BaseRatingProps,
+} from "../../primitives/useBaseRating";
 import { getTypeFormAnimations } from "../shared/animations";
 
 export type FormMode = "chat" | "typeform";
@@ -39,6 +41,8 @@ export function UnifiedRating({
     // Mode-specific behavior: typeform auto-advance is now handled by the parent view.
     autoSubmitOnChange: false,
     onSubmit,
+    a11yContainerRole: mode === "chat" ? "group" : "radiogroup",
+    a11yIncludeValueAria: mode !== "chat",
   });
 
   // const styles = mode === 'typeform' ? useThemeStyles('rating', 'typeform') : undefined;
@@ -214,7 +218,7 @@ export function UnifiedRating({
   // Chat layout and behavior
   return (
     <div
-      {...filterRatingContainerProps(base.containerProps)}
+      {...base.containerProps}
       className={cn("focus:outline-none", className)}
     >
       <div className={cn("flex items-center justify-start gap-2 sm:gap-3")}>

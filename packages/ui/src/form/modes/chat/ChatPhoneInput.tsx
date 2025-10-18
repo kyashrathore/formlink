@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { BaseTextInput } from "../../primitives/BaseTextInput";
+import { useBaseTextInput } from "../../primitives/useBaseTextInput";
 import { Input } from "../../../ui/input";
 import { cn } from "../../../lib/utils";
 
@@ -22,7 +22,7 @@ export function ChatPhoneInput({
   disabled = false,
   required = false,
 }: ChatPhoneInputProps) {
-  const { inputProps, errors, isTouched } = BaseTextInput({
+  const { inputProps, errors, isTouched } = useBaseTextInput({
     value,
     onChange,
     disabled,

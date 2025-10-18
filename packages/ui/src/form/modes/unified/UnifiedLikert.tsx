@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { BaseSelect } from "../../primitives/BaseSelect";
+import { useBaseSelect } from "../../primitives/useBaseSelect";
 import { cn } from "../../../lib/utils";
 import { motion } from "motion/react";
 import { getChatAnimations, getTypeFormAnimations } from "../shared/animations";
@@ -35,7 +35,7 @@ export function UnifiedLikert({
   density,
   debug = false,
 }: UnifiedLikertProps) {
-  const select = BaseSelect<string>({
+  const select = useBaseSelect<string>({
     options: options.map((o) => ({ value: o, label: o })),
     value: value,
     onChange,
@@ -45,6 +45,9 @@ export function UnifiedLikert({
     // Prevent double-submit in chat; allow auto-advance in Typeform only
     autoSubmitOnChange: mode === "typeform",
     autoFocus: mode === "typeform",
+    a11yContainerRole: "group",
+    a11yHasPopup: false,
+    a11yIncludeExpanded: false,
   });
 
   const showError = select.isTouched && select.errors.length > 0;

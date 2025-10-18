@@ -112,7 +112,7 @@ export interface BaseFileUploadReturn extends BasePrimitiveReturn<FileInfo[]> {
   openFileDialog: () => void;
 }
 
-export function BaseFileUpload(
+export function useBaseFileUpload(
   props: BaseFileUploadProps,
 ): BaseFileUploadReturn {
   const {
@@ -525,6 +525,8 @@ export function BaseFileUpload(
     openFileDialog,
   };
 }
+
+// Back-compat alias
 
 // Helper functions
 function formatFileSize(bytes: number): string {

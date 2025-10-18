@@ -6,7 +6,6 @@ import React from "react";
 import { useIsMobile } from "../../../hooks/ui/use-mobile";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
-import { filterMultiSelectContainerProps } from "../../primitives/patches/accessibility-fixes";
 import {
   useBaseMultiSelect,
   type BaseMultiSelectProps,
@@ -48,6 +47,14 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
   const base = useBaseMultiSelect<string>({
     enableShortcuts: true,
     enableArrowNavigation: true,
+    ...(mode === "chat"
+      ? {
+          a11yContainerRole: "group" as const,
+          a11yHasPopup: false,
+          a11yIncludeAriaMultiSelectable: false,
+          a11yIncludeExpanded: false,
+        }
+      : {}),
     ...baseProps,
     value: baseProps.value || [],
   });
@@ -240,7 +247,7 @@ export function UnifiedMultiSelect(props: UnifiedMultiSelectProps) {
 
   return (
     <div
-      {...filterMultiSelectContainerProps(base.getContainerProps())}
+      {...base.getContainerProps()}
       className={cn("space-y-3 focus:outline-none", className)}
       onKeyDown={handleKeyDown}
     >

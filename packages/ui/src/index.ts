@@ -71,22 +71,12 @@ export { default as OpenAIIcon } from "./icons/openai";
 // Store - REMOVED: UI package should be stateless
 // All state management should be handled by the consuming application
 
-// Form context
-export * from "./form/context/FormModeContext";
-export * from "./form/context/TypeFormOverlayContext";
+// Form context removed from UI to keep package stateless
 
 // Generic types for decoupled usage - IMPORT THESE FOR TYPE SAFETY
 export * from "./types/generic";
 
 // Hooks exports - organized by category
-export * from "./hooks/form/useAddressInput";
-export * from "./hooks/form/useFormValue";
-export * from "./hooks/form/useSelectInput";
-export * from "./hooks/form/useTextInput";
-export * from "./hooks/primitives/useFocusManagement";
-export * from "./hooks/primitives/useKeyboardNavigation";
-export * from "./hooks/primitives/useRowLayout";
-export * from "./hooks/primitives/useSubmissionControl";
 export * from "./hooks/ui/use-mobile";
 export * from "./hooks/ui/useTheme";
 
@@ -111,8 +101,7 @@ export { UnifiedRanking } from "./form/modes/unified/UnifiedRanking";
 export { UnifiedRating } from "./form/modes/unified/UnifiedRating";
 export { UnifiedSignature } from "./form/modes/unified/UnifiedSignature";
 
-// Context provider for mode management
-export { FormModeProvider, useFormMode } from "./form/context/FormModeContext";
+// Context provider removed (should live in app)
 
 // Base primitives - these provide the core logic
 export * from "./form/primitives";

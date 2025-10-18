@@ -2,9 +2,9 @@
 
 import { cn } from "@/lib/utils";
 import { AddressData } from "@formlink/schema";
+import { useBaseAddress } from "@formlink/ui";
 import { motion } from "motion/react";
 import React from "react";
-import { BaseAddress } from "../../../../packages/ui/src/form/primitives";
 
 export interface TypeFormAddressInputProps {
   value?: AddressData | null;
@@ -44,7 +44,7 @@ export function TypeFormAddressInput(props: TypeFormAddressInputProps) {
     className,
   } = props;
 
-  const addressPrimitive = BaseAddress({
+  const addressPrimitive = useBaseAddress({
     value,
     onChange: onChange as any,
     disabled,

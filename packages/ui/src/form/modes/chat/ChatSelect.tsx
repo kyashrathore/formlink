@@ -1,6 +1,9 @@
 import React from "react";
 import { motion } from "motion/react";
-import { BaseSelect, type BaseSelectProps } from "../../primitives/BaseSelect";
+import {
+  useBaseSelect,
+  type BaseSelectProps,
+} from "../../primitives/useBaseSelect";
 import { getChatAnimations } from "../shared/animations";
 import { cn } from "../../../lib/utils";
 
@@ -26,7 +29,7 @@ export function ChatSelect(props: ChatSelectProps) {
     ...baseProps
   } = props;
 
-  const base = BaseSelect({
+  const base = useBaseSelect({
     ...baseProps,
     autoSubmitOnChange: false, // Prevent auto-submission in Chat mode
     onSubmit, // BaseSelect handles onSubmit internally

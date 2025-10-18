@@ -2,7 +2,7 @@
 
 import { motion } from "motion/react";
 import { cn } from "../../../lib/utils";
-import { BaseSelect } from "../../primitives/BaseSelect";
+import { useBaseSelect } from "../../primitives/useBaseSelect";
 import { getTypeFormAnimations } from "../shared/animations";
 
 /**
@@ -34,7 +34,7 @@ export function TypeFormLikert(props: TypeFormLikertProps) {
     className,
   } = props;
 
-  const base = BaseSelect({
+  const base = useBaseSelect({
     options: options.map((label) => ({ value: label, label })),
     value,
     onChange,
@@ -42,6 +42,9 @@ export function TypeFormLikert(props: TypeFormLikertProps) {
     required,
     // We control auto-advance manually to sync with Typeform animations
     autoSubmitOnChange: false,
+    a11yContainerRole: "group",
+    a11yHasPopup: false,
+    a11yIncludeExpanded: false,
   });
 
   const processedOptions = base.options || [];

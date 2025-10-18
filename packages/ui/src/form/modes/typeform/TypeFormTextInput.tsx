@@ -2,7 +2,7 @@ import { motion } from "motion/react";
 import React from "react";
 import { useThemeStyles } from "../../../hooks/ui/useTheme";
 import { cn } from "../../../lib/utils";
-import { BaseTextInput } from "../../primitives/BaseTextInput";
+import { useBaseTextInput } from "../../primitives/useBaseTextInput";
 import { getTypeFormAnimations } from "../shared/animations";
 
 export interface TypeFormTextInputProps {
@@ -47,7 +47,7 @@ export function TypeFormTextInput({
   isInvalid = false, // Default to false
 }: TypeFormTextInputProps) {
   // Use the primitive for all logic
-  const base = BaseTextInput({
+  const base = useBaseTextInput({
     value: value || "", // Convert null to empty string
     onChange,
     disabled,

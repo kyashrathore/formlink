@@ -1,13 +1,28 @@
 # REPO_CONTEXT
 
-Last updated: 2025-10-10
+Last updated: 2025-10-18
 
 Recent change
 
+- Cleanup: Removed unused hooks in UI package. Deleted `packages/ui/src/hooks/primitives/*` and `packages/ui/src/form/primitives/hooks/*`; dropped their re-exports from `packages/ui/src/index.ts` and `packages/ui/src/form/primitives/index.ts`.
+- Cleanup: Removed unused hooks under `packages/ui/src/hooks/form/*` and removed their public re-exports from `packages/ui/src/index.ts`.
+- Cleanup: Removed now-empty directories `packages/ui/src/hooks/form` and `packages/ui/src/hooks/primitives`.
+- A11y: Replaced temporary `accessibility-fixes` patch module with explicit flags on base primitives. Added `a11y*` props to `BaseSelect`, `useBaseMultiSelect`, and `BaseRating`; updated unified/typeform/chat wrappers to set correct roles/ARIA (group vs combobox, haspopup/expanded, value ARIA).
+- Architecture: Moved app-specific context/screens out of UI package. Removed `FormModeContext` exports from UI index; added app-owned `apps/formfiller/contexts/FormModeContext.tsx`. Moved Intro/Completion screens to `apps/formfiller/components/shared/` and updated imports. UI still exports `ConfettiElements` only from shared.
+- UI/docs: Adjusted imports in Storybook and app chat components to import AI elements from `@formlink/ui/ai-elements` directly to avoid TS path alias issues.
+- Preview stability: Guarded repeated shadcn CSS updates in `apps/formfiller/app/preview/[formId]/PreviewPageClient.tsx:FORMCRAFT_SHADCN_CSS_UPDATE` by comparing `payload.cssText` to `lastCssRef.current` to avoid postMessage feedback loops causing maximum update depth.
+- Zustand shallow: Kept named import `import { shallow } from 'zustand/shallow'` and ensured alias to `zustand/react/shallow` in `apps/formfiller/next.config.ts` for v5 compatibility.
+- Cleanup: Removed unused hooks under `packages/ui/src/hooks/form/*` and removed their public re-exports from `packages/ui/src/index.ts`. Confirmed no in-repo usages. Kept `hooks/ui` (`useIsMobile`, `useThemeStyles`) as they are used by UI components and apps.
+- Cleanup: Removed unused app-level hook `apps/formcraft/hooks/use-mobile.tsx` (no references in app). Repo typecheck remains green.
+- Cleanup: Removed empty directories `packages/ui/src/hooks/form` and `packages/ui/src/hooks/primitives` after pruning unused hooks.
+- A11y: Removed temporary `accessibility-fixes` patch module. Added explicit accessibility flags to base primitives (`useBaseMultiSelect`, `BaseRating`) to control container role and ARIA attributes. Updated `UnifiedMultiSelect` and `UnifiedRating` to use the new flags. Result: no wrapper-side filtering, clearer semantics.
+- A11y: Extended the same flag-based approach to `BaseSelect` and updated wrappers that render in-page lists (TypeFormSelect, TypeFormLikert, UnifiedLikert, ChatLikertScale) to use `a11yContainerRole='group'` and disable `aria-haspopup/expanded`. This replaces combobox defaults in those contexts and aligns ARIA with rendered semantics.
 - Fix: Single-pass form creation repair now supplies required prompt variables to `form/create-form-repair.md` (`errors_json`, `json_payload`, `generation_context`). This prevents `loadPrompt: missing variables` errors during JSON repair in `apps/formcraft/app/lib/chat/tools/create-form.ts`.
 - Enhancement: Pre-repair invalid JSON text with `jsonrepair` before schema repair. Applied in `apps/formcraft/app/lib/chat/tools/create-form.ts: repairFunction` and `apps/formcraft/app/lib/chat/tools/generate-question.ts: repairFunction` to reduce failures from malformed JSON strings. Installed dependency in `apps/formcraft`.
 - UI primitives: Renamed `BaseMultiSelect` (hook-using function) to `useBaseMultiSelect` and updated all call sites (`packages/ui/src/form/modes/unified/UnifiedMultiSelect.tsx`) and re-exports (`packages/ui/src/form/primitives/base/index.ts`). Rationale: it’s a custom hook and must be called unconditionally at the top level; the new name makes this contract explicit and prevents conditional invocation leading to hook count mismatches.
 - Security/Privacy: Removed ad-hoc debug/info logs and any logs that could emit PII (e.g., `contextPayload`, full responses). Retained/restored essential error logs with redacted messages in server routes. Touched: `apps/formfiller/app/api/ai/chat-assist/**`, branching routes, upload/save-answers/forms/chat-history APIs, and `lib/getFormSchema.ts`.
+
+- Formlink Runtime docs consolidated: `docs/runtime/formlink-runtime-spec_v1.md` (headless runtime API, preview sessions + linking + retention, chat UI contract, UI registry guidance, glue snippets). Master spec points to it from §3.5–3.6.
 
 Logging policy
 
@@ -190,6 +205,12 @@ Additional guidance:
 - Environment: `.env.local` files per app contain Supabase keys, AI provider credentials, Composio tokens; never commit secrets.
 
 Documentation Index (selected)
+
+- Project spec and public contracts
+  - docs/runtime/formlink-runtime-spec_v1.md — single, canonical spec for runtime + chat + registry + preview
+  - docs/runtime/formlink-runtime-low-level-examples_v1.md — low‑level wiring examples for common requests
+  - docs/runtime/runtime-impl-plan_v1.md — implementation plan for @formlink/runtime (TanStack, transports, selectors)
+  - docs/runtime/llm-codegen-contract_v1.md — pasteable contract for LLM codegen to generate deployable forms
 
 - Chat runtime data flow (AI-assisted inputs): docs/chat-runtime-data-flow_v1.md
 

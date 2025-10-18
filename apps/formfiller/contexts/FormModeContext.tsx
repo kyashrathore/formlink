@@ -1,94 +1,91 @@
 "use client";
 
-import React from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  FormModeProvider as UIFormModeProvider,
-  useFormMode as useUIFormMode,
-  type FormMode as UIFormMode,
-} from "@formlink/ui";
-import type { ExtendedFormModeContext } from "@/lib/types";
 
 export type AppFormMode = "ai" | "typeform" | "classic";
+
+interface FormModeContextValue {
+  mode: AppFormMode;
+  setMode: (mode: AppFormMode) => void;
+  isAIMode: boolean;
+  isTypeFormMode: boolean;
+  isClassicMode: boolean;
+}
+
+const FormModeContext = createContext<FormModeContextValue | undefined>(
+  undefined,
+);
 
 interface FormModeProviderProps {
   children: React.ReactNode;
   defaultMode?: AppFormMode;
-  formSettings?: {
-    defaultMode?: AppFormMode;
-  };
-  urlSearchParams?: {
-    mode?: string;
-    aimode?: string;
-  };
+  formSettings?: { defaultMode?: AppFormMode };
+  urlSearchParams?: { mode?: string; aimode?: string };
 }
 
-// Wrapper that connects Next.js routing to the UI package's FormModeProvider
 export function FormModeProvider({
   children,
-  defaultMode = "ai" as AppFormMode,
+  defaultMode = "ai",
   formSettings,
   urlSearchParams: passedUrlSearchParams,
 }: FormModeProviderProps) {
   const searchParams = useSearchParams();
-
-  // Use passed URL search params if provided, otherwise read from Next.js
   const urlSearchParams = passedUrlSearchParams || {
     mode: searchParams.get("mode") || undefined,
     aimode: searchParams.get("aimode") || undefined,
   };
 
-  // Map "ai" mode to "chat" for the UI package
-  const mappedDefaultMode = (
-    defaultMode === "ai"
-      ? "chat"
-      : defaultMode === "typeform"
-        ? "typeform"
-        : defaultMode === "classic"
-          ? "classic"
-          : "chat"
-  ) as UIFormMode;
-  const mappedFormSettings = formSettings
-    ? {
-        defaultMode: (formSettings.defaultMode === "ai"
-          ? "chat"
-          : formSettings.defaultMode === "typeform"
-            ? "typeform"
-            : formSettings.defaultMode === "classic"
-              ? "classic"
-              : "chat") as UIFormMode,
-      }
-    : undefined;
+  const resolveInitialMode = (): AppFormMode => {
+    if (urlSearchParams?.mode === "typeform") return "typeform";
+    if (urlSearchParams?.mode === "ai") return "ai";
+    if (urlSearchParams?.mode === "classic") return "classic";
+    if (urlSearchParams?.aimode === "false") return "typeform";
+    if (urlSearchParams?.aimode === "true") return "ai";
+    if (formSettings?.defaultMode) return formSettings.defaultMode;
+    return defaultMode;
+  };
+
+  const [mode, setMode] = useState<AppFormMode>(resolveInitialMode());
+
+  useEffect(() => {
+    if (!urlSearchParams) return;
+    if (urlSearchParams.mode === "typeform") setMode("typeform");
+    else if (urlSearchParams.mode === "ai") setMode("ai");
+    else if (urlSearchParams.mode === "classic") setMode("classic");
+    else if (urlSearchParams.aimode === "false") setMode("typeform");
+    else if (urlSearchParams.aimode === "true") setMode("ai");
+  }, [urlSearchParams?.mode, urlSearchParams?.aimode]);
+
+  const value = useMemo<FormModeContextValue>(
+    () => ({
+      mode,
+      setMode,
+      isAIMode: mode === "ai",
+      isTypeFormMode: mode === "typeform",
+      isClassicMode: mode === "classic",
+    }),
+    [mode],
+  );
 
   return (
-    <UIFormModeProvider
-      defaultMode={mappedDefaultMode}
-      formSettings={mappedFormSettings}
-      urlSearchParams={urlSearchParams}
-    >
+    <FormModeContext.Provider value={value}>
       {children}
-    </UIFormModeProvider>
+    </FormModeContext.Provider>
   );
 }
 
-// Create a compatibility layer that maps UI package modes back to app modes
 export function useFormMode() {
-  const context = useUIFormMode();
-  const extendedContext = context as ExtendedFormModeContext;
-  const { mode, setMode } = extendedContext;
-  const isChatMode = extendedContext.isChatMode ?? mode === "chat";
-  const isTypeFormMode = extendedContext.isTypeFormMode ?? mode === "typeform";
-  const isClassicMode = extendedContext.isClassicMode ?? mode === "classic";
-
-  return {
-    mode: mode === "chat" ? ("ai" as const) : (mode as AppFormMode),
-    setMode: (newMode: AppFormMode) => {
-      setMode(newMode === "ai" ? "chat" : newMode);
-    },
-    isAIMode: isChatMode,
-    isTypeFormMode: isTypeFormMode,
-    isClassicMode: isClassicMode,
-  };
+  const ctx = useContext(FormModeContext);
+  if (!ctx)
+    throw new Error("useFormMode must be used within a FormModeProvider");
+  return ctx;
 }
 
-export type FormMode = AppFormMode; // Backwards compatibility alias
+export type FormMode = AppFormMode;

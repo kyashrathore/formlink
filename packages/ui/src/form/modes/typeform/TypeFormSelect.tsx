@@ -1,6 +1,9 @@
 import React from "react";
 import { motion } from "motion/react";
-import { BaseSelect, type BaseSelectProps } from "../../primitives/BaseSelect";
+import {
+  useBaseSelect,
+  type BaseSelectProps,
+} from "../../primitives/useBaseSelect";
 import { getTypeFormAnimations } from "../shared/animations";
 import { useIsMobile } from "../../../hooks/ui/use-mobile";
 
@@ -24,11 +27,14 @@ export function TypeFormSelect(props: TypeFormSelectProps) {
     enableShortcuts: true,
     enableArrowNavigation: true,
     autoSubmitOnChange: true, // TypeForm mode uses auto-submission
+    a11yContainerRole: "group" as const,
+    a11yHasPopup: false,
+    a11yIncludeExpanded: false,
     ...baseProps,
     onSubmit: autoAdvance ? undefined : onSubmit, // Only pass onSubmit if not auto-advancing
   };
 
-  const base = BaseSelect(safeBaseProps);
+  const base = useBaseSelect(safeBaseProps);
 
   // Safe access with fallbacks
   const processedOptions = base.options || [];

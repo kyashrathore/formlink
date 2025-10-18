@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./dialog";
-import { cn } from "@/lib/utils";
+import { cn } from "@formlink/ui/lib/utils";
 import { MagnifyingGlass } from "@phosphor-icons/react/MagnifyingGlass";
 import { Command as CommandPrimitive } from "cmdk";
 import * as React from "react";

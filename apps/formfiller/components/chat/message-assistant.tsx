@@ -3,7 +3,7 @@ import { UIMessage as MessageType } from "@ai-sdk/react";
 import { Message, MessageContent, Response } from "@formlink/ui/ai-elements";
 import { cn } from "@formlink/ui/lib/utils";
 import React from "react";
-import { shallow } from "zustand/shallow";
+import { useShallow } from "zustand/shallow";
 import { QuestionWrapper } from "./QuestionWrapper";
 import { remarkSlots } from "./remark-slots-streamdown";
 import { useChatStore } from "./store/useChatStore";
@@ -47,10 +47,9 @@ const MessageAssistantComponent = ({
   const { id: messageId, parts } = message || {};
 
   const { presentedQuestionMessageId } = useChatStore(
-    (state) => ({
+    useShallow((state) => ({
       presentedQuestionMessageId: state.presentedQuestionMessageId,
-    }),
-    shallow,
+    })),
   );
   // Log once per message id to avoid noisy output during streaming
   const loggedMsgIdsRef = React.useRef<Set<string>>(new Set());

@@ -25,6 +25,11 @@ export interface BaseMultiSelectProps<T = string>
   onSubmit?: () => void;
   enableShortcuts?: boolean;
   enableArrowNavigation?: boolean;
+  // Accessibility controls (for wrapper-specific semantics)
+  a11yContainerRole?: "combobox" | "group" | "listbox" | "none";
+  a11yHasPopup?: boolean | "listbox";
+  a11yIncludeAriaMultiSelectable?: boolean;
+  a11yIncludeExpanded?: boolean;
 }
 
 export interface BaseMultiSelectReturn<T = string>
@@ -78,6 +83,10 @@ export function useBaseMultiSelect<T = string>(
     onSubmit,
     enableShortcuts = true,
     enableArrowNavigation = true,
+    a11yContainerRole = "combobox",
+    a11yHasPopup = "listbox",
+    a11yIncludeAriaMultiSelectable = true,
+    a11yIncludeExpanded = true,
   } = props;
 
   const [errors, setErrors] = useState<ValidationError[]>([]);
@@ -347,10 +356,18 @@ export function useBaseMultiSelect<T = string>(
       "aria-invalid": errors.length > 0,
       "aria-required": required,
       "aria-disabled": disabled,
-      "aria-expanded": isOpen,
-      "aria-haspopup": "listbox" as const,
-      "aria-multiselectable": true,
-      role: "combobox",
+      ...(a11yIncludeExpanded ? { "aria-expanded": isOpen } : {}),
+      ...(a11yHasPopup
+        ? {
+            "aria-haspopup": (a11yHasPopup === true
+              ? "listbox"
+              : a11yHasPopup) as React.AriaAttributes["aria-haspopup"],
+          }
+        : {}),
+      ...(a11yIncludeAriaMultiSelectable
+        ? { "aria-multiselectable": true }
+        : {}),
+      ...(a11yContainerRole !== "none" ? { role: a11yContainerRole } : {}),
     }),
     [
       id,
@@ -361,6 +378,10 @@ export function useBaseMultiSelect<T = string>(
       errors,
       required,
       isOpen,
+      a11yIncludeExpanded,
+      a11yHasPopup,
+      a11yIncludeAriaMultiSelectable,
+      a11yContainerRole,
     ],
   );
 

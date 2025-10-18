@@ -2,7 +2,8 @@
 
 import React from "react";
 import { Form } from "@formlink/schema";
-import { FormModeProvider, IntroScreen } from "@formlink/ui";
+import { FormModeProvider } from "@/contexts/FormModeContext";
+import { IntroScreen } from "@/components/shared/IntroScreen";
 
 type AiIntroScreenProps = {
   formSchema: Form;
@@ -12,8 +13,8 @@ type AiIntroScreenProps = {
 export function AiIntroScreen({ formSchema, onStart }: AiIntroScreenProps) {
   return (
     <FormModeProvider
-      defaultMode="chat"
-      formSettings={{ defaultMode: "chat" }}
+      defaultMode="ai"
+      formSettings={{ defaultMode: "ai" }}
       urlSearchParams={{}}
     >
       <IntroScreen formSchema={formSchema} onStart={onStart} />

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CircleNotch } from "@phosphor-icons/react/CircleNotch";
 import { CaretDown } from "@phosphor-icons/react/CaretDown";
-import { MessageContent } from "@formlink/ui";
+import { MessageContent } from "@formlink/ui/ai-elements";
 interface MessageReasoningProps {
   isLoading: boolean;
   reasoningText: string;

@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import React from "react";
 import { cn } from "@/lib/utils";
-import { useThemeStyles, BaseTextInput } from "@formlink/ui";
+import { useThemeStyles } from "@formlink/ui";
 
 export interface TypeFormPhoneInputProps {
   value: string | null;

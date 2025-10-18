@@ -60,6 +60,10 @@ export interface BaseSelectProps<T = string>
    * Auto-submit on change (default: true for backward compatibility)
    */
   autoSubmitOnChange?: boolean;
+  // Accessibility controls (for wrapper-specific semantics)
+  a11yContainerRole?: "combobox" | "group" | "listbox" | "none";
+  a11yHasPopup?: boolean | "listbox";
+  a11yIncludeExpanded?: boolean;
 }
 
 export interface BaseSelectReturn<T = string>
@@ -126,7 +130,7 @@ export interface BaseSelectReturn<T = string>
   getOptionProps: (index: number) => React.HTMLAttributes<HTMLElement>;
 }
 
-export function BaseSelect<T = string>(
+export function useBaseSelect<T = string>(
   props: BaseSelectProps<T>,
 ): BaseSelectReturn<T> {
   const {
@@ -151,6 +155,9 @@ export function BaseSelect<T = string>(
     enableShortcuts = true,
     enableArrowNavigation = true,
     autoSubmitOnChange = true,
+    a11yContainerRole = "combobox",
+    a11yHasPopup = "listbox",
+    a11yIncludeExpanded = true,
   } = props;
 
   const [errors, setErrors] = useState<ValidationError[]>([]);
@@ -399,9 +406,15 @@ export function BaseSelect<T = string>(
       "aria-invalid": errors.length > 0,
       "aria-required": required,
       "aria-disabled": disabled,
-      "aria-expanded": isOpen,
-      "aria-haspopup": "listbox" as const,
-      role: "combobox",
+      ...(a11yIncludeExpanded ? { "aria-expanded": isOpen } : {}),
+      ...(a11yHasPopup
+        ? {
+            "aria-haspopup": (a11yHasPopup === true
+              ? "listbox"
+              : a11yHasPopup) as React.AriaAttributes["aria-haspopup"],
+          }
+        : {}),
+      ...(a11yContainerRole !== "none" ? { role: a11yContainerRole } : {}),
     }),
     [
       id,
@@ -412,6 +425,9 @@ export function BaseSelect<T = string>(
       errors,
       required,
       isOpen,
+      a11yIncludeExpanded,
+      a11yHasPopup,
+      a11yContainerRole,
     ],
   );
 
@@ -467,3 +483,5 @@ export function BaseSelect<T = string>(
     getOptionProps,
   };
 }
+
+// Back-compat alias

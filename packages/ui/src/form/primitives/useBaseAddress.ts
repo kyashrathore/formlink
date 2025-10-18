@@ -188,7 +188,7 @@ const defaultFieldConfig: Record<
   },
 };
 
-export function BaseAddress(props: BaseAddressProps): BaseAddressReturn {
+export function useBaseAddress(props: BaseAddressProps): BaseAddressReturn {
   const {
     value,
     onChange,
@@ -532,3 +532,5 @@ export function BaseAddress(props: BaseAddressProps): BaseAddressReturn {
     fieldTouchedStates,
   };
 }
+
+// Back-compat alias

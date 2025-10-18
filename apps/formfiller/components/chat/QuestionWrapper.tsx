@@ -3,7 +3,7 @@ import { fileDataToFile } from "@/lib/utils";
 import { AddressData, Question } from "@formlink/schema";
 // Replace generic registry-based InputContainer with explicit Chat switcher
 import React from "react";
-import { shallow } from "zustand/shallow";
+import { useShallow } from "zustand/shallow";
 import ChatQuestionInputSwitcher from "./ChatQuestionInputSwitcher";
 import { useChatStore } from "./store/useChatStore";
 import { debugLog } from "./utils/debug";
@@ -180,13 +180,12 @@ const QuestionWrapperComponent: React.FC<QuestionWrapperProps> = ({
 }) => {
   const { formSchema, currentInputs, setCurrentInput, currentQuestionId } =
     useChatStore(
-      (state) => ({
+      useShallow((state) => ({
         formSchema: state.formSchema,
         currentInputs: state.currentInputs,
         setCurrentInput: state.setCurrentInput,
         currentQuestionId: state.currentQuestionId,
-      }),
-      shallow,
+      })),
     );
 
   const question = formSchema?.questions.find((q) => q.id === questionId);

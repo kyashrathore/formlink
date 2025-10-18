@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@formlink/ui/lib/utils";
 
 import { CaretRight } from "@phosphor-icons/react/CaretRight";
 import { Circle } from "@phosphor-icons/react/Circle";

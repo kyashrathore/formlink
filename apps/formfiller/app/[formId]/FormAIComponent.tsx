@@ -25,7 +25,7 @@ import type {
   QueryDataForForm,
   QuestionResponse,
 } from "../../lib/types";
-import { shallow } from "zustand/shallow";
+import { useShallow } from "zustand/shallow";
 import { debugLog } from "@/components/chat/utils/debug";
 // Chat state is managed by @ai-sdk-tools/store globally to avoid prop-driven re-renders
 
@@ -74,6 +74,23 @@ export default function FormAIComponent({
     isTestSubmission,
   });
 
+  const selected = useChatStore(
+    useShallow((state) => ({
+      formDisplayState: state.formDisplayState,
+      currentQuestionId: state.currentQuestionId,
+      chatHistoryMessages: state.chatHistoryMessages,
+      processAssistantResponse: state.processAssistantResponse,
+      setFormDisplayState: state.setFormDisplayState,
+      setLastError: state.setLastError,
+      currentInputs: state.currentInputs,
+      setChatHistoryMessages: state.setChatHistoryMessages,
+      setCurrentInput: state.setCurrentInput,
+      setCurrentQuestionId: state.setCurrentQuestionId,
+      submissionId: state.submissionId,
+      formId: state.formId,
+    })),
+  );
+
   const {
     formDisplayState,
     currentQuestionId,
@@ -87,23 +104,7 @@ export default function FormAIComponent({
     setCurrentQuestionId,
     submissionId: storeSubmissionId,
     formId: storeFormId,
-  } = useChatStore(
-    (state) => ({
-      formDisplayState: state.formDisplayState,
-      currentQuestionId: state.currentQuestionId,
-      chatHistoryMessages: state.chatHistoryMessages,
-      processAssistantResponse: state.processAssistantResponse,
-      setFormDisplayState: state.setFormDisplayState,
-      setLastError: state.setLastError,
-      currentInputs: state.currentInputs,
-      setChatHistoryMessages: state.setChatHistoryMessages,
-      setCurrentInput: state.setCurrentInput,
-      setCurrentQuestionId: state.setCurrentQuestionId,
-      submissionId: state.submissionId,
-      formId: state.formId,
-    }),
-    shallow,
-  );
+  } = selected;
 
   const submissionId = storeSubmissionId;
 

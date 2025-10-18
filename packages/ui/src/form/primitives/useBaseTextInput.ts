@@ -64,7 +64,9 @@ export interface BaseTextInputReturn extends BasePrimitiveReturn<string> {
   isFocused: boolean;
 }
 
-export function BaseTextInput(props: BaseTextInputProps): BaseTextInputReturn {
+export function useBaseTextInput(
+  props: BaseTextInputProps,
+): BaseTextInputReturn {
   const {
     value,
     onChange,
@@ -335,3 +337,5 @@ export function BaseTextInput(props: BaseTextInputProps): BaseTextInputReturn {
     isFocused,
   };
 }
+
+// Back-compat alias

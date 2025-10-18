@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion } from "motion/react";
-import { BaseDatePicker } from "../../primitives/BaseDatePicker";
+import { useBaseDatePicker } from "../../primitives/useBaseDatePicker";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
 import { ArrowRight, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
@@ -41,7 +41,7 @@ export function UnifiedDatePicker({
   disabledDates = [],
   density,
 }: UnifiedDatePickerProps) {
-  const datePicker = BaseDatePicker({
+  const datePicker = useBaseDatePicker({
     value,
     onChange,
     disabled,

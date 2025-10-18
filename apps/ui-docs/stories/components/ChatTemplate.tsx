@@ -10,7 +10,7 @@ import {
   PromptInput,
   PromptInputTextarea,
   PromptInputSubmit,
-} from "@formlink/ui";
+} from "@formlink/ui/ai-elements";
 
 interface ChatTemplateProps {
   title: string;

@@ -56,7 +56,7 @@ export interface BaseLinearScaleReturn
   config: LinearScaleConfig;
 }
 
-export function BaseLinearScale(
+export function useBaseLinearScale(
   props: BaseLinearScaleProps,
 ): BaseLinearScaleReturn {
   const {
@@ -283,3 +283,5 @@ export function BaseLinearScale(
     config,
   };
 }
+
+// Back-compat alias

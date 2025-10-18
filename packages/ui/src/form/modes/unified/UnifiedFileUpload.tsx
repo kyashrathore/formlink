@@ -11,10 +11,10 @@ import {
   DropzoneEmptyState,
 } from "../../../ui/kibo-ui/dropzone";
 import {
-  BaseFileUpload,
+  useBaseFileUpload as BaseFileUpload,
   type BaseFileUploadReturn,
   type FileInfo,
-} from "../../primitives/BaseFileUpload";
+} from "../../primitives/useBaseFileUpload";
 
 export type FormMode = "chat" | "typeform";
 

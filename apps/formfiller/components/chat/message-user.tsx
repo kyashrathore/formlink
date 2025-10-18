@@ -1,6 +1,9 @@
 "use client";
 
-import { Message as MessageContainer, MessageContent } from "@formlink/ui";
+import {
+  Message as MessageContainer,
+  MessageContent,
+} from "@formlink/ui/ai-elements";
 
 import { UIMessage as MessageType } from "@ai-sdk/react";
 import { cn } from "@/lib/utils";

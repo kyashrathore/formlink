@@ -137,7 +137,7 @@ interface CalendarDay {
   props: React.HTMLAttributes<HTMLElement>;
 }
 
-export function BaseDatePicker(
+export function useBaseDatePicker(
   props: BaseDatePickerProps,
 ): BaseDatePickerReturn {
   const {
@@ -719,3 +719,5 @@ export function BaseDatePicker(
     selectDate,
   };
 }
+
+// Back-compat alias

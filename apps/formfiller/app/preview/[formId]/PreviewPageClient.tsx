@@ -224,7 +224,10 @@ export default function PreviewPageClient({
           break;
 
         case "FORMCRAFT_SHADCN_CSS_UPDATE":
-          applyShadcnCSS(payload.cssText);
+          // Avoid infinite loops by skipping if CSS hasn't changed
+          if (payload.cssText !== lastCssRef.current) {
+            applyShadcnCSS(payload.cssText);
+          }
           break;
 
         case "FORMCRAFT_THEME_MODE_UPDATE": {

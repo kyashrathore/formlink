@@ -3,7 +3,9 @@
 import { useIsMobile } from "@/hooks/useIsMobile";
 import type { QuestionResponse } from "@/lib/types";
 import { Form, getQuestionTypeName, Question } from "@formlink/schema";
-import { CompletionScreen, FormModeProvider, IntroScreen } from "@formlink/ui";
+import { FormModeProvider } from "@/contexts/FormModeContext";
+import { IntroScreen } from "@/components/shared/IntroScreen";
+import { CompletionScreen } from "@/components/shared/CompletionScreen";
 import { calcScore } from "@/lib/scoring/calcScore";
 import { useResultPage } from "@/hooks/useResultPage";
 import ReactMarkdown from "react-markdown";

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { BaseSelect } from "../../primitives/BaseSelect";
+import { useBaseSelect } from "../../primitives/useBaseSelect";
 import { cn } from "../../../lib/utils";
 import { getCountries, getCountryCallingCode } from "libphonenumber-js";
 // Ensure full metadata to avoid truncated country lists in some bundles
@@ -83,7 +83,7 @@ export function UnifiedCountrySelect({
     }));
   }, []);
 
-  const base = BaseSelect({
+  const base = useBaseSelect({
     options,
     value,
     onChange,

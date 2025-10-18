@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { BaseSelect } from "../../primitives/BaseSelect";
+import { useBaseSelect } from "../../primitives/useBaseSelect";
 import { Button } from "../../../ui/button";
 import { cn } from "../../../lib/utils";
 import { Option } from "../../primitives/types";
@@ -31,13 +31,16 @@ export function ChatLikertScale({
     label: option,
   }));
 
-  const base = BaseSelect({
+  const base = useBaseSelect({
     options: selectOptions,
     value,
     onChange,
     disabled,
     required,
     onSubmit,
+    a11yContainerRole: "group",
+    a11yHasPopup: false,
+    a11yIncludeExpanded: false,
   });
 
   const showError = base.isTouched && base.errors.length > 0;
