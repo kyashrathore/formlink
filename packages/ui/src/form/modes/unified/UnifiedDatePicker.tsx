@@ -1,12 +1,11 @@
 "use client";
 
-import React from "react";
+import { ArrowRight, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
-import { useBaseDatePicker } from "../../primitives/useBaseDatePicker";
 import { cn } from "../../../lib/utils";
 import { Button } from "../../../ui/button";
-import { ArrowRight, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
+import { useBaseDatePicker } from "../../primitives/useBaseDatePicker";
 
 export type FormMode = "chat" | "typeform";
 
@@ -79,7 +78,7 @@ export function UnifiedDatePicker({
   const resolvedDensity = density ?? (mode === "chat" ? "compact" : "comfy");
   const triggerClass = cn(
     "w-full flex items-center justify-between border rounded-lg transition-all duration-200",
-    mode === "typeform" ? "h-16" : "h-11",
+    mode === "typeform" ? "12" : "h-11",
     resolvedDensity === "compact" && "px-3 py-2 text-sm",
     resolvedDensity === "comfy" && "px-4 py-2 text-base",
     resolvedDensity === "spacious" && "px-5 py-3 text-base",

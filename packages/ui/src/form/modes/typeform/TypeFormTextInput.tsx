@@ -61,7 +61,8 @@ export function TypeFormTextInput({
     onValidate,
     ariaLabel,
     autoFocus: true, // TypeForm mode behavior: auto-focus
-    autoSubmitOnChange: true, // TypeForm mode behavior: auto-submit
+    // Avoid double submit on Enter: we handle Enter below.
+    autoSubmitOnChange: false,
   });
 
   // Get typeform mode styles
@@ -69,13 +70,12 @@ export function TypeFormTextInput({
 
   // Handle Enter key for submission (typeform mode specific)
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Let base process non-submit concerns (e.g., numeric guards)
     base.inputProps.onKeyDown?.(e);
+    if (e.defaultPrevented) return;
     if (e.key === "Enter" && !e.shiftKey && onSubmit) {
       e.preventDefault();
-      // Only submit if the parent component says the input is valid
-      if (!isInvalid) {
-        onSubmit();
-      }
+      if (!isInvalid) onSubmit();
     }
   };
 

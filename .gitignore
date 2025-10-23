@@ -30,6 +30,7 @@ artifacts
 vendor/
 data
 *.log
+*.tgz
 todos.md
 .store
 .npmrc

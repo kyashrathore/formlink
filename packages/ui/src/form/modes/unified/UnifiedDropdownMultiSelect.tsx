@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import { Check, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../../../lib/utils";
+import { Badge } from "../../../ui/badge";
+import { CommandItem } from "../../../ui/command";
 import {
   Combobox,
   ComboboxContent,
@@ -11,8 +14,6 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from "../../../ui/kibo-ui/combobox";
-import { CommandItem } from "../../../ui/command";
-import { Check } from "lucide-react";
 
 export type FormMode = "chat" | "typeform";
 
@@ -77,6 +78,42 @@ export function UnifiedDropdownMultiSelect<T = string>({
     onChange(newValues as unknown as T[]);
   };
 
+  // Measure-fit logic for badges: show +N only when they don't fit in one line
+  const containerRef = useRef<HTMLDivElement>(null);
+  const overflowRef = useRef<HTMLSpanElement>(null);
+  const [overflowAmount, setOverflowAmount] = useState(0);
+
+  const recalcOverflow = useCallback(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const overflowEl = overflowRef.current;
+    if (overflowEl) overflowEl.style.display = "none";
+    const items = el.querySelectorAll<HTMLElement>("[data-selected-item]");
+    items.forEach((child) => child.style.removeProperty("display"));
+
+    let amount = 0;
+    for (let i = items.length - 1; i >= 0; i--) {
+      if (el.scrollWidth <= el.clientWidth) break;
+      amount = items.length - i;
+      const child = items[i]!;
+      child.style.display = "none";
+      if (overflowEl) overflowEl.style.removeProperty("display");
+    }
+    setOverflowAmount(amount);
+  }, []);
+
+  useEffect(() => {
+    recalcOverflow();
+  }, [selectedLabels, recalcOverflow]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => recalcOverflow());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [recalcOverflow]);
+
   return (
     <div
       className={cn(
@@ -87,41 +124,50 @@ export function UnifiedDropdownMultiSelect<T = string>({
       <Combobox data={data} type="option">
         <ComboboxTrigger
           className={cn(
-            mode === "typeform" ? "h-16 text-base" : "h-10 text-sm",
-            "w-full justify-between",
+            mode === "typeform" ? "h-12 text-base" : "h-10 text-sm",
+            "w-full justify-between overflow-hidden whitespace-nowrap",
           )}
           onClick={(e) => {
             // Let popover toggle via combobox; no-op
           }}
         >
           {selectedLabels.length > 0 ? (
-            <div className="flex flex-wrap gap-1 items-center">
-              {selectedLabels.slice(0, 3).map((label) => (
-                <span
+            <div
+              ref={containerRef}
+              className="flex items-center gap-1.5 overflow-hidden"
+            >
+              {selectedLabels.map((label) => (
+                <Badge
                   key={label}
-                  className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs"
+                  variant="outline"
+                  className="flex items-center gap-1 p-2"
+                  data-selected-item
                 >
                   <span className="max-w-[160px] truncate">{label}</span>
                   {!disabled && (
-                    <button
-                      type="button"
+                    // Use a non-button element to avoid nesting a button inside the Combobox trigger button
+                    <span
                       onClick={(e) => {
                         e.stopPropagation();
                         handleToggleByLabel(label);
                       }}
                       aria-label={`Remove ${label}`}
-                      className="opacity-70 hover:opacity-100"
+                      className="opacity-70 hover:opacity-100 cursor-pointer"
+                      role="presentation"
                     >
-                      ×
-                    </button>
+                      <X className="w-3.5 h-3.5" aria-hidden="true" />
+                    </span>
                   )}
-                </span>
+                </Badge>
               ))}
-              {selectedLabels.length > 3 && (
-                <span className="text-xs text-muted-foreground">
-                  +{selectedLabels.length - 3}
-                </span>
-              )}
+              <Badge
+                ref={overflowRef}
+                variant="outline"
+                style={{ display: overflowAmount > 0 ? "inline-flex" : "none" }}
+                className="text-xs text-muted-foreground p-2"
+              >
+                +{overflowAmount}
+              </Badge>
             </div>
           ) : (
             placeholder

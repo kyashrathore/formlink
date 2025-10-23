@@ -1,17 +1,16 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { cn } from "../../../lib/utils";
-import { Input } from "../../../ui/input";
+import type { CountryCode } from "libphonenumber-js";
 import {
   AsYouType,
-  parsePhoneNumberFromString,
-  isValidPhoneNumber,
   getCountries,
   getCountryCallingCode,
+  isValidPhoneNumber,
+  parsePhoneNumberFromString,
 } from "libphonenumber-js";
-import type { CountryCode } from "libphonenumber-js";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
+import { ChevronDown } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "../../../lib/utils";
 import {
   Command,
   CommandEmpty,
@@ -20,7 +19,8 @@ import {
   CommandItem,
   CommandList,
 } from "../../../ui/command";
-import { ChevronDown } from "lucide-react";
+import { Input } from "../../../ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
 
 export type FormMode = "chat" | "typeform";
 
@@ -217,7 +217,7 @@ export function UnifiedPhoneInput({
   if (mode === "typeform") {
     return (
       <div className="w-full max-w-2xl">
-        <div className="flex items-center h-16 border-0 border-b-2 border-border/30 focus-within:border-primary transition-colors duration-200">
+        <div className="flex items-center h-12 border-0 border-b-2 border-border/30 focus-within:border-primary transition-colors duration-200">
           {showCountrySelector && (
             <Popover open={countryOpen} onOpenChange={setCountryOpen}>
               <PopoverTrigger

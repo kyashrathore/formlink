@@ -156,6 +156,7 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
     }
 
     try {
+      setInternalIsUploading(true);
       if (questionId && onFileUpload) {
         await (
           onFileUpload as unknown as (
@@ -168,6 +169,8 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
       setError(err instanceof Error ? err.message : "Upload failed");
       onFileSelect?.([]);
       setSelectedFile(null);
+    } finally {
+      setInternalIsUploading(false);
     }
   };
 
@@ -240,8 +243,19 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
   // TypeForm specific accepted types
   const acceptedTypes = allowedFileTypes
     ? allowedFileTypes.reduce(
-        (acc, type) => {
-          acc[type] = [];
+        (acc, raw) => {
+          const t = String(raw).trim();
+          let key = t;
+          if (t.includes("/")) {
+            key = t; // MIME like image/png
+          } else if (t.startsWith(".")) {
+            key = t.toLowerCase(); // .pdf
+          } else if (/^[a-z0-9]+$/i.test(t)) {
+            key = `.${t.toLowerCase()}`; // pdf -> .pdf
+          } else {
+            key = t;
+          }
+          acc[key] = [];
           return acc;
         },
         {} as Record<string, string[]>,
@@ -268,6 +282,7 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
       >
         <Dropzone
           onDrop={handleDrop}
+          onError={(err) => setError(err?.message || "File rejected")}
           accept={acceptedTypes}
           maxFiles={1}
           maxSize={maxSize}

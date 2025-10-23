@@ -5,6 +5,9 @@ import { Question } from "@formlink/schema";
 import {
   TypeFormTextInput,
   UnifiedFileUpload,
+  UnifiedDropdownSelect,
+  UnifiedDropdownMultiSelect,
+  UnifiedCountrySelect,
   UnifiedMultiSelect,
   UnifiedRating,
   UnifiedSignature,
@@ -12,8 +15,7 @@ import {
 import TypeFormAddress from "./TypeFormAddress";
 import { UnifiedLikert } from "@formlink/ui";
 import TypeFormRanking from "./TypeFormRanking";
-import { UnifiedPhoneInput, UnifiedCountryList } from "@formlink/ui";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { UnifiedPhoneInput } from "@formlink/ui";
 // Use unified phone input with libphonenumber-js formatting/validation
 // Temporarily avoid specialized phone/country inputs; use text input variants
 import { TypeFormLinearScale } from "./TypeFormLinearScale";
@@ -105,7 +107,6 @@ export default function TypeFormQuestionInputSwitcher(
     config?: Record<string, unknown>;
   };
   const t = typeObj.name ?? "";
-  const isMobile = useIsMobile();
 
   // Text questions with formats
   if (t === "text") {
@@ -136,7 +137,7 @@ export default function TypeFormQuestionInputSwitcher(
 
     if (f === "country") {
       return (
-        <UnifiedCountryList
+        <UnifiedCountrySelect
           mode="typeform"
           value={val}
           onChange={(v: string | null) => onAnswer(v)}
@@ -170,27 +171,20 @@ export default function TypeFormQuestionInputSwitcher(
   if (t === "singleChoice") {
     const options = typeObj.options || [];
     const val = toStringVal(response);
-    // Use unified in-page list in all cases; enable search for large/mobile lists
-    const useListWithSearch = isMobile || options.length >= 6;
     return (
       <div
         className="relative z-10 pointer-events-auto"
         onMouseDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
       >
-        <UnifiedMultiSelect
+        <UnifiedDropdownSelect
           mode="typeform"
           options={options}
-          value={val ? [val] : []}
-          maxSelections={1}
-          onChange={(arr: string[]) => {
-            const first = Array.isArray(arr) ? (arr[0] ?? "") : "";
-            onAnswer(first);
-          }}
+          value={val}
+          onChange={(v: string | null) => onAnswer(v ?? "")}
           onSubmit={onNext}
-          density="comfy"
-          enableSearch={useListWithSearch}
-          searchableThreshold={6}
+          className="w-full max-w-2xl"
+          autoOpenOnMountIfEmpty
         />
       </div>
     );
@@ -198,22 +192,19 @@ export default function TypeFormQuestionInputSwitcher(
   if (t === "multipleChoice") {
     const options = typeObj.options || [];
     const valArr = toStringArray(response);
-    const useListWithSearch = isMobile || options.length >= 6;
     return (
       <div
         className="relative z-10 pointer-events-auto"
         onMouseDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
       >
-        <UnifiedMultiSelect
+        <UnifiedDropdownMultiSelect
           mode="typeform"
           options={options}
           value={valArr}
           onChange={(arr: string[]) => onAnswer(arr)}
           onSubmit={onNext}
-          density="comfy"
-          enableSearch={useListWithSearch}
-          searchableThreshold={6}
+          className="w-full max-w-2xl"
         />
       </div>
     );

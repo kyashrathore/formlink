@@ -1,16 +1,13 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useBaseSelect } from "../../primitives/useBaseSelect";
-import { cn } from "../../../lib/utils";
 import { getCountries, getCountryCallingCode } from "libphonenumber-js";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { cn } from "../../../lib/utils";
+import { useBaseSelect } from "../../primitives/useBaseSelect";
 // Ensure full metadata to avoid truncated country lists in some bundles
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
-import fullMetadata from "libphonenumber-js/metadata.max.json";
-import type { Option } from "../../primitives/types";
-import { ChevronDown, Globe, Check } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
+import { Check, ChevronDown, Globe } from "lucide-react";
 import {
   Command,
   CommandEmpty,
@@ -19,6 +16,8 @@ import {
   CommandItem,
   CommandList,
 } from "../../../ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
+import type { Option } from "../../primitives/types";
 
 export type FormMode = "chat" | "typeform";
 
@@ -118,7 +117,7 @@ export function UnifiedCountrySelect({
 
   const sizeClasses =
     mode === "typeform"
-      ? "h-16 text-base"
+      ? "h-12 text-base"
       : density === "compact"
         ? "h-10 text-sm"
         : density === "comfy"

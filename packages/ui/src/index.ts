@@ -22,9 +22,11 @@ export * from "./ui/dropdown-menu";
 export * from "./ui/form";
 export * from "./ui/hover-card";
 export * from "./ui/input";
+export * from "./ui/input-group";
 export * from "./ui/kibo-ui/combobox";
 export * from "./ui/kibo-ui/dropzone";
 export * from "./ui/label";
+export * from "./ui/field";
 export * from "./ui/menubar";
 export * from "./ui/popover";
 export * from "./ui/progress";
@@ -79,6 +81,8 @@ export * from "./types/generic";
 // Hooks exports - organized by category
 export * from "./hooks/ui/use-mobile";
 export * from "./hooks/ui/useTheme";
+export * from "./hooks/typeform/useTypeFormScroll";
+export * from "./hooks/typeform/useTypeFormSwipe";
 
 // Unified Component Architecture Exports - PRIMARY INTERFACE
 

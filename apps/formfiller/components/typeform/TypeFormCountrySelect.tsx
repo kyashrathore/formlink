@@ -126,11 +126,17 @@ export function TypeFormCountrySelect({
         break;
 
       case "Enter":
-        e.preventDefault();
-        if (isOpen && focusedIndex >= 0 && filteredCountries[focusedIndex]) {
-          handleCountrySelect(filteredCountries[focusedIndex].code);
-        } else if (onSubmit && (!required || value)) {
-          onSubmit();
+        if (isOpen && focusedIndex >= 0) {
+          e.preventDefault();
+          const country = filteredCountries[focusedIndex];
+          if (country) {
+            handleCountrySelect(country.code);
+          }
+        } else if (!isOpen) {
+          setIsOpen(true);
+        } else if (searchTerm && filteredCountries.length > 0) {
+          const first = filteredCountries[0];
+          if (first) handleCountrySelect(first.code);
         }
         break;
 

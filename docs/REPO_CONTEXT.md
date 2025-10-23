@@ -1,9 +1,14 @@
 # REPO_CONTEXT
 
-Last updated: 2025-10-18
+Last updated: 2025-10-20
 
 Recent change
 
+- Runtime docs: Added consolidated plan at `docs/runtime/RUNTIME_CONSOLIDATED_v1.md` organizing packages, decisions to gavel, Deploy-on-Formlink flow, headless chat testmode, and the Devtools plan. This doc links to existing detailed specs and examples and defines MVP acceptance.
+- Runtime/schema: Re‑attached `@formlink/runtime` to the canonical `@formlink/schema` types to prevent drift. `packages/runtime/src/types.ts` now re‑exports `Form`/`Question`/`AddressData` from `@formlink/schema`, and core modules import types from the schema package. Address schema validation also uses `AddressSchema` from `@formlink/schema`.
+
+- Runtime: Rewrote `packages/runtime/src/ui/react/InlineSignature.tsx` to use `react-signature-canvas` (matches our UI package) instead of custom `<canvas>` (and dropped prior `@uiw/react-signature` change). Preserves API (`value?: string|null`, `onChange(dataUrl)`, `onSubmit?`, `width`, `height`). Behavior: loads existing `value` into the canvas via `fromDataURL`, new strokes append, and `toDataURL('image/png')` emits the full image; `Clear` resets and emits `null`. Added deps: `react-signature-canvas` and `@types/react-signature-canvas` to `@formlink/runtime`.
+- Runtime: Tweaked signature stroke thickness to be slightly lighter: `minWidth` 1 → 0.75 and `maxWidth` 3 → 2.0 in `InlineSignature`. No API change.
 - Cleanup: Removed unused hooks in UI package. Deleted `packages/ui/src/hooks/primitives/*` and `packages/ui/src/form/primitives/hooks/*`; dropped their re-exports from `packages/ui/src/index.ts` and `packages/ui/src/form/primitives/index.ts`.
 - Cleanup: Removed unused hooks under `packages/ui/src/hooks/form/*` and removed their public re-exports from `packages/ui/src/index.ts`.
 - Cleanup: Removed now-empty directories `packages/ui/src/hooks/form` and `packages/ui/src/hooks/primitives`.
@@ -21,6 +26,14 @@ Recent change
 - Enhancement: Pre-repair invalid JSON text with `jsonrepair` before schema repair. Applied in `apps/formcraft/app/lib/chat/tools/create-form.ts: repairFunction` and `apps/formcraft/app/lib/chat/tools/generate-question.ts: repairFunction` to reduce failures from malformed JSON strings. Installed dependency in `apps/formcraft`.
 - UI primitives: Renamed `BaseMultiSelect` (hook-using function) to `useBaseMultiSelect` and updated all call sites (`packages/ui/src/form/modes/unified/UnifiedMultiSelect.tsx`) and re-exports (`packages/ui/src/form/primitives/base/index.ts`). Rationale: it’s a custom hook and must be called unconditionally at the top level; the new name makes this contract explicit and prevents conditional invocation leading to hook count mismatches.
 - Security/Privacy: Removed ad-hoc debug/info logs and any logs that could emit PII (e.g., `contextPayload`, full responses). Retained/restored essential error logs with redacted messages in server routes. Touched: `apps/formfiller/app/api/ai/chat-assist/**`, branching routes, upload/save-answers/forms/chat-history APIs, and `lib/getFormSchema.ts`.
+
+- Runtime: Unified error‑visibility policy moved into `@formlink/runtime`.
+  - Typeform mode: reveal errors on `actions.next()` and on submit; clear on `actions.set()` when valid.
+  - Classic mode: reveal errors on `actions.blur(qid)`; clear on `actions.set()` when valid. `next()` no longer reveals in classic.
+  - UI should render `context.get.visibleError(qid)` instead of `context.get.error(qid)`.
+
+- UI: Combobox close-on-select
+  - Fixed `kibo-ui/combobox` so `ComboboxItem` always closes the popover on selection even when a consumer supplies `onSelect`. Implementation merges handlers instead of overriding. Affects `UnifiedDropdownSelect` (single-select dropdown) which now closes immediately after choosing an option.
 
 - Formlink Runtime docs consolidated: `docs/runtime/formlink-runtime-spec_v1.md` (headless runtime API, preview sessions + linking + retention, chat UI contract, UI registry guidance, glue snippets). Master spec points to it from §3.5–3.6.
 
@@ -207,10 +220,11 @@ Additional guidance:
 Documentation Index (selected)
 
 - Project spec and public contracts
-  - docs/runtime/formlink-runtime-spec_v1.md — single, canonical spec for runtime + chat + registry + preview
-  - docs/runtime/formlink-runtime-low-level-examples_v1.md — low‑level wiring examples for common requests
-  - docs/runtime/runtime-impl-plan_v1.md — implementation plan for @formlink/runtime (TanStack, transports, selectors)
-  - docs/runtime/llm-codegen-contract_v1.md — pasteable contract for LLM codegen to generate deployable forms
+- docs/runtime/formlink-runtime-spec_v1.md — single, canonical spec for runtime + chat + registry + preview
+- docs/runtime/formlink-runtime-low-level-examples_v1.md — low‑level wiring examples for common requests
+- docs/runtime/runtime-impl-plan_v1.md — implementation plan for @formlink/runtime (TanStack, transports, selectors)
+- docs/runtime/llm-codegen-contract_v1.md — pasteable contract for LLM codegen to generate deployable forms
+- docs/ui/form-components.md — overview of supported @formlink/ui form components (Unified\* inputs, Field, InputGroup), usage patterns, and runtime wiring guidelines
 
 - Chat runtime data flow (AI-assisted inputs): docs/chat-runtime-data-flow_v1.md
 

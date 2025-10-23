@@ -2,6 +2,7 @@
 
 import { useControllableState } from "@radix-ui/react-use-controllable-state";
 import { ChevronsUpDownIcon, PlusIcon } from "lucide-react";
+import React from "react";
 import {
   type ComponentProps,
   createContext,
@@ -111,37 +112,39 @@ export const Combobox = ({
 
 export type ComboboxTriggerProps = ComponentProps<typeof Button>;
 
-export const ComboboxTrigger = ({
-  children,
-  ...props
-}: ComboboxTriggerProps) => {
+export const ComboboxTrigger = React.forwardRef<
+  HTMLButtonElement,
+  ComboboxTriggerProps
+>(({ children, ...props }, forwardedRef) => {
   const { value, data, type, setWidth } = useContext(ComboboxContext);
-  const ref = useRef<HTMLButtonElement>(null);
+  const internalRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    // Create a ResizeObserver to detect width changes
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const newWidth = (entry.target as HTMLElement).offsetWidth;
-        if (newWidth) {
-          setWidth?.(newWidth);
-        }
+        if (newWidth) setWidth?.(newWidth);
       }
     });
-
-    if (ref.current) {
-      resizeObserver.observe(ref.current);
-    }
-
-    // Clean up the observer when component unmounts
-    return () => {
-      resizeObserver.disconnect();
-    };
+    const node = internalRef.current;
+    if (node) resizeObserver.observe(node);
+    return () => resizeObserver.disconnect();
   }, [setWidth]);
+
+  const setRefs = (node: HTMLButtonElement | null) => {
+    internalRef.current = node;
+    if (typeof forwardedRef === "function") {
+      forwardedRef(node);
+    } else if (forwardedRef) {
+      (
+        forwardedRef as React.MutableRefObject<HTMLButtonElement | null>
+      ).current = node;
+    }
+  };
 
   return (
     <PopoverTrigger asChild>
-      <Button variant="outline" {...props} ref={ref}>
+      <Button variant="outline" {...props} ref={setRefs}>
         {children ?? (
           <span className="flex w-full items-center justify-between gap-2">
             {value
@@ -156,7 +159,7 @@ export const ComboboxTrigger = ({
       </Button>
     </PopoverTrigger>
   );
-};
+});
 
 export type ComboboxContentProps = ComponentProps<typeof Command> & {
   popoverOptions?: ComponentProps<typeof PopoverContent>;
@@ -241,16 +244,19 @@ export const ComboboxGroup = (props: ComboboxGroupProps) => (
 
 export type ComboboxItemProps = ComponentProps<typeof CommandItem>;
 
-export const ComboboxItem = (props: ComboboxItemProps) => {
+export const ComboboxItem = ({ onSelect, ...props }: ComboboxItemProps) => {
   const { onValueChange, onOpenChange } = useContext(ComboboxContext);
 
   return (
     <CommandItem
+      {...props}
       onSelect={(currentValue) => {
+        // Always update the combobox selected value and close the popover
         onValueChange(currentValue);
         onOpenChange(false);
+        // Then invoke any consumer-provided handler (e.g., to notify parent)
+        onSelect?.(currentValue);
       }}
-      {...props}
     />
   );
 };

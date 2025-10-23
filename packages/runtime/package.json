@@ -1,0 +1,75 @@
+{
+  "name": "@formlink/runtime",
+  "version": "0.1.0-alpha.3",
+  "private": false,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./transport/fetch": {
+      "types": "./dist/transport/fetchTransport.d.ts",
+      "import": "./dist/transport/fetchTransport.js"
+    },
+    "./ui/react": {
+      "types": "./dist/ui/react/index.d.ts",
+      "import": "./dist/ui/react/index.js"
+    },
+    "./ui/react/style.css": "./src/ui/react/style.css",
+    "./devtools": {
+      "types": "./dist/devtools/Devtools.d.ts",
+      "import": "./dist/devtools/Devtools.js"
+    },
+    "./schema": {
+      "types": "./dist/schema/index.d.ts",
+      "import": "./dist/schema/index.js"
+    },
+    "./tailwind-safelist": "./tailwind-safelist.cjs"
+  },
+  "files": [
+    "dist",
+    "src/ui/react/style.css",
+    "tailwind-safelist.cjs"
+  ],
+  "sideEffects": [
+    "src/ui/react/style.css"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "libphonenumber-js": "^1.11.18",
+    "@dnd-kit/core": "^6.1.0",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@tanstack/form-core": "0.42.1",
+    "@tanstack/react-form": "0.42.1",
+    "@tanstack/zod-form-adapter": "0.42.1",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "react-signature-canvas": "1.1.0-alpha.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/react-signature-canvas": "^1.0.7",
+    "tsup": "^8.0.2",
+    "@formlink/schema": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "scripts": {
+    "build": "tsup --config tsup.config.ts",
+    "postbuild": "cp ../schema/dist/index.d.ts dist/schema/index.d.ts || true && node ./scripts/fix-dts-schema-imports.mjs",
+    "type-check": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}

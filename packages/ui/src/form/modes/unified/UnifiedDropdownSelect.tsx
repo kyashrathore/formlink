@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { cn } from "../../../lib/utils";
 import {
   Combobox,
@@ -33,6 +33,11 @@ export interface UnifiedDropdownSelectProps<T = string> {
   className?: string;
   ariaLabel?: string;
   ariaDescribedBy?: string;
+  /**
+   * Optional: open popover on first mount if value is empty (Typeform speed).
+   * Default false for accessibility.
+   */
+  autoOpenOnMountIfEmpty?: boolean;
 }
 
 export function UnifiedDropdownSelect<T = string>({
@@ -45,6 +50,7 @@ export function UnifiedDropdownSelect<T = string>({
   disabled = false,
   required = false,
   className,
+  autoOpenOnMountIfEmpty = false,
 }: UnifiedDropdownSelectProps<T>) {
   const data = useMemo(
     () => options.map((o) => ({ value: String(o.value), label: o.label })),
@@ -59,6 +65,7 @@ export function UnifiedDropdownSelect<T = string>({
     [options, value],
   );
   const currentLabel = selectedOption ? selectedOption.label : "";
+  const shouldAutoOpen = Boolean(autoOpenOnMountIfEmpty && value == null);
 
   return (
     <div
@@ -67,17 +74,23 @@ export function UnifiedDropdownSelect<T = string>({
         className,
       )}
     >
-      <Combobox data={data} type="option" value={currentLabel}>
+      <Combobox
+        data={data}
+        type="option"
+        value={currentLabel}
+        defaultOpen={shouldAutoOpen}
+      >
         <ComboboxTrigger
+          autoFocus={!shouldAutoOpen}
           className={cn(
-            mode === "typeform" ? "h-16 text-base" : "h-10 text-sm",
+            mode === "typeform" ? "h-12 text-base" : "h-10 text-sm",
             "w-full justify-between",
           )}
         >
           {currentLabel || placeholder}
         </ComboboxTrigger>
         <ComboboxContent>
-          <ComboboxInput className="h-10" />
+          <ComboboxInput className="h-10" autoFocus={shouldAutoOpen} />
           <ComboboxList>
             <ComboboxEmpty>No options found.</ComboboxEmpty>
             <ComboboxGroup>
