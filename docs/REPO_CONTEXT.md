@@ -323,6 +323,7 @@ Documentation Index (selected)
 
 - Primary config: `packages/runtime/docs/mint.json` (site root for published docs).
 - Scope: publish only `packages/runtime/docs/**/*` (public runtime docs, examples, pitfalls). Internal repo docs under `docs/` remain private.
+- Added landing: `packages/runtime/docs/index.mdx` and updated navigation in `mint.json` to include `index` first.
 
 Verification (local preview):
 

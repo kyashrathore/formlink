@@ -8,7 +8,7 @@
   "navigation": [
     {
       "group": "Overview",
-      "pages": ["README", "formlink-runtime-spec_v1_normative_only"]
+      "pages": ["index", "formlink-runtime-spec_v1_normative_only"]
     },
     {
       "group": "Examples",
