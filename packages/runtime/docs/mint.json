@@ -1,0 +1,31 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "theme": "mint",
+  "name": "Formlink Runtime",
+  "colors": { "primary": "#3b82f6" },
+  "description": "Headless runtime + UI contracts and examples.",
+  "navigation": [
+    {
+      "group": "Overview",
+      "pages": ["README", "formlink-runtime-spec_v1_normative_only"]
+    },
+    {
+      "group": "Examples",
+      "pages": [
+        "examples/universal-classic",
+        "examples/universal-typeform",
+        "examples/composed-react-wiring"
+      ]
+    },
+    {
+      "group": "Pitfalls",
+      "pages": [
+        "pitfalls/createRuntime-import",
+        "pitfalls/mockTransport-alias",
+        "pitfalls/question-undefined-title",
+        "pitfalls/start-button-no-op",
+        "pitfalls/useRuntime-export-missing"
+      ]
+    }
+  ]
+}

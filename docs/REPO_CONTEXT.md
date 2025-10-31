@@ -318,6 +318,27 @@ Documentation Index (selected)
 
 - `docs/submission_intelligence_job_v1.md` — authoritative background job specification (verify latest before edits).
 - `docs/automation_triggers_v1.md` — future-state trigger DSL research.
+
+## Mintlify — Runtime Docs (code-based)
+
+- Primary config: `packages/runtime/docs/mint.json` (site root for published docs).
+- Scope: publish only `packages/runtime/docs/**/*` (public runtime docs, examples, pitfalls). Internal repo docs under `docs/` remain private.
+
+Verification (local preview):
+
+- From `packages/runtime/docs`, run: `pnpm dlx mint dev --port 3100`
+  - Keep app `pnpm run dev` running; this uses a separate port.
+
+Publish (Mintlify Cloud):
+
+- Settings → Code-based → Docs directory: set to `packages/runtime/docs`.
+- Mintlify looks for `mint.json` or `docs.json` in that directory.
+- Branch defaults to `main`; adjust as needed.
+
+Notes / TODOs:
+
+- TODO(mintlify): If any page shows as “Untitled”, add frontmatter `title:`.
+- TODO(mintlify): Add brand colors/logo later; currently `#3b82f6`.
 - `docs/` folder holds additional context; keep synchronized when architecture evolves.
 - `AGENTS.md` — operational rules for AI agents collaborating on the repo.
 
