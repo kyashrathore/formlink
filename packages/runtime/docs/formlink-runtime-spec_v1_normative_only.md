@@ -725,20 +725,103 @@ Always import runtime UI CSS once in your entry (e.g., `src/main.tsx` or root la
 
 This is the single source of truth for mapping a schema question to a React component. Do not deviate.
 
-| If `q.type.name` is… | And `q.type.format` is…                              | You MUST use this component (props abbreviated)                                                                                                                                       |
-| :------------------- | :--------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `text`               | `tel`                                                | `<UnifiedPhoneInput mode="typeform" value={String(rt.context.get.value(qId) ?? '')} onChange={(v)=>rt.actions.set(qId,v)} onSubmit={onContinue} preventInvalidSubmit />`              |
-| `text`               | `country`                                            | `<UnifiedCountrySelect mode="typeform" options={buildCountryOptions()} value={rt.context.get.value<string                                                                             | null>(qId) ?? null} onChange={(v)=>rt.actions.set(qId,v)} onSubmit={onContinue} />`                              |
-| `text`               | `textarea`                                           | `<TypeFormTextInput value={String(rt.context.get.value(qId) ?? '')} onChange={(v)=>rt.actions.set(qId,v)} />` (Note: submit handled by footer; there is no `multiline` prop)          |
-| `text`               | `email` \| `url` \| `text` \| `password` \| `number` | `<TypeFormTextInput type={q.type.format} value={String(rt.context.get.value(qId) ?? '')} onChange={(v)=>rt.actions.set(qId,v)} onSubmit={onContinue} />`                              |
-| `singleChoice`       | options ≤ 5                                          | `<InlineSelect options={opts} value={rt.context.get.value<string                                                                                                                      | null>(qId) ?? null} onChange={(v)=>rt.actions.set(qId,v)} onSubmit={onContinue} />`                              |
-| `singleChoice`       | options > 5                                          | `<UnifiedDropdownSelect mode="typeform" options={opts} value={rt.context.get.value<string                                                                                             | null>(qId) ?? null} onChange={(v)=>rt.actions.set(qId,v)} onSubmit={onContinue} />`                              |
-| `multipleChoice`     | options ≤ 5                                          | `<InlineMultiSelect options={opts} value={(rt.context.get.value(qId) as string[]) ?? []} onChange={(arr)=>rt.actions.set(qId,arr)} onSubmit={onContinue} />`                          |
-| `multipleChoice`     | options > 5                                          | `<UnifiedDropdownMultiSelect mode="typeform" options={opts} value={(rt.context.get.value(qId) as string[]) ?? []} onChange={(arr)=>rt.actions.set(qId,arr)} onSubmit={onContinue} />` |
-| `rating`             | N/A                                                  | `<InlineRating max={q.type.config?.max ?? 5} value={rt.context.get.value<number                                                                                                       | null>(qId) ?? null} onChange={(n)=>rt.actions.set(qId,n)} onSubmit={onContinue} />`(Note: no`min`or`step` props) |
-| `fileUpload`         | N/A                                                  | `<UnifiedFileUpload mode="typeform" questionId={qId} onFileUpload={async (id,file)=>{ const desc=await rt.actions.upload(id,file); rt.actions.set(id,desc); }} />`                    |
-| `signature`          | N/A                                                  | `<InlineSignature value={rt.context.get.value<string                                                                                                                                  | null>(qId) ?? null} onChange={(s)=>rt.actions.set(qId,s)} onSubmit={onContinue} />`                              |
-| `date`               | N/A                                                  | `<UnifiedDatePicker mode="typeform" value={rt.context.get.value<string                                                                                                                | null>(qId) ?? null} onChange={(v)=>rt.actions.set(qId,v)} />`                                                    |
+<table>
+  <thead>
+    <tr>
+      <th>If <code>q.type.name</code> is…</th>
+      <th>And <code>q.type.format</code> is…</th>
+      <th>You MUST use this component (props abbreviated)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>text</code></td>
+      <td><code>tel</code></td>
+      <td>
+        <code>&lt;UnifiedPhoneInput mode="typeform" value={String(rt.context.get.value(qId) ?? '')} onChange={(v)=&gt;rt.actions.set(qId,v)} onSubmit={onContinue} preventInvalidSubmit /&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>text</code></td>
+      <td><code>country</code></td>
+      <td>
+        <code>&lt;UnifiedCountrySelect mode="typeform" options={buildCountryOptions()} value={rt.context.get.value&lt;string | null&gt;(qId) ?? null} onChange={(v)=&gt;rt.actions.set(qId,v)} onSubmit={onContinue} /&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>text</code></td>
+      <td><code>textarea</code></td>
+      <td>
+        <code>&lt;TypeFormTextInput value={String(rt.context.get.value(qId) ?? '')} onChange={(v)=&gt;rt.actions.set(qId,v)} /&gt;</code>
+        <div><em>Note: submit handled by footer; there is no <code>multiline</code> prop.</em></div>
+      </td>
+    </tr>
+    <tr>
+      <td><code>text</code></td>
+      <td><code>email</code> | <code>url</code> | <code>text</code> | <code>password</code> | <code>number</code></td>
+      <td>
+        <code>&lt;TypeFormTextInput type={q.type.format} value={String(rt.context.get.value(qId) ?? '')} onChange={(v)=&gt;rt.actions.set(qId,v)} onSubmit={onContinue} /&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>singleChoice</code></td>
+      <td>options ≤ 5</td>
+      <td>
+        <code>&lt;InlineSelect options={opts} value={rt.context.get.value&lt;string | null&gt;(qId) ?? null} onChange={(v)=&gt;rt.actions.set(qId,v)} onSubmit={onContinue} /&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>singleChoice</code></td>
+      <td>options &gt; 5</td>
+      <td>
+        <code>&lt;UnifiedDropdownSelect mode="typeform" options={opts} value={rt.context.get.value&lt;string | null&gt;(qId) ?? null} onChange={(v)=&gt;rt.actions.set(qId,v)} onSubmit={onContinue} /&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>multipleChoice</code></td>
+      <td>options ≤ 5</td>
+      <td>
+        <code>&lt;InlineMultiSelect options={opts} value={(rt.context.get.value(qId) as string[]) ?? []} onChange={(arr)=&gt;rt.actions.set(qId,arr)} onSubmit={onContinue} /&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>multipleChoice</code></td>
+      <td>options &gt; 5</td>
+      <td>
+        <code>&lt;UnifiedDropdownMultiSelect mode="typeform" options={opts} value={(rt.context.get.value(qId) as string[]) ?? []} onChange={(arr)=&gt;rt.actions.set(qId,arr)} onSubmit={onContinue} /&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>rating</code></td>
+      <td>N/A</td>
+      <td>
+        <code>&lt;InlineRating max={q.type.config?.max ?? 5} value={rt.context.get.value&lt;number | null&gt;(qId) ?? null} onChange={(n)=&gt;rt.actions.set(qId,n)} onSubmit={onContinue} /&gt;</code>
+        <div><em>Note: no <code>min</code> or <code>step</code> props.</em></div>
+      </td>
+    </tr>
+    <tr>
+      <td><code>fileUpload</code></td>
+      <td>N/A</td>
+      <td>
+        <code>&lt;UnifiedFileUpload mode="typeform" questionId={qId} onFileUpload={async (id,file)=&gt;{ const desc = await rt.actions.upload(id,file); rt.actions.set(id,desc); }} /&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>signature</code></td>
+      <td>N/A</td>
+      <td>
+        <code>&lt;InlineSignature value={rt.context.get.value&lt;string | null&gt;(qId) ?? null} onChange={(s)=&gt;rt.actions.set(qId,s)} onSubmit={onContinue} /&gt;</code>
+      </td>
+    </tr>
+    <tr>
+      <td><code>date</code></td>
+      <td>N/A</td>
+      <td>
+        <code>&lt;UnifiedDatePicker mode="typeform" value={rt.context.get.value&lt;string | null&gt;(qId) ?? null} onChange={(v)=&gt;rt.actions.set(qId,v)} /&gt;</code>
+      </td>
+    </tr>
+  </tbody>
+  </table>
 
 ### Required Semantics
 
