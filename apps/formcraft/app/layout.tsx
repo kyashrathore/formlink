@@ -7,6 +7,7 @@ import {
 import { ReactQueryClientProvider } from "@/app/ReactQueryClientProvider"
 import { Toaster } from "@formlink/ui"
 import "@formlink/ui/globals.css"
+import "./styles/vars.css"
 import type { Metadata } from "next"
 import { ThemeProvider } from "next-themes"
 import { Inter, Poppins } from "next/font/google"
