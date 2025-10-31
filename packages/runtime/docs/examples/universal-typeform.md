@@ -9,6 +9,7 @@ Purpose: Mount the one-by-one Typeform-style UI via UniversalTypeform with a hea
 
 ## Code
 
+```jsx
 "use client"
 import React from "react"
 import { createRuntime } from "@formlink/runtime"
@@ -17,24 +18,25 @@ import type { Form } from "@formlink/runtime/schema"
 import "@formlink/runtime/ui/react/style.css"
 
 const form: Form = {
-id: "example",
-title: "Example Form",
-questions: [
-{ id: "email", title: "Email", type: { name: "text", format: "email" }, validations: { required: { value: true } } },
-],
+  id: "example",
+  title: "Example Form",
+  questions: [
+    { id: "email", title: "Email", type: { name: "text", format: "email" }, validations: { required: { value: true } } },
+  ],
 }
 
 export default function Example() {
-const rt = React.useMemo(() => createRuntime({ form, uiMode: "typeform" }), [])
-const primitives = { /_ map your shadcn/ui primitives here _/ } as any
-return (
-<RuntimeProvider runtime={rt} showDevtools>
-<ShadCnProvider components={primitives}>
-<UniversalTypeform />
-</ShadCnProvider>
-</RuntimeProvider>
-)
+  const rt = React.useMemo(() => createRuntime({ form, uiMode: "typeform" }), [])
+  const primitives = { /* map your shadcn/ui primitives here */ } as any
+  return (
+    <RuntimeProvider runtime={rt} showDevtools>
+      <ShadCnProvider components={primitives}>
+        <UniversalTypeform />
+      </ShadCnProvider>
+    </RuntimeProvider>
+  )
 }
+```
 
 ## Notes
 

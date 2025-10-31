@@ -15,8 +15,12 @@ description: "Incorrect import/export for mock transport factory."
 
 ## Fix
 
+```js
 import { createMockTransport as mockTransportInDraft } from "@formlink/runtime"
+```
 
 ## Usage
 
+```js
 const rt = createRuntime({ form, transport: mockTransportInDraft() })
+```
