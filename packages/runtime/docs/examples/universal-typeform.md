@@ -1,8 +1,14 @@
-Example — Universal Typeform
+---
+title: "Example — Universal Typeform"
+description: "Mount the one-by-one Typeform-style UI via UniversalTypeform with a headless runtime."
+---
+
+# Example — Universal Typeform
 
 Purpose: Mount the one-by-one Typeform-style UI via UniversalTypeform with a headless runtime.
 
-Code
+## Code
+
 "use client"
 import React from "react"
 import { createRuntime } from "@formlink/runtime"
@@ -30,6 +36,6 @@ return (
 )
 }
 
-Notes
+## Notes
 
 - Provide shadcn primitives via ShadCnProvider. See formlink-runtime-spec_v1_normative_only.md.

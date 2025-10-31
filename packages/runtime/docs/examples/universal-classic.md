@@ -1,8 +1,14 @@
-Example — Universal Classic
+---
+title: "Example — Universal Classic"
+description: "Mount the page/list UI via UniversalClassic with a headless runtime."
+---
+
+# Example — Universal Classic
 
 Purpose: Mount the page/list UI via UniversalClassic with a headless runtime.
 
-Code
+## Code
+
 "use client"
 import React from "react"
 import { createRuntime } from "@formlink/runtime"

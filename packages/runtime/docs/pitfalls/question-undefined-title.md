@@ -1,14 +1,20 @@
-Pitfall — Cannot read properties of undefined (reading 'title')
+---
+title: "Pitfall — Cannot read properties of undefined (reading 'title')"
+description: "Guard question lookup against null qId and subscribe to runtime state."
+---
 
-Error
+# Pitfall — Cannot read properties of undefined (reading 'title')
+
+## Error
 
 - Cannot read properties of undefined (reading 'title')
 
-Root cause
+## Root cause
 
 - `question` was derived from FORM_SCHEMA instead of the runtime context, or `qId` is null/invalid.
 
-Fix
+## Fix
+
 // derive qId from the snapshot, and fetch question via runtime
 const snap = React.useSyncExternalStore(rt.context.subscribe, rt.context.getSnapshot, rt.context.getSnapshot)
 const qId = snap.currentId ?? snap.firstUnansweredId ?? snap.eligibleIds[0] ?? null

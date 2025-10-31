@@ -1,8 +1,14 @@
-Example — Composed Wiring (no Universal)
+---
+title: "Example — Composed Wiring (no Universal)"
+description: "Minimal reactive wiring using runtime actions/context with Typeform helpers."
+---
+
+# Example — Composed Wiring (no Universal)
 
 Purpose: Minimal reactive wiring using runtime actions/context with Typeform helpers.
 
-Code
+## Code
+
 "use client"
 import React from "react"
 import { createRuntime } from "@formlink/runtime"
@@ -34,6 +40,7 @@ return (
 <RuntimeProvider runtime={rt} showDevtools>
 <ShadCnProvider components={primitives}>
 {q && (
+
 <div>
 <h1>{rt.context.form.title}</h1>
 <h2>{q.title}</h2>
@@ -51,6 +58,6 @@ onChange={(v) => rt.actions.set(qId, v)}
 )
 }
 
-Notes
+## Notes
 
 - Always subscribe via useSyncExternalStore for reactivity.

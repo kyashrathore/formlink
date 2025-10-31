@@ -1,14 +1,20 @@
-Pitfall — Start button does nothing
+---
+title: "Pitfall — Start button does nothing"
+description: "Component never subscribes to the runtime store; state changes don't rerender."
+---
 
-Symptom
+# Pitfall — Start button does nothing
+
+## Symptom
 
 - Clicking “Start” leaves the UI unchanged; status stays "idle".
 
-Root cause
+## Root cause
 
 - Component never subscribes to the runtime store, so state changes don’t trigger rerenders.
 
-Fix
+## Fix
+
 "use client"
 import React from "react"
 import { createRuntime } from "@formlink/runtime"
@@ -20,6 +26,6 @@ if (snap.status === "idle") return <button onClick={() => rt.actions.start()}>St
 return <div>Filling…</div>
 }
 
-Notes
+## Notes
 
 - Wrapping with RuntimeProvider is optional for Devtools/contexts, but subscription is required for reactivity.

@@ -1,15 +1,22 @@
-Pitfall — mock transport name
+---
+title: "Pitfall — mock transport name"
+description: "Incorrect import/export for mock transport factory."
+---
 
-Error
+# Pitfall — mock transport name
+
+## Error
 
 - The "@formlink/runtime" module does not provide an export named "mockTransportInDraft".
 
-Explanation
+## Explanation
 
 - The dev/mock transport factory is exported as `createMockTransport`.
 
-Fix
+## Fix
+
 import { createMockTransport as mockTransportInDraft } from "@formlink/runtime"
 
-Usage
+## Usage
+
 const rt = createRuntime({ form, transport: mockTransportInDraft() })
