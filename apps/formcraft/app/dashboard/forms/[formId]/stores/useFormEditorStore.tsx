@@ -1,6 +1,5 @@
 import { arrayMove } from "@dnd-kit/sortable"
 import {
-  EditableFormField,
   EditableQuestionField,
   Form,
   Option,
@@ -14,9 +13,15 @@ import { v4 as uuidv4 } from "uuid"
 import { create, StateCreator } from "zustand"
 import { immer } from "zustand/middleware/immer"
 
-type FormWithVersionIds = {
+export type FormWithVersionIds = {
   current_published_version_id?: string | null
   current_draft_version_id?: string | null
+  branch_name?: string | null
+  preview_url?: string | null
+  live_url?: string | null
+  last_deployed_at?: string | null
+  published_at?: string | null
+  sandbox_id?: string | null
 } & Form
 
 type QuestionWithLists = Question & {
@@ -43,7 +48,8 @@ interface FormEditorActions {
     field: K,
     value: Settings[K]
   ) => void
-  updateFormField: <K extends EditableFormField>(
+  // Accept extended editor fields (title/description + runtime/deploy metadata)
+  updateFormField: <K extends keyof FormWithVersionIds>(
     field: K,
     value: FormWithVersionIds[K]
   ) => void
@@ -194,7 +200,7 @@ const formEditorStore: StateCreator<
       }
     }),
 
-  updateFormField: <K extends EditableFormField>(
+  updateFormField: <K extends keyof FormWithVersionIds>(
     field: K,
     value: FormWithVersionIds[K]
   ) =>

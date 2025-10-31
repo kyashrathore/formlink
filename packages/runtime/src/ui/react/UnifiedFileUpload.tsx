@@ -18,6 +18,16 @@ export interface UnifiedFileUploadProps {
   className?: string;
 }
 
+type FileUploadHandler =
+  | ((files: File[]) => Promise<void>)
+  | ((questionId: string, file: File) => Promise<void>);
+
+function isQuestionScopedUploadHandler(
+  handler: FileUploadHandler,
+): handler is (questionId: string, file: File) => Promise<void> {
+  return handler.length > 1;
+}
+
 export function UnifiedFileUpload({
   mode,
   questionId,
@@ -62,10 +72,16 @@ export function UnifiedFileUpload({
     if (!onFileUpload) return;
     setUploading(true);
     try {
-      if (onFileUpload.length === 2 && questionId) {
-        await (onFileUpload as any)(questionId, list[0]!);
+      if (questionId && isQuestionScopedUploadHandler(onFileUpload)) {
+        const firstFile = list[0];
+        if (!firstFile) return;
+        await onFileUpload(questionId, firstFile);
+      } else if (!isQuestionScopedUploadHandler(onFileUpload)) {
+        await onFileUpload(list);
       } else {
-        await (onFileUpload as any)(list);
+        throw new Error(
+          "UnifiedFileUpload received a question-scoped upload handler but no questionId.",
+        );
       }
     } finally {
       setUploading(false);

@@ -72,32 +72,33 @@ export function createMockTransport(
       let name = questionId;
       let size = 0;
       let mimeType: string | undefined;
-      if (typeof File !== "undefined" && file instanceof File) {
+      if (file instanceof File) {
         name = file.name || name;
-        size = file.size || 0;
-        mimeType = file.type || undefined;
-        if (
-          generateObjectUrl &&
-          typeof URL !== "undefined" &&
-          URL.createObjectURL
-        ) {
-          url = URL.createObjectURL(file);
-          if (typeof revokeAfterMs === "number" && revokeAfterMs >= 0) {
-            setTimeout(() => {
-              try {
-                URL.revokeObjectURL(url);
-              } catch {}
-            }, revokeAfterMs);
-          }
+      }
+      if (
+        generateObjectUrl &&
+        typeof URL !== "undefined" &&
+        URL.createObjectURL &&
+        file instanceof Blob
+      ) {
+        url = URL.createObjectURL(file);
+        if (typeof revokeAfterMs === "number" && revokeAfterMs >= 0) {
+          setTimeout(() => {
+            try {
+              URL.revokeObjectURL(url);
+            } catch {
+              // ignore revoke failures
+            }
+          }, revokeAfterMs);
         }
-      } else {
-        // Blob or unknown — fabricate descriptor
-        size = (file as any)?.size ?? 0;
-        mimeType = (file as any)?.type ?? undefined;
       }
       if (!url) {
         // Fallback data URL-ish marker when object URL isn't generated
         url = `mock://${questionId}/${Date.now()}`;
+      }
+      if (file instanceof Blob) {
+        size = file.size;
+        mimeType = file.type || undefined;
       }
       return { url, name, size, mimeType };
     },

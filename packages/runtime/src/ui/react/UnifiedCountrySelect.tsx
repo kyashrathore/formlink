@@ -1,14 +1,15 @@
 "use client";
 import * as React from "react";
+import type { ComponentPropsWithRef } from "react";
 import { usePrimitives } from "./primitives/context";
 
-function must<T extends React.ComponentType<any> | undefined>(
+function must<P extends object>(
   name: string,
-  comp: T,
-): NonNullable<T> {
+  comp: React.ComponentType<P> | undefined,
+): React.ComponentType<P> {
   if (!comp)
     throw new Error(`ShadCnProvider is missing required primitive: ${name}`);
-  return comp as NonNullable<T>;
+  return comp;
 }
 
 export type FormMode = "chat" | "typeform";
@@ -49,16 +50,57 @@ export function UnifiedCountrySelect({
   autoFocus,
 }: UnifiedCountrySelectProps) {
   const p = usePrimitives();
-  const Button = must("Button", p.Button);
-  const PopoverRoot = must("PopoverRoot", p.PopoverRoot);
-  const PopoverTrigger = must("PopoverTrigger", p.PopoverTrigger);
-  const PopoverContent = must("PopoverContent", p.PopoverContent);
-  const CommandRoot = must("CommandRoot", p.CommandRoot);
-  const CommandList = must("CommandList", p.CommandList);
-  const CommandItem = must("CommandItem", p.CommandItem);
-  const CommandEmpty = must("CommandEmpty", p.CommandEmpty);
-  const CommandGroup = must("CommandGroup", p.CommandGroup ?? p.CommandRoot);
-  const CommandInput = must("CommandInput", p.CommandInput);
+  const Button = must<ComponentPropsWithRef<"button"> & { variant?: string }>(
+    "Button",
+    p.Button as React.ComponentType<
+      ComponentPropsWithRef<"button"> & { variant?: string }
+    >,
+  );
+  type PopoverProps = { children?: React.ReactNode } & Record<string, unknown>;
+  const PopoverRoot = must<PopoverProps>(
+    "PopoverRoot",
+    p.PopoverRoot as React.ComponentType<PopoverProps>,
+  );
+  const PopoverTrigger = must<PopoverProps>(
+    "PopoverTrigger",
+    p.PopoverTrigger as React.ComponentType<PopoverProps>,
+  );
+  const PopoverContent = must<PopoverProps>(
+    "PopoverContent",
+    p.PopoverContent as React.ComponentType<PopoverProps>,
+  );
+  const CommandRoot = must<PopoverProps>(
+    "CommandRoot",
+    p.CommandRoot as React.ComponentType<PopoverProps>,
+  );
+  const CommandList = must<PopoverProps>(
+    "CommandList",
+    p.CommandList as React.ComponentType<PopoverProps>,
+  );
+  const CommandItem = must<
+    PopoverProps & { value?: string; onSelect?: () => void }
+  >(
+    "CommandItem",
+    p.CommandItem as React.ComponentType<
+      PopoverProps & { value?: string; onSelect?: () => void }
+    >,
+  );
+  const CommandEmpty = must<PopoverProps>(
+    "CommandEmpty",
+    p.CommandEmpty as React.ComponentType<PopoverProps>,
+  );
+  const CommandGroup = must<PopoverProps>(
+    "CommandGroup",
+    (p.CommandGroup ?? p.CommandRoot) as React.ComponentType<PopoverProps>,
+  );
+  const CommandInput = must<
+    PopoverProps & { value?: string; onValueChange?: (next: string) => void }
+  >(
+    "CommandInput",
+    p.CommandInput as React.ComponentType<
+      PopoverProps & { value?: string; onValueChange?: (next: string) => void }
+    >,
+  );
 
   const [open, setOpen] = React.useState(false);
   const [query, setQuery] = React.useState("");
@@ -126,7 +168,7 @@ export function UnifiedCountrySelect({
       <PopoverRoot open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            ref={triggerRef as any}
+            ref={triggerRef}
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded={open}

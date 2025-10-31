@@ -143,7 +143,7 @@ export function InlineMultiSelect<T = string>({
                 selected ? "text-foreground font-medium" : "text-foreground",
               ].join(" ")}
             >
-              {opt.label as any}
+              {opt.label}
             </span>
             {selected && (
               <svg

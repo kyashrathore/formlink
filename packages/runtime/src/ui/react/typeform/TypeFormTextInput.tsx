@@ -116,7 +116,7 @@ export function TypeFormTextInput({
         className={[
           "w-full h-16 px-0 py-3 text-2xl md:text-3xl font-light",
           "bg-transparent border-0 border-b-2 border-border/30",
-          focused ? "focus:border-primary" : "",
+          focused ? "focus:border-b-primary" : "",
           "focus:outline-none transition-colors duration-200",
           "placeholder:text-muted-foreground/50",
           disabled ? "opacity-50 cursor-not-allowed" : "",

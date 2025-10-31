@@ -1,0 +1,133 @@
+@import "tailwindcss";
+@source "./src/**/*.{ts,tsx}";
+@plugin "tailwindcss-animate";
+
+:root {
+  --background: oklch(0.99 0.016 80.5);
+  --foreground: oklch(0.32 0.088 41.5);
+  --card: oklch(0.995 0.008 81.3);
+  --card-foreground: oklch(0.32 0.088 41.5);
+  --popover: oklch(0.995 0.008 81.3);
+  --popover-foreground: oklch(0.32 0.088 41.5);
+  --primary: oklch(0.69 0.187 40.8);
+  --primary-foreground: oklch(0.99 0.016 80.5);
+  --secondary: oklch(0.96 0.019 79.2);
+  --secondary-foreground: oklch(0.42 0.09 41.6);
+  --muted: oklch(0.96 0.019 79.2);
+  --muted-foreground: oklch(0.55 0.07 41.8);
+  --accent: oklch(0.93 0.03 78.5);
+  --accent-foreground: oklch(0.42 0.09 41.6);
+  --destructive: oklch(0.61 0.203 26.3);
+  --destructive-foreground: oklch(0.99 0.016 80.5);
+  --border: oklch(0.89 0.048 76.9);
+  --input: oklch(0.87 0.054 75.8);
+  --ring: oklch(0.69 0.187 40.8);
+  --font-sans: "FT Kunst Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "Apercu Mono Pro", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+  --radius: 0.5rem;
+  --shadow-color: oklch(0.32 0.088 41.5 / 0.1);
+  --shadow-sm: 0 1px 2px 0 var(--shadow-color);
+  --shadow: 0 1px 3px 0 var(--shadow-color), 0 1px 2px -1px var(--shadow-color);
+  --shadow-md: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -2px var(--shadow-color);
+  --shadow-lg: 0 10px 15px -3px var(--shadow-color), 0 4px 6px -4px var(--shadow-color);
+  --shadow-xl: 0 20px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color);
+  --shadow-2xl: 0 25px 50px -12px var(--shadow-color);
+  --shadow-inner: inset 0 2px 4px 0 var(--shadow-color);
+}
+
+.dark {
+  --background: oklch(0.27 0.02 43.1);
+  --foreground: oklch(0.99 0.016 80.5);
+  --card: oklch(0.29 0.02 43.3);
+  --card-foreground: oklch(0.99 0.016 80.5);
+  --popover: oklch(0.29 0.02 43.3);
+  --popover-foreground: oklch(0.99 0.016 80.5);
+  --primary: oklch(0.69 0.187 40.8);
+  --primary-foreground: oklch(0.99 0.016 80.5);
+  --secondary: oklch(0.34 0.022 42.4);
+  --secondary-foreground: oklch(0.99 0.016 80.5);
+  --muted: oklch(0.34 0.022 42.4);
+  --muted-foreground: oklch(0.82 0.02 75);
+  --accent: oklch(0.34 0.022 42.4);
+  --accent-foreground: oklch(0.99 0.016 80.5);
+  --destructive: oklch(0.61 0.203 26.3);
+  --destructive-foreground: oklch(0.99 0.016 80.5);
+  --border: oklch(0.39 0.024 42.2);
+  --input: oklch(0.41 0.025 42.1);
+  --ring: oklch(0.69 0.187 40.8);
+  --shadow-color: oklch(0.1 0.02 43 / 0.5);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius: var(--radius);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+  --shadow-inner: var(--shadow-inner);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+}
+
+@layer components {
+  .fl-rt-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+  }
+  .fl-rt-nav-desktop {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    z-index: 1000;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .fl-rt-nav-mobile {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+  }
+}

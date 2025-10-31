@@ -12,6 +12,7 @@ import {
   UIMessage,
 } from "ai"
 import { customAlphabet } from "nanoid"
+import { cookies } from "next/headers"
 import { streamText } from "../../../lib/ai/tracing"
 
 const nanoid = customAlphabet(
@@ -57,6 +58,11 @@ export async function handleChatRequest(
   await ensureFormExists(supabase, currentFormId, userId)
 
   const chatDB = new ChatService(supabase)
+  const cookieStore = await cookies()
+  const cookieHeader = cookieStore
+    .getAll()
+    .map((cookie) => `${cookie.name}=${cookie.value}`)
+    .join("; ")
 
   // Persist the last user message as-is
   const lastUserMessage = messages[messages.length - 1]
@@ -78,14 +84,18 @@ export async function handleChatRequest(
           userId,
           options,
           isFirstMessage: messages.length <= 1,
+          cookieHeader,
         }
 
         const tools = createChatTools(toolContext)
         const intent = (options as any)?.intent || "general"
         const riFlag = Boolean((options as any)?.responseIntelligence)
-        const systemTemplate = (options as any)?.singlePass
-          ? "chat/form-creation-system_single-pass_v1.md"
-          : "chat/form-creation-system.md"
+        const systemTemplate =
+          process.env.CODEGEN_PREVIEW_UI === "true"
+            ? "chat/codegen-system.md"
+            : (options as any)?.singlePass
+              ? "chat/form-creation-system_single-pass_v1.md"
+              : "chat/form-creation-system.md"
         const system = await loadPrompt(systemTemplate, {
           session_form_id: currentFormId,
           session_intent: intent,

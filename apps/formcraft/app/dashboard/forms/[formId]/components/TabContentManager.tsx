@@ -39,6 +39,10 @@ const ShareTabContent = dynamic(
   }
 )
 
+const CODEGEN_PREVIEW =
+  process.env.NEXT_PUBLIC_CODEGEN_PREVIEW_UI === "true" ||
+  process.env.CODEGEN_PREVIEW_UI === "true"
+
 interface TabContentManagerProps {
   formId: string
   shadcnCSSData?: {
@@ -65,6 +69,15 @@ export default function TabContentManager({
   const renderContent = () => {
     switch (activeMainTab) {
       case "form":
+        if (CODEGEN_PREVIEW) {
+          return (
+            <PreviewTabContent
+              formId={formId}
+              shadcnCSSData={shadcnCSSData}
+              onShadcnApplied={onShadcnApplied}
+            />
+          )
+        }
         return <FormTabContent />
       case "preview":
         return (

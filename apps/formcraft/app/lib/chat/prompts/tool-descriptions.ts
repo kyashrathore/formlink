@@ -2,6 +2,9 @@ export const TOOL_DESCRIPTIONS = {
   createForm:
     "Create a new form based on user requirements. Use this immediately when the user asks to create/build/make a new form. Do NOT call getFormContext as a preliminary step for new form creation.",
 
+  generateCode:
+    "Generate or update the runtime code for the active form using the Bun + Vite template. Call this when the user wants working code, a preview, or deployment-ready changes for the form runtime.",
+
   updateForm:
     "Update an existing form's title, description, or questions. Use this ONLY when the form already has content to modify. Do not use for empty forms.",
 

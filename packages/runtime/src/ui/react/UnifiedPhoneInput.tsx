@@ -21,8 +21,53 @@
  */
 import { AsYouType, parsePhoneNumberFromString } from "libphonenumber-js";
 import * as React from "react";
+import type {
+  ComponentPropsWithRef,
+  HTMLAttributes,
+  InputHTMLAttributes,
+  Ref,
+} from "react";
 import { buildCountryOptions } from "./country-utils";
 import { usePrimitives } from "./primitives/context";
+
+type WindowWithDebug = Window & { __FL_DEBUG_PHONE?: unknown };
+type GlobalWithProcess = typeof globalThis & {
+  process?: { env?: Record<string, unknown> };
+};
+
+type CommandRootProps = {
+  children?: React.ReactNode;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  className?: string;
+};
+
+type CommandListProps = HTMLAttributes<HTMLDivElement>;
+type CommandItemProps = HTMLAttributes<HTMLDivElement> & {
+  value?: string;
+  onSelect?: (value: string) => void;
+};
+type CommandInputProps = {
+  value?: string;
+  onValueChange?: (value: string) => void;
+  placeholder?: string;
+  className?: string;
+};
+type PopoverRootProps = {
+  children?: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+type PopoverTriggerProps = {
+  children?: React.ReactNode;
+  asChild?: boolean;
+};
+type PopoverContentProps = {
+  children?: React.ReactNode;
+  align?: string;
+  className?: string;
+  style?: React.CSSProperties;
+};
 
 export type FormMode = "chat" | "typeform";
 
@@ -62,33 +107,70 @@ export function UnifiedPhoneInput({
   preventInvalidSubmit = true,
 }: UnifiedPhoneInputProps) {
   // Debug logger — enable by setting window.__FL_DEBUG_PHONE = true in console
-  const DEBUG =
-    typeof window !== "undefined" &&
-    (window as any).__FL_DEBUG_PHONE !== undefined
-      ? Boolean((window as any).__FL_DEBUG_PHONE)
-      : typeof globalThis !== "undefined" &&
-        (globalThis as any).process &&
-        (globalThis as any).process.env &&
-        (globalThis as any).process.env.NODE_ENV !== "production";
+  const DEBUG = (() => {
+    if (typeof window !== "undefined") {
+      const win = window as WindowWithDebug;
+      if ("__FL_DEBUG_PHONE" in win) {
+        return Boolean(win.__FL_DEBUG_PHONE);
+      }
+    }
+    if (typeof globalThis !== "undefined") {
+      const globalRef = globalThis as GlobalWithProcess;
+      const envNode = globalRef.process?.env?.NODE_ENV;
+      if (typeof envNode === "string") {
+        return envNode !== "production";
+      }
+    }
+    return false;
+  })();
 
-  const dbg = (...args: any[]) => {
+  const dbg = (...args: unknown[]) => {
     if (DEBUG) console.log("[UnifiedPhoneInput]", ...args);
   };
 
   const p = usePrimitives();
-  const { Input } = p;
-  const PopoverRoot = p.PopoverRoot;
-  const PopoverTrigger = p.PopoverTrigger;
-  const PopoverContent = p.PopoverContent;
-  const CommandRoot = p.CommandRoot;
-  const CommandList = p.CommandList;
-  const CommandItem = p.CommandItem;
-  const CommandEmptyComp = (p.CommandEmpty ||
-    ((props: any) => <div {...props} />)) as React.ComponentType<any>;
-  const CommandGroupComp = (p.CommandGroup ||
-    p.CommandRoot ||
-    ((props: any) => <div {...props} />)) as React.ComponentType<any>;
-  const CommandInput = p.CommandInput;
+  const Input = p.Input as
+    | React.ComponentType<
+        InputHTMLAttributes<HTMLInputElement> & {
+          ref?: Ref<HTMLInputElement>;
+        }
+      >
+    | undefined;
+  const Button = p.Button as
+    | React.ComponentType<
+        ComponentPropsWithRef<"button"> & {
+          variant?: string;
+          ref?: Ref<HTMLButtonElement>;
+        }
+      >
+    | undefined;
+  const PopoverRoot = p.PopoverRoot as
+    | React.ComponentType<PopoverRootProps>
+    | undefined;
+  const PopoverTrigger = p.PopoverTrigger as
+    | React.ComponentType<PopoverTriggerProps>
+    | undefined;
+  const PopoverContent = p.PopoverContent as
+    | React.ComponentType<PopoverContentProps>
+    | undefined;
+  const CommandRoot = p.CommandRoot as
+    | React.ComponentType<CommandRootProps>
+    | undefined;
+  const CommandList = p.CommandList as
+    | React.ComponentType<CommandListProps>
+    | undefined;
+  const CommandItem = p.CommandItem as
+    | React.ComponentType<CommandItemProps>
+    | undefined;
+  const CommandEmptyComp =
+    (p.CommandEmpty as React.ComponentType<HTMLAttributes<HTMLDivElement>>) ??
+    ((props: HTMLAttributes<HTMLDivElement>) => <div {...props} />);
+  const CommandGroupComp =
+    (p.CommandGroup as React.ComponentType<HTMLAttributes<HTMLDivElement>>) ??
+    ((props: HTMLAttributes<HTMLDivElement>) => <div {...props} />);
+  const CommandInput = p.CommandInput as
+    | React.ComponentType<CommandInputProps>
+    | undefined;
 
   const sizeCls =
     mode === "typeform" ? "h-16 text-2xl md:text-3xl" : "h-10 text-sm";
@@ -359,7 +441,7 @@ export function UnifiedPhoneInput({
     onValidityChange?.(valid);
   }, [value, guessFromValue, onValidityChange, required]);
 
-  const inputProps = {
+  const inputProps: InputHTMLAttributes<HTMLInputElement> = {
     type: "tel",
     value: value || "",
     placeholder,
@@ -420,7 +502,6 @@ export function UnifiedPhoneInput({
     disabled,
     "aria-label": ariaLabel,
     "aria-describedby": ariaDescribedBy,
-    ref: inputRef,
     "aria-invalid": (() => {
       const trimmed = (value || "").trim();
       if (!trimmed) return required ? true : undefined;
@@ -454,7 +535,14 @@ export function UnifiedPhoneInput({
     ]
       .filter(Boolean)
       .join(" "),
-  } as const;
+  };
+
+  const renderNativeInput = () => <input ref={inputRef} {...inputProps} />;
+  const renderPrimitiveInput = () => {
+    if (!Input) return renderNativeInput();
+    const Component = Input;
+    return <Component ref={inputRef} {...inputProps} />;
+  };
 
   // If no selector primitives are provided, fall back to a plain input
   if (
@@ -468,9 +556,8 @@ export function UnifiedPhoneInput({
     !CommandInput
   ) {
     // In typeform mode, render native input to ensure exact bottom-border styling
-    if (mode === "typeform") return <input {...(inputProps as any)} />;
-    if (Input) return <Input {...(inputProps as any)} />;
-    return <input {...(inputProps as any)} />;
+    if (mode === "typeform") return renderNativeInput();
+    return renderPrimitiveInput();
   }
 
   return (
@@ -479,7 +566,7 @@ export function UnifiedPhoneInput({
         <PopoverRoot open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <button
-              ref={triggerRef as any}
+              ref={triggerRef}
               type="button"
               className="inline-flex h-16 items-center gap-2 text-base bg-transparent outline-none focus:outline-none border-b border-input font-light"
             >
@@ -544,13 +631,7 @@ export function UnifiedPhoneInput({
             </CommandRoot>
           </PopoverContent>
         </PopoverRoot>
-        {mode === "typeform" ? (
-          <input {...(inputProps as any)} />
-        ) : Input ? (
-          <Input {...(inputProps as any)} />
-        ) : (
-          <input {...(inputProps as any)} />
-        )}
+        {mode === "typeform" ? renderNativeInput() : renderPrimitiveInput()}
       </div>
     </div>
   );

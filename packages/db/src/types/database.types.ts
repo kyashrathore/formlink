@@ -268,11 +268,16 @@ export type Database = {
       forms: {
         Row: {
           agent_state: Json | null;
+          branch_name: string | null;
           brand_id: string | null;
           created_at: string;
           current_draft_version_id: string | null;
           current_published_version_id: string | null;
           id: string;
+          last_deployed_at: string | null;
+          live_url: string | null;
+          preview_url: string | null;
+          published_at: string | null;
           short_id: string | null;
           updated_at: string;
           user_id: string | null;
@@ -280,11 +285,16 @@ export type Database = {
         };
         Insert: {
           agent_state?: Json | null;
+          branch_name?: string | null;
           brand_id?: string | null;
           created_at?: string;
           current_draft_version_id?: string | null;
           current_published_version_id?: string | null;
           id?: string;
+          last_deployed_at?: string | null;
+          live_url?: string | null;
+          preview_url?: string | null;
+          published_at?: string | null;
           short_id?: string | null;
           updated_at?: string;
           user_id?: string | null;
@@ -292,11 +302,16 @@ export type Database = {
         };
         Update: {
           agent_state?: Json | null;
+          branch_name?: string | null;
           brand_id?: string | null;
           created_at?: string;
           current_draft_version_id?: string | null;
           current_published_version_id?: string | null;
           id?: string;
+          last_deployed_at?: string | null;
+          live_url?: string | null;
+          preview_url?: string | null;
+          published_at?: string | null;
           short_id?: string | null;
           updated_at?: string;
           user_id?: string | null;

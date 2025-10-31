@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import type { Question } from "../schema";
 import type { RuntimeApi, RuntimeContextSnapshot } from "../types";
 
 type DevEvent = {
@@ -63,30 +64,109 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
   const { events, clear, copy } = useDevlog(runtime);
 
   const form = runtime.context.form;
-  const answered = form.questions.filter((q: any) =>
-    isAnswered(snapshot.values[q.id]),
-  );
-  const unanswered = form.questions.filter(
-    (q: any) => !isAnswered(snapshot.values[q.id]),
-  );
+  const questions = React.useMemo(() => {
+    const visibleErrorGetter = runtime.context.get.visibleError ?? null;
+    // Filter out non-persisted UI-only questions (element nodes expressed via styling.as)
+    const FIELD_ONLY = (form.questions as Question[]).filter(
+      (q: any) => !q?.styling?.as,
+    );
+    return FIELD_ONLY.map((question) => {
+      const value = snapshot.values[question.id];
+      const answeredState = isAnswered(value);
+      const rawErrors = snapshot.errors[question.id] ?? [];
+      const visibleError =
+        typeof visibleErrorGetter === "function"
+          ? visibleErrorGetter(question.id)
+          : undefined;
+      const hasVisibleError =
+        typeof visibleError === "string" && visibleError.length > 0;
+      const pendingError = rawErrors.length > 0;
+      return {
+        question,
+        answered: answeredState,
+        visibleError,
+        hasVisibleError,
+        pendingError,
+        value,
+      };
+    });
+  }, [form.questions, runtime.context, snapshot.errors, snapshot.values]);
 
-  const tagForQuestion = (q: (typeof form.questions)[number]) => {
+  const firstErrorId = React.useMemo(() => {
+    const firstVisible = questions.find((item) => item.hasVisibleError);
+    if (firstVisible) return firstVisible.question.id;
+    if (snapshot.firstUnansweredId) return snapshot.firstUnansweredId;
+    const firstPending = questions.find((item) => !item.answered);
+    return firstPending?.question.id ?? null;
+  }, [questions, snapshot.firstUnansweredId]);
+
+  const tagForQuestion = (q: Question) => {
     const tags: string[] = [];
-    if ((q as any)?.validations?.required?.value) tags.push("required");
-    else tags.push("optional");
+    const isRequired = q.validations?.required?.value === true;
+    tags.push(isRequired ? "required" : "optional");
     // type-specific tags
-    const t: any = q.type;
-    if (t?.name === "text" && t?.format) tags.push(String(t.format));
-    const v: any = (q as any)?.validations ?? {};
-    if (v.minLength) tags.push(`minLen:${v.minLength.value}`);
-    if (v.maxLength) tags.push(`maxLen:${v.maxLength.value}`);
-    if ((q as any)?.validations?.pattern) tags.push("pattern");
+    const questionType = q.type;
+    if (questionType?.name === "text" && "format" in questionType) {
+      tags.push(String(questionType.format));
+    }
+    const validations = q.validations;
+    if (validations?.minLength)
+      tags.push(`minLen:${validations.minLength.value}`);
+    if (validations?.maxLength)
+      tags.push(`maxLen:${validations.maxLength.value}`);
+    if (validations?.pattern) tags.push("pattern");
     return tags;
   };
 
   const currentQuestion = snapshot.currentId
     ? runtime.context.get.q(snapshot.currentId)
     : undefined;
+
+  const handleNavigate = React.useCallback(
+    (questionId: string) => {
+      // Typeform mode (or when currentId is used): use goTo
+      try {
+        if (snapshot.currentId !== questionId) {
+          runtime.actions.goTo(questionId);
+        }
+      } catch (error) {
+        // non-fatal in classic; we fall back to DOM focus
+      }
+
+      // Classic mode: attempt to focus DOM field by data attribute
+      try {
+        const win: any = typeof window !== "undefined" ? window : null;
+        if (!win || !win.document) return;
+        const el = win.document.querySelector(
+          `[data-fl-qid="${CSS.escape(questionId)}"]`,
+        ) as HTMLElement | null;
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          // Find a focusable descendant
+          const focusable = el.querySelector(
+            'input, textarea, select, [contenteditable="true"], [tabindex]:not([tabindex="-1"])',
+          ) as HTMLElement | null;
+          if (focusable) {
+            // Delay focus slightly to allow scroll
+            setTimeout(() => {
+              try {
+                focusable.focus({ preventScroll: true } as any);
+              } catch {}
+            }, 75);
+          }
+          return;
+        }
+        // If not found, emit a custom event so hosts can switch steps and re-render nodes
+        try {
+          const evt = new CustomEvent("formlink:devtools:goto", {
+            detail: { questionId },
+          });
+          win.dispatchEvent(evt);
+        } catch {}
+      } catch {}
+    },
+    [runtime.actions, snapshot.currentId],
+  );
 
   return (
     <div className="w-full max-w-md pr-6 rounded-lg border bg-card p-4 shadow-sm h-full overflow-y-auto min-h-0">
@@ -106,67 +186,97 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
 
       {/* Answered */}
       <div className="mt-6">
-        <div className="mb-2 text-sm font-semibold">
-          Answered ({answered.length})
-        </div>
-        <div className="space-y-2">
-          {answered.map((q: any) => (
-            <div key={q.id} className="rounded-md border p-2">
-              <div className="flex items-center justify-between">
-                <div className="font-medium">{q.title}</div>
-                <div className="text-xs text-muted-foreground font-mono">
-                  {q.id}
-                </div>
-              </div>
-              <div className="mt-1 font-mono text-xs break-all">
-                {JSON.stringify(snapshot.values[q.id])}
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {tagForQuestion(q).map((t) => (
-                  <span
-                    key={t}
-                    className="rounded bg-muted px-2 py-0.5 text-xs"
+        <div className="mb-2 text-sm font-semibold">Questions</div>
+        <div className="space-y-4">
+          {questions.map(
+            ({
+              question,
+              answered,
+              visibleError,
+              hasVisibleError,
+              pendingError,
+              value,
+            }) => {
+              const isCurrent = snapshot.currentId === question.id;
+              const showWarning =
+                !answered && firstErrorId === question.id && !visibleError;
+              const banner =
+                visibleError ??
+                (showWarning ? "Fix this before submitting." : null);
+              return (
+                <div
+                  key={question.id}
+                  className={["relative", banner ? "pt-12" : ""]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {banner && (
+                    <>
+                      <div className="h-6" aria-hidden="true" />
+                      <div
+                        style={{ width: "95%" }}
+                        className="absolute z-10 inset-x-0 -top-6  mx-auto flex justify-center bg-background"
+                      >
+                        <div className="w-full rounded-md border border-destructive bg-destructive/95 px-3 py-1.5 text-xs font-medium text-destructive-foreground shadow-md">
+                          {banner}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleNavigate(question.id)}
+                    className={[
+                      "w-full rounded-md border p-2 text-left transition-colors",
+                      answered
+                        ? "border-emerald-300/70 bg-emerald-50/30 dark:bg-emerald-950/10"
+                        : "border-border bg-card",
+                      isCurrent ? "ring-2 ring-primary border-primary" : "",
+                      hasVisibleError
+                        ? "border-destructive/70 bg-destructive/10"
+                        : "",
+                      showWarning ? "border-amber-200 bg-amber-50/40" : "",
+                      pendingError && !answered
+                        ? "border-amber-100 bg-amber-50/30"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-          {answered.length === 0 && (
-            <div className="text-sm text-muted-foreground">No answers yet.</div>
-          )}
-        </div>
-      </div>
-
-      {/* Unanswered */}
-      <div className="mt-6">
-        <div className="mb-2 text-sm font-semibold">
-          Unanswered ({unanswered.length})
-        </div>
-        <div className="space-y-2">
-          {unanswered.map((q: any) => (
-            <div key={q.id} className="rounded-md border p-2">
-              <div className="flex items-center justify-between">
-                <div className="font-medium">{q.title}</div>
-                <div className="text-xs text-muted-foreground font-mono">
-                  {q.id}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-medium">{question.title}</div>
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {question.id}
+                      </div>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-1 text-xs">
+                      {answered ? (
+                        <span className="rounded bg-emerald-100 px-2 py-0.5 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">
+                          Answered
+                        </span>
+                      ) : (
+                        <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground">
+                          Pending
+                        </span>
+                      )}
+                      {tagForQuestion(question).map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded bg-muted px-2 py-0.5 text-muted-foreground"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    {answered && (
+                      <div className="mt-2 font-mono text-xs break-all text-muted-foreground">
+                        {JSON.stringify(value)}
+                      </div>
+                    )}
+                  </button>
                 </div>
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {tagForQuestion(q).map((t) => (
-                  <span
-                    key={t}
-                    className="rounded bg-muted px-2 py-0.5 text-xs"
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ))}
-          {unanswered.length === 0 && (
-            <div className="text-sm text-muted-foreground">All answered.</div>
+              );
+            },
           )}
         </div>
       </div>
@@ -187,24 +297,47 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
             </button>
           </div>
         </div>
-        <div className="max-h-64 overflow-auto rounded border">
-          <table className="w-full text-left text-sm">
+        <CollapsibleEvents events={events} />
+      </div>
+    </div>
+  );
+}
+
+function CollapsibleEvents({ events }: { events: DevEvent[] }) {
+  const [open, setOpen] = React.useState(false);
+  return (
+    <div className="rounded border">
+      <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b">
+        <div className="text-xs text-muted-foreground">
+          {open ? "Hide" : "Show"} event log
+        </div>
+        <button
+          type="button"
+          className="inline-flex h-7 items-center rounded px-2 text-xs hover:bg-muted"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? "Collapse" : "Expand"}
+        </button>
+      </div>
+      {open && (
+        <div className="max-h-64 max-w-full overflow-auto">
+          <table className="w-full table-fixed text-left text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
-                <th className="px-2 py-1">Time</th>
-                <th className="px-2 py-1">Type</th>
+                <th className="px-2 py-1 w-24">Time</th>
+                <th className="px-2 py-1 w-40">Type</th>
                 <th className="px-2 py-1">Payload</th>
               </tr>
             </thead>
             <tbody>
               {events.map((e, i) => (
                 <tr key={i} className="border-b last:border-0">
-                  <td className="px-2 py-1 font-mono text-xs">
+                  <td className="px-2 py-1 font-mono text-xs align-top">
                     {new Date(e.ts).toLocaleTimeString()}
                   </td>
-                  <td className="px-2 py-1">{e.type}</td>
+                  <td className="px-2 py-1 align-top">{e.type}</td>
                   <td
-                    className="px-2 py-1 font-mono text-xs whitespace-nowrap overflow-hidden text-ellipsis"
+                    className="px-2 py-1 font-mono text-xs whitespace-pre-wrap break-words align-top"
                     title={
                       typeof e.payload === "string"
                         ? e.payload
@@ -230,7 +363,7 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
             </tbody>
           </table>
         </div>
-      </div>
+      )}
     </div>
   );
 }

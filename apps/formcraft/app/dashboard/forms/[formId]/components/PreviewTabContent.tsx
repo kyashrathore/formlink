@@ -1,12 +1,18 @@
 "use client"
 
+import { formatDistanceToNow } from "date-fns"
 import { useMemo, useState } from "react"
 import { useFormEditorStore } from "../stores/useFormEditorStore"
+import type { FormWithVersionIds } from "../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../stores/useFormGenerationStore"
 import { DeviceMode } from "./form/DevicePreviewFrame"
 import { FormMode } from "./form/FormModeControls"
 import FormPreviewWithDevices from "./form/FormPreviewWithDevices"
 import { MetadataShimmer, QuestionsShimmer } from "./form/shimmers/FormShimmers"
+
+const CODEGEN_PREVIEW =
+  process.env.NEXT_PUBLIC_CODEGEN_PREVIEW_UI === "true" ||
+  process.env.CODEGEN_PREVIEW_UI === "true"
 
 interface PreviewTabContentProps {
   formId: string
@@ -29,7 +35,8 @@ export default function PreviewTabContent({
 }: PreviewTabContentProps) {
   const { form: initialForm, isLoading } = useFormEditorStore()
   const { currentForm, isFormGenerating } = useFormGenerationStore()
-  const form = currentForm || initialForm
+  const baseForm = currentForm ?? initialForm
+  const form = baseForm as FormWithVersionIds | null
   const [formMode, setFormMode] = useState<FormMode>("chat")
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("desktop")
 
@@ -43,6 +50,68 @@ export default function PreviewTabContent({
       <div className="bg-background flex h-full flex-col space-y-4 overflow-auto p-4">
         <MetadataShimmer />
         <QuestionsShimmer count={3} />
+      </div>
+    )
+  }
+
+  if (CODEGEN_PREVIEW) {
+    const previewUrl = form?.live_url || form?.preview_url
+    const branchName = form?.branch_name || "(pending)"
+    const deployedAt = form?.last_deployed_at
+    const isPublished = Boolean(form?.live_url)
+
+    return (
+      <div className="bg-background flex h-full flex-col overflow-hidden">
+        <div className="bg-muted/50 border-border flex items-center justify-between border-b px-4 py-2">
+          <div>
+            <div className="text-sm font-medium">
+              {isPublished ? "Live deployment" : "Sandbox preview"}
+            </div>
+            <div className="text-muted-foreground text-xs">
+              Branch: {branchName}
+              {deployedAt && (
+                <>
+                  {" "}
+                  • Deployed{" "}
+                  {formatDistanceToNow(new Date(deployedAt), {
+                    addSuffix: true,
+                  })}
+                </>
+              )}
+            </div>
+          </div>
+          {previewUrl && (
+            <a
+              href={previewUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+            >
+              Open in new tab
+            </a>
+          )}
+        </div>
+        <div className="bg-muted flex-1">
+          {previewUrl ? (
+            <iframe
+              title="Form preview"
+              src={previewUrl}
+              className="h-full w-full border-0 bg-white"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          ) : (
+            <div className="text-muted-foreground flex h-full flex-col items-center justify-center text-center">
+              <div className="mb-2 text-lg font-medium">
+                Preview not available yet
+              </div>
+              <div className="max-w-md text-sm">
+                Run the generate code tool to build a sandbox preview. Once
+                published, this tab will display the live deployment.
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     )
   }

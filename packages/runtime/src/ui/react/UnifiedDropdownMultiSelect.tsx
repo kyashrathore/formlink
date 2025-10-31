@@ -1,14 +1,15 @@
 "use client";
 import * as React from "react";
+import type { ComponentPropsWithRef } from "react";
 import { usePrimitives } from "./primitives/context";
 
-function must<T extends React.ComponentType<any> | undefined>(
+function must<P extends object>(
   name: string,
-  comp: T,
-): NonNullable<T> {
+  comp: React.ComponentType<P> | undefined,
+): React.ComponentType<P> {
   if (!comp)
     throw new Error(`ShadCnProvider is missing required primitive: ${name}`);
-  return comp as NonNullable<T>;
+  return comp;
 }
 
 export type FormMode = "chat" | "typeform";
@@ -49,17 +50,66 @@ export function UnifiedDropdownMultiSelect<T = string>({
   autoFocus = true,
 }: UnifiedDropdownMultiSelectProps<T>) {
   const p = usePrimitives();
-  const Button = must("Button", p.Button);
-  const PopoverRoot = must("PopoverRoot", p.PopoverRoot);
-  const PopoverTrigger = must("PopoverTrigger", p.PopoverTrigger);
-  const PopoverContent = must("PopoverContent", p.PopoverContent);
-  const CommandRoot = must("CommandRoot", p.CommandRoot);
-  const CommandList = must("CommandList", p.CommandList);
-  const CommandItem = must("CommandItem", p.CommandItem);
-  const CommandEmpty = must("CommandEmpty", p.CommandEmpty);
-  const CommandGroup = must("CommandGroup", p.CommandGroup ?? p.CommandRoot);
-  const CommandInput = must("CommandInput", p.CommandInput);
-  const Badge = p.Badge ?? ((props: any) => <span {...props} />);
+  type ButtonProps = ComponentPropsWithRef<"button"> & {
+    variant?: string;
+    [key: string]: unknown;
+  };
+  const Button = must<ButtonProps>(
+    "Button",
+    p.Button as React.ComponentType<ButtonProps>,
+  );
+  type PopoverProps = { children?: React.ReactNode } & Record<string, unknown>;
+  const PopoverRoot = must<PopoverProps>(
+    "PopoverRoot",
+    p.PopoverRoot as React.ComponentType<PopoverProps>,
+  );
+  const PopoverTrigger = must<PopoverProps>(
+    "PopoverTrigger",
+    p.PopoverTrigger as React.ComponentType<PopoverProps>,
+  );
+  const PopoverContent = must<PopoverProps>(
+    "PopoverContent",
+    p.PopoverContent as React.ComponentType<PopoverProps>,
+  );
+  const CommandRoot = must<PopoverProps>(
+    "CommandRoot",
+    p.CommandRoot as React.ComponentType<PopoverProps>,
+  );
+  const CommandList = must<PopoverProps>(
+    "CommandList",
+    p.CommandList as React.ComponentType<PopoverProps>,
+  );
+  const CommandItem = must<
+    PopoverProps & { value?: string; onSelect?: () => void }
+  >(
+    "CommandItem",
+    p.CommandItem as React.ComponentType<
+      PopoverProps & { value?: string; onSelect?: () => void }
+    >,
+  );
+  const CommandEmpty = must<PopoverProps>(
+    "CommandEmpty",
+    p.CommandEmpty as React.ComponentType<PopoverProps>,
+  );
+  const CommandGroup = must<PopoverProps>(
+    "CommandGroup",
+    (p.CommandGroup ?? p.CommandRoot) as React.ComponentType<PopoverProps>,
+  );
+  const CommandInput = must<
+    PopoverProps & { value?: string; onValueChange?: (next: string) => void }
+  >(
+    "CommandInput",
+    p.CommandInput as React.ComponentType<
+      PopoverProps & { value?: string; onValueChange?: (next: string) => void }
+    >,
+  );
+  type BadgeProps = React.HTMLAttributes<HTMLSpanElement> & {
+    variant?: string;
+    [key: string]: unknown;
+  };
+  const Badge =
+    (p.Badge as React.ComponentType<BadgeProps>) ??
+    ((props: BadgeProps) => <span {...props} />);
 
   const [open, setOpen] = React.useState<boolean>(false);
   const [query, setQuery] = React.useState<string>("");
@@ -92,40 +142,29 @@ export function UnifiedDropdownMultiSelect<T = string>({
     };
   }, [open]);
 
-  const items = React.useMemo(
-    () => options.map((o) => ({ value: String(o.value), label: o.label })),
-    [options],
-  );
-  const stringValues = React.useMemo(
-    () => new Set((value || []).map((v) => String(v))),
-    [value],
-  );
+  const valueSet = React.useMemo(() => new Set<T>(value), [value]);
   const selectedLabels = React.useMemo(
-    () =>
-      options
-        .filter((o) => stringValues.has(String(o.value)))
-        .map((o) => o.label),
-    [options, stringValues],
+    () => options.filter((o) => valueSet.has(o.value)).map((o) => o.label),
+    [options, valueSet],
   );
   const filtered = React.useMemo(
     () =>
       query
-        ? items.filter((i) =>
-            i.label.toLowerCase().includes(query.toLowerCase()),
+        ? options.filter((opt) =>
+            opt.label.toLowerCase().includes(query.toLowerCase()),
           )
-        : items,
-    [items, query],
+        : options,
+    [options, query],
   );
 
   function toggleByLabel(label: string) {
     const opt = options.find((o) => o.label === label);
     if (!opt) return;
-    const valStr = String(opt.value);
-    const current = (value ?? []) as unknown as string[];
-    const next = stringValues.has(valStr)
-      ? current.filter((v) => v !== valStr)
-      : [...current, valStr];
-    onChange(next as unknown as T[]);
+    const exists = value.some((item) => Object.is(item, opt.value));
+    const next = exists
+      ? value.filter((item) => !Object.is(item, opt.value))
+      : [...value, opt.value];
+    onChange(next);
   }
 
   const sizeCls = mode === "typeform" ? "h-12 text-base" : "h-10 text-sm";
@@ -147,7 +186,7 @@ export function UnifiedDropdownMultiSelect<T = string>({
       <PopoverRoot open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
-            ref={triggerRef as any}
+            ref={triggerRef}
             role="combobox"
             aria-haspopup="listbox"
             aria-expanded={open}
@@ -208,17 +247,15 @@ export function UnifiedDropdownMultiSelect<T = string>({
             <CommandList id={listId}>
               <CommandEmpty>No options found.</CommandEmpty>
               <CommandGroup>
-                {filtered
-                  .filter((i) => !stringValues.has(i.value))
-                  .map((item) => (
-                    <CommandItem
-                      key={item.value}
-                      value={item.label}
-                      onSelect={() => toggleByLabel(item.label)}
-                    >
-                      {item.label}
-                    </CommandItem>
-                  ))}
+                {filtered.map((option) => (
+                  <CommandItem
+                    key={String(option.value)}
+                    value={option.label}
+                    onSelect={() => toggleByLabel(option.label)}
+                  >
+                    {option.label}
+                  </CommandItem>
+                ))}
               </CommandGroup>
             </CommandList>
           </CommandRoot>

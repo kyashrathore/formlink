@@ -19,7 +19,7 @@ Scope (packages)
 
 Reading map (authoritative docs)
 
-- Runtime API, schema contract, wiring rules → docs/runtime/formlink-runtime-spec_v1.md
+- Runtime API, schema contract, wiring rules → packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md
 - Implementation details and current consumer audit → docs/runtime/runtime-impl-plan_v1.md
 - Devtools component plan → docs/runtime/devtools_component_ideas_v1.md
 - Error visibility policy → docs/runtime/error-visibility-policy_v1.md
@@ -300,7 +300,7 @@ Goal
 
 Plan
 
-- Host `docs/runtime/formlink-runtime-spec_v1.md` and this consolidated doc behind a public docs site (or GitHub raw URLs) and keep them versioned.
+- Host `packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md` and this consolidated doc behind a public docs site (or GitHub raw URLs) and keep them versioned.
 - Add a short `AI_README_v1.md` with only the must‑follow wiring rules and imports (link out to full docs). Keep it stable and compact.
 
 —

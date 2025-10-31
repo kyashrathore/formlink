@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import type { ComponentPropsWithRef } from "react";
 import { usePrimitives } from "../primitives/context";
 
 export function TypeFormContinueFooter({
@@ -12,9 +13,23 @@ export function TypeFormContinueFooter({
   errorMessage?: string | null;
   continueLabel?: string;
 }) {
-  const Button =
-    usePrimitives().Button ??
-    ((props: any) => <button type="button" {...props} />);
+  const primitives = usePrimitives();
+  const ButtonPrimitive = primitives.Button;
+  const Button: React.FC<ComponentPropsWithRef<"button">> =
+    React.useMemo(() => {
+      if (ButtonPrimitive) {
+        const Element = ButtonPrimitive as React.ElementType;
+        const Component: React.FC<ComponentPropsWithRef<"button">> = (props) =>
+          React.createElement(Element, { type: "button", ...props });
+        Component.displayName = "TypeFormContinueFooterButtonPrimitive";
+        return Component;
+      }
+      const Fallback: React.FC<ComponentPropsWithRef<"button">> = (props) => (
+        <button type="button" {...props} />
+      );
+      Fallback.displayName = "TypeFormContinueFooterButtonFallback";
+      return Fallback;
+    }, [ButtonPrimitive]);
   // Hide on mobile to match original behavior
   const [isMobile, setIsMobile] = React.useState(false);
   React.useEffect(() => {

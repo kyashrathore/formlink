@@ -1,6 +1,6 @@
 # @formlink/runtime — Headless Runtime (alpha)
 
-_Updated: 2025‑10‑21_
+Updated: 2025‑10‑31
 
 Single‑install, headless runtime for building delightful forms with deterministic validation, branching, navigation, persistence and uploads. React UI helpers and Devtools included. The canonical schema is embedded and exported via ./schema — install one package only.
 
@@ -47,7 +47,9 @@ Exports & Subpaths
 - UI (React): `@formlink/runtime/ui/react`
 - Devtools: `@formlink/runtime/devtools`
 - Schema: `@formlink/runtime/schema`
-- Styles (fallback): `@formlink/runtime/ui/react/style.css`
+- Runtime CSS (precompiled): `@formlink/runtime/ui/react/style.css`
+- Tailwind preset: `@formlink/runtime/tailwind-preset`
+- Tailwind source sheet (optional): `@formlink/runtime/styles/runtime-tailwind.css`
   WIP packages
 - `@formlink/ui` — not yet published; until then, supply your own primitives or pull sources from our registry (see docs/registry/registry.json).
 - `@formlink/chat` — not yet published; conversational adapters will ship separately.
@@ -68,117 +70,129 @@ Host Setup Checklist
 - [ ] Import `@formlink/runtime/ui/react/style.css` (minimal CSS) OR ensure your design‑system CSS is present (or future `@formlink/ui` globals).
 - [ ] If using Typeform helpers, pages/components rendering them are client components ('use client').
 
-Quickstart — Typeform style (one‑by‑one)
+Quickstart — Typeform style (reactive)
 
 ```tsx
 "use client";
+import React from "react";
 import { createRuntime } from "@formlink/runtime";
 import {
-  TypeFormLayout,
-  TypeFormProgress,
-  TypeFormQuestionHeader,
+  TypeFormTextInput,
   TypeFormContinueFooter,
-  TypeFormNavigation,
+  RuntimeProvider,
+  ShadCnProvider,
 } from "@formlink/runtime/ui/react";
 import type { Form } from "@formlink/runtime/schema";
 
 const form: Form = {
   id: "waitlist",
-  version_id: "v1",
   title: "Join",
   questions: [
     {
       id: "email",
-      questionNo: 1,
       title: "Work email",
       type: { name: "text", format: "email" },
-      validations: { required: { value: true } },
-    },
-    {
-      id: "company",
-      questionNo: 2,
-      title: "Company",
-      type: { name: "text", format: "text" },
       validations: { required: { value: true } },
     },
   ],
 };
 
-const rt = createRuntime({ form, uiMode: "typeform" });
-
 export default function View() {
-  const { context, actions } = rt;
-  const p = context.progress;
-  const qid = context.currentId;
-  const q = qid ? context.get.q(qid) : undefined;
-
-  async function handleContinue() {
-    if (!qid) return;
-    const res = await actions.validate(qid);
-    if (res.isValid) await actions.next();
+  const rt = React.useMemo(
+    () => createRuntime({ form, uiMode: "typeform" }),
+    [],
+  );
+  const snap = React.useSyncExternalStore(
+    rt.context.subscribe,
+    rt.context.getSnapshot,
+    rt.context.getSnapshot,
+  );
+  const qId =
+    snap.currentId ?? snap.firstUnansweredId ?? snap.eligibleIds[0] ?? null;
+  const q = qId ? rt.context.get.q(qId) : undefined;
+  async function onContinue() {
+    if (!qId) return;
+    const res = await rt.actions.validate(qId);
+    if (res.isValid) await rt.actions.next();
   }
-
   return (
-    <>
-      <TypeFormLayout>
-        <TypeFormProgress
-          progress={p.percent}
-          current={p.index + 1}
-          total={p.total}
-        />
-        {qid && q && (
-          <>
-            <TypeFormQuestionHeader question={q} questionNumber={p.index + 1} />
-            <input
-              className="border-b focus:outline-none w-full"
-              value={String(context.get.value(qid) ?? "")}
-              onChange={(e) => actions.set(qid, e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleContinue()}
+    <RuntimeProvider runtime={rt} showDevtools>
+      <ShadCnProvider
+        components={
+          {
+            /* your primitives */
+          } as any
+        }
+      >
+        {snap.status === "idle" ? (
+          <button onClick={() => rt.actions.start()}>Start</button>
+        ) : q ? (
+          <div>
+            <h1>{rt.context.form.title}</h1>
+            <h2>{q.title}</h2>
+            <TypeFormTextInput
+              type={(q.type as any).format}
+              value={String(rt.context.get.value(qId) ?? "")}
+              onChange={(v) => rt.actions.set(qId, v)}
             />
-            <div className="text-sm text-red-500">
-              {context.get.visibleError(qid)}
+            <div className="text-red-500 text-sm">
+              {rt.context.get.visibleError(qId)}
             </div>
-            <TypeFormContinueFooter onClick={handleContinue} />
-          </>
-        )}
-      </TypeFormLayout>
-      <TypeFormNavigation
-        onNext={handleContinue}
-        onPrevious={() => actions.prev()}
-      />
-    </>
+            <TypeFormContinueFooter
+              onClick={onContinue}
+              isLoadingNext={snap.isSubmitting}
+            />
+          </div>
+        ) : null}
+      </ShadCnProvider>
+    </RuntimeProvider>
   );
 }
 ```
 
-Quickstart — Classic (list/page)
+Quickstart — Classic (reactive)
 
 ```tsx
 "use client";
+import React from "react";
 import { createRuntime } from "@formlink/runtime";
 import type { Form } from "@formlink/runtime/schema";
 
-const rt = createRuntime({ form, uiMode: "classic" });
+const form: Form = {
+  id: "ex",
+  title: "Example",
+  questions: [
+    { id: "name", title: "Name", type: { name: "text", format: "text" } },
+  ],
+};
 
-function ClassicPage() {
-  const { context, actions } = rt;
+export default function ClassicPage() {
+  const rt = React.useMemo(
+    () => createRuntime({ form, uiMode: "classic" }),
+    [],
+  );
+  const snap = React.useSyncExternalStore(
+    rt.context.subscribe,
+    rt.context.getSnapshot,
+    rt.context.getSnapshot,
+  );
   return (
     <form
       onSubmit={async (e) => {
         e.preventDefault();
-        await actions.submit();
+        await rt.actions.submit();
       }}
     >
-      {context.eligibleIds.map((qid) => (
+      {snap.eligibleIds.map((qid) => (
         <div key={qid}>
-          <label>{context.get.q(qid)?.title}</label>
+          <label>{rt.context.get.q(qid)?.title}</label>
           <input
-            value={String(context.get.value(qid) ?? "")}
-            onChange={(e) => actions.set(qid, e.target.value)}
-            onBlur={() => actions.blur(qid)}
+            value={String(rt.context.get.value(qid) ?? "")}
+            onChange={(e) => rt.actions.set(qid, e.target.value)}
+            onBlur={() => rt.actions.blur(qid)}
           />
           <div className="text-sm text-red-500">
-            {context.get.visibleError(qid)}
+            {rt.context.get.visibleError(qid)}
           </div>
         </div>
       ))}
@@ -190,12 +204,26 @@ function ClassicPage() {
 
 ## Provider & UI Helpers (React)
 
-- ShadCnProvider maps your primitives; required keys at minimum: Button, Input, Textarea, Label, Badge, ScrollArea, Separator, PopoverRoot/Trigger/Content/Anchor, CommandRoot/List/Item/Group/Empty/Input/Separator.
+- ShadCnProvider maps your primitives; required keys at minimum: Button, Input, Textarea, Label, Badge, ScrollArea, Separator, PopoverRoot/Trigger/Content/Anchor, CommandRoot/List/Item/Group/Empty/Input/Separator. See packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md.
 - Exported helpers:
   - Typeform scaffolding: TypeFormLayout, TypeFormProgress, TypeFormQuestionHeader, TypeFormContinueFooter({ onClick, isLoadingNext? }), TypeFormNavigation({ onNext?, onPrevious?, canGoNext?, canGoPrevious?, isLoadingNext? }), TypeFormTransition.
   - Unified inputs: UnifiedDropdownSelect<T>({ mode:'typeform'|'chat', options, value, onChange, onSubmit? … }), UnifiedDropdownMultiSelect<T>({ options, value: T[], onChange, onSubmit? … }), UnifiedCountrySelect, UnifiedDatePicker, UnifiedPhoneInput, UnifiedFileUpload, InlineSelect, InlineMultiSelect, InlineRating, InlineRanking, InlineSignature.
-  - RuntimeProvider/useRuntime for optional React context wiring.
+  - RuntimeProvider (optional React context + Devtools). There is no public useRuntime export; subscribe via useSyncExternalStore as shown in quickstarts.
 - Fallback CSS: import '@formlink/runtime/ui/react/style.css' if your Tailwind pipeline does not scan the runtime.
+
+Examples
+
+- docs/examples/universal-typeform.md
+- docs/examples/universal-classic.md
+- docs/examples/composed-react-wiring.md
+
+Common Pitfalls
+
+- docs/pitfalls/start-button-no-op.md
+- docs/pitfalls/createRuntime-import.md
+- docs/pitfalls/mockTransport-alias.md
+- docs/pitfalls/useRuntime-export-missing.md
+- docs/pitfalls/question-undefined-title.md
 
 ## Devtools
 
@@ -356,7 +384,47 @@ declare function createMockTransport(
 
 ## Styles
 
-- If you do not use a design‑system CSS bundle, import `@formlink/runtime/ui/react/style.css` to style runtime helpers (layout/progress/navigation). Otherwise rely on your own design system’s CSS.
+You have two options:
+
+1. **Drop-in CSS bundle**  
+   Import the prebuilt file once in your host app (e.g. `_app.tsx`, `layout.tsx`, or entry CSS):
+
+   ```ts
+   import "@formlink/runtime/ui/react/style.css";
+   ```
+
+   This includes the runtime layout utilities, tokens, and Tailwind utility classes used by our helpers.
+
+2. **Integrate with your own Tailwind pipeline**  
+   Extend your Tailwind config with the packaged preset and keep your existing design language:
+
+   ```js
+   // tailwind.config.cjs
+   const runtimePreset = require("@formlink/runtime/tailwind-preset");
+
+   module.exports = {
+     presets: [runtimePreset],
+     content: [
+       "./src/**/*.{ts,tsx}",
+       // ...your content globs
+     ],
+     safelist: [
+       ...(runtimePreset.safelist || []),
+       // ...your extra safelist entries
+     ],
+   };
+   ```
+
+   Then include the source layer in your global stylesheet if you want to reuse our tokens:
+
+   ```css
+   /* app.css */
+   @import "@formlink/runtime/styles/runtime-tailwind.css";
+   ```
+
+   The safelist is already bundled in the preset, but you can also `require("@formlink/runtime/tailwind-safelist")` and merge manually if you prefer.
+
+During development, run `pnpm --filter @formlink/runtime dev:css` to watch and rebuild the CSS bundle when editing runtime components locally.
 
 ## SSR/Edge
 

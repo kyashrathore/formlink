@@ -14,7 +14,6 @@ module.exports = {
   safelist: [
     // Arbitrary values used in runtime components
     "bottom-[12px]",
-    "right-[12px]",
     "z-[1000]",
     "z-[100]",
   ],

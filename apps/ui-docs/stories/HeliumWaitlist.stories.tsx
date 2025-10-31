@@ -72,7 +72,7 @@ type Story = StoryObj;
 
 type RuntimeQuestion = Question;
 
-// Form schema with one question per supported type (per docs/runtime/formlink-runtime-spec_v1.md)
+// Form schema with one question per supported type (per runtime spec: formlink-runtime-spec_v1_normative_only.md)
 const FORM_ALL_TYPES: Form = {
   current_published_version_id: "helium_waitlist_all_types_v1",
   current_draft_version_id: "helium_waitlist_all_types_v1",

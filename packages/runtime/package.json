@@ -1,6 +1,6 @@
 {
   "name": "@formlink/runtime",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.5",
   "private": false,
   "type": "module",
   "main": "./dist/index.js",
@@ -8,34 +8,46 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "source": "./src/index.ts"
     },
     "./transport/fetch": {
       "types": "./dist/transport/fetchTransport.d.ts",
-      "import": "./dist/transport/fetchTransport.js"
+      "import": "./dist/transport/fetchTransport.js",
+      "source": "./src/transport/fetchTransport.ts"
     },
     "./ui/react": {
       "types": "./dist/ui/react/index.d.ts",
-      "import": "./dist/ui/react/index.js"
+      "import": "./dist/ui/react/index.js",
+      "source": "./src/ui/react/index.ts"
     },
-    "./ui/react/style.css": "./src/ui/react/style.css",
+    "./ui/react/style.css": {
+      "source": "./styles/runtime-tailwind.css",
+      "import": "./dist/ui/react/style.css",
+      "default": "./dist/ui/react/style.css"
+    },
     "./devtools": {
       "types": "./dist/devtools/Devtools.d.ts",
-      "import": "./dist/devtools/Devtools.js"
+      "import": "./dist/devtools/Devtools.js",
+      "source": "./src/devtools/Devtools.tsx"
     },
     "./schema": {
       "types": "./dist/schema/index.d.ts",
-      "import": "./dist/schema/index.js"
+      "import": "./dist/schema/index.js",
+      "source": "./src/schema/index.ts"
     },
-    "./tailwind-safelist": "./tailwind-safelist.cjs"
+    "./tailwind-safelist": "./tailwind-safelist.cjs",
+    "./tailwind-preset": "./tailwind.runtime.preset.cjs"
   },
   "files": [
     "dist",
-    "src/ui/react/style.css",
-    "tailwind-safelist.cjs"
+    "src",
+    "styles/runtime-tailwind.css",
+    "tailwind-safelist.cjs",
+    "tailwind.runtime.preset.cjs"
   ],
   "sideEffects": [
-    "src/ui/react/style.css"
+    "dist/ui/react/style.css"
   ],
   "publishConfig": {
     "access": "public"
@@ -58,7 +70,10 @@
     "@types/react-dom": "^19.0.0",
     "@types/react-signature-canvas": "^1.0.7",
     "tsup": "^8.0.2",
-    "@formlink/schema": "workspace:*"
+    "@formlink/schema": "workspace:*",
+    "tailwindcss": "^4.1.5",
+    "tailwindcss-animate": "^1.0.7",
+    "@tailwindcss/cli": "^4.1.5"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -66,8 +81,10 @@
   },
   "scripts": {
     "build": "tsup --config tsup.config.ts",
-    "postbuild": "cp ../schema/dist/index.d.ts dist/schema/index.d.ts || true && node ./scripts/fix-dts-schema-imports.mjs",
-    "type-check": "tsc --noEmit"
+    "postbuild": "cp ../schema/dist/index.d.ts dist/schema/index.d.ts || true && node ./scripts/fix-dts-schema-imports.mjs && pnpm run build:css",
+    "type-check": "tsc --noEmit",
+    "build:css": "node -e \"require('fs').mkdirSync('dist/ui/react',{recursive:true})\" && pnpm exec tailwindcss -i ./styles/runtime-tailwind.css -o ./dist/ui/react/style.css --minify",
+    "dev:css": "node -e \"require('fs').mkdirSync('dist/ui/react',{recursive:true})\" && pnpm exec tailwindcss -i ./styles/runtime-tailwind.css -o ./dist/ui/react/style.css --watch"
   },
   "engines": {
     "node": ">=18.17"

@@ -12,6 +12,8 @@ import { useResponseViewsStore } from "../stores/useResponseViewsStore"
 
 type ButtonState = "normal" | "loading" | "success" | "error"
 
+const CODEGEN_PREVIEW = process.env.NEXT_PUBLIC_CODEGEN_PREVIEW_UI === "true"
+
 interface NavigationBarProps {
   formId: string
   onSaveForm?: () => void
@@ -220,19 +222,21 @@ export default function NavigationBar({
               : "text-muted-foreground hover:text-foreground hover:bg-accent"
           } `}
         >
-          <span>Form</span>
+          <span>{CODEGEN_PREVIEW ? "Preview" : "Form"}</span>
         </button>
 
-        <button
-          onClick={() => guardNav("preview")}
-          className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-            activeMainTab === "preview"
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground hover:bg-accent"
-          } `}
-        >
-          <span>Preview</span>
-        </button>
+        {!CODEGEN_PREVIEW && (
+          <button
+            onClick={() => guardNav("preview")}
+            className={`flex items-center space-x-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+              activeMainTab === "preview"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent"
+            } `}
+          >
+            <span>Preview</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveMainTab("responses")}

@@ -1,6 +1,5 @@
 "use client";
 import * as React from "react";
-import { usePrimitives } from "./primitives/context";
 import { useIsMobile } from "./hooks/use-mobile";
 
 export type Option<T = string> = {
@@ -35,7 +34,6 @@ export function InlineSelect<T = string>({
   ariaDescribedBy,
 }: InlineSelectProps<T>) {
   const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const p = usePrimitives();
   const isMobile = useIsMobile();
 
   React.useEffect(() => {
@@ -92,7 +90,7 @@ export function InlineSelect<T = string>({
         .join(" ")}
     >
       {options.map((opt, index) => {
-        const selected = value === (opt.value as any);
+        const selected = value === opt.value;
         const shortcutKey = String.fromCharCode(65 + index);
         return (
           <div
@@ -128,7 +126,7 @@ export function InlineSelect<T = string>({
                 selected ? "text-foreground font-medium" : "text-foreground",
               ].join(" ")}
             >
-              {opt.label as any}
+              {opt.label}
             </span>
             {selected && (
               <svg

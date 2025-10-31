@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import type { ComponentPropsWithRef } from "react";
 import { useIsMobile } from "../hooks/use-mobile";
 import { usePrimitives } from "../primitives/context";
 import { useRuntime } from "../runtime-context";
@@ -17,9 +18,23 @@ export function TypeFormNavigation({
   canGoNext?: boolean;
   isLoadingNext?: boolean;
 }) {
-  const Button =
-    usePrimitives().Button ??
-    ((props: any) => <button type="button" {...props} />);
+  const primitives = usePrimitives();
+  const ButtonPrimitive = primitives.Button;
+  const Button: React.FC<ComponentPropsWithRef<"button">> =
+    React.useMemo(() => {
+      if (ButtonPrimitive) {
+        const Element = ButtonPrimitive as React.ElementType;
+        const Component: React.FC<ComponentPropsWithRef<"button">> = (props) =>
+          React.createElement(Element, { type: "button", ...props });
+        Component.displayName = "TypeFormNavigationButtonPrimitive";
+        return Component;
+      }
+      const Fallback: React.FC<ComponentPropsWithRef<"button">> = (props) => (
+        <button type="button" {...props} />
+      );
+      Fallback.displayName = "TypeFormNavigationButtonFallback";
+      return Fallback;
+    }, [ButtonPrimitive]);
   const isMobile = useIsMobile();
   const runtime = useRuntime();
 
@@ -50,14 +65,14 @@ export function TypeFormNavigation({
     let startX = 0;
     let startY = 0;
     let tracking = false;
-    const onTouchStart = (e: TouchEvent) => {
+    const handleTouchStart = (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       const t = e.touches[0]!;
       startX = t.clientX;
       startY = t.clientY;
       tracking = true;
     };
-    const onTouchEnd = (e: TouchEvent) => {
+    const handleTouchEnd = (e: TouchEvent) => {
       if (!tracking) return;
       tracking = false;
       const t = e.changedTouches[0];
@@ -70,11 +85,11 @@ export function TypeFormNavigation({
         if (dx > 0) handlePrev(); // swipe right → prev
       }
     };
-    window.addEventListener("touchstart", onTouchStart, { passive: true });
-    window.addEventListener("touchend", onTouchEnd);
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd);
     return () => {
-      window.removeEventListener("touchstart", onTouchStart as any);
-      window.removeEventListener("touchend", onTouchEnd as any);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
     };
   }, [onNext, onPrevious, canGoNext, canGoPrevious, isLoadingNext, runtime]);
 

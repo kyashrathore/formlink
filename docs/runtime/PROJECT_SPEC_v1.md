@@ -29,7 +29,7 @@ Packages (kept small and stable)
   - Command: `actions` (setAnswer/validate/next/prev/goTo/submit/uploadFile)
   - Subscribe: `events` (answer:set, validate, cursor:change, visibility:change, progress:change, submit:success/error, upload:success/error)
 
-- `@formlink/ui` — provided via a shadcn‑style registry. See the consolidated runtime doc at `docs/runtime/formlink-runtime-spec_v1.md` (§7) for component list and rules.
+- `@formlink/ui` — provided via a shadcn‑style registry. See the consolidated runtime doc at `packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md` (§7) for component list and rules.
 
 - `@formlink/chat` — chat glue (React)
   - `ResponseWrapper`: drop‑in replacement for ai‑sdk `<Response>` that renders assistant text and mounts the correct input for a backend slot token `::PresentQuestionInputComponent qId="…"::`.
@@ -80,11 +80,11 @@ Packages (kept small and stable)
 
 - The runtime supports multiple models for establishing ownership, including a secure, cookie-based flow for anonymous users and automatic linking for authenticated users via injected secrets (environment variables or MCP).
 
-See `docs/runtime/formlink-runtime-spec_v1.md` (§4). Summary: stable `previewId` → backend draft; heartbeat via PUT; link bubble optional; GET polls `linked`.
+See `packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md` (§4). Summary: stable `previewId` → backend draft; heartbeat via PUT; link bubble optional; GET polls `linked`.
 
 ### 3.6 Preview Retention & Cleanup — See Consolidated Doc
 
-See `docs/runtime/formlink-runtime-spec_v1.md` (§4). Summary: retain if linked or active; archive/purge per env‑driven TTLs; storage GC aligned.
+See `packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md` (§4). Summary: retain if linked or active; archive/purge per env‑driven TTLs; storage GC aligned.
 
 ## 4) Chat Mode (ai‑sdk + ResponseWrapper)
 

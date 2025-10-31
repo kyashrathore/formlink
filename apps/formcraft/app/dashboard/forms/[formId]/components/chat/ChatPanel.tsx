@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from "uuid"
 import { useChatHistoryQuery } from "../../hooks/useChatHistoryQuery"
 import { usePanelState } from "../../hooks/usePanelState"
 import { applyRIPlanToUI } from "../../lib/responses/ri-adapter"
-import { AgentEvent } from "../../lib/types/agent-events"
+import { AgentEvent, createAgentEvent } from "../../lib/types/agent-events"
 import { useAutomationsPlanStore } from "../../stores/useAutomationsPlanStore"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
@@ -190,6 +190,121 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             eventHandlerRef.current.handleRawEvent(event)
           }
           memoizedProcessEvent(event)
+          return
+        }
+
+        // Bridge codegen SSE events into our AgentEvent log + update preview URL
+        if (
+          dataPart &&
+          typeof dataPart === "object" &&
+          (dataPart as any).type === "data" &&
+          Array.isArray((dataPart as any).value)
+        ) {
+          const arr = (dataPart as any).value as any[]
+          for (const item of arr) {
+            if (item?.eventName === "codegen") {
+              const et = String(item.eventType || "log")
+              const payload = item.data || {}
+              const seq = Date.now()
+
+              // Map to AgentEvent
+              if (et === "error") {
+                const ev = createAgentEvent(
+                  "agent_error",
+                  "error",
+                  {
+                    message: payload?.message || "Codegen error",
+                    details: payload,
+                    recoverable: true,
+                  },
+                  formId,
+                  userId || "anonymous",
+                  seq
+                )
+                memoizedProcessEvent(ev as any)
+              } else if (et === "status" || et === "log" || et === "command") {
+                const ev = createAgentEvent(
+                  "task_started",
+                  "progress",
+                  {
+                    taskId: et,
+                    taskType: "codegen",
+                    current: 0,
+                    total: 0,
+                    message:
+                      payload?.message ||
+                      payload?.cmd ||
+                      payload?.status ||
+                      JSON.stringify(payload),
+                  },
+                  formId,
+                  userId || "anonymous",
+                  seq
+                )
+                memoizedProcessEvent(ev as any)
+              } else if (et === "preview") {
+                const url = payload?.url as string | undefined
+                const sid = payload?.sandboxId as string | undefined
+                if (url) {
+                  // Update the form editor store so Preview tab swaps immediately
+                  useFormEditorStore
+                    .getState()
+                    .updateFormField("preview_url", url as any)
+                }
+                if (sid) {
+                  useFormEditorStore
+                    .getState()
+                    .updateFormField("sandbox_id", sid as any)
+                }
+                const ev = createAgentEvent(
+                  "task_completed",
+                  "progress",
+                  {
+                    taskId: "preview",
+                    taskType: "codegen",
+                    current: 1,
+                    total: 1,
+                    message: url
+                      ? `Preview available: ${url}`
+                      : "Preview updated",
+                  },
+                  formId,
+                  userId || "anonymous",
+                  seq
+                )
+                memoizedProcessEvent(ev as any)
+              } else if (et === "push") {
+                const branch = payload?.branchName as string | undefined
+                if (branch) {
+                  useFormEditorStore
+                    .getState()
+                    .updateFormField("branch_name", branch as any)
+                }
+              } else if (et === "complete") {
+                const branch = payload?.branchName as string | undefined
+                const url = payload?.previewUrl as string | undefined
+                if (branch) {
+                  useFormEditorStore
+                    .getState()
+                    .updateFormField("branch_name", branch as any)
+                }
+                if (url) {
+                  useFormEditorStore
+                    .getState()
+                    .updateFormField("preview_url", url as any)
+                }
+                const ev = createAgentEvent(
+                  "agent_finalized",
+                  "system",
+                  { message: "Codegen complete", details: payload },
+                  formId,
+                  userId || "anonymous",
+                  seq
+                )
+                memoizedProcessEvent(ev as any)
+              }
+            }
+          }
         }
       } catch (err) {
         console.error("[ChatPanel] onData handler error:", err)

@@ -1,6 +1,25 @@
 "use client";
 import * as React from "react";
+import type { ComponentPropsWithRef, Ref } from "react";
 import { usePrimitives } from "./primitives/context";
+
+type PopoverRootProps = {
+  children?: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
+
+type PopoverTriggerProps = {
+  children?: React.ReactNode;
+  asChild?: boolean;
+};
+
+type PopoverContentProps = {
+  children?: React.ReactNode;
+  align?: string;
+  className?: string;
+  style?: React.CSSProperties;
+};
 
 export type FormMode = "chat" | "typeform";
 
@@ -29,14 +48,40 @@ export function UnifiedDatePicker({
   ariaDescribedBy,
   autoFocus,
 }: UnifiedDatePickerProps) {
-  const {
-    Input,
-    Button,
-    Calendar,
-    PopoverRoot,
-    PopoverTrigger,
-    PopoverContent,
-  } = usePrimitives();
+  const primitives = usePrimitives();
+  const Input = primitives.Input as
+    | React.ComponentType<
+        React.InputHTMLAttributes<HTMLInputElement> & {
+          ref?: Ref<HTMLInputElement>;
+        }
+      >
+    | undefined;
+  const Button = primitives.Button as
+    | React.ComponentType<
+        React.ComponentPropsWithRef<"button"> & {
+          variant?: string;
+          ref?: Ref<HTMLButtonElement>;
+        }
+      >
+    | undefined;
+  type CalendarProps = {
+    mode: "single";
+    selected?: Date;
+    onSelect?: (date?: Date) => void;
+    initialFocus?: boolean;
+  } & Record<string, unknown>;
+  const Calendar = primitives.Calendar as
+    | React.ComponentType<CalendarProps>
+    | undefined;
+  const PopoverRoot = primitives.PopoverRoot as
+    | React.ComponentType<PopoverRootProps>
+    | undefined;
+  const PopoverTrigger = primitives.PopoverTrigger as
+    | React.ComponentType<PopoverTriggerProps>
+    | undefined;
+  const PopoverContent = primitives.PopoverContent as
+    | React.ComponentType<PopoverContentProps>
+    | undefined;
   const sizeCls =
     mode === "typeform" ? "h-16 text-2xl md:text-3xl" : "h-10 text-sm";
   const inputRef = React.useRef<HTMLInputElement | null>(null);
@@ -110,12 +155,12 @@ export function UnifiedDatePicker({
             </PopoverTrigger>
             <PopoverContent align="start" className="p-2">
               {/* shadcn Calendar signature: mode="single" selected={date} onSelect={fn} */}
-              {React.createElement(Calendar as any, {
-                mode: "single",
-                selected: dateVal ?? undefined,
-                onSelect: onSelectDate,
-                initialFocus: true,
-              })}
+              <Calendar
+                mode="single"
+                selected={dateVal ?? undefined}
+                onSelect={onSelectDate}
+                initialFocus
+              />
             </PopoverContent>
           </PopoverRoot>
         </div>
@@ -137,12 +182,12 @@ export function UnifiedDatePicker({
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="p-2">
-            {React.createElement(Calendar as any, {
-              mode: "single",
-              selected: dateVal ?? undefined,
-              onSelect: onSelectDate,
-              initialFocus: true,
-            })}
+            <Calendar
+              mode="single"
+              selected={dateVal ?? undefined}
+              onSelect={onSelectDate}
+              initialFocus
+            />
           </PopoverContent>
         </PopoverRoot>
       </div>
@@ -173,7 +218,7 @@ export function UnifiedDatePicker({
       </div>
     );
   }
-  const props = {
+  const inputProps: React.InputHTMLAttributes<HTMLInputElement> = {
     type: "date",
     value: strVal,
     placeholder,
@@ -183,7 +228,7 @@ export function UnifiedDatePicker({
     "aria-label": ariaLabel,
     "aria-describedby": ariaDescribedBy,
     className: ["w-full", sizeCls, className].filter(Boolean).join(" "),
-  } as const;
-  if (Input) return <Input {...props} />;
-  return <input {...(props as any)} />;
+  };
+  if (Input) return <Input {...inputProps} />;
+  return <input {...inputProps} />;
 }

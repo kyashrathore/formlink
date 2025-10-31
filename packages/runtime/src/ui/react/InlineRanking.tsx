@@ -93,7 +93,7 @@ function SortableRow<T = string>({
       </div>
 
       {/* Label */}
-      <span className="flex-1 text-base">{option.label as any}</span>
+      <span className="flex-1 text-base">{option.label}</span>
 
       {/* Drag handle on right */}
       <button

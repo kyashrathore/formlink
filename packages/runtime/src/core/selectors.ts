@@ -77,7 +77,10 @@ export function computeUnansweredIds(
   return eligibleIds.filter((id) => {
     const question = questionMap.get(id);
     if (!question) return false;
-    const required = Boolean((question as any)?.validations?.required?.value);
+    const required =
+      question.validations?.required?.value !== undefined
+        ? Boolean(question.validations.required.value)
+        : false;
     if (!required) return false;
     const value = values[id];
     return !isAnswered(value);

@@ -1,53 +1,55 @@
 "use client";
 import * as React from "react";
 
+type UnknownProps = Record<string, unknown>;
+
 // Minimal primitives map the runtime UI can consume from the host app.
 // All keys are optional; components should gracefully fallback.
 export type ShadCnPrimitives = {
   // Base
-  Button?: React.ComponentType<any>;
-  Input?: React.ComponentType<any>;
-  Textarea?: React.ComponentType<any>;
-  Label?: React.ComponentType<any>;
-  Badge?: React.ComponentType<any>;
-  ScrollArea?: React.ComponentType<any>;
-  Separator?: React.ComponentType<any>;
+  Button?: React.ComponentType<UnknownProps>;
+  Input?: React.ComponentType<UnknownProps>;
+  Textarea?: React.ComponentType<UnknownProps>;
+  Label?: React.ComponentType<UnknownProps>;
+  Badge?: React.ComponentType<UnknownProps>;
+  ScrollArea?: React.ComponentType<UnknownProps>;
+  Separator?: React.ComponentType<UnknownProps>;
   // Date
-  Calendar?: React.ComponentType<any>; // shadcn Calendar wrapper (react-day-picker)
+  Calendar?: React.ComponentType<UnknownProps>; // shadcn Calendar wrapper (react-day-picker)
 
   // Popover
-  PopoverRoot?: React.ComponentType<any>;
-  PopoverTrigger?: React.ComponentType<any>;
-  PopoverContent?: React.ComponentType<any>;
-  PopoverAnchor?: React.ComponentType<any>;
+  PopoverRoot?: React.ComponentType<UnknownProps>;
+  PopoverTrigger?: React.ComponentType<UnknownProps>;
+  PopoverContent?: React.ComponentType<UnknownProps>;
+  PopoverAnchor?: React.ComponentType<UnknownProps>;
 
   // Command
-  CommandRoot?: React.ComponentType<any>;
-  CommandList?: React.ComponentType<any>;
-  CommandItem?: React.ComponentType<any>;
-  CommandGroup?: React.ComponentType<any>;
-  CommandEmpty?: React.ComponentType<any>;
-  CommandInput?: React.ComponentType<any>;
-  CommandSeparator?: React.ComponentType<any>;
+  CommandRoot?: React.ComponentType<UnknownProps>;
+  CommandList?: React.ComponentType<UnknownProps>;
+  CommandItem?: React.ComponentType<UnknownProps>;
+  CommandGroup?: React.ComponentType<UnknownProps>;
+  CommandEmpty?: React.ComponentType<UnknownProps>;
+  CommandInput?: React.ComponentType<UnknownProps>;
+  CommandSeparator?: React.ComponentType<UnknownProps>;
 
   // Field (shadcn registry variants)
-  Field?: React.ComponentType<any>; // Root
-  FieldControl?: React.ComponentType<any>;
-  FieldDescription?: React.ComponentType<any>;
-  FieldMessage?: React.ComponentType<any>;
-  FieldLabel?: React.ComponentType<any>;
-  FieldGroup?: React.ComponentType<any>;
-  FieldLegend?: React.ComponentType<any>;
-  FieldSeparator?: React.ComponentType<any>;
-  FieldSet?: React.ComponentType<any>;
+  Field?: React.ComponentType<UnknownProps>; // Root
+  FieldControl?: React.ComponentType<UnknownProps>;
+  FieldDescription?: React.ComponentType<UnknownProps>;
+  FieldMessage?: React.ComponentType<UnknownProps>;
+  FieldLabel?: React.ComponentType<UnknownProps>;
+  FieldGroup?: React.ComponentType<UnknownProps>;
+  FieldLegend?: React.ComponentType<UnknownProps>;
+  FieldSeparator?: React.ComponentType<UnknownProps>;
+  FieldSet?: React.ComponentType<UnknownProps>;
 
   // Input Group
-  InputGroup?: React.ComponentType<any>; // Root
-  InputGroupAddon?: React.ComponentType<any>;
-  InputGroupButton?: React.ComponentType<any>;
-  InputGroupText?: React.ComponentType<any>;
-  InputGroupInput?: React.ComponentType<any>;
-  InputGroupTextarea?: React.ComponentType<any>;
+  InputGroup?: React.ComponentType<UnknownProps>; // Root
+  InputGroupAddon?: React.ComponentType<UnknownProps>;
+  InputGroupButton?: React.ComponentType<UnknownProps>;
+  InputGroupText?: React.ComponentType<UnknownProps>;
+  InputGroupInput?: React.ComponentType<UnknownProps>;
+  InputGroupTextarea?: React.ComponentType<UnknownProps>;
 };
 
 const PrimitivesContext = React.createContext<ShadCnPrimitives | null>(null);
@@ -62,8 +64,8 @@ export function ShadCnProvider({
   // Only run validation in development (avoid Node type requirement)
   const isDev =
     typeof globalThis !== "undefined" &&
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (globalThis as any)?.process?.env?.NODE_ENV !== "production";
+    (globalThis as { process?: { env?: Record<string, unknown> } })?.process
+      ?.env?.NODE_ENV !== "production";
   if (isDev) {
     // Validate a minimal set so common runtime components render correctly.
     const requiredKeys: Array<keyof ShadCnPrimitives> = [
@@ -93,7 +95,7 @@ export function ShadCnProvider({
     if (missing.length > 0) {
       throw new Error(
         `[ShadCnProvider] Missing required primitives: ${missing.join(", ")}.\n` +
-          `Provide these via <ShadCnProvider components={...}>. See docs/runtime/formlink-runtime-spec_v1.md for the mapping guide.`,
+          `Provide these via <ShadCnProvider components={...}>. See the runtime docs (normative spec) for the primitives mapping guide.`,
       );
     }
   }

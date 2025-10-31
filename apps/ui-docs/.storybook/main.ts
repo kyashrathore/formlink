@@ -1,5 +1,5 @@
-import { createRequire } from "node:module";
 import type { StorybookConfig } from "@storybook/nextjs";
+import { createRequire } from "node:module";
 import path, { dirname, join } from "path";
 
 const require = createRequire(import.meta.url);
@@ -45,6 +45,10 @@ const config: StorybookConfig = {
           "src",
         ),
       };
+      config.resolve.conditionNames = [
+        "source",
+        ...(config.resolve.conditionNames ?? []),
+      ];
     }
     return config;
   },

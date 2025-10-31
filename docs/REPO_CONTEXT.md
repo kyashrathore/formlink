@@ -4,8 +4,10 @@ Last updated: 2025-10-20
 
 Recent change
 
+- 2025-10-23: Codegen deployments will use `wrangler pages deploy` from inside the Vercel sandbox (with Cloudflare tokens) instead of hitting the Pages Direct Upload REST API. The API path is still viable later, but CLI keeps us unblocked now; revisit once we have a stable archive streaming helper.
 - Runtime docs: Added consolidated plan at `docs/runtime/RUNTIME_CONSOLIDATED_v1.md` organizing packages, decisions to gavel, Deploy-on-Formlink flow, headless chat testmode, and the Devtools plan. This doc links to existing detailed specs and examples and defines MVP acceptance.
 - Runtime/schema: Re‑attached `@formlink/runtime` to the canonical `@formlink/schema` types to prevent drift. `packages/runtime/src/types.ts` now re‑exports `Form`/`Question`/`AddressData` from `@formlink/schema`, and core modules import types from the schema package. Address schema validation also uses `AddressSchema` from `@formlink/schema`.
+- Runtime packaging: `@formlink/runtime` now ships the full `src/` tree in npm with a `source` conditional export, and Storybook aliases resolve to those `.ts/.tsx` files so “Open in editor” no longer jumps to `dist/*.d.ts`.
 
 - Runtime: Rewrote `packages/runtime/src/ui/react/InlineSignature.tsx` to use `react-signature-canvas` (matches our UI package) instead of custom `<canvas>` (and dropped prior `@uiw/react-signature` change). Preserves API (`value?: string|null`, `onChange(dataUrl)`, `onSubmit?`, `width`, `height`). Behavior: loads existing `value` into the canvas via `fromDataURL`, new strokes append, and `toDataURL('image/png')` emits the full image; `Clear` resets and emits `null`. Added deps: `react-signature-canvas` and `@types/react-signature-canvas` to `@formlink/runtime`.
 - Runtime: Tweaked signature stroke thickness to be slightly lighter: `minWidth` 1 → 0.75 and `maxWidth` 3 → 2.0 in `InlineSignature`. No API change.
@@ -35,7 +37,7 @@ Recent change
 - UI: Combobox close-on-select
   - Fixed `kibo-ui/combobox` so `ComboboxItem` always closes the popover on selection even when a consumer supplies `onSelect`. Implementation merges handlers instead of overriding. Affects `UnifiedDropdownSelect` (single-select dropdown) which now closes immediately after choosing an option.
 
-- Formlink Runtime docs consolidated: `docs/runtime/formlink-runtime-spec_v1.md` (headless runtime API, preview sessions + linking + retention, chat UI contract, UI registry guidance, glue snippets). Master spec points to it from §3.5–3.6.
+- Formlink Runtime docs consolidated: `packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md` (headless runtime API, preview sessions + linking + retention, chat UI contract, UI registry guidance, glue snippets). Master spec points to it from §3.5–3.6.
 
 Logging policy
 
@@ -220,7 +222,7 @@ Additional guidance:
 Documentation Index (selected)
 
 - Project spec and public contracts
-- docs/runtime/formlink-runtime-spec_v1.md — single, canonical spec for runtime + chat + registry + preview
+- packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md — single, canonical spec for runtime + chat + registry + preview
 - docs/runtime/formlink-runtime-low-level-examples_v1.md — low‑level wiring examples for common requests
 - docs/runtime/runtime-impl-plan_v1.md — implementation plan for @formlink/runtime (TanStack, transports, selectors)
 - docs/runtime/llm-codegen-contract_v1.md — pasteable contract for LLM codegen to generate deployable forms
@@ -332,3 +334,25 @@ Documentation Index (selected)
 5. Validate with lint/type-check/tests and document any new behaviors under `docs/`.
 
 This context should equip both humans and AI agents to reason about Formlink’s architecture, locate relevant modules quickly, and implement features while respecting existing contracts and guardrails.
+
+## Mintlify — Runtime Docs Site (code-based)
+
+- Added `docs/runtime/docs.json` and `docs/runtime/index.mdx` to publish only `@runtime/docs` via Mintlify’s code‑based workflow.
+- Scope: pages under `docs/runtime/` are surfaced; navigation grouped (Overview, Specification, Implementation, Policies & Ideas, Examples).
+
+Verification (local preview):
+
+- Ensure `pnpm` is installed.
+- From `docs/runtime/`, run: `pnpm dlx mint dev --port 3100`
+  - This avoids conflicts with any app dev server; don’t stop `pnpm run dev`.
+
+Publish (Mintlify Cloud):
+
+- In Mintlify Cloud → Create site → Connect this repository.
+- Set the docs directory to `docs/runtime` (where `docs.json` lives).
+- Mintlify will build from `main` by default; adjust branch as needed.
+
+Notes / TODOs:
+
+- TODO(mintlify): If any page shows as “Untitled”, add frontmatter `title:` to the source `.md` file.
+- TODO(mintlify): Add brand colors/logo later; currently using a neutral primary `#3b82f6`.

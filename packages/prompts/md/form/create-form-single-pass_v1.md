@@ -49,6 +49,18 @@ Mission:
 - address: standard fields only.
 - likertScale: use agree–disagree anchors or a suitable custom set.
 
+Display & Format Rules (Required)
+
+- Choice `display` selection is deterministic based on option count:
+  - `singleChoice`: 1–5 options → `display: "radio"`; ≥6 → `display: "dropdown"`.
+  - `multipleChoice`: 1–5 options → `display: "checkbox"`; ≥6 → `display: "multiSelectDropdown"`.
+- Text `format` must reflect semantics:
+  - email → `format: "email"`
+  - website/URL → `format: "url"`
+  - phone → `format: "tel"`
+  - country selector → `format: "country"`
+  - long answer → `format: "textarea"`; otherwise `"text"`.
+
 ---
 
 ## Journey Script

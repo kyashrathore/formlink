@@ -1,3 +1,4 @@
+import type { FormWithVersionIds } from "@/app/dashboard/forms/[formId]/stores/useFormEditorStore"
 import { parseFormSchema } from "@/app/lib"
 import { getModel } from "@/app/lib/ai/provider"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
@@ -26,11 +27,11 @@ async function getFormSchemaById(
   versionIdColumn: "current_published_version_id" | "current_draft_version_id",
   versionStatus: "published" | "draft",
   supabase: SupabaseClient
-): Promise<Form | null> {
+): Promise<FormWithVersionIds | null> {
   const { data: formData, error: formError } = await supabase
     .from("forms")
     .select(
-      "current_published_version_id,short_id, current_draft_version_id, brand_id"
+      "current_published_version_id, short_id, current_draft_version_id, brand_id, branch_name, preview_url, live_url, last_deployed_at, published_at, sandbox_id"
     )
     .eq("id", formId)
     .single()
@@ -113,7 +114,7 @@ async function getFormSchemaById(
       }
     }
 
-    const formSchemaResult: Form = {
+    const formSchemaResult: FormWithVersionIds = {
       id: formId,
       version_id: v.version_id,
       title: v.title,
@@ -128,6 +129,12 @@ async function getFormSchemaById(
       current_published_version_id: formData.current_published_version_id,
       current_draft_version_id: formData.current_draft_version_id,
       short_id: formData.short_id,
+      branch_name: (formData as any).branch_name,
+      preview_url: (formData as any).preview_url,
+      live_url: (formData as any).live_url,
+      last_deployed_at: (formData as any).last_deployed_at,
+      published_at: (formData as any).published_at,
+      sandbox_id: (formData as any).sandbox_id,
     }
     return formSchemaResult
   } catch {
@@ -557,7 +564,7 @@ export async function GET(
   const supabase = await createServerClient(cookieStore)
 
   try {
-    let formSchema: Form | null = null
+    let formSchema: FormWithVersionIds | null = null
 
     formSchema = await getFormSchemaById(
       formId,

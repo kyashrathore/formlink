@@ -2,14 +2,14 @@
 
 Status: Draft v1 • Last updated: 2025-10-23
 
-This document defines how we replace the legacy form‑creation agent with an in‑app code generation agent that produces working Next.js code conforming to our Runtime spec (see `docs/runtime/formlink-runtime-spec_v1.md`). We do NOT host `coding-agent-template` separately; instead we extract only the minimal logic needed and embed it inside Formcraft.
+This document defines how we replace the legacy form‑creation agent with an in‑app code generation agent that produces working Next.js code conforming to our Runtime spec (see `packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md`). We do NOT host `coding-agent-template` separately; instead we extract only the minimal logic needed and embed it inside Formcraft.
 
 ---
 
 ## 1) Goals
 
 - Turn a user prompt + (optional) schema into a working code branch that implements the Runtime spec.
-- Run CLI coding agents (start with Claude CLI and Codex CLI) inside an ephemeral server workspace (no Vercel token) cloned from our template repo/branch.
+- Run CLI coding agents (start with Claude CLI and Codex CLI) inside a Vercel Sandbox ephemeral workspace cloned from our template repo/branch.
 - Stream progress to chat (status/commands/logs/commit/push/complete/errors).
 - Commit + push to a feature branch and return branchName and optional preview link.
 - Keep v1 simple: one‑off streaming (no persistent task DB). Add history later if needed.
@@ -20,14 +20,16 @@ This document defines how we replace the legacy form‑creation agent with an in
 
 - Chat (AI SDK) → `generateCode` tool → POST `/api/codegen/run`.
 - API handler:
-  - Create/attach an ephemeral local workspace from `repoUrl` + `baseBranch`.
+  - Create/attach a Vercel Sandbox workspace from `repoUrl` + `baseBranch`.
   - Optionally install deps (`bun install` for Bun template); detect package manager.
   - Execute selected agent (Claude or Codex) with a single, deterministic instruction built from the Runtime spec + current schema.
   - Git add/commit/push to `feature/formcraft-<formId>-<shortId>`.
-  - Optionally start a local preview server when `keepAlive` is true; emit preview URL if available.
+  - Optionally start a preview server inside the sandbox when `keepAlive` is true; emit preview URL if available.
   - Stream events back to the chat tool until complete.
 
 No task rows or SSE multiplexer in v1; the chat connection is the stream.
+
+Note: Execution always uses Vercel Sandbox. Local workspace mode is out of scope.
 
 ---
 
@@ -42,9 +44,9 @@ API
 
 - Codegen core
 
-- `apps/formcraft/app/lib/codegen/workspace.ts`
-  - `createWorkspaceFromRepo(repoUrl, baseBranch)` using local filesystem + `git` with `CODEGEN_GITHUB_TOKEN`.
-  - `run(cmd, args, opts)`; `detectPackageManager()`; helpers for `bun`.
+- `apps/formcraft/app/lib/codegen/sandbox.ts`
+  - `createSandboxFromRepo(repoUrl, baseBranch, { token, teamId, projectId })` using `@vercel/sandbox`.
+  - `runInSandbox(cmd, args, opts)`; `detectPackageManager()`.
 - `apps/formcraft/app/lib/codegen/git.ts`
   - `ensureBranch(workspace, baseBranch, branchName)`.
   - `commitAndPush(workspace, branchName, message)`.
@@ -79,7 +81,7 @@ Chat handler
 
 ## 4) Runtime Contract (embed in instruction)
 
-Source of truth: `docs/runtime/formlink-runtime-spec_v1.md`. The instruction builder must embed a condensed, operational version:
+Source of truth: `packages/runtime/docs/formlink-runtime-spec_v1_normative_only.md`. The instruction builder must embed a condensed, operational version:
 
 - State management: Use `@formlink/runtime` only; do not add `react-hook-form` or unmanaged `useState` for answers.
 - Packages: `@formlink/runtime @formlink/ui motion react react-dom`. Add `@dnd-kit/*` when ranking is used.
@@ -221,11 +223,15 @@ Error handling
 
 ## 10) Security & Config
 
-- Server env (never exposed to client):
-  - GitHub access: `CODEGEN_GITHUB_TOKEN`, `CODEGEN_GITHUB_REPO`, optional author name/email.
-  - Cloudflare Pages: `CF_API_TOKEN`, `CF_ACCOUNT_ID`, `CF_PAGES_PROJECT`.
+- Server env (never exposed to client)
+  - GitHub: `CODEGEN_GITHUB_TOKEN`, `CODEGEN_GITHUB_REPO`, optional `CODEGEN_GIT_AUTHOR_NAME`, `CODEGEN_GIT_AUTHOR_EMAIL`.
   - Agents: `ANTHROPIC_API_KEY` (Claude), `AI_GATEWAY_API_KEY` or `OPENAI_API_KEY` (Codex).
-- Infra requirements: Bun installed in the execution environment; ability to run `git`, `bun`, `node`, `npm`/`pnpm`.
+  - Cloudflare Pages: `CF_API_TOKEN`, `CF_ACCOUNT_ID`, `CF_PAGES_PROJECT`.
+  - Vercel Sandbox: `SANDBOX_VERCEL_TOKEN`, `SANDBOX_VERCEL_TEAM_ID`, `SANDBOX_VERCEL_PROJECT_ID`.
+
+- Infra requirements
+  - API host needs network access to Vercel Sandbox API; all build/CLI commands run inside the sandbox.
+
 - Redaction rules: redact tokens (`sk-*`, `vck_*`), `Authorization: Bearer …`, secrets in URLs, emails when present.
 - Command allowlist: `git`, `bun`, `node/npm/pnpm/yarn`, `claude`, `codex`, and preview/build scripts only.
 
@@ -327,6 +333,123 @@ Notes
 
 ---
 
+## 23) Implementation Extraction From coding-agent-template (what to copy and modify)
+
+Goal: copy proven components from `coding-agent-template/` to minimize net new code. This lists exact files to lift, how to adapt them, and where they land under Formcraft.
+
+Copy (as close to as‑is as possible)
+
+- Sandbox command wrapper
+  - From: `lib/sandbox/commands.ts`
+  - To: `apps/formcraft/app/lib/codegen/sandbox/commands.ts`
+  - Why: stable helper around `Sandbox.runCommand` that normalizes stdout/stderr and returns `{ success, exitCode, output, error }`.
+
+- Sandbox registry (keepAlive)
+  - From: `lib/sandbox/sandbox-registry.ts`
+  - To: `apps/formcraft/app/lib/codegen/sandbox/registry.ts`
+  - Why: in‑memory map that tracks the Sandbox instance by taskId for kill/reuse.
+
+- Redaction helpers
+  - From: `lib/utils/logging.ts` (use `redactSensitiveInfo`, `create*Log` if needed)
+  - To: `apps/formcraft/app/lib/codegen/logging.ts`
+  - Change: drop DB `LogEntry` types; emit redacted strings to stream.
+
+- Agents (Claude, Codex)
+  - From: `lib/sandbox/agents/claude.ts`, `lib/sandbox/agents/codex.ts`
+  - To: `apps/formcraft/app/lib/codegen/agents/{claude,codex}.ts`
+  - Change: replace `TaskLogger` with `StreamLogger` that writes SSE events (`status`, `command`, `log`).
+
+Copy (with focused edits)
+
+- Sandbox creation + git bootstrap
+  - From: `lib/sandbox/creation.ts`
+  - To: `apps/formcraft/app/lib/codegen/sandbox/creation.ts`
+  - Edits:
+    - Ensure Bun inside sandbox if missing; then prefer `bun install` for Bun + Vite template, fallback to npm.
+    - Use predetermined branch `form-<formId>`: if exists on remote, fetch/checkout; else create.
+    - Keep `.gitignore` augmentation; retain `sandbox.domain()` only if we later enable dynamic preview.
+
+- Package manager detection
+  - From: `lib/sandbox/package-manager.ts`
+  - To: `apps/formcraft/app/lib/codegen/sandbox/package-manager.ts`
+  - Edits: add Bun detection (`bun.lockb` or `which bun`) and install path; else pnpm → yarn → npm.
+
+- Git push + shutdown helpers
+  - From: `lib/sandbox/git.ts`
+  - To: `apps/formcraft/app/lib/codegen/sandbox/git.ts`
+  - Edits: none functionally; keep permissive push handling (`pushFailed` boolean).
+
+- Env validation + repo URL auth
+  - From: `lib/sandbox/config.ts`
+  - To: `apps/formcraft/app/lib/codegen/sandbox/config.ts`
+  - Edits: require GitHub token; enforce Vercel sandbox env; prefer `http.extraHeader` over credentials in URL.
+
+Reuse patterns (not full files)
+
+- Branch/commit generators
+  - From: `lib/utils/{branch-name,commit-message,title}-*.ts`
+  - To: `apps/formcraft/app/lib/codegen/generation/*`
+  - Edits: AI optional (fallbacks if AI Gateway key absent).
+
+- Task logger → Stream logger
+  - From: `lib/utils/task-logger.ts`
+  - Create: `apps/formcraft/app/lib/codegen/stream-logger.ts`
+  - Change: same API (`info`, `command`, `error`, `success`, `updateProgress`, `updateStatus`) but write to SSE instead of DB.
+
+API orchestration (inspired by tasks route)
+
+- Reference: `app/api/tasks/route.ts` → morph into `apps/formcraft/app/api/codegen/run/route.ts`:
+  - Validate, create `taskId` (nanoid), open stream.
+  - Init `StreamLogger(taskId, writer)`.
+  - `createSandbox({... preDeterminedBranchName: 'form-<formId>' ...})`.
+  - Run agent (Claude default) with `instruction`.
+  - Generate or fallback commit message; `pushChangesToBranch`.
+  - `bun run build` + Cloudflare Pages Direct Upload; save and emit `preview_url`.
+  - Emit `complete` and close stream.
+
+Do NOT copy
+
+- Drizzle schemas/DB, NextAuth integration, or template UI pages.
+
+Path Summary
+
+- `lib/sandbox/commands.ts` → `app/lib/codegen/sandbox/commands.ts`
+- `lib/sandbox/sandbox-registry.ts` → `app/lib/codegen/sandbox/registry.ts`
+- `lib/sandbox/creation.ts` → `app/lib/codegen/sandbox/creation.ts`
+- `lib/sandbox/package-manager.ts` → `app/lib/codegen/sandbox/package-manager.ts`
+- `lib/sandbox/git.ts` → `app/lib/codegen/sandbox/git.ts`
+- `lib/sandbox/config.ts` → `app/lib/codegen/sandbox/config.ts`
+- `lib/sandbox/agents/{claude,codex}.ts` → `app/lib/codegen/agents/{claude,codex}.ts`
+- `lib/utils/logging.ts` → `app/lib/codegen/logging.ts`
+- `lib/utils/{branch-name,commit-message,title}-*.ts` → `app/lib/codegen/generation/*`
+
+Edge adaptations
+
+- Bun bootstrap command inside sandbox prior to `bun install`.
+- Use `git -c http.extraHeader="Authorization: Bearer $TOKEN"` for Github auth; never embed tokens in URLs or logs.
+- If we later support dynamic preview, map the sandbox domain from `sandbox.domain(port)` into an internal proxy.
+
+---
+
+## 24) Minimal Interfaces for Copy/Paste Compatibility
+
+- `StreamLogger` methods: `info`, `command`, `error`, `success`, `updateProgress`, `updateStatus`.
+- `SandboxResult`: `{ success, sandbox?, domain?, branchName?, error?, cancelled? }`.
+- `AgentExecutionResult`: `{ success, agentResponse?, changesDetected?, sessionId?, error? }`.
+
+Keeping these shapes lets us bring over the agent and creation code with trivial edits.
+
+---
+
+## 25) Dev Checklist (copy → compile → run)
+
+- Copy files per Path Summary into `apps/formcraft/app/lib/codegen/…`.
+- Implement `StreamLogger` and wire `redactSensitiveInfo`.
+- Implement `/api/codegen/run` orchestration.
+- Add Cloudflare Direct Upload util: `deployDistToCloudflare({ accountId, project, token, branch, distPath })` → `{ url }`.
+- Add `generateCode` tool + system prompt; hide legacy builder behind flag.
+- Validate end‑to‑end: branch push, build, preview URL, `/f/<shortId>` redirect after publish.
+
 ## 20) UI Consolidation (replace tab, remove duplicate preview)
 
 - Navigation: hide the standalone Preview tab behind a feature flag and make the Form tab render the embedded preview.
@@ -400,8 +523,8 @@ Assumptions
 
 - We do not ask users for a repo. A single private template repo (Bun + Vite) is used for all generations.
 - You provide a GitHub token with repo read/write on that template repo only.
-- No Vercel Sandbox/token usage in this flow.
-- Required tokens: `AI_GATEWAY_API_KEY` (or `OPENAI_API_KEY`) for Codex CLI, `ANTHROPIC_API_KEY` for Claude CLI.
+- All execution happens inside Vercel Sandbox.
+- Required tokens: `AI_GATEWAY_API_KEY` (or `OPENAI_API_KEY`) for Codex CLI, `ANTHROPIC_API_KEY` for Claude CLI, and Vercel Sandbox tokens.
 
 Env
 
@@ -412,22 +535,21 @@ Env
 
 Clone & Checkout Strategy
 
-- Workspace root: an ephemeral local folder per request: `/<work>/codegen/<formId>`.
+- Sandbox working directory per request (Vercel-managed path).
 - Branch name: `form-<formId>` (sanitize to `[a-z0-9/_-]`).
 - First time for a given `<formId>`:
   1. `git clone` main: `git -c http.extraHeader="Authorization: Bearer $CODEGEN_GITHUB_TOKEN" clone https://github.com/${CODEGEN_GITHUB_REPO}.git .`
   2. `git checkout -B form-<formId> origin/main` (create branch from main).
   3. `bun install` (one time per fresh workspace).
 - Subsequent runs for the same `<formId>`:
-  1. If workspace exists, reuse it to avoid reinstall.
-  2. `git fetch origin form-<formId}` and `git checkout form-<formId>` (create if missing by repeating first‑time path).
-  3. Optional `git pull --ff-only`.
+  1. If reusing a running sandbox (`keepAlive`), skip reinstall and fetch/checkout `form-<formId>`.
+  2. If a new sandbox is created, repeat first‑time steps (install may be required again).
 
 Notes
 
-- If the deployment environment is ephemeral (serverless), we still follow the above but expect `bun install` to run each time; consider enabling a disk cache path (e.g., `/var/cache/bun`) to speed up installs.
+- Install Bun inside the sandbox if not present (e.g., `curl -fsSL https://bun.sh/install | bash` and export PATH) before `bun install`.
 - Always pass the token via `http.extraHeader` not via URL to avoid leaking credentials in logs.
-- Configure git author locally per workspace: `git config user.name`, `git config user.email`.
+- Configure git author in the repo: `git config user.name`, `git config user.email`.
 
 Commit + Push
 

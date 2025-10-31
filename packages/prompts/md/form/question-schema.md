@@ -45,3 +45,20 @@ Rules:
   - choice/multipleChoice: `options` array of 2–7 items with unique `{ value, label }`.
 - Titles/descriptions: no HTML/scripts/URLs; keep concise (title ≤ 120, description ≤ 300 chars).
 - Do not add `validations` unless clearly implied by the request.
+
+Display & Format Rules (Required):
+
+- Choice `display` must match option count:
+  - `singleChoice`: 1–5 options → `display: "radio"`; ≥6 options → `display: "dropdown"`.
+  - `multipleChoice`: 1–5 options → `display: "checkbox"`; ≥6 options → `display: "multiSelectDropdown"`.
+- Text `format` must reflect the user’s intent (choose one):
+  - `"email"` for email fields
+  - `"url"` for website/URL fields
+  - `"tel"` for phone number fields
+  - `"country"` for country selection fields
+  - Else use `"text"` (or `"textarea"` for long free‑text answers)
+
+Validation Guidance:
+
+- Only include `validations` if the prompt clearly asks for them (e.g., “required”, “min length 10”, “must be an email”).
+- For phone numbers, setting `format: "tel"` is sufficient unless the user specifies stricter rules.

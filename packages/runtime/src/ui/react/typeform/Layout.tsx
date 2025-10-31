@@ -37,7 +37,7 @@ export function TypeFormLayout({
           minHeight: `calc(100dvh - ${PROGRESS_PX}px - ${isMobile ? NAV_PX : 0}px)`,
         }}
       >
-        <div className="w-full max-w-3xl h-full flex flex-col justify-center">
+        <div className="w-full max-w-2xl h-full flex flex-col justify-center">
           {children}
         </div>
       </main>

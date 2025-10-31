@@ -2,7 +2,13 @@
   "extends": "../../packages/typescript-config/nextjs.json",
   "compilerOptions": {
     "plugins": [{ "name": "next" }],
-    "types": ["react", "react-dom"]
+    "types": ["react", "react-dom"],
+    "paths": {
+      "@formlink/runtime/ui/react": [
+        "../../packages/runtime/src/ui/react/index.ts"
+      ],
+      "@formlink/runtime/*": ["../../packages/runtime/src/*"]
+    }
   },
   "include": [
     "next-env.d.ts",

@@ -1,4 +1,3 @@
-// @ts-nocheck
 "use client";
 
 import * as React from "react";
@@ -26,6 +25,20 @@ const fieldGridConfig: Record<keyof AddressData, string> = {
   country: "col-span-1",
 };
 
+function addressesEqual(a: AddressData | null, b: AddressData | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  const keys: Array<keyof AddressData> = [
+    "street1",
+    "street2",
+    "city",
+    "stateProvince",
+    "postalCode",
+    "country",
+  ];
+  return keys.every((key) => (a[key] ?? "") === (b[key] ?? ""));
+}
+
 export function AddressInput(props: AddressInputProps) {
   const {
     value = null,
@@ -49,10 +62,10 @@ export function AddressInput(props: AddressInputProps) {
   const [localAddress, setLocalAddress] = React.useState<AddressData | null>(
     value,
   );
-  const lastCompletedAddressRef = React.useRef<string | null>(null);
+  const lastCompletedAddressRef = React.useRef<AddressData | null>(null);
 
   React.useEffect(() => {
-    if (JSON.stringify(value) !== JSON.stringify(localAddress)) {
+    if (!addressesEqual(value, localAddress)) {
       setLocalAddress(value);
     }
   }, [value, localAddress]);
@@ -61,7 +74,7 @@ export function AddressInput(props: AddressInputProps) {
   const isComplete = React.useMemo(() => {
     if (!localAddress) return false;
     return requiredFields.every((f) => {
-      const v = (localAddress as any)[f];
+      const v = localAddress[f];
       return typeof v === "string" && v.trim().length > 0;
     });
   }, [localAddress, requiredFields]);
@@ -69,10 +82,12 @@ export function AddressInput(props: AddressInputProps) {
   // Notify once when complete with a distinct value.
   React.useEffect(() => {
     if (!onCompleteChange) return;
-    const current = JSON.stringify(localAddress);
-    if (isComplete && current !== lastCompletedAddressRef.current) {
+    if (
+      isComplete &&
+      !addressesEqual(localAddress, lastCompletedAddressRef.current)
+    ) {
       onCompleteChange(localAddress);
-      lastCompletedAddressRef.current = current;
+      lastCompletedAddressRef.current = localAddress;
     }
   }, [isComplete, localAddress, onCompleteChange]);
 
@@ -111,7 +126,7 @@ export function AddressInput(props: AddressInputProps) {
     <div className={["w-full space-y-4", className].filter(Boolean).join(" ")}>
       <div className="grid grid-cols-2 gap-4">
         {fieldOrder.map((field, index) => {
-          const fieldVal = (localAddress as any)?.[field] ?? "";
+          const fieldVal = localAddress?.[field] ?? "";
           const isReq = required && requiredFields.includes(field);
           const hasError = isTouched && isReq && !fieldVal;
 
@@ -133,8 +148,10 @@ export function AddressInput(props: AddressInputProps) {
                 name={`addr_${field}`}
                 value={fieldVal}
                 onChange={(e) => {
-                  const next = { ...(localAddress ?? {}) } as any;
-                  next[field] = e.target.value;
+                  const next: AddressData = {
+                    ...(localAddress ?? {}),
+                    [field]: e.target.value,
+                  };
                   setLocalAddress(next);
                   onChange(next);
                   if (!isTouched) setIsTouched(true);

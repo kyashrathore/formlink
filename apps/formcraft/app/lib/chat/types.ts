@@ -65,4 +65,5 @@ export interface ChatToolContext {
   userId: string
   options?: ChatRequest["options"]
   isFirstMessage: boolean
+  cookieHeader?: string
 }

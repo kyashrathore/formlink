@@ -10,7 +10,7 @@ export function TypeFormQuestionHeader({
   questionNumber?: number;
 }) {
   const showNumber = typeof questionNumber === "number" && questionNumber > 0;
-  const isRequired = Boolean((question as any)?.validations?.required?.value);
+  const isRequired = question.validations?.required?.value === true;
   return (
     <div className="space-y-3">
       <div className="flex flex-col">
@@ -43,7 +43,7 @@ export function TypeFormQuestionHeader({
               className="text-muted-foreground"
               id={`question-description-${question.id}`}
             >
-              {question.description as any}
+              {question.description}
             </p>
           )}
         </div>
