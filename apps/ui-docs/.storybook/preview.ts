@@ -1,9 +1,12 @@
-import type { Preview } from "@storybook/nextjs";
 import { withThemeByClassName } from "@storybook/addon-themes";
+import type { Preview } from "@storybook/nextjs";
 import "../../../packages/ui/src/styles/globals.css"; // Adjust path if needed
+// Runtime bundled CSS (layout/progress/navigation helpers)
+import "@formlink/runtime/ui/react/style.css";
 
 const preview: Preview = {
   parameters: {
+    layout: "fullscreen",
     actions: { argTypesRegex: "^on[A-Z].*" },
     controls: {
       matchers: {

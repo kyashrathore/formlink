@@ -4,6 +4,9 @@ import { useSyncExternalStore } from "react";
 import type { Question } from "../../schema";
 import { useRuntime } from "./runtime-context";
 import { usePrimitives } from "./primitives/context";
+import { UnifiedPhoneInput } from "./UnifiedPhoneInput";
+import { UnifiedFileUpload } from "./UnifiedFileUpload";
+import { UnifiedDatePicker } from "./UnifiedDatePicker";
 
 type ShowIf = {
   q: string;
@@ -173,9 +176,11 @@ export function UniversalClassic({
     if (as) return renderBlock(q);
 
     const name = (q.type as any)?.name as Question["type"]["name"];
-    const labelText = formatWithRefs(q.title ?? "", (id) =>
+    const isRequired = Boolean((q as any)?.validations?.required?.value);
+    const labelBase = formatWithRefs(q.title ?? "", (id) =>
       runtime.context.get.value(id),
     );
+    const labelText = isRequired ? `${labelBase} *` : labelBase;
     const helpText = q.description
       ? formatWithRefs(q.description, (id) => runtime.context.get.value(id))
       : null;
@@ -184,11 +189,38 @@ export function UniversalClassic({
 
     if (name === "text") {
       const fmt = (q.type as any)?.format as string | undefined;
+      // Phone number: use unified phone input (compact style for classic)
+      if (fmt === "tel") {
+        const value = String(runtime.context.get.value(q.id) ?? "");
+        return (
+          <div className="space-y-2">
+            <Label>{labelText}</Label>
+            {helpText ? (
+              <div className="text-xs text-muted-foreground">{helpText}</div>
+            ) : null}
+            <UnifiedPhoneInput
+              mode="chat"
+              value={value}
+              onChange={(v) => setVal(v ?? "")}
+              placeholder="Enter phone number"
+            />
+            {err ? <div className="text-xs text-destructive">{err}</div> : null}
+          </div>
+        );
+      }
       const inputType =
-        fmt && ["email", "url", "password", "number", "tel"].includes(fmt)
+        fmt && ["email", "url", "password", "number"].includes(fmt)
           ? (fmt as any)
           : "text";
       const value = String(runtime.context.get.value(q.id) ?? "");
+      const placeholder =
+        fmt === "email"
+          ? "name@company.com"
+          : fmt === "url"
+            ? "https://example.com"
+            : fmt === "password"
+              ? "••••••••"
+              : undefined;
       return (
         <div className="space-y-2">
           <Label>{labelText}</Label>
@@ -198,7 +230,48 @@ export function UniversalClassic({
           <Input
             type={inputType}
             value={value}
+            placeholder={placeholder}
             onChange={(e: any) => setVal(e.target.value)}
+          />
+          {err ? <div className="text-xs text-destructive">{err}</div> : null}
+        </div>
+      );
+    }
+
+    if (name === "date") {
+      const raw = runtime.context.get.value(q.id);
+      const value = typeof raw === "string" ? raw : null;
+      return (
+        <div className="space-y-2">
+          <Label>{labelText}</Label>
+          {helpText ? (
+            <div className="text-xs text-muted-foreground">{helpText}</div>
+          ) : null}
+          <UnifiedDatePicker
+            mode="chat"
+            value={value}
+            onChange={(v) => setVal(v ?? "")}
+            placeholder="Select date"
+          />
+          {err ? <div className="text-xs text-destructive">{err}</div> : null}
+        </div>
+      );
+    }
+
+    if (name === "fileUpload") {
+      return (
+        <div className="space-y-2">
+          <Label>{labelText}</Label>
+          {helpText ? (
+            <div className="text-xs text-muted-foreground">{helpText}</div>
+          ) : null}
+          <UnifiedFileUpload
+            mode="chat"
+            questionId={q.id}
+            onFileUpload={async (id, file) => {
+              const desc = await runtime.actions.upload(String(id), file);
+              runtime.actions.set(String(id), desc);
+            }}
           />
           {err ? <div className="text-xs text-destructive">{err}</div> : null}
         </div>
@@ -393,44 +466,7 @@ export function UniversalClassic({
       );
     }
 
-    if (name === "date") {
-      const value = String(runtime.context.get.value(q.id) ?? "");
-      return (
-        <div className="space-y-2">
-          <Label>{labelText}</Label>
-          {helpText ? (
-            <div className="text-xs text-muted-foreground">{helpText}</div>
-          ) : null}
-          <Input
-            type="date"
-            value={value}
-            onChange={(e: any) => setVal(e.target.value)}
-          />
-          {err ? <div className="text-xs text-destructive">{err}</div> : null}
-        </div>
-      );
-    }
-
-    if (name === "fileUpload") {
-      return (
-        <div className="space-y-2">
-          <Label>{labelText}</Label>
-          {helpText ? (
-            <div className="text-xs text-muted-foreground">{helpText}</div>
-          ) : null}
-          <Input
-            type="file"
-            onChange={async (e: any) => {
-              const file = e.currentTarget.files?.[0];
-              if (!file) return;
-              const desc = await runtime.actions.upload(q.id, file);
-              runtime.actions.set(q.id, desc as any);
-            }}
-          />
-          {err ? <div className="text-xs text-destructive">{err}</div> : null}
-        </div>
-      );
-    }
+    // (date and fileUpload handled above with Unified components)
 
     if (name === "address") {
       const raw = runtime.context.get.value(q.id);

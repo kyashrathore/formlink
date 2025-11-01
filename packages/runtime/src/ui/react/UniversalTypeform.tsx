@@ -423,6 +423,8 @@ export function UniversalTypeform(): React.JSX.Element | null {
         <TypeFormNavigation
           onPrevious={handleBack}
           onNext={handleContinue}
+          canGoPrevious={snap.progress.index > 0}
+          canGoNext={!snap.isSubmitting}
           isLoadingNext={snap.isSubmitting}
         />
       )}

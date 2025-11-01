@@ -1,7 +1,5 @@
 "use client";
 
-import type { Meta, StoryObj } from "@storybook/nextjs";
-import React, { useMemo } from "react";
 import {
   createRuntime,
   createMockTransport as mockTransportInDraft,
@@ -16,23 +14,25 @@ import {
   Badge,
   Button,
   Calendar,
-  Command as CommandRoot,
   CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
+  Command as CommandRoot,
   CommandSeparator,
   Input,
   Label,
-  Popover as PopoverRoot,
   PopoverAnchor,
   PopoverContent,
+  Popover as PopoverRoot,
   PopoverTrigger,
   ScrollArea,
   Separator,
   Textarea,
 } from "@formlink/ui";
+import type { Meta, StoryObj } from "@storybook/nextjs";
+import { useMemo } from "react";
 
 const meta: Meta = {
   title: "Universal/Typeform Quickstart",
@@ -123,7 +123,7 @@ export const Demo: Story = {
           Calendar,
         }}
       >
-        <RuntimeProvider runtime={rt} showDevtools>
+        <RuntimeProvider runtime={rt} showDevtools={false}>
           <UniversalTypeform />
         </RuntimeProvider>
       </ShadCnProvider>

@@ -11,6 +11,10 @@
       "pages": ["index", "formlink-runtime-spec_v1_normative_only"]
     },
     {
+      "group": "Design & UX",
+      "pages": ["design-guidelines"]
+    },
+    {
       "group": "Examples",
       "pages": [
         "examples/universal-classic",
@@ -21,6 +25,7 @@
     {
       "group": "Pitfalls",
       "pages": [
+        "pitfalls/shadcn-missing-primitives",
         "pitfalls/createRuntime-import",
         "pitfalls/mockTransport-alias",
         "pitfalls/question-undefined-title",

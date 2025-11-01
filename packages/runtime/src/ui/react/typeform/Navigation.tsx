@@ -1,6 +1,6 @@
 "use client";
-import * as React from "react";
 import type { ComponentPropsWithRef } from "react";
+import * as React from "react";
 import { useIsMobile } from "../hooks/use-mobile";
 import { usePrimitives } from "../primitives/context";
 import { useRuntime } from "../runtime-context";
@@ -108,51 +108,45 @@ export function TypeFormNavigation({
   };
 
   if (isMobile) {
+    // Align navigation to bottom-right on mobile as well (compact buttons)
     return (
       <div
-        className="fl-rt-nav-mobile absolute bottom-0 left-0 right-0 z-[1000] bg-background/95 backdrop-blur-sm border-t border-border p-4 text-foreground"
+        className="fl-rt-nav-mobile absolute right-8 bottom-8 z-10 flex items-center gap-2 text-foreground"
         role="navigation"
       >
-        <div className="flex items-center gap-3 max-w-sm mx-auto">
-          <Button
-            disabled={onPrevious ? !canGoPrevious : false}
-            onClick={handlePrev}
-            className="h-12 w-12 rounded-md border bg-background text-foreground hover:bg-accent disabled:opacity-100 disabled:text-muted-foreground disabled:border-border/70"
-            aria-label="Previous"
-          >
+        <Button
+          disabled={onPrevious ? !canGoPrevious : false}
+          onClick={handlePrev}
+          className="h-12 w-12 rounded-md border bg-background/95 text-foreground hover:bg-accent disabled:opacity-100 disabled:text-muted-foreground disabled:border-border/70"
+          aria-label="Previous"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path
+              fillRule="evenodd"
+              d="M12.707 4.293a1 1 0 010 1.414L9.414 9H16a1 1 0 110 2H9.414l3.293 3.293a1 1 0 01-1.414 1.414l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </Button>
+        <Button
+          disabled={onNext ? !canGoNext || isLoadingNext : isLoadingNext}
+          onClick={handleNext}
+          className="h-12 w-12 rounded-md border bg-background/95 text-foreground hover:bg-accent disabled:opacity-60"
+          aria-label="Next"
+        >
+          {!isLoadingNext && (
             <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path
                 fillRule="evenodd"
-                d="M12.707 4.293a1 1 0 010 1.414L9.414 9H16a1 1 0 110 2H9.414l3.293 3.293a1 1 0 01-1.414 1.414l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 0z"
+                d="M7.293 4.293a1 1 0 000 1.414L10.586 9H4a1 1 0 100 2h6.586l-3.293 3.293a1 1 0 101.414 1.414l5-5a1 1 0 000-1.414l-5-5a1 1 0 00-1.414 0z"
                 clipRule="evenodd"
               />
             </svg>
-          </Button>
-          <Button
-            disabled={onNext ? !canGoNext || isLoadingNext : isLoadingNext}
-            onClick={handleNext}
-            className="flex-1 h-12 rounded-md bg-primary text-primary-foreground disabled:opacity-60 group"
-            aria-label="Next"
-          >
-            <span>Continue</span>
-            {!isLoadingNext && (
-              <svg
-                className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10.293 3.293a1 1 0 011.414 0l5 5a1 1 0 010 1.414l-5 5a1 1 0 11-1.414-1.414L13.586 11H4a1 1 0 110-2h9.586l-3.293-3.293a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-            {isLoadingNext && (
-              <span className="ml-2 h-4 w-4 inline-block animate-spin border-b-2 border-primary-foreground rounded-full" />
-            )}
-          </Button>
-        </div>
+          )}
+          {isLoadingNext && (
+            <span className="h-4 w-4 inline-block animate-spin border-b-2 border-foreground rounded-full" />
+          )}
+        </Button>
       </div>
     );
   }
