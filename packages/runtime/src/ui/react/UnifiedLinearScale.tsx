@@ -1,5 +1,6 @@
 "use client";
 
+import { useLinearScale } from "@/headless/react/hooks/useLinearScale";
 import * as React from "react";
 import { useIsMobile } from "./hooks/use-mobile";
 
@@ -95,63 +96,27 @@ export function UnifiedLinearScale({
 
   const [touched, setTouched] = React.useState(false);
 
-  const showError =
-    required && touched && (value === null || !scaleValues.includes(value));
+  // Avoid passing `null` to Array.includes which expects `number`.
+  const selectedValid = value !== null && scaleValues.includes(value);
+  const showError = required && touched && !selectedValid;
 
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-
-  const handleSelect = (nextValue: number) => {
-    if (disabled) return;
-    setTouched(true);
-    onChange(nextValue);
-    if (submitOnChange) {
-      setTimeout(() => onSubmit?.(), 16);
-    }
-  };
-
-  const handleContainerKeyDown = (
-    event: React.KeyboardEvent<HTMLDivElement>,
-  ) => {
-    if (disabled) return;
-    const currentIndex = value !== null ? scaleValues.indexOf(value) : -1;
-    switch (event.key) {
-      case "ArrowLeft":
-      case "ArrowUp": {
-        event.preventDefault();
-        const next =
-          currentIndex > 0
-            ? scaleValues[currentIndex - 1]
-            : scaleValues[scaleValues.length - 1];
-        if (next !== undefined) handleSelect(next);
-        break;
-      }
-      case "ArrowRight":
-      case "ArrowDown": {
-        event.preventDefault();
-        const next =
-          currentIndex >= 0 && currentIndex < scaleValues.length - 1
-            ? scaleValues[currentIndex + 1]
-            : scaleValues[0];
-        if (next !== undefined) handleSelect(next);
-        break;
-      }
-      case "Escape": {
-        event.preventDefault();
-        setTouched(true);
-        onChange(null);
-        break;
-      }
-      default: {
-        if (/^[0-9]$/.test(event.key)) {
-          const numeric = Number(event.key);
-          if (scaleValues.includes(numeric)) {
-            event.preventDefault();
-            handleSelect(numeric);
-          }
-        }
-      }
-    }
-  };
+  const ls = useLinearScale({
+    value,
+    onChange: (n) => {
+      if (disabled) return;
+      setTouched(true);
+      onChange(n);
+    },
+    start: config.start,
+    end: config.end,
+    step: config.step,
+    showKeyboardHints:
+      mode !== "typeform"
+        ? (showKeyboardHints ?? true)
+        : (showKeyboardHints ?? false),
+    autoAdvanceOnClick: submitOnChange,
+    onAutoAdvance: onSubmit,
+  });
 
   const buttonBaseClass =
     "relative rounded-lg font-medium transition-all border border-border/50 bg-card/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 flex items-center justify-center hover:border-primary/50 hover:bg-card/80";
@@ -169,22 +134,19 @@ export function UnifiedLinearScale({
       data-unified-linear-scale-mode={mode}
     >
       <div
-        ref={containerRef}
-        role="radiogroup"
+        {...ls.containerProps}
         aria-required={required}
         aria-disabled={disabled}
-        tabIndex={0}
-        onKeyDown={handleContainerKeyDown}
         className="flex flex-col gap-4"
       >
         <div className="flex gap-2 sm:gap-3 justify-start flex-wrap">
-          {scaleValues.map((scaleValue) => {
+          {scaleValues.map((scaleValue, idx) => {
             const isSelected = value === scaleValue;
             return (
               <button
+                {...ls.getItemProps(idx)}
                 key={scaleValue}
                 type="button"
-                role="radio"
                 aria-checked={isSelected}
                 disabled={disabled}
                 className={cx(
@@ -193,14 +155,22 @@ export function UnifiedLinearScale({
                   mode === "typeform" ? "h-14 min-w-[56px] text-base" : null,
                   isSelected
                     ? "border-primary bg-primary/10 hover:bg-primary/15"
-                    : null,
+                    : "group",
                   disabled
                     ? "opacity-50 cursor-not-allowed hover:bg-card/50 hover:border-border/50"
                     : null,
                 )}
-                onClick={() => handleSelect(scaleValue)}
               >
-                {scaleValue}
+                <span
+                  className={cx(
+                    "px-1 pb-0.5 border-b-2 border-transparent",
+                    // underline on focus
+                    "group-focus:border-primary",
+                    isSelected ? "border-primary" : null,
+                  )}
+                >
+                  {scaleValue}
+                </span>
               </button>
             );
           })}

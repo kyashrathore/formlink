@@ -3,8 +3,8 @@
 import { Check, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "../../../lib/utils";
-import { Badge } from "../../../ui/badge";
-import { CommandItem } from "../../../ui/command";
+import { Badge } from "../../../components/ui/badge";
+import { CommandItem } from "../../../components/ui/command";
 import {
   Combobox,
   ComboboxContent,
@@ -13,7 +13,7 @@ import {
   ComboboxInput,
   ComboboxList,
   ComboboxTrigger,
-} from "../../../ui/kibo-ui/combobox";
+} from "../../../components/kibo-ui/combobox";
 
 export type FormMode = "chat" | "typeform";
 

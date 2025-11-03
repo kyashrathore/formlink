@@ -114,3 +114,9 @@ Prompt Guards
 - Updated the Airbnb story to include Runtime Devtools on the left (sticky) to validate event flows and visible errors while interacting with the Application tab.
 - Added a resume upload field (fileUpload) in the Application tab with `UnifiedFileUpload` wired to runtime `actions.upload` → store descriptor via `actions.set`. Transport mocked to return an object URL and metadata. Also adjusted layout so the tabs span full width; the content (including Devtools + form) renders below the tabs.
 - Implemented a Thank You state: when runtime status becomes `completed`, the Application tab now renders a confirmation card instead of the form, with a button to start a new application (reset + start). Error state shows a retry button.
+
+## UI Toast Usage — 2025-11-04
+
+- Import `Toaster` from `@formlink/ui` and `toast` from `sonner` in app code. Do not import `toast` from `@formlink/ui` (UI only re-exports `Toaster`).
+- Prefer `toast.success|error|warning("Message", { description })` or `toast("Message", { description })` instead of object-first calls.
+- AI Elements: use `PromptInputFooter` (not `PromptInputToolbar`) and `Suggestion`/`Suggestions` (not `PromptSuggestion`).

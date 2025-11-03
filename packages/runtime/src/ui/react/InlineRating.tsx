@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useRating } from "@/headless/react/hooks/useRating";
 
 export interface InlineRatingProps {
   value: number | null;
@@ -26,83 +27,41 @@ export function InlineRating({
   ariaLabel,
   ariaDescribedBy,
 }: InlineRatingProps) {
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  React.useEffect(() => {
-    if (autoFocus) {
-      try {
-        containerRef.current?.focus();
-      } catch {}
-    }
-  }, [autoFocus]);
-
-  const select = (n: number) => {
-    onChange(n);
-    if (autoAdvance && onSubmit) {
-      const t = window.setTimeout(() => onSubmit(), 150);
-      return () => window.clearTimeout(t);
-    }
-  };
-
-  // Global listener: allow 1..max anywhere unless typing in inputs
-  React.useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
-      const tag = target.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable)
-        return;
-      if (/^[0-9]$/.test(e.key)) {
-        const n = parseInt(e.key, 10);
-        if (!Number.isNaN(n) && n >= 1 && n <= max) {
-          e.preventDefault();
-          select(n);
-        }
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [max]);
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (/^[0-9]$/.test(e.key)) {
-      const n = parseInt(e.key, 10);
-      if (n >= 1 && n <= max) {
-        e.preventDefault();
-        select(n);
-      }
-    }
-  };
+  const rt = useRating({
+    value,
+    onChange,
+    max,
+    showKeyboardHints,
+    autoAdvanceOnClick: autoAdvance,
+    onAutoAdvance: onSubmit,
+  });
 
   return (
     <div
-      ref={containerRef}
-      tabIndex={0}
-      role="group"
+      {...rt.containerProps}
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
-      onKeyDown={onKeyDown}
       className={["w-full max-w-2xl outline-none focus:outline-none", className]
         .filter(Boolean)
         .join(" ")}
     >
       <div className="flex gap-3">
-        {Array.from({ length: max }, (_, i) => i + 1).map((n) => {
+        {Array.from({ length: max }, (_, i) => i + 1).map((n, idx) => {
           const active = (value ?? 0) >= n;
           return (
             <button
+              {...rt.getStarProps(idx)}
               key={n}
               type="button"
-              aria-pressed={active}
-              onClick={() => select(n)}
-              className="p-2 transition-transform hover:scale-105 focus:outline-none focus:scale-105"
+              className="group p-2 transition-transform hover:scale-105 focus:outline-none focus:scale-105"
             >
               <div className="flex flex-col items-center">
                 <svg
                   className={[
                     "w-10 h-10 transition-all duration-200",
-                    active ? "text-primary" : "text-muted-foreground/50",
+                    active
+                      ? "text-primary"
+                      : "text-muted-foreground/50 group-focus:text-primary/60",
                   ].join(" ")}
                   viewBox="0 0 24 24"
                   fill={active ? "currentColor" : "none"}

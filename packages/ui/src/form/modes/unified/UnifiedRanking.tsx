@@ -23,7 +23,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button } from "../../../ui/button";
+import { Button } from "../../../components/ui/button";
 
 export type FormMode = "chat" | "typeform";
 

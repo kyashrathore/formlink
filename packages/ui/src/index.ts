@@ -1,52 +1,49 @@
 "use client";
 
 // Pure UI components (shadcn-style)
-export * from "./ui/accordion";
-export * from "./ui/alert";
-export * from "./ui/alert-dialog";
-export * from "./ui/avatar";
-export * from "./ui/badge";
-export * from "./ui/breadcrumb";
-export * from "./ui/button";
-export * from "./ui/calendar";
-export * from "./ui/card";
-export * from "./ui/chart";
-export * from "./ui/checkbox";
-export * from "./ui/code-block";
-export * from "./ui/code-editor";
-export * from "./ui/collapsible";
-export * from "./ui/command";
-export * from "./ui/dialog";
-export * from "./ui/drawer";
-export * from "./ui/dropdown-menu";
-export * from "./ui/form";
-export * from "./ui/hover-card";
-export * from "./ui/input";
-export * from "./ui/input-group";
-export * from "./ui/kibo-ui/combobox";
-export * from "./ui/kibo-ui/dropzone";
-export * from "./ui/label";
-export * from "./ui/field";
-export * from "./ui/menubar";
-export * from "./ui/popover";
-export * from "./ui/progress";
-export * from "./ui/radio-group";
+export * from "./components/kibo-ui/combobox";
+export * from "./components/kibo-ui/dropzone";
+export * from "./components/ui/accordion";
+export * from "./components/ui/alert";
+export * from "./components/ui/alert-dialog";
+export * from "./components/ui/avatar";
+export * from "./components/ui/badge";
+export * from "./components/ui/breadcrumb";
+export * from "./components/ui/button";
+export * from "./components/ui/calendar";
+export * from "./components/ui/card";
+export * from "./components/ui/chart";
+export * from "./components/ui/checkbox";
+export * from "./components/ui/collapsible";
+export * from "./components/ui/command";
+export * from "./components/ui/dialog";
+export * from "./components/ui/drawer";
+export * from "./components/ui/dropdown-menu";
+export * from "./components/ui/field";
+export * from "./components/ui/form";
+export * from "./components/ui/hover-card";
+export * from "./components/ui/input";
+export * from "./components/ui/input-group";
+export * from "./components/ui/label";
+export * from "./components/ui/menubar";
+export * from "./components/ui/popover";
+export * from "./components/ui/progress";
+export * from "./components/ui/radio-group";
+export * from "./components/ui/scroll-area";
+export * from "./components/ui/select";
+export * from "./components/ui/separator";
+export * from "./components/ui/sheet";
+export * from "./components/ui/sidebar";
+export * from "./components/ui/skeleton";
+export * from "./components/ui/sonner";
+export * from "./components/ui/switch";
+export * from "./components/ui/table";
+export * from "./components/ui/tabs";
+export * from "./components/ui/textarea";
+export * from "./components/ui/toggle";
+export * from "./components/ui/toggle-group";
+export * from "./components/ui/tooltip";
 export * from "./ui/scoped-drawer";
-export * from "./ui/scroll-area";
-export * from "./ui/select";
-export * from "./ui/separator";
-export * from "./ui/sheet";
-export * from "./ui/sidebar";
-export * from "./ui/skeleton";
-export * from "./ui/sonner";
-export * from "./ui/switch";
-export * from "./ui/table";
-export * from "./ui/tabs";
-export * from "./ui/textarea";
-export * from "./ui/toast";
-export * from "./ui/toggle";
-export * from "./ui/toggle-group";
-export * from "./ui/tooltip";
 
 // Motion components
 export * from "./motion/morphing-dialog";
@@ -56,11 +53,10 @@ export * from "./motion/text-morph";
 export * from "./motion/useClickOutside";
 
 // Chat UI components (prompt-kit) - remaining components still in use
-export * from "./chat-ui/loader";
 
 // AI Elements - new architecture components
 // Includes: Message, MessageContent, MessageAvatar, Conversation, PromptInput, Tool, PromptSuggestion
-export * from "./ai-elements";
+export * from "./components/ai-elements/";
 
 // Icons
 export { default as ClaudeIcon } from "./icons/claude";
@@ -79,10 +75,10 @@ export { default as OpenAIIcon } from "./icons/openai";
 export * from "./types/generic";
 
 // Hooks exports - organized by category
-export * from "./hooks/ui/use-mobile";
-export * from "./hooks/ui/useTheme";
 export * from "./hooks/typeform/useTypeFormScroll";
 export * from "./hooks/typeform/useTypeFormSwipe";
+export * from "./hooks/ui/use-mobile";
+export * from "./hooks/ui/useTheme";
 
 // Unified Component Architecture Exports - PRIMARY INTERFACE
 

@@ -2,7 +2,7 @@
 
 import type { RIPlan, RIPlanResponse } from "@/app/lib/ri/types"
 import type { Form } from "@formlink/schema"
-import { toast } from "@formlink/ui"
+import { toast } from "sonner"
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { useDataTableStore } from "../components/data-table/dataTableStore"
@@ -138,17 +138,13 @@ async function persistViewUpdate(view: ResponseView) {
       const data = (await res.json().catch(() => ({}))) as any
       throw new Error(data?.error || `Failed to update view`)
     }
-    toast({
-      title: "View updated",
+    toast.success("View updated", {
       description: `Saved changes to "${view.name}"`,
-      status: "success",
     })
   } catch (e) {
     console.error("[views] persist update failed", e)
-    toast({
-      title: "Failed to update view",
+    toast.error("Failed to update view", {
       description: e instanceof Error ? e.message : String(e),
-      status: "error",
     })
   }
 }

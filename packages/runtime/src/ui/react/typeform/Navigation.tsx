@@ -2,7 +2,7 @@
 import type { ComponentPropsWithRef } from "react";
 import * as React from "react";
 import { useIsMobile } from "../hooks/use-mobile";
-import { usePrimitives } from "../primitives/context";
+import { useUiComponents } from "../primitives/context";
 import { useRuntime } from "../runtime-context";
 
 export function TypeFormNavigation({
@@ -18,7 +18,7 @@ export function TypeFormNavigation({
   canGoNext?: boolean;
   isLoadingNext?: boolean;
 }) {
-  const primitives = usePrimitives();
+  const primitives = useUiComponents();
   const ButtonPrimitive = primitives.Button;
   const Button: React.FC<ComponentPropsWithRef<"button">> =
     React.useMemo(() => {
@@ -38,27 +38,9 @@ export function TypeFormNavigation({
   const isMobile = useIsMobile();
   const runtime = useRuntime();
 
-  // Global keyboard navigation: Left/Right arrows trigger prev/next
-  React.useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      const target = e.target as HTMLElement | null;
-      if (target) {
-        const tag = target.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable)
-          return;
-      }
-      if (e.key === "ArrowRight") {
-        e.preventDefault();
-        handleNext();
-      } else if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        handlePrev();
-      }
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onNext, onPrevious, canGoNext, canGoPrevious, isLoadingNext, runtime]);
+  // Intentionally no global arrow key navigation. Arrow keys are reserved
+  // for in-control interactions (e.g., rating/linear scale) to avoid
+  // conflicting with question navigation.
 
   // Basic swipe detection on mobile to navigate between questions
   React.useEffect(() => {

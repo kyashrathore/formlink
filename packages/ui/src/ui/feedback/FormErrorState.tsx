@@ -3,7 +3,7 @@
 import React from "react";
 import { cn } from "../../lib/utils";
 import { AlertCircle, RefreshCcw, Home, WifiOff, FileX } from "lucide-react";
-import { Button } from "../button";
+import { Button } from "../../components/ui/button";
 import { motion } from "motion/react";
 
 export interface FormErrorStateProps {

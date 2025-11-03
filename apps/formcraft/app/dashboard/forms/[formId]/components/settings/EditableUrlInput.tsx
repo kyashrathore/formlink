@@ -1,8 +1,9 @@
 "use client"
 
-import { Button, Input, Label, toast } from "@formlink/ui"
+import { Button, Input, Label } from "@formlink/ui"
 import { Pencil } from "lucide-react"
 import React, { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 interface EditableUrlInputProps {
   label: string
@@ -143,10 +144,8 @@ const EditableUrlInput: React.FC<EditableUrlInputProps> = ({
                       if (!initialValue) {
                         setEnabled(false)
                         onSave("")
-                        toast({
-                          title: "Disabled",
+                        toast("Disabled", {
                           description: `${label} has been disabled.`,
-                          status: "info",
                         })
                       }
                     }}

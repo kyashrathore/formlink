@@ -1,10 +1,11 @@
 "use client";
 
-import * as React from "react";
-import { motion } from "motion/react";
+import { useAddress } from "@/headless/react/hooks/useAddress";
 import { ArrowRight } from "lucide-react";
+import { motion } from "motion/react";
+import * as React from "react";
 import type { AddressData } from "../../schema";
-import { usePrimitives } from "./primitives/context";
+import { useUiComponents } from "./primitives/context";
 
 export type FormMode = "chat" | "typeform";
 
@@ -132,34 +133,6 @@ function getInputClasses(mode: FormMode, density: Density | undefined) {
   }
 }
 
-function cloneAddress(source: AddressData | null): AddressData | null {
-  if (!source) return null;
-  return {
-    street1: source.street1 ?? "",
-    street2: source.street2 ?? "",
-    city: source.city ?? "",
-    stateProvince: source.stateProvince ?? "",
-    postalCode: source.postalCode ?? "",
-    country: source.country ?? "",
-  };
-}
-
-function normalizeAddress(address: AddressData | null): AddressData | null {
-  if (!address) return null;
-  const sanitized: AddressData = {};
-  let hasValue = false;
-  for (const field of FIELD_ORDER) {
-    const raw = address[field];
-    if (typeof raw === "string" && raw.trim().length > 0) {
-      sanitized[field] = raw;
-      hasValue = true;
-    } else {
-      sanitized[field] = "";
-    }
-  }
-  return hasValue ? sanitized : null;
-}
-
 export function UnifiedAddressInput({
   mode,
   value = null,
@@ -178,20 +151,10 @@ export function UnifiedAddressInput({
   className,
   density,
 }: UnifiedAddressInputProps) {
-  const [localAddress, setLocalAddress] = React.useState<AddressData | null>(
-    cloneAddress(value),
-  );
-  const [touchedFields, setTouchedFields] = React.useState<
-    Partial<Record<keyof AddressData, boolean>>
-  >({});
   const [submitted, setSubmitted] = React.useState(false);
   const fieldRefs = React.useRef<
     Partial<Record<keyof AddressData, HTMLInputElement | null>>
   >({});
-
-  React.useEffect(() => {
-    setLocalAddress(cloneAddress(value));
-  }, [value]);
 
   React.useEffect(() => {
     if (!autoFocus) return;
@@ -207,60 +170,32 @@ export function UnifiedAddressInput({
     }
   }, [autoFocus]);
 
-  const requiredSet = React.useMemo(
-    () => new Set<keyof AddressData>(requiredFields),
-    [requiredFields],
-  );
+  const address = useAddress({
+    value,
+    onChange,
+    onSubmit,
+    required,
+    requiredFields,
+  });
 
   const resolvedContainerClass = getContainerSpacing(mode, density);
   const inputClass = getInputClasses(mode, density);
 
-  const allRequiredFilled = React.useMemo(() => {
-    if (!required) return true;
-    const current = localAddress ?? {};
-    for (const field of requiredSet) {
-      const v = current[field];
-      if (typeof v !== "string" || v.trim().length === 0) {
-        return false;
-      }
-    }
-    return true;
-  }, [localAddress, required, requiredSet]);
-
+  const allRequiredFilled = address.allRequiredFilled;
   const showError =
-    required &&
-    (!allRequiredFilled || submitted) &&
-    FIELD_ORDER.some((field) => touchedFields[field]);
+    required && (!allRequiredFilled || submitted) && address.showAnyError;
 
-  const primitives = usePrimitives();
+  const primitives = useUiComponents();
   const ButtonComponent =
     (primitives.Button as React.ComponentType<ButtonProps>) ??
     ((props: ButtonProps) => <button type="button" {...props} />);
 
   const handleFieldChange = (field: keyof AddressData, nextValue: string) => {
-    setLocalAddress((prev) => {
-      const next: AddressData = {
-        ...(prev ?? {}),
-        [field]: nextValue,
-      };
-      return next;
-    });
-    setTouchedFields((prev) => ({
-      ...prev,
-      [field]: true,
-    }));
+    address.setField(field, nextValue);
   };
 
-  const emitChange = React.useCallback(
-    (address: AddressData | null) => {
-      onChange(normalizeAddress(address));
-    },
-    [onChange],
-  );
-
-  React.useEffect(() => {
-    emitChange(localAddress);
-  }, [emitChange, localAddress]);
+  // Note: We intentionally do not re-emit on external value → localAddress sync
+  // to prevent infinite loops. Emissions happen in handleFieldChange only.
 
   const focusNext = (currentField: keyof AddressData) => {
     const currentIndex = FIELD_ORDER.indexOf(currentField);
@@ -281,17 +216,10 @@ export function UnifiedAddressInput({
     event: React.KeyboardEvent<HTMLInputElement>,
     field: keyof AddressData,
   ) => {
-    if (event.key !== "Enter" || event.shiftKey) return;
-    event.preventDefault();
     const isLast = FIELD_ORDER.indexOf(field) === FIELD_ORDER.length - 1;
-    if (isLast) {
-      setSubmitted(true);
-      if (!required || allRequiredFilled) {
-        onSubmit?.();
-      }
-      return;
-    }
-    focusNext(field);
+    const next = () => focusNext(field);
+    address.onFieldKeyDown(field, isLast, next)(event);
+    if (event.key === "Enter" && !event.shiftKey) setSubmitted(true);
   };
 
   return (
@@ -303,9 +231,9 @@ export function UnifiedAddressInput({
       <div className="grid grid-cols-2 gap-4">
         {FIELD_ORDER.map((field, index) => {
           const config = FIELD_CONFIG[field];
-          const fieldValue = localAddress?.[field] ?? "";
-          const isRequired = requiredSet.has(field);
-          const isTouched = Boolean(touchedFields[field]);
+          const fieldValue = address.getValue(field);
+          const isRequired = address.requiredSet.has(field);
+          const isTouched = true; // address hook tracks errors by overall showAnyError; keep per-field simple
           const hasError =
             required &&
             isRequired &&
@@ -349,9 +277,9 @@ export function UnifiedAddressInput({
                 onChange={(event) =>
                   handleFieldChange(field, event.target.value)
                 }
-                onBlur={() =>
-                  setTouchedFields((prev) => ({ ...prev, [field]: true }))
-                }
+                onBlur={() => {
+                  /* touched handled in hook via setField on change */
+                }}
                 onKeyDown={(event) => handleKeyDown(event, field)}
                 className={cx(
                   inputClass,

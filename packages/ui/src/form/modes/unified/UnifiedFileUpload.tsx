@@ -3,13 +3,13 @@
 import { ArrowRight, File, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useCallback, useEffect, useState } from "react";
-import { cn } from "../../../lib/utils";
-import { Button } from "../../../ui/button";
 import {
   Dropzone,
   DropzoneContent,
   DropzoneEmptyState,
-} from "../../../ui/kibo-ui/dropzone";
+} from "../../../components/kibo-ui/dropzone";
+import { Button } from "../../../components/ui/button";
+import { cn } from "../../../lib/utils";
 import {
   useBaseFileUpload as BaseFileUpload,
   type BaseFileUploadReturn,
@@ -296,7 +296,6 @@ export function UnifiedFileUpload(props: UnifiedFileUploadProps) {
           )}
           aria-label={ariaLabel}
           aria-describedby={ariaDescribedBy || `${questionId}-instructions`}
-          role="region"
         >
           <DropzoneEmptyState className="space-y-4">
             <div className="text-left space-y-2">

@@ -1,4 +1,8 @@
+import { getModel } from "@/app/lib/ai/provider"
+import { streamText } from "@/app/lib/ai/tracing"
 import { ChatService } from "@/app/lib/chat/services/chat-service"
+import { FormService } from "@/app/lib/chat/services/form-service"
+import { createChatTools } from "@/app/lib/chat/tools"
 import { validateChatRequest } from "@/app/lib/chat/utils/validation"
 import logger from "@/app/lib/logger"
 import { authErrorResponse, requireAuth } from "@/app/lib/middleware/auth"
@@ -6,11 +10,36 @@ import {
   verifyGuestUserLimits,
   verifyUserOwnsForm,
 } from "@/app/lib/middleware/authorization"
-import { createServerClient } from "@formlink/db"
+import { createServerClient, SupabaseClient } from "@formlink/db"
+import { loadPrompt } from "@formlink/prompts"
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  UIMessage,
+} from "ai"
 import { customAlphabet } from "nanoid"
 import { cookies } from "next/headers"
 import { NextRequest, NextResponse } from "next/server"
-import { handleChatRequest } from "./handlers"
+
+async function ensureFormExists(
+  supabase: SupabaseClient,
+  formId: string,
+  userId: string
+) {
+  const formService = new FormService(supabase)
+  try {
+    await formService.ensureFormExists(formId, userId)
+    logger.info(`[POST /api/chat] Form ${formId} ensured for user ${userId}`)
+  } catch (error) {
+    logger.error(`[POST /api/chat] Failed to ensure form exists`, {
+      formId,
+      userId,
+      error,
+    })
+    throw error
+  }
+}
 
 const nanoid = customAlphabet(
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz-",
@@ -120,13 +149,115 @@ export async function POST(req: NextRequest) {
       userId,
       formId: initialFormId,
     })
-    const res = await handleChatRequest(
-      messages as any,
-      initialFormId,
-      userId,
-      supabase as any,
-      normalizedOptions
-    )
+    const currentFormId = initialFormId || `form_${nanoid()}`
+
+    await ensureFormExists(supabase, currentFormId, userId)
+
+    const chatDB = new ChatService(supabase)
+    const cookieHeader = req.headers.get("cookie") ?? undefined
+
+    // Persist the last user message as-is
+    const lastUserMessage = messages[messages.length - 1]
+    if (lastUserMessage?.role === "user") {
+      await chatDB.saveMessage(currentFormId, userId, lastUserMessage)
+    }
+
+    let writerRef: any = null
+    const stream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        try {
+          writerRef = writer as any
+          chatDB.writeStreamEvent(writer as any, "chat_initialized")
+
+          const toolContext = {
+            dataStream: writer as any, // Cast to 'any' to avoid type mismatch
+            formId: currentFormId,
+            supabase,
+            userId,
+            options: normalizedOptions,
+            isFirstMessage: messages.length <= 1,
+            cookieHeader,
+          }
+
+          const tools = createChatTools(toolContext)
+          const intent = (normalizedOptions as any)?.intent || "general"
+          const riFlag = Boolean(
+            (normalizedOptions as any)?.responseIntelligence
+          )
+          const systemTemplate =
+            process.env.CODEGEN_PREVIEW_UI === "true"
+              ? "chat/codegen-system.md"
+              : (normalizedOptions as any)?.singlePass
+                ? "chat/form-creation-system_single-pass_v1.md"
+                : "chat/form-creation-system.md"
+          const system = await loadPrompt(systemTemplate, {
+            session_form_id: currentFormId,
+            session_intent: intent,
+            ri_requested: riFlag,
+            // Include guardrails only for user-facing chat endpoint
+            include_guards: true,
+          })
+          const MODEL = getModel(normalizedOptions?.model)
+          const result = await streamText({
+            model: MODEL,
+            messages: convertToModelMessages(messages as any),
+            tools,
+            system,
+            maxOutputTokens: normalizedOptions?.maxOutputTokens ?? 2000,
+            toolChoice: "auto",
+            stopWhen({ steps }) {
+              // Stop if `createForm` has been successfully called and produced a result.
+              const hasCreateFormResult = steps.some((s) =>
+                s.toolResults?.some(
+                  (tr) =>
+                    tr.toolName === "createForm" &&
+                    "result" in tr &&
+                    tr.result != null
+                )
+              )
+              return steps.length > 10 || hasCreateFormResult
+            },
+          })
+
+          writer.merge(result.toUIMessageStream())
+        } catch (executeError) {
+          logger.error("Error in chat stream execution", {
+            userId,
+            formId: currentFormId,
+            error: executeError,
+          })
+        }
+      },
+      onFinish: async ({ messages: finalMessages }) => {
+        // The last message in the stream is the complete assistant message
+        const assistantMessage = finalMessages[finalMessages.length - 1]
+
+        if (assistantMessage && assistantMessage.role === "assistant") {
+          try {
+            await chatDB.saveMessage(currentFormId, userId, assistantMessage)
+            logger.info("Assistant message saved successfully", {
+              formId: currentFormId,
+              userId,
+            })
+          } catch (error) {
+            logger.error("Error saving assistant message", {
+              formId: currentFormId,
+              userId,
+              error,
+            })
+          }
+        }
+        if (writerRef && typeof writerRef.write === "function") {
+          chatDB.writeStreamEvent(writerRef, "chat_completed")
+        }
+      },
+      onError: (error) => {
+        logger.error("Error in chat stream:", { error })
+        return error instanceof Error ? error.message : String(error)
+      },
+    })
+
+    const res = createUIMessageStreamResponse({ stream })
     const durationMs = Date.now() - startedAt
     logger.info("[POST /api/chat] Chat stream initialized", {
       reqId,

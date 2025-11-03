@@ -4,12 +4,10 @@ import NavigationBar from "@/app/dashboard/forms/[formId]/components/NavigationB
 import TabContentManager from "@/app/dashboard/forms/[formId]/components/TabContentManager"
 import { useFormEditorStore } from "@/app/dashboard/forms/[formId]/stores/useFormEditorStore"
 import { Form } from "@formlink/schema"
-import { User } from "@supabase/supabase-js"
 import { useEffect } from "react"
 
 interface FormPageClientProps {
   form: Form
-  user: User
 }
 
 export default function FormPageClient({ form }: FormPageClientProps) {

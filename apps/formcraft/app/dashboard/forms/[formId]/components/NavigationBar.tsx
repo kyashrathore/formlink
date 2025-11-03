@@ -1,10 +1,10 @@
 "use client"
 
-import { toast } from "@formlink/ui"
 import { useMutation } from "@tanstack/react-query"
 import { Check, Loader2, X } from "lucide-react"
 import type { ReactNode } from "react"
 import { useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 import { usePanelState } from "../hooks/usePanelState"
 import { selectIsDirty, useFormEditorStore } from "../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../stores/useFormGenerationStore"
@@ -45,10 +45,8 @@ export default function NavigationBar({
 
   function guardNav(target: Parameters<typeof setActiveMainTab>[0]) {
     if (hasBlockingUnsavedPlan && target !== "responses") {
-      toast({
-        title: "Save response plan first",
+      toast.warning("Save response plan first", {
         description: "Save or dismiss the Response Plan to leave Responses.",
-        status: "warning",
       })
       return
     }
@@ -77,11 +75,7 @@ export default function NavigationBar({
     onError: (error: Error) => {
       setSaveState("error")
       setTimeout(() => setSaveState("normal"), 2000)
-      toast({
-        title: "Failed to update form",
-        description: error.message,
-        status: "error",
-      })
+      toast.error("Failed to update form", { description: error.message })
     },
   })
 
@@ -101,19 +95,14 @@ export default function NavigationBar({
       setPublishState("success")
       onPublishForm?.()
       setTimeout(() => setPublishState("normal"), 2000)
-      toast({
-        title: "Form published successfully!",
+      toast.success("Form published successfully!", {
         description: "Your form is now live.",
       })
     },
     onError: (error: Error) => {
       setPublishState("error")
       setTimeout(() => setPublishState("normal"), 2000)
-      toast({
-        title: "Failed to publish form",
-        description: error.message,
-        status: "error",
-      })
+      toast.error("Failed to publish form", { description: error.message })
     },
   })
 

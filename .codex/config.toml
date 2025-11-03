@@ -1,0 +1,12 @@
+# Codex CLI configuration
+# Created: 2025-11-05
+
+[features]
+# When true, Codex requests approval before performing web searches.
+# TODO(codex-config): Confirm desired gating semantics (boolean vs enum).
+tools.web_search = true
+
+[approvals]
+# Grants Codex permission to request/run with full access when escalated.
+# WARNING: Enable only if you intend to allow privileged commands.
+approval_policy = "untrusted"

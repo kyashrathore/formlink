@@ -32,6 +32,12 @@ export type ShadCnPrimitives = {
   CommandInput?: React.ComponentType<UnknownProps>;
   CommandSeparator?: React.ComponentType<UnknownProps>;
 
+  // Optional PromptInput HoverCard primitives (from @formlink/ui/ai-elements)
+  PromptInputHoverCard?: React.ComponentType<UnknownProps>;
+  PromptInputHoverCardTrigger?: React.ComponentType<UnknownProps>;
+  PromptInputHoverCardContent?: React.ComponentType<UnknownProps>;
+  PromptInputButton?: React.ComponentType<UnknownProps>;
+
   // Field (shadcn registry variants)
   Field?: React.ComponentType<UnknownProps>; // Root
   FieldControl?: React.ComponentType<UnknownProps>;
@@ -106,6 +112,6 @@ export function ShadCnProvider({
   );
 }
 
-export function usePrimitives(): ShadCnPrimitives {
+export function useUiComponents(): ShadCnPrimitives {
   return React.useContext(PrimitivesContext) || {};
 }

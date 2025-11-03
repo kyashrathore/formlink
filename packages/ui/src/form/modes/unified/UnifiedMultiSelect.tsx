@@ -5,7 +5,7 @@ import { motion } from "motion/react";
 import React from "react";
 import { useIsMobile } from "../../../hooks/ui/use-mobile";
 import { cn } from "../../../lib/utils";
-import { Button } from "../../../ui/button";
+import { Button } from "../../../components/ui/button";
 import {
   useBaseMultiSelect,
   type BaseMultiSelectProps,

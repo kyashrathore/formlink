@@ -10,11 +10,11 @@ import {
 } from "@formlink/ui"
 import {
   PromptInput,
+  PromptInputFooter,
   PromptInputSubmit,
   PromptInputTextarea,
-  PromptInputToolbar,
   PromptInputTools,
-  PromptSuggestion,
+  Suggestion,
 } from "@formlink/ui/ai-elements"
 import { useCallback, useState } from "react"
 
@@ -54,8 +54,8 @@ function Chat({
   )
 
   const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault() // Prevent default form submission
+    async (_message: unknown, e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault()
 
       if (!input.trim() || isLoading) return
 
@@ -83,7 +83,7 @@ function Chat({
             className="mt-2 ml-2 min-h-[44px] text-base leading-[1.3] sm:text-base md:text-base"
             disabled={isLoading}
           />
-          <PromptInputToolbar className="w-full justify-between px-3 py-2">
+          <PromptInputFooter className="w-full justify-between px-3 py-2">
             <div className="flex items-center gap-2">
               <Select value={selectedModel} onValueChange={setSelectedModel}>
                 <SelectTrigger className="text-muted-foreground w-auto border-none bg-transparent text-xs shadow-none">
@@ -106,20 +106,21 @@ function Chat({
                 disabled={!input.trim() || isLoading}
               />
             </PromptInputTools>
-          </PromptInputToolbar>
+          </PromptInputFooter>
         </PromptInput>
       </div>
       {showSuggestions && !input && (
         <div className="mt-4 flex w-full max-w-3xl flex-wrap gap-2">
           {suggestions.map((suggestion) => (
-            <PromptSuggestion
+            <Suggestion
+              suggestion={suggestion}
               key={suggestion}
               onClick={() => handleSuggestionClick(suggestion)}
               variant="outline"
               size="sm"
             >
               {suggestion}
-            </PromptSuggestion>
+            </Suggestion>
           ))}
         </div>
       )}

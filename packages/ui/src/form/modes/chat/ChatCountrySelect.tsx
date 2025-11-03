@@ -2,7 +2,7 @@
 
 import React, { useMemo } from "react";
 import { useBaseSelect } from "../../primitives/useBaseSelect";
-import { Button } from "../../../ui/button";
+import { Button } from "../../../components/ui/button";
 import { cn } from "../../../lib/utils";
 import { Check } from "lucide-react";
 import { getCountries, getCountryCallingCode } from "libphonenumber-js";

@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { Devtools } from "../../devtools/Devtools";
+import type { FormlinkFlow } from "../../core/formlinkFlow";
 import type { RuntimeApi } from "../../types";
 
 const RuntimeReactContext = React.createContext<RuntimeApi | null>(null);
@@ -9,10 +10,12 @@ export function RuntimeProvider({
   runtime,
   children,
   showDevtools,
+  flowEngine,
 }: {
   runtime: RuntimeApi;
   children: React.ReactNode;
   showDevtools: boolean;
+  flowEngine?: FormlinkFlow;
 }) {
   return (
     <RuntimeReactContext.Provider value={runtime}>
@@ -22,7 +25,11 @@ export function RuntimeProvider({
             className="max-h-screen overflow-y-auto"
             style={{ maxHeight: "100vh" }}
           >
-            <Devtools runtime={runtime} label="Show devtools" />
+            <Devtools
+              runtime={runtime}
+              flowEngine={flowEngine}
+              label="Show devtools"
+            />
           </div>
         )}
         <div className="w-full">{children}</div>

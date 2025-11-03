@@ -1,23 +1,23 @@
 "use client";
-import * as React from "react";
-import { useIsMobile } from "./hooks/use-mobile";
 import {
   DndContext,
-  closestCenter,
-  type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
+  closestCenter,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from "@dnd-kit/core";
-import { CSS } from "@dnd-kit/utilities";
 import {
   SortableContext,
+  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-  arrayMove,
-  sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import * as React from "react";
+import { useIsMobile } from "./hooks/use-mobile";
+import { useRanking } from "@/headless/react/hooks/useRanking";
 
 export type InlineOption<T = string> = { value: T; label: string };
 
@@ -50,6 +50,7 @@ function SortableRow<T = string>({
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: id as unknown as string });
+
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
     transition: transition || "transform 180ms ease",
@@ -59,7 +60,7 @@ function SortableRow<T = string>({
       ref={setNodeRef}
       style={style}
       className="flex items-center gap-3 rounded-lg transition-all duration-200 min-h-[56px] px-5 py-4 bg-muted/30 border border-border/50 hover:bg-muted/60 hover:border-border outline-none focus:outline-none"
-      tabIndex={0}
+      tabIndex={-1}
       onKeyDown={onRowKeyDown}
       aria-label={`Ranking row for ${option.label}`}
     >
@@ -69,6 +70,20 @@ function SortableRow<T = string>({
           ref={(el) => bindSelectRef(id, el)}
           value={rank}
           onChange={(e) => onRankChange(id, parseInt(e.target.value))}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              // Coerce native select to open on Enter by simulating Space
+              try {
+                const ev = new KeyboardEvent("keydown", {
+                  key: " ",
+                  bubbles: true,
+                });
+                e.currentTarget.dispatchEvent(ev);
+                e.preventDefault();
+              } catch {}
+            }
+          }}
           className="appearance-none px-3 py-1 pr-8 rounded border bg-background text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary border-border text-foreground hover:border-primary/50"
           aria-label={`Rank for ${option.label}`}
         >
@@ -135,17 +150,7 @@ export function InlineRanking<T = string>({
     () => new Map<T, InlineOption<T>>(options.map((o) => [o.value, o])),
     [options],
   );
-  // Build the current display order: use value if provided; append any missing options in original order
-  const orderedValues = React.useMemo(() => {
-    const base: T[] = value && value.length > 0 ? [...value] : [];
-    for (const o of options) if (!base.includes(o.value)) base.push(o.value);
-    return base;
-  }, [value, options]);
-  const ranksMap = React.useMemo(() => {
-    const m = new Map<T, number>();
-    orderedValues.forEach((v, idx) => m.set(v, idx + 1));
-    return m;
-  }, [orderedValues]);
+  const rk = useRanking<T>({ options, value, onChange });
 
   // Map of value -> select ref
   const selectRefMap = React.useRef(new Map<T, HTMLSelectElement | null>());
@@ -153,29 +158,7 @@ export function InlineRanking<T = string>({
     selectRefMap.current.set(id, el);
   };
 
-  const setRank = (optVal: T, rank: number) => {
-    // Build a complete list from current value or default options order
-    let currentList: T[] =
-      value && value.length > 0 ? [...value] : options.map((o) => o.value);
-    // Remove rank 0
-    if (rank === 0) {
-      currentList = currentList.filter((v) => v !== optVal);
-    } else {
-      // Ensure optVal exists in the list
-      if (!currentList.includes(optVal)) currentList.push(optVal);
-      // Remove any duplicate occurrences
-      currentList = currentList.filter((v, i, arr) => arr.indexOf(v) === i);
-      // Move optVal to target rank (rank is 1-based)
-      const from = currentList.indexOf(optVal);
-      const to = Math.max(0, Math.min(rank - 1, currentList.length - 1));
-      if (from !== -1 && from !== to)
-        currentList = arrayMove(currentList, from, to);
-      // Ensure all options are present after first assignment
-      for (const o of options)
-        if (!currentList.includes(o.value)) currentList.push(o.value);
-    }
-    onChange(currentList);
-  };
+  const setRank = (optVal: T, rank: number) => rk.setRank(optVal, rank);
 
   const handleRowKeyDown = (id: T) => (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
@@ -202,16 +185,7 @@ export function InlineRanking<T = string>({
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    // Build list to reorder
-    let currentList: T[] =
-      value && value.length > 0 ? [...value] : options.map((o) => o.value);
-    const from = currentList.indexOf(active.id as unknown as T);
-    const to = currentList.indexOf(over.id as unknown as T);
-    if (from === -1 || to === -1) return;
-    currentList = arrayMove(currentList, from, to);
-    for (const o of options)
-      if (!currentList.includes(o.value)) currentList.push(o.value);
-    onChange(currentList);
+    rk.onDragEnd(active.id as unknown as T, over.id as unknown as T);
   };
 
   return (
@@ -228,12 +202,12 @@ export function InlineRanking<T = string>({
         onDragEnd={onDragEnd}
       >
         <SortableContext
-          items={orderedValues.map((v) => String(v))}
+          items={rk.orderedValues.map((v) => String(v))}
           strategy={verticalListSortingStrategy}
         >
-          {orderedValues.map((val) => {
+          {rk.orderedValues.map((val) => {
             const opt = optionMap.get(val)!;
-            const rank = ranksMap.get(val) ?? 0;
+            const rank = rk.ranksMap.get(val) ?? 0;
             return (
               <SortableRow
                 key={String(val)}

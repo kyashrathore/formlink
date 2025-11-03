@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { useIsMobile } from "./hooks/use-mobile";
+import { useSingleChoice } from "@/headless/react/hooks/useSingleChoice";
 
 export type Option<T = string> = {
   value: T;
@@ -33,58 +34,22 @@ export function InlineSelect<T = string>({
   ariaLabel,
   ariaDescribedBy,
 }: InlineSelectProps<T>) {
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
   const isMobile = useIsMobile();
 
-  React.useEffect(() => {
-    if (autoFocus) {
-      try {
-        containerRef.current?.focus();
-      } catch {}
-    }
-  }, [autoFocus]);
-
-  const handleSelectIndex = React.useCallback(
-    (index: number) => {
-      if (index < 0 || index >= options.length) return;
-      const opt = options[index]!;
-      if (opt.disabled) return;
-      onChange(opt.value);
-      if (autoAdvance && onSubmit) {
-        const t = window.setTimeout(() => onSubmit(), 150);
-        return () => window.clearTimeout(t);
-      }
-      return;
-    },
-    [options, onChange, autoAdvance, onSubmit],
-  );
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (isMobile) return; // hide keyboard behavior on mobile
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (/^[a-zA-Z]$/.test(e.key)) {
-      const idx = e.key.toUpperCase().charCodeAt(0) - 65; // A->0
-      if (idx >= 0 && idx < options.length) {
-        e.preventDefault();
-        handleSelectIndex(idx);
-      }
-    } else if (/^[1-9]$/.test(e.key)) {
-      const idx = parseInt(e.key, 10) - 1;
-      if (idx >= 0 && idx < options.length) {
-        e.preventDefault();
-        handleSelectIndex(idx);
-      }
-    }
-  };
+  const sc = useSingleChoice({
+    options,
+    value,
+    onChange,
+    showKeyboardHints,
+    autoAdvance,
+    onAutoAdvance: onSubmit,
+  });
 
   return (
     <div
-      ref={containerRef}
-      tabIndex={0}
-      role="group"
+      {...sc.containerProps}
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
-      onKeyDown={onKeyDown}
       className={["space-y-3 outline-none", className]
         .filter(Boolean)
         .join(" ")}
@@ -94,12 +59,8 @@ export function InlineSelect<T = string>({
         const shortcutKey = String.fromCharCode(65 + index);
         return (
           <div
+            {...sc.getItemProps(index)}
             key={String(opt.value)}
-            role="option"
-            aria-selected={selected}
-            aria-disabled={Boolean(opt.disabled)}
-            tabIndex={-1}
-            onClick={() => !opt.disabled && handleSelectIndex(index)}
             className={[
               "flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200",
               selected

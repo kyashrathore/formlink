@@ -138,7 +138,7 @@ export async function verifyGuestUserLimits(
     .eq("user_id", userId)
 
   if (forms && forms.length > 0) {
-    const formIds = forms.map((f) => f.id)
+    const formIds = forms.map((f: { id: string }) => f.id)
     const { count: submissionCount } = await supabase
       .from("form_submissions")
       .select("*", { count: "exact", head: true })

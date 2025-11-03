@@ -4,6 +4,7 @@ export default defineConfig({
   entry: [
     "src/index.ts",
     "src/ui/react/index.ts",
+    "src/headless/react/index.ts",
     "src/devtools/Devtools.tsx",
     "src/schema/index.ts",
   ],

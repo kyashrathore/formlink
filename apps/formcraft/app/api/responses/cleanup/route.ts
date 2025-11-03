@@ -58,7 +58,7 @@ export async function DELETE(req: NextRequest) {
         })
       }
 
-      const formIds = userForms.map((f) => f.id)
+      const formIds = userForms.map((f: any) => f.id)
 
       // Get all form versions for these forms
       const { data: formVersions } = await supabase
@@ -75,7 +75,9 @@ export async function DELETE(req: NextRequest) {
         })
       }
 
-      const versionIds = formVersions.map((v) => v.version_id)
+      const versionIds = formVersions.map(
+        (v: { version_id: string }) => v.version_id
+      )
 
       // Get all test submissions for these versions
       const { data: testSubmissions, error: fetchError } = await supabase
@@ -104,7 +106,9 @@ export async function DELETE(req: NextRequest) {
         })
       }
 
-      const submissionIds = testSubmissions.map((s) => s.submission_id)
+      const submissionIds = testSubmissions.map(
+        (s: { submission_id: string }) => s.submission_id
+      )
 
       // Count and delete answers first
       const { data: answersToDelete } = await supabase
@@ -173,7 +177,9 @@ export async function DELETE(req: NextRequest) {
       }
 
       // Delete test data for all versions of this form
-      const versionIds = versions.map((v) => v.version_id)
+      const versionIds = versions.map(
+        (v: { version_id: string }) => v.version_id
+      )
 
       // Get all test submissions
       const { data: testSubmissions, error: fetchError } = await supabase
@@ -202,7 +208,9 @@ export async function DELETE(req: NextRequest) {
         })
       }
 
-      const submissionIds = testSubmissions.map((s) => s.submission_id)
+      const submissionIds = testSubmissions.map(
+        (s: { submission_id: string }) => s.submission_id
+      )
 
       // Delete answers first (select to count before deleting)
       const { data: answersToDelete } = await supabase
@@ -315,7 +323,9 @@ export async function DELETE(req: NextRequest) {
       })
     }
 
-    const submissionIds = testSubmissions.map((s) => s.submission_id)
+    const submissionIds = testSubmissions.map(
+      (s: { submission_id: string }) => s.submission_id
+    )
 
     // Count and delete answers first
     const { data: answersToDelete } = await supabase

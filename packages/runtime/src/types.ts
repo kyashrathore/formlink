@@ -1,6 +1,7 @@
 // Re-export canonical schema types to prevent drift.
 // Always import types from here in runtime to keep parity with packages/schema.
 import type { Form, Question, AddressData } from "./schema";
+import type { FormlinkFlow } from "./core/formlinkFlow";
 export type { Form, Question, AddressData } from "./schema";
 
 export type RuntimeStatus =
@@ -108,6 +109,12 @@ export interface RuntimeConfig {
    * Defaults to 'typeform' to preserve existing flows.
    */
   uiMode?: "typeform" | "classic";
+  /**
+   * Optional routing engine to control branching and navigation.
+   * When provided, runtime computes eligibleIds via this engine
+   * (typeform: visibleSet; classic: full path).
+   */
+  flowEngine?: FormlinkFlow;
 }
 
 export type RuntimeEventMap = {

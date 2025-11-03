@@ -9,7 +9,7 @@ function requiredEnv(name) {
 }
 
 function normalizeRepo(repo) {
-  const raw = String(repo || '').trim()
+  const raw = String(repo || "").trim()
   if (!raw) return raw
   // Handle git@ style by converting to https
   // git@github.com:owner/repo.git -> https://github.com/owner/repo.git
@@ -23,7 +23,7 @@ function normalizeRepo(repo) {
 }
 
 function buildCredentialedRepo(repo, token) {
-  const url = new URL(String(repo || '').trim())
+  const url = new URL(String(repo || "").trim())
   // Preserve username if caller already provided one; otherwise set GitHub-recommended sentinel
   if (!url.username) {
     url.username = process.env.CODEGEN_GITHUB_USER || "x-access-token"

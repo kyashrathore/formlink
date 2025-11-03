@@ -1,6 +1,7 @@
 "use client"
 
 import { useAuth } from "@/app/hooks/useAuth"
+import { Toaster } from "@formlink/ui"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import {
   Suspense,
@@ -338,6 +339,7 @@ export default function TestUIPage() {
       }
     >
       <TestUIPageContent />
+      <Toaster />
     </Suspense>
   )
 }

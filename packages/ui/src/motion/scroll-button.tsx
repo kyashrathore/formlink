@@ -1,7 +1,7 @@
 "use client";
 
-import { Button, buttonVariants } from "../ui/button";
-import { cn } from "@formlink/ui/lib/utils";
+import { Button, buttonVariants } from "../components/ui/button";
+import { cn } from "../lib/utils";
 import { ArrowDown } from "@phosphor-icons/react/ArrowDown";
 import { type VariantProps } from "class-variance-authority";
 import { useEffect, useState } from "react";

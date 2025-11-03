@@ -3,8 +3,12 @@
 import { ArrowRight, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
 import { cn } from "../../../lib/utils";
-import { Button } from "../../../ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
+import { Button } from "../../../components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../../components/ui/popover";
 import { useBaseDatePicker } from "../../primitives/useBaseDatePicker";
 
 export type FormMode = "chat" | "typeform";

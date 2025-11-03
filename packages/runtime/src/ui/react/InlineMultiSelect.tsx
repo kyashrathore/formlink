@@ -1,5 +1,7 @@
 "use client";
+import { useMultiChoice } from "@/headless/react/hooks/useMultiChoice";
 import * as React from "react";
+import { useIsMobile } from "./hooks/use-mobile";
 
 export type InlineMultiOption<T = string> = {
   value: T;
@@ -30,65 +32,12 @@ export function InlineMultiSelect<T = string>({
   ariaLabel,
   ariaDescribedBy,
 }: InlineMultiSelectProps<T>) {
-  const containerRef = React.useRef<HTMLDivElement | null>(null);
-  const [isMobile, setIsMobile] = React.useState(false);
-  React.useEffect(() => {
-    try {
-      const mq = window.matchMedia("(max-width: 768px)");
-      const apply = () => setIsMobile(mq.matches);
-      apply();
-      mq.addEventListener("change", apply);
-      return () => mq.removeEventListener("change", apply);
-    } catch {}
-  }, []);
-  React.useEffect(() => {
-    if (autoFocus) {
-      try {
-        containerRef.current?.focus();
-      } catch {}
-    }
-  }, [autoFocus]);
+  const mc = useMultiChoice({ options, value, onChange, showKeyboardHints });
+  const isMobile = useIsMobile();
 
-  const selectedSet = React.useMemo(
-    () => new Set((value ?? []).map((v) => String(v))),
-    [value],
-  );
-
-  const toggleIndex = React.useCallback(
-    (idx: number) => {
-      if (idx < 0 || idx >= options.length) return;
-      const opt = options[idx]!;
-      if (opt.disabled) return;
-      const sv = String(opt.value);
-      const next = new Set(selectedSet);
-      if (next.has(sv)) next.delete(sv);
-      else next.add(sv);
-      onChange(
-        options
-          .filter((o) => next.has(String(o.value)))
-          .map((o) => o.value as T),
-      );
-    },
-    [options, onChange, selectedSet],
-  );
-
+  // Keep Enter submit at container level for multi-choice
   const onKeyDown = (e: React.KeyboardEvent) => {
-    if (isMobile) return; // disable keyboard shortcuts on mobile
-    if (e.metaKey || e.ctrlKey || e.altKey) return;
-    if (/^[a-zA-Z]$/.test(e.key)) {
-      const idx = e.key.toUpperCase().charCodeAt(0) - 65; // A->0
-      if (idx >= 0 && idx < options.length) {
-        e.preventDefault();
-        toggleIndex(idx);
-      }
-    } else if (/^[1-9]$/.test(e.key)) {
-      const idx = parseInt(e.key, 10) - 1;
-      if (idx >= 0 && idx < options.length) {
-        e.preventDefault();
-        toggleIndex(idx);
-      }
-    } else if (e.key === "Enter" && onSubmit) {
-      // Enter submits selection (no auto-advance on toggle)
+    if (e.key === "Enter" && onSubmit) {
       e.preventDefault();
       onSubmit();
     }
@@ -96,9 +45,7 @@ export function InlineMultiSelect<T = string>({
 
   return (
     <div
-      ref={containerRef}
-      tabIndex={0}
-      role="group"
+      {...mc.containerProps}
       aria-label={ariaLabel}
       aria-describedby={ariaDescribedBy}
       onKeyDown={onKeyDown}
@@ -107,16 +54,12 @@ export function InlineMultiSelect<T = string>({
         .join(" ")}
     >
       {options.map((opt, index) => {
-        const selected = selectedSet.has(String(opt.value));
+        const selected = value.includes(opt.value);
         const shortcutKey = String.fromCharCode(65 + index);
         return (
           <div
+            {...mc.getItemProps(index)}
             key={String(opt.value)}
-            role="option"
-            aria-selected={selected}
-            aria-disabled={Boolean(opt.disabled)}
-            tabIndex={-1}
-            onClick={() => !opt.disabled && toggleIndex(index)}
             className={[
               "flex items-center gap-3 px-4 py-3 rounded-lg cursor-pointer transition-all duration-200",
               selected
@@ -125,7 +68,7 @@ export function InlineMultiSelect<T = string>({
               opt.disabled ? "opacity-50 cursor-not-allowed" : "",
             ].join(" ")}
           >
-            {showKeyboardHints && !isMobile && (
+            {showKeyboardHints && (
               <div
                 className={[
                   "flex items-center justify-center w-8 h-8 rounded text-sm font-semibold",

@@ -15,8 +15,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "../../../ui/command";
-import { Popover, PopoverContent, PopoverTrigger } from "../../../ui/popover";
+} from "../../../components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../../../components/ui/popover";
 import type { Option } from "../../primitives/types";
 
 export type FormMode = "chat" | "typeform";

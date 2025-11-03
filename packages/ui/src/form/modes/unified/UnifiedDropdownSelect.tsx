@@ -11,7 +11,7 @@ import {
   ComboboxItem,
   ComboboxList,
   ComboboxTrigger,
-} from "../../../ui/kibo-ui/combobox";
+} from "../../../components/kibo-ui/combobox";
 
 export type FormMode = "chat" | "typeform";
 

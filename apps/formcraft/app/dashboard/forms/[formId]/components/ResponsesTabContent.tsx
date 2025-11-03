@@ -7,8 +7,6 @@ import Responses from "./responses/Responses"
 
 export default function ResponsesTabContent() {
   const formFromStore = useFormEditorStore((state) => state.form)
-  const loadSavedViews = useResponseViewsStore((s) => s.loadSavedViews)
-  const initDefault = useResponseViewsStore((s) => s.initDefault)
 
   if (!formFromStore) {
     return (

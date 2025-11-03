@@ -2,6 +2,7 @@ import { FormApi } from "@tanstack/form-core";
 import { zodValidator } from "@tanstack/zod-form-adapter";
 import type { Form, Question } from "../schema";
 import { buildRuntimeSchema, createDefaultValues } from "./schema";
+import { buildDynamicSchema } from "./validation/dynamicSchema";
 import { createSnapshot, buildFieldErrors } from "./selectors";
 import {
   getEligibleQuestionIds,
@@ -24,6 +25,7 @@ import type {
   RuntimeValues,
 } from "../types";
 import { createFormfillerTransport } from "../transport/formfillerTransport";
+import type { FormlinkFlow } from "./formlinkFlow";
 
 const noopTransport: RuntimeTransport = {
   async submit(values) {
@@ -153,6 +155,7 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
       ? createFormfillerTransport(config.formfiller)
       : noopTransport);
   const uiMode = config.uiMode ?? "typeform";
+  const flowEngine: FormlinkFlow | undefined = config.flowEngine;
 
   const schema = buildRuntimeSchema(form);
   const defaultValues = {
@@ -181,6 +184,22 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
 
   const unmountForm = formApi.mount();
 
+  function getSchema() {
+    if (flowEngine) {
+      try {
+        return buildDynamicSchema(
+          form,
+          flowEngine,
+          formApi.state.values,
+          uiMode,
+        );
+      } catch {
+        // fall through to base schema
+      }
+    }
+    return schema;
+  }
+
   const questionMap = new Map<string, Question>(
     form.questions.map(
       (question: Question) => [question.id, question] as const,
@@ -198,7 +217,7 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
   } = {
     status: config.initialStatus ?? "idle",
     currentId: config.initialCurrentId ?? null,
-    eligibleIds: getEligibleQuestionIds(form, formApi.state.values),
+    eligibleIds: computeEligibleIds(),
   };
 
   if (runtimeState.currentId === null) {
@@ -214,6 +233,8 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
     eligibleIds: string[];
   }): RuntimeContextSnapshot {
     const formState = formApi.state;
+    // Compute dynamic validity using flow-based schema if present
+    const dynamicParsed = getSchema().safeParse(formState.values);
     return createSnapshot({
       status: state.status,
       currentId: state.currentId,
@@ -221,7 +242,7 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
       values: cloneValues(formState.values),
       errors: buildFieldErrors(formState.fieldMeta),
       questionMap,
-      isValid: formState.isValid,
+      isValid: dynamicParsed.success,
       isSubmitting: formState.isSubmitting,
     });
   }
@@ -260,8 +281,24 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
     }
   }
 
+  function computeEligibleIds(): string[] {
+    try {
+      if (flowEngine) {
+        if (uiMode === "typeform") {
+          return Array.from(
+            flowEngine.visibleSet(formApi.state.values as any, "typeform"),
+          );
+        }
+        return flowEngine.path(formApi.state.values as any);
+      }
+    } catch {
+      // fall back
+    }
+    return getEligibleQuestionIds(form, formApi.state.values);
+  }
+
   function recomputeEligibleIds() {
-    const nextEligible = getEligibleQuestionIds(form, formApi.state.values);
+    const nextEligible = computeEligibleIds();
     setEligibleIds(nextEligible);
   }
 
@@ -353,12 +390,12 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
         .catch(() => undefined)
         .finally(() => {
           // If this field is now valid, clear any reveal flag
-          const parsed = schema.safeParse(formApi.state.values);
+          const parsed = getSchema().safeParse(formApi.state.values);
           if (parsed.success) {
             revealed.delete(questionId);
           } else {
             const fieldIssues = parsed.error.issues.filter(
-              (i) => (i.path?.[0] as string) === questionId,
+              (i: any) => (i.path?.[0] as string) === questionId,
             );
             if (fieldIssues.length === 0) {
               revealed.delete(questionId);
@@ -371,12 +408,12 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
     },
     blur(questionId) {
       if (uiMode !== "classic") return;
-      const parsed = schema.safeParse(formApi.state.values);
+      const parsed = getSchema().safeParse(formApi.state.values);
       if (parsed.success) {
         revealed.delete(questionId);
       } else {
         const fieldIssues = parsed.error.issues.filter(
-          (i) => (i.path?.[0] as string) === questionId,
+          (i: any) => (i.path?.[0] as string) === questionId,
         );
         if (fieldIssues.length > 0) {
           revealed.add(questionId);
@@ -396,11 +433,11 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
         isNavigating = false;
         return;
       }
-      const parsed = schema.safeParse(formApi.state.values);
+      const parsed = getSchema().safeParse(formApi.state.values);
       if (uiMode === "typeform" && !parsed.success) {
         const messages = parsed.error.issues
-          .filter((i) => (i.path?.[0] as string) === currentId)
-          .map((i) => i.message);
+          .filter((i: any) => (i.path?.[0] as string) === currentId)
+          .map((i: any) => String(i.message ?? "Invalid"));
         if (messages.length > 0) {
           // Reveal-on-fail only for Typeform flows
           revealed.add(currentId);
@@ -409,7 +446,18 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
           return;
         }
       }
-      const nextId = getNextQuestionId(currentId, runtimeState.eligibleIds);
+      let nextId = getNextQuestionId(currentId, runtimeState.eligibleIds);
+      // In typeform mode, eligibleIds stops at the first unanswered.
+      // That can block advancing on optional questions left blank.
+      // Fall back to flow engine routing when available to advance along the branch.
+      if (!nextId && uiMode === "typeform" && flowEngine) {
+        try {
+          const n = flowEngine.nextNode(formApi.state.values as any, currentId);
+          if (n && n !== "END") nextId = n;
+        } catch {
+          // ignore engine errors and stay in place
+        }
+      }
       if (nextId) {
         setCurrentId(nextId);
         try {
@@ -419,12 +467,12 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
           // noop
         }
         // If the new current step has no issues, make sure reveal flag is cleared
-        const parsedNext = schema.safeParse(formApi.state.values);
+        const parsedNext = getSchema().safeParse(formApi.state.values);
         if (parsedNext.success) {
           revealed.delete(nextId);
         } else {
           const fieldIssues = parsedNext.error.issues.filter(
-            (i) => (i.path?.[0] as string) === nextId,
+            (i: any) => (i.path?.[0] as string) === nextId,
           );
           if (fieldIssues.length === 0) {
             revealed.delete(nextId);
@@ -448,12 +496,12 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
         } catch {
           // noop
         }
-        const parsedPrev = schema.safeParse(formApi.state.values);
+        const parsedPrev = getSchema().safeParse(formApi.state.values);
         if (parsedPrev.success) {
           revealed.delete(prevId);
         } else {
           const fieldIssues = parsedPrev.error.issues.filter(
-            (i) => (i.path?.[0] as string) === prevId,
+            (i: any) => (i.path?.[0] as string) === prevId,
           );
           if (fieldIssues.length === 0) {
             revealed.delete(prevId);
@@ -475,12 +523,12 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
       } catch {
         // noop
       }
-      const parsedGoto = schema.safeParse(formApi.state.values);
+      const parsedGoto = getSchema().safeParse(formApi.state.values);
       if (parsedGoto.success) {
         revealed.delete(questionId);
       } else {
         const fieldIssues = parsedGoto.error.issues.filter(
-          (i) => (i.path?.[0] as string) === questionId,
+          (i: any) => (i.path?.[0] as string) === questionId,
         );
         if (fieldIssues.length === 0) {
           revealed.delete(questionId);
@@ -489,15 +537,15 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
       syncContext();
     },
     async validate(questionId) {
-      const parsed = schema.safeParse(formApi.state.values);
+      const parsed = getSchema().safeParse(formApi.state.values);
       if (parsed.success) {
         revealed.delete(questionId);
         syncContext();
         return toValidationResult([]);
       }
       const messages = parsed.error.issues
-        .filter((i) => (i.path?.[0] as string) === questionId)
-        .map((i) => i.message);
+        .filter((i: any) => (i.path?.[0] as string) === questionId)
+        .map((i: any) => String(i.message ?? "Invalid"));
       if (messages.length > 0) {
         revealed.add(questionId);
       } else {
@@ -527,12 +575,13 @@ export function createRuntime(config: RuntimeConfig): RuntimeApi {
       } catch {
         // Ignore adapter throws; rely on state below.
       }
-      const parsed = schema.safeParse(formApi.state.values);
+      const parsed = getSchema().safeParse(formApi.state.values);
       if (!parsed.success) {
-        // Reveal all invalid fields so errors surface immediately.
+        // Reveal invalid fields that are currently eligible (visible in this branch).
+        const eligibleNow = new Set(runtimeState.eligibleIds);
         for (const issue of parsed.error.issues) {
           const qid = String(issue.path?.[0] ?? "");
-          if (qid) revealed.add(qid);
+          if (qid && eligibleNow.has(qid)) revealed.add(qid);
         }
         setStatus("filling");
         syncContext();

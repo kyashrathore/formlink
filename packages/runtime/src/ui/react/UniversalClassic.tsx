@@ -3,7 +3,7 @@ import * as React from "react";
 import { useSyncExternalStore } from "react";
 import type { Question } from "../../schema";
 import { useRuntime } from "./runtime-context";
-import { usePrimitives } from "./primitives/context";
+import { useUiComponents } from "./primitives/context";
 import { UnifiedPhoneInput } from "./UnifiedPhoneInput";
 import { UnifiedFileUpload } from "./UnifiedFileUpload";
 import { UnifiedDatePicker } from "./UnifiedDatePicker";
@@ -57,7 +57,7 @@ export function UniversalClassic({
   showDefaultSubmit?: boolean;
 }): React.JSX.Element | null {
   const runtime = useRuntime();
-  const primitives = usePrimitives();
+  const primitives = useUiComponents();
   const Btn =
     (primitives.Button as React.ElementType | undefined) ?? ("button" as any);
   const Input =
@@ -512,6 +512,11 @@ export function UniversalClassic({
           )}
         </p>
       ) : null}
+
+      {/* Branch-aware progress (based on runtime.context.progress) */}
+      <div className="mt-2 text-right text-sm text-muted-foreground">
+        {snap.progress.index + 1} of {snap.progress.total}
+      </div>
 
       {snap.status !== "completed" ? (
         <form
