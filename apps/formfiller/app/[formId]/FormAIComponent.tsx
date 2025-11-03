@@ -1,22 +1,23 @@
 "use client";
 
-import { Conversation } from "@/components/chat/conversation";
 import { AiIntroScreen } from "@/components/chat/AiIntroScreen";
+import { Conversation } from "@/components/chat/conversation";
 import { useChatStore } from "@/components/chat/store/useChatStore";
+import { debugLog } from "@/components/chat/utils/debug";
 import { useChat } from "@ai-sdk-tools/store";
 import { Form } from "@formlink/schema";
 import { Alert, AlertDescription, Button } from "@formlink/ui";
 import {
   PromptInput,
-  PromptInputTextarea,
-  PromptInputToolbar,
-  PromptInputTools,
   PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
 } from "@formlink/ui/ai-elements";
 import { DefaultChatTransport } from "ai";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useShallow } from "zustand/shallow";
 import { useFormSession } from "../../hooks/useFormSession";
 import { useRedirect } from "../../hooks/useRedirect";
 import { apiConfig, apiServices } from "../../lib/api-config";
@@ -25,8 +26,6 @@ import type {
   QueryDataForForm,
   QuestionResponse,
 } from "../../lib/types";
-import { useShallow } from "zustand/shallow";
-import { debugLog } from "@/components/chat/utils/debug";
 // Chat state is managed by @ai-sdk-tools/store globally to avoid prop-driven re-renders
 
 type FormAIComponentProps = {
@@ -363,8 +362,7 @@ export default function FormAIComponent({
     }
   }, [isLoading, chatHistoryMessages, setMessages]);
 
-  async function handleAISubmit(e?: React.FormEvent | React.KeyboardEvent) {
-    e?.preventDefault();
+  async function handleAISubmit(message: any) {
     if (!input.trim()) return;
 
     setErrorMessage(null);
@@ -682,7 +680,7 @@ export default function FormAIComponent({
                                 e: React.ChangeEvent<HTMLTextAreaElement>,
                               ) => setInput(e.target.value)}
                             />
-                            <PromptInputToolbar className="mt-5 w-full justify-end px-2">
+                            <PromptInputTools className="mt-5 w-full justify-end px-2">
                               <PromptInputTools>
                                 <PromptInputSubmit
                                   className="h-9 w-9 cursor-pointer rounded-full transition-all duration-300 ease-out"
@@ -695,7 +693,7 @@ export default function FormAIComponent({
                                   aria-label="Send answer"
                                 />
                               </PromptInputTools>
-                            </PromptInputToolbar>
+                            </PromptInputTools>
                           </PromptInput>
                         </div>
                       </div>

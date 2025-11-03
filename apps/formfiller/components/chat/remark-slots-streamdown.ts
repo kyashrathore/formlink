@@ -16,6 +16,8 @@ const PROP_REGEX = /([a-zA-Z_][a-zA-Z0-9_]*)=(?:"([^"]*)"|'([^']*)'|(\S+))/g;
 
 export function remarkSlots() {
   return (tree: MdastRoot) => {
+    // Carry unmatched trailing slot token across sibling text nodes in the same run
+    let carry: string | null = null;
     visit(
       tree as unknown as MdastNode,
       "text",
@@ -26,7 +28,8 @@ export function remarkSlots() {
       ) => {
         if (!parent || typeof index !== "number") return;
 
-        const value = node.value || "";
+        const value = (carry ? carry : "") + (node.value || "");
+        carry = null;
         const children: MdastNode[] = [];
         let lastIndex = 0;
 
@@ -134,9 +137,12 @@ export function remarkSlots() {
             if (visible.length > 0) {
               children.push({ type: "text", value: visible });
             }
+            // Save unmatched start for next text node in this traversal
+            carry = tail.slice(cutIndex);
           } else if (cutIndex === 0) {
             // Entire tail is an unmatched token → hide completely
-            // do nothing
+            // Save for next text node in this traversal
+            carry = tail;
           } else {
             // No unmatched token.
             // Also hide a partial single-colon prefix like ":ComponentName" (streaming start)
@@ -144,6 +150,7 @@ export function remarkSlots() {
             const singleColonPartial = /^:([A-Z][A-Za-z0-9]*)$/.test(trimmed);
             if (singleColonPartial) {
               // hide until we know it's really a slot (when second ':' arrives)
+              carry = tail;
             } else {
               children.push({ type: "text", value: tail });
             }

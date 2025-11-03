@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useBaseTextInput } from "../../primitives/useBaseTextInput";
-import { Input } from "../../../ui/input";
+import { Input } from "../../../components/ui/input";
 import { cn } from "../../../lib/utils";
 
 export interface ChatPhoneInputProps {

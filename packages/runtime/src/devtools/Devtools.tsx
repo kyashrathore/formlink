@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import type { FormlinkFlow } from "../core/formlinkFlow";
 import type { Question } from "../schema";
 import type { RuntimeApi, RuntimeContextSnapshot } from "../types";
 
@@ -47,7 +48,13 @@ function isAnswered(value: unknown): boolean {
   return true;
 }
 
-function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
+function DevtoolsPanel({
+  runtime,
+  flowEngine,
+}: {
+  runtime: RuntimeApi;
+  flowEngine?: FormlinkFlow;
+}) {
   const subscribe = React.useCallback(
     (fn: () => void) => runtime.context.subscribe(fn),
     [runtime],
@@ -64,6 +71,15 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
   const { events, clear, copy } = useDevlog(runtime);
 
   const form = runtime.context.form;
+  const branchIds = React.useMemo(() => {
+    try {
+      if (!flowEngine) return [] as string[];
+      return flowEngine.path(snapshot.values);
+    } catch {
+      return [] as string[];
+    }
+  }, [flowEngine, snapshot.values]);
+  const branchSet = React.useMemo(() => new Set(branchIds), [branchIds]);
   const questions = React.useMemo(() => {
     const visibleErrorGetter = runtime.context.get.visibleError ?? null;
     // Filter out non-persisted UI-only questions (element nodes expressed via styling.as)
@@ -80,7 +96,8 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
           : undefined;
       const hasVisibleError =
         typeof visibleError === "string" && visibleError.length > 0;
-      const pendingError = rawErrors.length > 0;
+      const skipped = branchSet.size > 0 && !branchSet.has(question.id);
+      const pendingError = !skipped && rawErrors.length > 0;
       return {
         question,
         answered: answeredState,
@@ -88,15 +105,26 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
         hasVisibleError,
         pendingError,
         value,
+        skipped,
       };
     });
-  }, [form.questions, runtime.context, snapshot.errors, snapshot.values]);
+  }, [
+    form.questions,
+    runtime.context,
+    snapshot.errors,
+    snapshot.values,
+    branchSet,
+  ]);
 
   const firstErrorId = React.useMemo(() => {
-    const firstVisible = questions.find((item) => item.hasVisibleError);
+    const firstVisible = questions.find(
+      (item) => !item.skipped && item.hasVisibleError,
+    );
     if (firstVisible) return firstVisible.question.id;
     if (snapshot.firstUnansweredId) return snapshot.firstUnansweredId;
-    const firstPending = questions.find((item) => !item.answered);
+    const firstPending = questions.find(
+      (item) => !item.skipped && !item.answered,
+    );
     return firstPending?.question.id ?? null;
   }, [questions, snapshot.firstUnansweredId]);
 
@@ -196,10 +224,14 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
               hasVisibleError,
               pendingError,
               value,
+              skipped,
             }) => {
               const isCurrent = snapshot.currentId === question.id;
               const showWarning =
-                !answered && firstErrorId === question.id && !visibleError;
+                !answered &&
+                !skipped &&
+                firstErrorId === question.id &&
+                !visibleError;
               const banner =
                 visibleError ??
                 (showWarning ? "Fix this before submitting." : null);
@@ -214,7 +246,7 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
                     <>
                       <div className="h-6" aria-hidden="true" />
                       <div
-                        style={{ width: "95%" }}
+                        style={{ top: 0, width: "95%" }}
                         className="absolute z-10 inset-x-0 -top-6  mx-auto flex justify-center bg-background"
                       >
                         <div className="w-full rounded-md border border-destructive bg-destructive/95 px-3 py-1.5 text-xs font-medium text-destructive-foreground shadow-md">
@@ -257,6 +289,11 @@ function DevtoolsPanel({ runtime }: { runtime: RuntimeApi }) {
                       ) : (
                         <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground">
                           Pending
+                        </span>
+                      )}
+                      {skipped && (
+                        <span className="rounded bg-muted px-2 py-0.5 text-muted-foreground">
+                          skipped
                         </span>
                       )}
                       {tagForQuestion(question).map((tag) => (
@@ -370,10 +407,15 @@ function CollapsibleEvents({ events }: { events: DevEvent[] }) {
 
 type DevtoolsProps = {
   runtime: RuntimeApi;
+  flowEngine?: FormlinkFlow;
   label: string;
 };
 
-export function Devtools({ runtime, label = "Devtools" }: DevtoolsProps) {
+export function Devtools({
+  runtime,
+  flowEngine,
+  label = "Devtools",
+}: DevtoolsProps) {
   const [open, setOpen] = React.useState(false);
 
   return (
@@ -430,7 +472,7 @@ export function Devtools({ runtime, label = "Devtools" }: DevtoolsProps) {
               </div>
             </div>
             <div className="p-3 flex-1 min-h-0 overflow-y-auto">
-              <DevtoolsPanel runtime={runtime} />
+              <DevtoolsPanel runtime={runtime} flowEngine={flowEngine} />
             </div>
           </div>
         </div>

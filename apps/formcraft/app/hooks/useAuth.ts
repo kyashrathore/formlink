@@ -1,6 +1,6 @@
 "use client"
 
-import { createBrowserClient, User } from "@formlink/db"
+import { createBrowserClient, Session, User } from "@formlink/db"
 import { useEffect, useState } from "react"
 
 export function useAuth() {
@@ -76,7 +76,7 @@ export function useAuth() {
     }, 5000)
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (_event: string, session: Session | null) => {
         try {
           setUser(session?.user ?? null)
 

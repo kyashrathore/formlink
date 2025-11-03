@@ -2,6 +2,12 @@ import { getenv } from "@/lib/env"
 import { ssrCreateServerClient } from "@formlink/db"
 import { NextResponse, type NextRequest } from "next/server"
 
+type CookieToSet = {
+  name: string
+  value: string
+  options?: Record<string, unknown>
+}
+
 function isLocalSupabase(): boolean {
   if (process.env.NEXT_PUBLIC_USE_LOCAL_SUPABASE === "true") {
     return true
@@ -29,14 +35,14 @@ export async function updateSession(request: NextRequest) {
       getAll() {
         return request.cookies.getAll()
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) =>
+      setAll(cookiesToSet: CookieToSet[]) {
+        cookiesToSet.forEach(({ name, value }: CookieToSet) =>
           request.cookies.set(name, value)
         )
         supabaseResponse = NextResponse.next({
           request,
         })
-        cookiesToSet.forEach(({ name, value, options }) =>
+        cookiesToSet.forEach(({ name, value, options }: CookieToSet) =>
           supabaseResponse.cookies.set(name, value, options)
         )
       },

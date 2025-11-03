@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import type { ComponentPropsWithRef } from "react";
-import { usePrimitives } from "./primitives/context";
+import { useUiComponents } from "./primitives/context";
 
 function must<P extends object>(
   name: string,
@@ -49,7 +49,7 @@ export function UnifiedCountrySelect({
   ariaDescribedBy,
   autoFocus,
 }: UnifiedCountrySelectProps) {
-  const p = usePrimitives();
+  const p = useUiComponents();
   const Button = must<ComponentPropsWithRef<"button"> & { variant?: string }>(
     "Button",
     p.Button as React.ComponentType<
@@ -175,10 +175,18 @@ export function UnifiedCountrySelect({
             aria-controls={listId}
             variant="outline"
             data-has-value={hasValue || undefined}
+            data-fl-keyscope-stop
             className={triggerCls.join(" ")}
             aria-label={ariaLabel}
             aria-describedby={ariaDescribedBy}
             disabled={disabled}
+            onKeyDown={(e: React.KeyboardEvent) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                setOpen((prev) => !prev);
+              }
+            }}
           >
             {selected ? (
               <span className="flex items-center gap-2 overflow-hidden">

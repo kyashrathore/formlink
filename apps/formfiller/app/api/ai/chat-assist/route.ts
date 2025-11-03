@@ -458,6 +458,14 @@ export async function POST(req: Request) {
     });
 
     const resp = createUIMessageStreamResponse({ stream: uiStream });
+    try {
+      resp.headers.set("Access-Control-Allow-Origin", "*");
+      resp.headers.set("Access-Control-Allow-Methods", "POST,OPTIONS");
+      resp.headers.set(
+        "Access-Control-Allow-Headers",
+        "content-type,authorization",
+      );
+    } catch {}
     return resp;
   } catch (error) {
     console.error(
@@ -466,12 +474,27 @@ export async function POST(req: Request) {
     );
     trackServerEvent("api.form_assist.critical_error");
 
-    return NextResponse.json(
+    const json = NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Internal server error",
         fallback: true,
       },
       { status: 500 },
     );
+    json.headers.set("Access-Control-Allow-Origin", "*");
+    json.headers.set("Access-Control-Allow-Methods", "POST,OPTIONS");
+    json.headers.set(
+      "Access-Control-Allow-Headers",
+      "content-type,authorization",
+    );
+    return json;
   }
+}
+
+export async function OPTIONS() {
+  const res = new NextResponse(null, { status: 204 });
+  res.headers.set("Access-Control-Allow-Origin", "*");
+  res.headers.set("Access-Control-Allow-Methods", "POST,OPTIONS");
+  res.headers.set("Access-Control-Allow-Headers", "content-type,authorization");
+  return res;
 }

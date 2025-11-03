@@ -5,14 +5,6 @@ import { requiresParamsForSlug } from "@/app/dashboard/forms/[formId]/components
 import ViewPlanDrawer from "@/app/dashboard/forms/[formId]/components/responses/ViewPlanDrawer"
 import { Form } from "@formlink/schema"
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
   Button,
   Dialog,
   DialogContent,
@@ -25,7 +17,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  toast,
   Button as UIButton,
 } from "@formlink/ui"
 import {
@@ -38,6 +29,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table"
 import React, { useEffect, useMemo, useState } from "react"
+import { toast } from "sonner"
 import { useActionTools } from "../../hooks/useActionTools"
 import { useAutomationsConfig } from "../../hooks/useAutomationsConfig"
 import { useFormResponsesQuery } from "../../hooks/useFormResponsesQuery"
@@ -46,7 +38,6 @@ import {
   generateTableColumnsFromForm,
 } from "../../lib/responses/generateFilterFieldsFromForm"
 import { useAutomationsPlanStore } from "../../stores/useAutomationsPlanStore"
-import type { ResponseViewsState } from "../../stores/useResponseViewsStore"
 import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
 import DataTable from "../data-table/data-table"
 import { useDataTableStore } from "../data-table/dataTableStore"
@@ -561,10 +552,8 @@ function ResponseActionsMenu({
     const t = tools.find((x) => x.slug === slug)
     if (!t) return
     if (!selectedSubmissionIds.length) {
-      toast({
-        title: "No responses selected",
+      toast("No responses selected", {
         description: "Select responses to run an action.",
-        status: "warning",
       })
       return
     }
@@ -590,25 +579,19 @@ function ResponseActionsMenu({
     })
     const json = (await res.json().catch(() => ({}))) as any
     if (!res.ok) {
-      toast({
-        title: "Action failed",
+      toast.error("Action failed", {
         description: json?.error || `Execution failed (${res.status})`,
-        status: "error",
       })
       return
     }
     const status = String(json?.status || "").toLowerCase()
     if (status === "completed") {
-      toast({
-        title: "Action completed",
+      toast.success("Action completed", {
         description: `${t.label || t.slug} ran on ${selectedSubmissionIds.length} response(s).`,
-        status: "success",
       })
     } else {
-      toast({
-        title: "Action queued",
+      toast("Action queued", {
         description: `${t.label || t.slug} enqueued.`,
-        status: "info",
       })
     }
   }
@@ -661,10 +644,10 @@ function MoreActionsSubmenu({ formId }: { formId: string }) {
       if (!hasTestmode) filters.push({ id: "testmode", value: true } as any)
       setColumnFilters(filters as any)
       setPagination({ pageIndex: 0, pageSize: pagination.pageSize })
-      toast({ title: "Generated 100 test responses", status: "success" })
+      toast.success("Generated 100 test responses")
     } catch (e) {
       console.error(e)
-      toast({ title: "Failed to generate test data", status: "error" })
+      toast.error("Failed to generate test data")
     }
   }
   async function cleanup() {
@@ -677,10 +660,10 @@ function MoreActionsSubmenu({ formId }: { formId: string }) {
       })
       if (!res.ok) throw new Error("Failed to cleanup test data")
       setPagination({ pageIndex: 0, pageSize: pagination.pageSize })
-      toast({ title: "Test data cleaned", status: "success" })
+      toast.success("Test data cleaned")
     } catch (e) {
       console.error(e)
-      toast({ title: "Failed to cleanup test data", status: "error" })
+      toast.error("Failed to cleanup test data")
     }
   }
   return (

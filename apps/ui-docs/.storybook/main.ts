@@ -17,7 +17,9 @@ const config: StorybookConfig = {
   ],
   framework: {
     name: getAbsolutePath("@storybook/nextjs"),
-    options: {},
+    options: {
+      nextConfigPath: path.resolve(__dirname, "../next.config.mjs"),
+    },
   },
   docs: {
     defaultName: "Documentation",
@@ -45,10 +47,34 @@ const config: StorybookConfig = {
           "src",
         ),
       };
+      config.resolve.extensions = [
+        ".ts",
+        ".tsx",
+        ".js",
+        ".jsx",
+        ".mjs",
+        ...(config.resolve.extensions || []),
+      ];
       config.resolve.conditionNames = [
         "source",
         ...(config.resolve.conditionNames ?? []),
       ];
+    }
+    // Transpile TS sources from eventsource-parser used by @ai-sdk/react in Storybook
+    if (config.module) {
+      const rules = config.module.rules || [];
+      rules.push({
+        test: /node_modules[\\/](eventsource-parser)[\\/]src[\\/].+\.ts$/,
+        use: [
+          {
+            loader: require.resolve("babel-loader"),
+            options: {
+              presets: [require.resolve("next/babel")],
+            },
+          },
+        ],
+      });
+      config.module.rules = rules;
     }
     return config;
   },

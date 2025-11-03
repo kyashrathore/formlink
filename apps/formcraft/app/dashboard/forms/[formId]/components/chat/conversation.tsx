@@ -11,9 +11,9 @@ import {
   Tool,
   ToolContent,
   ToolHeader,
-  ToolLogs,
   ToolOutput,
 } from "@formlink/ui/ai-elements"
+import type { ToolUIPart } from "ai"
 import { getToolName, type UIMessage } from "ai"
 import { Loader2 } from "lucide-react"
 import type { ReactNode } from "react"
@@ -91,10 +91,14 @@ const VisibleMessage = ({
                   )
                 }
                 return (
-                  <Tool key={`tool-${partIndex}`} state="output-available">
-                    <ToolHeader type="response-plan" state="output-available" />
+                  <Tool key={`tool-${partIndex}`}>
+                    <ToolHeader
+                      type={"tool-response-plan" as ToolUIPart["type"]}
+                      state="output-available"
+                      title="Response Plan"
+                    />
                     <ToolContent>
-                      <ToolOutput output={part.plan} />
+                      <ToolOutput output={part.plan} errorText={undefined} />
                     </ToolContent>
                   </Tool>
                 )
@@ -167,13 +171,19 @@ const VisibleMessage = ({
 
                 return (
                   <div key={`tool-${partIndex}`} className="my-2">
-                    <Tool state={state}>
-                      <ToolHeader type={prettyToolName} state={state} />
+                    <Tool>
+                      <ToolHeader
+                        type={`tool-${toolName}` as ToolUIPart["type"]}
+                        state={state as ToolUIPart["state"]}
+                        title={prettyToolName}
+                      />
                       <ToolContent>
                         {(state === "input-streaming" ||
                           state === "input-available") &&
                           displaySummaryMessage && (
-                            <ToolLogs logs={displaySummaryMessage} />
+                            <div className="text-muted-foreground p-3 text-xs">
+                              {displaySummaryMessage}
+                            </div>
                           )}
 
                         {(() => {
@@ -202,7 +212,11 @@ const VisibleMessage = ({
                             )
                           }
                           if (displaySummaryMessage) {
-                            return <ToolLogs logs={displaySummaryMessage} />
+                            return (
+                              <div className="text-muted-foreground p-3 text-xs">
+                                {displaySummaryMessage}
+                              </div>
+                            )
                           }
                           let doneLabel = `✓ Completed ${prettyToolName}`
                           if (

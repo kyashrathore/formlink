@@ -15,9 +15,10 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import type { Question } from "@formlink/schema"
-import { Button, toast } from "@formlink/ui"
+import { Button } from "@formlink/ui"
 import { Plus } from "lucide-react"
 import { useMemo, useState } from "react"
+import { toast } from "sonner"
 import { useMobile } from "../../hooks/use-mobile"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
@@ -128,19 +129,15 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
       }
 
       if (!response.ok) {
-        toast({
-          title: "API Error",
+        toast.warning("API Error", {
           description:
             result.message ||
             "An unexpected error occurred while creating the question.",
-          status: "warning",
         })
       } else if (result.error) {
-        toast({
-          title: "Creation Error",
+        toast.warning("Creation Error", {
           description:
             result.message || "Could not create question from prompt.",
-          status: "warning",
         })
       } else if (result.data) {
         addQuestion({
@@ -149,20 +146,16 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
         })
         setIsPromptDialogOpen(false)
       } else {
-        toast({
-          title: "Creation Error",
+        toast.warning("Creation Error", {
           description:
             "Question creation successful, but no question object returned.",
-          status: "warning",
         })
       }
     } catch (error) {
-      toast({
-        title: "Request Failed",
+      toast.warning("Request Failed", {
         description:
           (error instanceof Error ? error.message : String(error)) ||
           "Could not connect to AI service for question creation.",
-        status: "warning",
       })
     }
   }

@@ -3,7 +3,7 @@ import { FormGenerationEventHandler } from "@/app/lib/handlers/FormGenerationEve
 import type { LifecyclePlanProposal } from "@/app/lib/lifecycle/plan-types"
 import type { RIPlanResponse } from "@/app/lib/ri/types"
 import { useChat } from "@ai-sdk/react"
-import { Button, PromptSuggestion } from "@formlink/ui"
+import { Button } from "@formlink/ui"
 import { Suggestion, Suggestions } from "@formlink/ui/ai-elements"
 import { DefaultChatTransport } from "ai"
 import { AlertTriangle } from "lucide-react"
@@ -648,7 +648,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
 
               <div className="flex w-full flex-col gap-2">
                 {isResponsesTab && (
-                  <PromptSuggestion
+                  <Suggestion
+                    suggestion="Explore Response Intelligence"
                     variant="ghost"
                     size="sm"
                     disabled
@@ -660,7 +661,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                     <span className="text-muted-foreground text-xs">
                       {responsePlanPromptIntro}
                     </span>
-                  </PromptSuggestion>
+                  </Suggestion>
                 )}
 
                 {isResponsesTab && responsePlanSuggestionsLoading && (
@@ -676,8 +677,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                 )}
 
                 {responseSuggestionsToShow.map((prompt, index) => (
-                  <PromptSuggestion
+                  <Suggestion
                     key={`${prompt}-${index}`}
+                    suggestion={prompt}
                     onClick={() => handleSuggestionClick(prompt)}
                     variant={isResponsesTab ? "ghost" : "outline"}
                     size="sm"
@@ -686,10 +688,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                         ? "w-full justify-start text-left"
                         : "text-sm"
                     }
-                    highlight={isResponsesTab ? "view" : ""}
                   >
                     {prompt}
-                  </PromptSuggestion>
+                  </Suggestion>
                 ))}
               </div>
             </div>

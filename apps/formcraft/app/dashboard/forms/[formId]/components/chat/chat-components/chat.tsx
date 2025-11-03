@@ -10,9 +10,9 @@ import {
 } from "@formlink/ui"
 import {
   PromptInput,
+  PromptInputFooter,
   PromptInputSubmit,
   PromptInputTextarea,
-  PromptInputToolbar,
   PromptInputTools,
 } from "@formlink/ui/ai-elements"
 import React, { useCallback, useState } from "react"
@@ -47,8 +47,8 @@ export function ChatComposer({
   status,
 }: ChatComposerProps) {
   const handleSubmit = useCallback(
-    (e?: React.FormEvent) => {
-      e?.preventDefault()
+    (_message: unknown, e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault()
       if (!value.trim() || isSubmitting) return
       onSubmit()
     },
@@ -70,7 +70,7 @@ export function ChatComposer({
           onValueChange(e.target.value)
         }
       />
-      <PromptInputToolbar className="w-full justify-between px-3 py-2">
+      <PromptInputFooter className="w-full justify-between px-3 py-2">
         <div className="flex items-center gap-2">
           {/* Model Selection */}
           <Select value={selectedModel} onValueChange={onSelectModel}>
@@ -97,7 +97,7 @@ export function ChatComposer({
             aria-label="Send message"
           />
         </PromptInputTools>
-      </PromptInputToolbar>
+      </PromptInputFooter>
     </PromptInput>
   )
 }

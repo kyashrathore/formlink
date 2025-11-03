@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
 import type { ComponentPropsWithRef, Ref } from "react";
-import { usePrimitives } from "./primitives/context";
+import { useUiComponents } from "./primitives/context";
+import { useDate } from "@/headless/react/hooks/useDate";
 
 type PopoverRootProps = {
   children?: React.ReactNode;
@@ -27,6 +28,7 @@ export interface UnifiedDatePickerProps {
   mode: FormMode;
   value: string | Date | null;
   onChange: (value: string | null) => void;
+  onSubmit?: () => void;
   placeholder?: string;
   disabled?: boolean;
   required?: boolean;
@@ -40,6 +42,7 @@ export function UnifiedDatePicker({
   mode,
   value,
   onChange,
+  onSubmit,
   placeholder = "Select date",
   disabled,
   required,
@@ -48,7 +51,8 @@ export function UnifiedDatePicker({
   ariaDescribedBy,
   autoFocus,
 }: UnifiedDatePickerProps) {
-  const primitives = usePrimitives();
+  const primitives = useUiComponents();
+  const triggerRef = React.useRef<HTMLButtonElement | null>(null);
   const Input = primitives.Input as
     | React.ComponentType<
         React.InputHTMLAttributes<HTMLInputElement> & {
@@ -89,13 +93,15 @@ export function UnifiedDatePicker({
     () => (typeof autoFocus === "boolean" ? autoFocus : mode === "typeform"),
     [autoFocus, mode],
   );
+  // Do not auto-focus input on mount in typeform mode; rely on Tab navigation
   React.useEffect(() => {
-    if (shouldAutoFocus) {
+    if (shouldAutoFocus && mode !== "typeform") {
       try {
         inputRef.current?.focus();
       } catch {}
     }
-  }, [shouldAutoFocus]);
+  }, [shouldAutoFocus, mode]);
+  // Do not auto-focus popover trigger in typeform mode; rely on Tab
   const strVal = React.useMemo(() => {
     if (!value) return "";
     if (typeof value === "string") return value;
@@ -116,29 +122,27 @@ export function UnifiedDatePicker({
 
   // If host provides Calendar + Popover, render a popover calendar picker
   if (Calendar && Button && PopoverRoot && PopoverTrigger && PopoverContent) {
-    const [open, setOpen] = React.useState(false);
-    const onSelectDate = (d: Date | undefined) => {
-      if (!d) return;
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, "0");
-      const dd = String(d.getDate()).padStart(2, "0");
-      onChange(`${yyyy}-${mm}-${dd}`);
-      setOpen(false);
-    };
+    const dd = useDate({
+      value,
+      onChange,
+      mode: "popover",
+      onAutoAdvance: onSubmit,
+    });
     // Typeform mode: present as a bottom-border clickable control
     if (mode === "typeform") {
       return (
         <div
           className={["w-full max-w-2xl", className].filter(Boolean).join(" ")}
         >
-          <PopoverRoot open={open} onOpenChange={setOpen}>
+          <PopoverRoot open={dd.open} onOpenChange={dd.setOpen}>
             <PopoverTrigger asChild>
               <button
+                ref={triggerRef}
                 type="button"
+                {...dd.triggerProps}
                 aria-label={ariaLabel}
                 aria-describedby={ariaDescribedBy}
                 disabled={disabled}
-                onClick={() => setOpen((s) => !s)}
                 className={[
                   "w-full px-0 py-3 text-left",
                   sizeCls,
@@ -146,7 +150,7 @@ export function UnifiedDatePicker({
                   "placeholder:text-muted-foreground/50",
                 ].join(" ")}
               >
-                {strVal || (
+                {dd.value || (
                   <span className="text-muted-foreground/50">
                     {placeholder}
                   </span>
@@ -157,8 +161,8 @@ export function UnifiedDatePicker({
               {/* shadcn Calendar signature: mode="single" selected={date} onSelect={fn} */}
               <Calendar
                 mode="single"
-                selected={dateVal ?? undefined}
-                onSelect={onSelectDate}
+                selected={dd.date ?? undefined}
+                onSelect={dd.onSelect}
                 initialFocus
               />
             </PopoverContent>
@@ -169,7 +173,7 @@ export function UnifiedDatePicker({
     // Classic/chat: render Button-like trigger
     return (
       <div className={className}>
-        <PopoverRoot open={open} onOpenChange={setOpen}>
+        <PopoverRoot open={dd.open} onOpenChange={dd.setOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -178,14 +182,14 @@ export function UnifiedDatePicker({
               className={["justify-start w-full", sizeCls].join(" ")}
               disabled={disabled}
             >
-              {strVal || placeholder}
+              {dd.value || placeholder}
             </Button>
           </PopoverTrigger>
           <PopoverContent align="start" className="p-2">
             <Calendar
               mode="single"
-              selected={dateVal ?? undefined}
-              onSelect={onSelectDate}
+              selected={dd.date ?? undefined}
+              onSelect={dd.onSelect}
               initialFocus
             />
           </PopoverContent>
@@ -195,16 +199,20 @@ export function UnifiedDatePicker({
   }
   // In typeform mode, render a plain input with bottom-border styling to match text input
   if (mode === "typeform") {
+    const dd = useDate({
+      value,
+      onChange,
+      mode: "native",
+      onAutoAdvance: onSubmit,
+    });
     return (
       <div
         className={["w-full max-w-2xl", className].filter(Boolean).join(" ")}
       >
         <input
           ref={inputRef}
-          type="date"
-          value={strVal}
+          {...dd.inputProps}
           placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value || null)}
           disabled={disabled}
           aria-label={ariaLabel}
           aria-describedby={ariaDescribedBy}

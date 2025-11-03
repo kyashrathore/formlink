@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
 import type { ComponentPropsWithRef } from "react";
-import { usePrimitives } from "./primitives/context";
+import { useUiComponents } from "./primitives/context";
+import { useTriggerMultiSelect } from "@/headless/react/hooks/useTriggerMultiSelect";
 
 function must<P extends object>(
   name: string,
@@ -49,7 +50,7 @@ export function UnifiedDropdownMultiSelect<T = string>({
   ariaDescribedBy,
   autoFocus = true,
 }: UnifiedDropdownMultiSelectProps<T>) {
-  const p = usePrimitives();
+  const p = useUiComponents();
   type ButtonProps = ComponentPropsWithRef<"button"> & {
     variant?: string;
     [key: string]: unknown;
@@ -111,7 +112,9 @@ export function UnifiedDropdownMultiSelect<T = string>({
     (p.Badge as React.ComponentType<BadgeProps>) ??
     ((props: BadgeProps) => <span {...props} />);
 
-  const [open, setOpen] = React.useState<boolean>(false);
+  const tms = useTriggerMultiSelect<T>({ options, value, onChange });
+  const open = tms.open;
+  const setOpen = tms.setOpen;
   const [query, setQuery] = React.useState<string>("");
   const listId = React.useId();
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
@@ -158,13 +161,8 @@ export function UnifiedDropdownMultiSelect<T = string>({
   );
 
   function toggleByLabel(label: string) {
-    const opt = options.find((o) => o.label === label);
-    if (!opt) return;
-    const exists = value.some((item) => Object.is(item, opt.value));
-    const next = exists
-      ? value.filter((item) => !Object.is(item, opt.value))
-      : [...value, opt.value];
-    onChange(next);
+    const idx = options.findIndex((o) => o.label === label);
+    if (idx >= 0) tms.getItemProps(idx).onClick?.();
   }
 
   const sizeCls = mode === "typeform" ? "h-12 text-base" : "h-10 text-sm";
@@ -187,9 +185,7 @@ export function UnifiedDropdownMultiSelect<T = string>({
         <PopoverTrigger asChild>
           <Button
             ref={triggerRef}
-            role="combobox"
-            aria-haspopup="listbox"
-            aria-expanded={open}
+            {...tms.triggerProps}
             aria-controls={listId}
             aria-label={ariaLabel}
             aria-describedby={ariaDescribedBy}
@@ -251,7 +247,12 @@ export function UnifiedDropdownMultiSelect<T = string>({
                   <CommandItem
                     key={String(option.value)}
                     value={option.label}
-                    onSelect={() => toggleByLabel(option.label)}
+                    onSelect={() => {
+                      const idx = options.findIndex(
+                        (o) => o.label === option.label,
+                      );
+                      if (idx >= 0) tms.getItemProps(idx).onClick?.();
+                    }}
                   >
                     {option.label}
                   </CommandItem>

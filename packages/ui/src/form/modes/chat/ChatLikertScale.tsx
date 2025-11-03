@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useBaseSelect } from "../../primitives/useBaseSelect";
-import { Button } from "../../../ui/button";
+import { Button } from "../../../components/ui/button";
 import { cn } from "../../../lib/utils";
 import { Option } from "../../primitives/types";
 

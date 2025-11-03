@@ -1,7 +1,8 @@
 "use client";
-import * as React from "react";
 import type { ComponentPropsWithRef } from "react";
-import { usePrimitives } from "../primitives/context";
+import * as React from "react";
+import { useIsMobile } from "../hooks/use-mobile";
+import { useUiComponents } from "../primitives/context";
 
 export function TypeFormContinueFooter({
   onClick,
@@ -13,7 +14,7 @@ export function TypeFormContinueFooter({
   errorMessage?: string | null;
   continueLabel?: string;
 }) {
-  const primitives = usePrimitives();
+  const primitives = useUiComponents();
   const ButtonPrimitive = primitives.Button;
   const Button: React.FC<ComponentPropsWithRef<"button">> =
     React.useMemo(() => {
@@ -31,15 +32,7 @@ export function TypeFormContinueFooter({
       return Fallback;
     }, [ButtonPrimitive]);
   // Hide on mobile to match original behavior
-  const [isMobile, setIsMobile] = React.useState(false);
-  React.useEffect(() => {
-    const mq = window.matchMedia("(max-width: 768px)");
-    const apply = () => setIsMobile(mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, []);
-
+  const isMobile = useIsMobile();
   if (isMobile) return null;
   return (
     <div className="flex items-center mt-4 gap-2">

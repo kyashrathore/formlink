@@ -27,8 +27,9 @@
   },
   "dependencies": {
     "@formlink/schema": "workspace:*",
-    "@formlink/runtime": "workspace",
+    "@formlink/runtime": "workspace:*",
     "@formlink/ui": "workspace:*",
-    "lucide-react": "^0.542.0"
+    "lucide-react": "^0.542.0",
+    "@ai-sdk/react": "^2.0.60"
   }
 }

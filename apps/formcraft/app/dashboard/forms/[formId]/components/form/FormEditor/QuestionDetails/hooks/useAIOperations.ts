@@ -1,7 +1,7 @@
 import { useAI } from "@/app/hooks/use-ai"
 import { Question } from "@formlink/schema"
-import { toast } from "@formlink/ui"
 import { useCallback } from "react"
+import { toast } from "sonner"
 
 interface FormData {
   questions: Question[]
@@ -57,10 +57,8 @@ export const useAIOperations = ({
         })
 
         if (result.error) {
-          toast({
-            title: "Validation Error",
+          toast.warning("Validation Error", {
             description: result.message || "Invalid validation rule statement.",
-            status: "warning",
           })
         } else if (result.data) {
           addQuestionValidation(
@@ -70,20 +68,16 @@ export const useAIOperations = ({
           )
           setVisibleInput(null)
         } else {
-          toast({
-            title: "Validation Error",
+          toast.warning("Validation Error", {
             description: "Validation successful, but no schema returned.",
-            status: "warning",
           })
         }
       } catch (error) {
-        toast({
-          title: "Request Failed",
+        toast.warning("Request Failed", {
           description:
             error instanceof Error
               ? error.message
               : "Could not connect to AI service.",
-          status: "warning",
         })
       }
     },
@@ -114,11 +108,9 @@ export const useAIOperations = ({
         })
 
         if (result.error) {
-          toast({
-            title: "Validation Error",
+          toast.warning("Validation Error", {
             description:
               result.message || "Invalid conditional logic statement.",
-            status: "warning",
           })
         } else if (result.data && (result.data as any).jsonataExpression) {
           addQuestionCondition(
@@ -127,27 +119,21 @@ export const useAIOperations = ({
             (result.data as any).jsonataExpression
           )
           setVisibleInput(null)
-          toast({
-            title: "Condition Added",
+          toast.success("Condition Added", {
             description: "JSONata expression generated successfully.",
-            status: "success",
           })
         } else {
-          toast({
-            title: "Validation Error",
+          toast.warning("Validation Error", {
             description:
               "Validation successful, but no JSONata expression returned.",
-            status: "warning",
           })
         }
       } catch (error) {
-        toast({
-          title: "Request Failed",
+        toast.warning("Request Failed", {
           description:
             error instanceof Error
               ? error.message
               : "Could not connect to AI service.",
-          status: "warning",
         })
       }
     },

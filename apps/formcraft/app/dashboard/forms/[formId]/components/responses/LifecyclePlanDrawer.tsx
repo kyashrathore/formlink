@@ -9,7 +9,7 @@ import {
   ScopedDrawerOverlay,
   ScopedDrawerPortal,
   ScopedDrawerTitle,
-} from "@formlink/ui/ui/scoped-drawer"
+} from "@formlink/ui"
 
 interface LifecyclePlanDrawerProps {
   formId: string

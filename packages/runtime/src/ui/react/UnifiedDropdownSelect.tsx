@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
 import type { ComponentPropsWithRef } from "react";
-import { usePrimitives } from "./primitives/context";
+import { useUiComponents } from "./primitives/context";
+import { useTriggerSelect } from "@/headless/react/hooks/useTriggerSelect";
 
 function must<P extends object>(
   name: string,
@@ -51,7 +52,7 @@ export function UnifiedDropdownSelect<T = string>({
   ariaDescribedBy,
   autoOpenOnMountIfEmpty = false,
 }: UnifiedDropdownSelectProps<T>) {
-  const p = usePrimitives();
+  const p = useUiComponents();
   const Button = must<ComponentPropsWithRef<"button"> & { variant?: string }>(
     "Button",
     p.Button as React.ComponentType<
@@ -104,9 +105,15 @@ export function UnifiedDropdownSelect<T = string>({
     >,
   );
 
-  const [open, setOpen] = React.useState<boolean>(
-    Boolean(autoOpenOnMountIfEmpty && value == null),
-  );
+  const ts = useTriggerSelect<T>({
+    options,
+    value,
+    onChange,
+    onAutoAdvance: onSubmit,
+    initialOpen: autoOpenOnMountIfEmpty,
+  });
+  const open = ts.open;
+  const setOpen = ts.setOpen;
   const [query, setQuery] = React.useState<string>("");
   const listId = React.useId();
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
@@ -178,9 +185,7 @@ export function UnifiedDropdownSelect<T = string>({
         <PopoverTrigger asChild>
           <Button
             ref={triggerRef}
-            role="combobox"
-            aria-haspopup="listbox"
-            aria-expanded={open}
+            {...ts.triggerProps}
             aria-controls={listId}
             aria-label={ariaLabel}
             aria-describedby={ariaDescribedBy}
@@ -220,11 +225,12 @@ export function UnifiedDropdownSelect<T = string>({
                     key={item.value}
                     value={item.label}
                     onSelect={() => {
-                      const found = options.find((o) => o.label === item.label);
-                      onChange(found ? (found.value as T) : null);
-                      setOpen(false);
-                      if (onSubmit) {
-                        window.setTimeout(() => onSubmit(), 150);
+                      const idx = options.findIndex(
+                        (o) => o.label === item.label,
+                      );
+                      if (idx >= 0) {
+                        const props = ts.getItemProps(idx);
+                        props.onClick?.();
                       }
                     }}
                   >

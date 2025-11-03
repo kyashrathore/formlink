@@ -211,7 +211,7 @@ export async function runSubmissionJob(
   }
 
   const answers: Record<string, unknown> = {}
-  answerRows?.forEach((row) => {
+  answerRows?.forEach((row: { question_id: string; answer_value: unknown }) => {
     answers[row.question_id] = row.answer_value
   })
 

@@ -9,7 +9,7 @@
     "lint": "next lint && pnpm format",
     "format": "prettier --write .",
     "test": "echo \"No tests specified for formcraft (Next.js app)\"",
-    "type-check": "tsc --noEmit",
+    "types": "tsc --noEmit",
     "supabase:start": "pnpm dlx supabase start",
     "supabase:stop": "pnpm dlx supabase stop",
     "supabase:status": "pnpm dlx supabase status",

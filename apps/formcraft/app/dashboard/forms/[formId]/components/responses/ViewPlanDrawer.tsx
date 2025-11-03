@@ -13,9 +13,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
   Button,
-  toast,
-} from "@formlink/ui"
-import {
   ScopedDrawer,
   ScopedDrawerClose,
   ScopedDrawerContent,
@@ -24,8 +21,9 @@ import {
   ScopedDrawerOverlay,
   ScopedDrawerPortal,
   ScopedDrawerTitle,
-} from "@formlink/ui/ui/scoped-drawer"
+} from "@formlink/ui"
 import { useEffect } from "react"
+import { toast } from "sonner"
 
 interface ViewPlanDrawerProps {
   formId: string
@@ -134,16 +132,12 @@ export function ViewPlanDrawer(props: ViewPlanDrawerProps) {
         }
       })
 
-      toast({
-        title: "View saved",
+      toast.success("View saved", {
         description: `Saved "${viewMeta.name}"`,
-        status: "success",
       })
     } catch (error) {
-      toast({
-        title: "Failed to save view",
+      toast.error("Failed to save view", {
         description: error instanceof Error ? error.message : String(error),
-        status: "error",
       })
     }
   }
@@ -294,16 +288,11 @@ export function ViewPlanDrawer(props: ViewPlanDrawerProps) {
                                 }
                               })
                               onDismiss?.()
-                              toast({
-                                title: "View deleted",
-                                status: "success",
-                              })
+                              toast.success("View deleted")
                             } catch (e) {
-                              toast({
-                                title: "Failed to delete view",
+                              toast.error("Failed to delete view", {
                                 description:
                                   e instanceof Error ? e.message : String(e),
-                                status: "error",
                               })
                             }
                           }}

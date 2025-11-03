@@ -1,8 +1,10 @@
 # REPO_CONTEXT
 
-Last updated: 2025-10-20
+Last updated: 2025-11-04
 
 Recent change
+
+- Runtime/chat scaffold: Added `useChatStartCard` and `useQuestionPlaceholder` hooks to `@formlink/runtime/ui/react` for start-card control and consistent placeholders. See `docs/ai-chat-scaffold-primitives.md`.
 
 - 2025-10-23: Codegen deployments will use `wrangler pages deploy` from inside the Vercel sandbox (with Cloudflare tokens) instead of hitting the Pages Direct Upload REST API. The API path is still viable later, but CLI keeps us unblocked now; revisit once we have a stable archive streaming helper.
 - Runtime docs: Added consolidated plan at `docs/runtime/RUNTIME_CONSOLIDATED_v1.md` organizing packages, decisions to gavel, Deploy-on-Formlink flow, headless chat testmode, and the Devtools plan. This doc links to existing detailed specs and examples and defines MVP acceptance.
@@ -318,6 +320,7 @@ Documentation Index (selected)
 
 - `docs/submission_intelligence_job_v1.md` — authoritative background job specification (verify latest before edits).
 - `docs/automation_triggers_v1.md` — future-state trigger DSL research.
+- `docs/formlinkflow-engine-implementation-plan_v1.md` — FormlinkFlow: centralized, AI-first flow engine (JSONata routes, compile/analyze/nextNode/path, Typeform/Classic integration, Devtools simulation, limitations & mitigations). (Note: previously named branching engine.)
 
 ## Mintlify — Runtime Docs (code-based)
 
@@ -380,3 +383,4 @@ Notes / TODOs:
 
 - TODO(mintlify): If any page shows as “Untitled”, add frontmatter `title:` to the source `.md` file.
 - TODO(mintlify): Add brand colors/logo later; currently using a neutral primary `#3b82f6`.
+- Runtime/Flow: Added deep explainer `docs/formlinkflow_typeform_transition_explainer_v1.md` covering FormlinkFlow navigation semantics, Typeform visibility (required‑only gating), the animation architecture, and the two tricky bugs (optional back navigation and direction/opacity issues) with fixes and modeling patterns for deferred branching (depend on Q1, execute at Q5).
