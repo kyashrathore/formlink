@@ -1,4 +1,4 @@
-Pitfall — useRuntime export missing
+# Pitfall — useRuntime export missing
 
 Error
 
@@ -12,13 +12,9 @@ Fix
 
 - Do not import `useRuntime`. Instead, construct a runtime and subscribe with `useSyncExternalStore`.
 
-Code
-"use client"
-import React from "react"
-import { createRuntime } from "@formlink/runtime"
+Code "use client" import React from "react" import  createRuntime  from "@formlink/runtime"
 
-const rt = createRuntime({ form }) // or useMemo in a component
-const snap = React.useSyncExternalStore(rt.context.subscribe, rt.context.getSnapshot, rt.context.getSnapshot)
+const rt = createRuntime( form ) // or useMemo in a component const snap = React.useSyncExternalStore(rt.context.subscribe, rt.context.getSnapshot, rt.context.getSnapshot)
 
 Also see
 

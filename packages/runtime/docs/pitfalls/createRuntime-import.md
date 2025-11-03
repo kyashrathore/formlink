@@ -1,4 +1,4 @@
-Pitfall — createRuntime imported from UI subpath
+# Pitfall — createRuntime imported from UI subpath
 
 Error
 
@@ -8,8 +8,6 @@ Fix
 
 - Import from the package root:
 
-Correct
-import { createRuntime } from "@formlink/runtime"
+Correct import  createRuntime  from "@formlink/runtime"
 
-Incorrect
-import { createRuntime } from "@formlink/runtime/ui/react"
+Incorrect import  createRuntime  from "@formlink/runtime/ui/react"
