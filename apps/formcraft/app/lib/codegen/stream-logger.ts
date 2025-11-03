@@ -51,7 +51,7 @@ export class StreamLogger {
 
   async info(message: string): Promise<void> {
     if (this.debug) {
-      console.log(`[codegen:${this.taskId}] info: ${message}`)
+      console.warn(`[codegen:${this.taskId}] info: ${message}`)
     }
     await this.emitLog("info", message)
   }
@@ -74,7 +74,7 @@ export class StreamLogger {
     }
 
     if (this.debug) {
-      console.log(
+      console.warn(
         `[codegen:${this.taskId}] command: ${payload.cmd} ${payload.args?.join(" ") ?? ""}`
       )
     }
@@ -91,7 +91,7 @@ export class StreamLogger {
 
   async success(message: string): Promise<void> {
     if (this.debug) {
-      console.log(`[codegen:${this.taskId}] success: ${message}`)
+      console.warn(`[codegen:${this.taskId}] success: ${message}`)
     }
     await this.emitLog("success", message)
   }
@@ -107,7 +107,7 @@ export class StreamLogger {
     }
 
     if (this.debug) {
-      console.log(
+      console.warn(
         `[codegen:${this.taskId}] progress: ${progress}% ${message ?? ""}`
       )
     }
@@ -125,7 +125,9 @@ export class StreamLogger {
     }
 
     if (this.debug) {
-      console.log(`[codegen:${this.taskId}] status: ${status} ${message ?? ""}`)
+      console.warn(
+        `[codegen:${this.taskId}] status: ${status} ${message ?? ""}`
+      )
     }
 
     await this.emit("status", payload)
@@ -133,7 +135,7 @@ export class StreamLogger {
 
   async logPushResult(payload: PushPayload): Promise<void> {
     if (this.debug) {
-      console.log(
+      console.warn(
         `[codegen:${this.taskId}] push: ${payload.branchName} success=${payload.success}`
       )
     }

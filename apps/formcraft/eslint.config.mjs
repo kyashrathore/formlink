@@ -33,6 +33,13 @@ const eslintConfig = [
       "@typescript-eslint/no-explicit-any": "warn",
     },
   },
+  {
+    files: ["scripts/**/*"],
+    rules: {
+      // Allow console usage in node scripts
+      "no-console": "off",
+    },
+  },
 ]
 
 export default eslintConfig

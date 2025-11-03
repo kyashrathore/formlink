@@ -42,6 +42,12 @@ export default [
       "**/*.test.{ts,tsx}",
       "src/test/**/*.{ts,tsx}",
     ],
+    languageOptions: {
+      parserOptions: {
+        // Do not use project service for tests; avoids parser project lookup errors
+        project: false,
+      },
+    },
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/ban-ts-comment": "off",

@@ -104,7 +104,7 @@ export async function shutdownSandbox(
         await runCommandInSandbox(sandbox, "pkill", ["-f", "bun"])
       } catch {
         // Best effort - don't fail if we can't kill processes
-        console.log("Best effort process cleanup completed")
+        console.warn("Best effort process cleanup completed")
       }
     }
 

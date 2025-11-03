@@ -56,9 +56,11 @@ function TestUIPageContent() {
   const params = useParams()
   const searchParams = useSearchParams()
   const storeInitialModel = useFormGenerationStore((s) => s.initialModel)
-  const initialModel =
-    storeInitialModel ||
-    useMemo(() => searchParams.get("model") || undefined, [searchParams])
+  const urlInitialModel = useMemo(
+    () => searchParams.get("model") || undefined,
+    [searchParams]
+  )
+  const initialModel = storeInitialModel ?? urlInitialModel
 
   const formIdFromUrl = params.formId as string
   // Defer formId creation - only use real IDs, not sentinels like "new"

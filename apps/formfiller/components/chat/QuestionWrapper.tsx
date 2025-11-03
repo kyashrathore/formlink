@@ -239,11 +239,13 @@ const QuestionWrapperComponent: React.FC<QuestionWrapperProps> = ({
     [],
   );
 
+  // Define local submission state before any early returns to satisfy Rules of Hooks
+  const [isSubmitted, setIsSubmitted] = React.useState(false);
+
   if (!question) return null;
 
   // Simplified visibility rules: show input only for last assistant row until local submit.
   const hasResp = hasAnswer(response ?? null, question);
-  const [isSubmitted, setIsSubmitted] = React.useState(false);
   const showInput = variant === "assistant" && Boolean(isLast) && !isSubmitted;
   const showUserSummary = variant === "user" && hasResp;
   debugLog("QuestionWrapper visibility", {

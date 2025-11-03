@@ -50,7 +50,7 @@ async function writeSseEvent(
 
 export async function POST(request: NextRequest) {
   // Watermark this route build to verify hot reloads
-  console.log("[codegen/run] route revision watermark", "2025-10-25T13:50:00Z")
+  console.warn("[codegen/run] route revision watermark", "2025-10-25T13:50:00Z")
   let authResult
   try {
     authResult = await requireAuth(request)
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
   const debug = process.env.CODEGEN_DEBUG === "true"
   const dbg = (...args: unknown[]) => {
     if (debug) {
-      console.log("[codegen/run]", ...args)
+      console.warn("[codegen/run]", ...args)
     }
   }
 
@@ -185,8 +185,8 @@ export async function POST(request: NextRequest) {
     try {
       // Always mirror critical events to server console for debugging
       if (event === "error") console.error("[codegen/run] error", payload)
-      else if (event === "status") console.log("[codegen/run] status", payload)
-      else if (debug) console.log("[codegen/run] emit", event, payload)
+      else if (event === "status") console.warn("[codegen/run] status", payload)
+      else if (debug) console.warn("[codegen/run] emit", event, payload)
       if (!isClosed) {
         await writeSseEvent(writer, event, payload)
       }
@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
 
   // Important: do not write to the stream before returning the Response.
   // We start the SSE handshake and orchestration asynchronously below.
-  console.log("[codegen/run] Scheduling orchestration")
+  console.warn("[codegen/run] Scheduling orchestration")
   ;(async () => {
     let sandbox: Sandbox | undefined
     try {
@@ -214,7 +214,7 @@ export async function POST(request: NextRequest) {
           writer.write(encoder.encode(":hb\n\n")).catch(() => {})
         }
       }, 5000)
-      console.log("[codegen/run] SSE connection established")
+      console.warn("[codegen/run] SSE connection established")
 
       // Preflight env validation (emit to SSE, do not return HTTP errors)
       const envValidation = validateEnvironmentVariables(agent, githubToken, {
@@ -231,8 +231,8 @@ export async function POST(request: NextRequest) {
         return
       }
 
-      console.log("[codegen/run] Starting orchestration")
-      console.log("[codegen/run] Creating sandbox")
+      console.warn("[codegen/run] Starting orchestration")
+      console.warn("[codegen/run] Creating sandbox")
       const sandboxResult = await createSandbox(
         {
           taskId,
@@ -271,7 +271,7 @@ export async function POST(request: NextRequest) {
       const workingBranch = sandboxResult.branchName || branchName
       const sandboxPreviewDomain = sandboxResult.domain
       const sandboxId = sandbox.sandboxId
-      console.log("[codegen/run] Sandbox ready", { sandboxId, workingBranch })
+      console.warn("[codegen/run] Sandbox ready", { sandboxId, workingBranch })
       // Expose the sandbox preview domain immediately so the UI can embed it
       if (sandboxPreviewDomain) {
         const sandboxUrl = sandboxPreviewDomain.startsWith("http")
@@ -297,7 +297,7 @@ export async function POST(request: NextRequest) {
           ? // Force Codex to use its own model (gpt-5-codex). Ignore incoming model.
             await executeCodexInSandbox(sandbox, instruction, logger, undefined)
           : await executeClaudeInSandbox(sandbox, instruction, logger, model)
-      console.log("[codegen/run] Agent result", agentResult)
+      console.warn("[codegen/run] Agent result", agentResult)
 
       if (!agentResult.success) {
         dbg("Agent execution failed", agentResult.error)
@@ -329,7 +329,7 @@ export async function POST(request: NextRequest) {
         logger,
         githubToken
       )
-      console.log("[codegen/run] Push result", pushResult)
+      console.warn("[codegen/run] Push result", pushResult)
 
       await logger.logPushResult({
         branchName: workingBranch,
@@ -386,7 +386,7 @@ export async function POST(request: NextRequest) {
           apiToken: apiToken!,
         })
         deployUrl = deployResult.url
-        console.log("[codegen/run] Deploy complete", deployUrl)
+        console.warn("[codegen/run] Deploy complete", deployUrl)
       } else {
         await logger.updateStatus(
           "deploy_skipped",
@@ -394,7 +394,7 @@ export async function POST(request: NextRequest) {
             ? "Skipping Cloudflare deploy (credentials missing)"
             : "Skipping Cloudflare deploy (CODEGEN_SKIP_DEPLOY=true)"
         )
-        console.log("[codegen/run] Deploy skipped")
+        console.warn("[codegen/run] Deploy skipped")
       }
 
       const updatePayload: Database["public"]["Tables"]["forms"]["Update"] & {
@@ -423,7 +423,10 @@ export async function POST(request: NextRequest) {
           .update(updatePayload)
           .eq("id", formId)
         if (updateError) {
-          console.log("[codegen/run] Failed to update forms table", updateError)
+          console.warn(
+            "[codegen/run] Failed to update forms table",
+            updateError
+          )
           // Downgrade to info to avoid alarming logs when columns are not yet migrated
           await logger.info(
             `Skipped form metadata update: ${updateError.message}`
@@ -439,7 +442,7 @@ export async function POST(request: NextRequest) {
         previewUrl: deployUrl,
         pushFailed: Boolean(pushResult.pushFailed),
       })
-      console.log("[codegen/run] Task completed")
+      console.warn("[codegen/run] Task completed")
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Unexpected error"

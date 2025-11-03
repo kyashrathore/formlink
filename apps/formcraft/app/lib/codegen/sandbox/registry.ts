@@ -58,7 +58,7 @@ export async function killSandbox(
       await sandbox.stop()
     } catch (stopError) {
       // Sandbox may already be stopped, that's okay
-      console.log("Sandbox stop completed or was already stopped")
+      console.warn("Sandbox stop completed or was already stopped")
     }
 
     return { success: true }

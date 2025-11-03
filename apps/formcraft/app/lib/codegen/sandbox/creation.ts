@@ -192,7 +192,7 @@ export async function createSandbox(
       "validating_env",
       "Validating environment configuration"
     )
-    console.log("[codegen/sandbox] validate env")
+    console.warn("[codegen/sandbox] validate env")
 
     if (config.onProgress) {
       await config.onProgress(15, "Validating environment variables...")
@@ -243,7 +243,7 @@ export async function createSandbox(
       "creating_sandbox",
       "Creating sandbox environment"
     )
-    console.log("[codegen/sandbox] creating sandbox via @vercel/sandbox")
+    console.warn("[codegen/sandbox] creating sandbox via @vercel/sandbox")
     if (config.onProgress) {
       await config.onProgress(25, "Creating sandbox environment...")
     }
@@ -279,7 +279,7 @@ export async function createSandbox(
       "cloning_repository",
       "Cloning template repository"
     )
-    console.log("[codegen/sandbox] cloning repository", { baseBranch })
+    console.warn("[codegen/sandbox] cloning repository", { baseBranch })
     await runAndLogCommand(sandbox, "sh", ["-c", "rm -rf ./* ./.??*"], logger)
 
     // Match the CLI: embed GitHub token in HTTPS URL to avoid http.extraHeader issues inside sandbox
