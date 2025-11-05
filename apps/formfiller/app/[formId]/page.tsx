@@ -1,9 +1,6 @@
-import React from "react";
-import { Form } from "@formlink/schema";
 import FormPageClient from "@/app/[formId]/FormPageClient";
-import { createServerClient } from "@formlink/db";
-import { notFound } from "next/navigation";
 import { getFormSchemaById } from "@/app/lib/getFormSchema";
+import { notFound } from "next/navigation";
 
 // Always render dynamically to avoid stale theme/styles after edits
 export const dynamic = "force-dynamic";

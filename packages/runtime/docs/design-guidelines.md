@@ -7,7 +7,7 @@ description: "Practical guidance for Classic and Typeform modes: required labels
 
 Scope
 
-- Applies to `UniversalClassic` (multi-step) and `UniversalTypeform` (one-by-one) UIs.
+- Applies to `ClassicTemplate` (multi-step) and `TypeformTemplate` (one-by-one) UIs.
 - Complements the normative mapping tables; focuses on UX choices and structure.
 
 Required fields

@@ -24,7 +24,10 @@ export { UnifiedFileUpload } from "./UnifiedFileUpload";
 export { UnifiedLikert } from "./UnifiedLikert";
 export { UnifiedLinearScale } from "./UnifiedLinearScale";
 export { UnifiedPhoneInput } from "./UnifiedPhoneInput";
-export { UniversalClassic } from "./UniversalClassic";
+export { ClassicTemplate } from "./ClassicTemplate";
+// Temporary alias for back-compat; TODO: remove in next minor
+export { ClassicTemplate as UniversalClassic } from "./ClassicTemplate";
+export { ChatTemplate } from "./ChatTemplate";
 // Chat glue primitives (AI mode)
 export { useSlotBridge } from "./chat/hooks/useSlotBridge";
 export { useSubmitSelection } from "./chat/hooks/useSubmitSelection";

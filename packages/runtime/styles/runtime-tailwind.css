@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@source "./src/**/*.{ts,tsx}";
+@source "../src/**/*.{ts,tsx}";
 @plugin "tailwindcss-animate";
 
 :root {
@@ -22,16 +22,22 @@
   --border: oklch(0.89 0.048 76.9);
   --input: oklch(0.87 0.054 75.8);
   --ring: oklch(0.69 0.187 40.8);
-  --font-sans: "FT Kunst Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: "Apercu Mono Pro", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans:
+    "FT Kunst Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:
+    "Apercu Mono Pro", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    monospace;
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --radius: 0.5rem;
   --shadow-color: oklch(0.32 0.088 41.5 / 0.1);
   --shadow-sm: 0 1px 2px 0 var(--shadow-color);
   --shadow: 0 1px 3px 0 var(--shadow-color), 0 1px 2px -1px var(--shadow-color);
-  --shadow-md: 0 4px 6px -1px var(--shadow-color), 0 2px 4px -2px var(--shadow-color);
-  --shadow-lg: 0 10px 15px -3px var(--shadow-color), 0 4px 6px -4px var(--shadow-color);
-  --shadow-xl: 0 20px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color);
+  --shadow-md:
+    0 4px 6px -1px var(--shadow-color), 0 2px 4px -2px var(--shadow-color);
+  --shadow-lg:
+    0 10px 15px -3px var(--shadow-color), 0 4px 6px -4px var(--shadow-color);
+  --shadow-xl:
+    0 20px 25px -5px var(--shadow-color), 0 8px 10px -6px var(--shadow-color);
   --shadow-2xl: 0 25px 50px -12px var(--shadow-color);
   --shadow-inner: inset 0 2px 4px 0 var(--shadow-color);
 }

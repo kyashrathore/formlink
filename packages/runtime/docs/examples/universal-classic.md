@@ -1,11 +1,11 @@
 ---
 title: "Example — Universal Classic"
-description: "Mount the page/list UI via UniversalClassic with a headless runtime."
+description: "Mount the page/list UI via ClassicTemplate with a headless runtime."
 ---
 
 # Example — Universal Classic
 
-Purpose: Mount the page/list UI via UniversalClassic with a headless runtime.
+Purpose: Mount the page/list UI via ClassicTemplate with a headless runtime.
 
 ## Code
 
@@ -13,7 +13,7 @@ Purpose: Mount the page/list UI via UniversalClassic with a headless runtime.
 "use client"
 import React from "react"
 import { createRuntime } from "@formlink/runtime"
-import { RuntimeProvider, ShadCnProvider, UniversalClassic } from "@formlink/runtime/ui/react"
+import { RuntimeProvider, ShadCnProvider, ClassicTemplate } from "@formlink/runtime/ui/react"
 import type { Form } from "@formlink/runtime/schema"
 import "@formlink/runtime/ui/react/style.css"
 
@@ -31,7 +31,7 @@ export default function Example() {
   return (
     <RuntimeProvider runtime={rt} showDevtools>
       <ShadCnProvider components={primitives}>
-        <UniversalClassic />
+        <ClassicTemplate />
       </ShadCnProvider>
     </RuntimeProvider>
   )

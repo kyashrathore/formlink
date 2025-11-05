@@ -8,7 +8,7 @@ import type { Form } from "@formlink/runtime/schema";
 import {
   RuntimeProvider,
   ShadCnProvider,
-  UniversalClassic,
+  ClassicTemplate,
 } from "@formlink/runtime/ui/react";
 import {
   Badge,
@@ -160,7 +160,7 @@ export const Demo: Story = {
         }}
       >
         <RuntimeProvider runtime={rt} showDevtools>
-          <UniversalClassic
+          <ClassicTemplate
             nodes={
               [
                 { kind: "field", id: "n1", qId: "first_name", colSpan: 6 },

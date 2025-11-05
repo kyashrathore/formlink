@@ -73,8 +73,8 @@ Vite/SPA (React Router, embed in Home page component)
 The Classic renderer accepts a schema (Form.questions) and an optional `nodes` prop that controls layout. This enables "schema in → UI out" with precise placement for non‑persisted elements, and custom rendering when needed.
 
 - Component
-  - `import { UniversalClassic } from '@formlink/runtime/ui/react'`
-  - `<UniversalClassic nodes={nodes} />`
+  - `import { ClassicTemplate } from '@formlink/runtime/ui/react'`
+  - `<ClassicTemplate nodes={nodes} />`
   - If `nodes` is omitted, Classic falls back to rendering `form.questions` using any `styling.colSpan` and `styling.as` hints.
 
 - Node union (passed via `nodes` prop)
@@ -96,7 +96,7 @@ The Classic renderer accepts a schema (Form.questions) and an optional `nodes` p
 - Example (Classic)
 
   ```tsx
-  <UniversalClassic
+  <ClassicTemplate
     nodes={[
       {
         kind: "element",
@@ -191,7 +191,7 @@ import {
 import {
   RuntimeProvider,
   ShadCnProvider,
-  UniversalClassic,
+  ClassicTemplate,
 } from "@formlink/runtime/ui/react";
 import { Button, Separator } from "@formlink/ui";
 import type { Form } from "@formlink/runtime/schema";
@@ -349,7 +349,7 @@ export function ClassicStepsPage() {
   return (
     <ShadCnProvider components={{ Button, Separator }}>
       <RuntimeProvider runtime={rt} showDevtools>
-        <UniversalClassic nodes={nodes} showDefaultSubmit={false} />
+        <ClassicTemplate nodes={nodes} showDefaultSubmit={false} />
       </RuntimeProvider>
     </ShadCnProvider>
   );
@@ -382,3 +382,4 @@ React.useEffect(() => {
   const onGoto = (ev: Event) => {
     const e = ev as CustomEvent<{ questionId?: string }>;
     const qid = e.detail?.
+```

@@ -49,7 +49,7 @@ function formatWithRefs(
   });
 }
 
-export function UniversalClassic({
+export function ClassicTemplate({
   nodes: propNodes,
   showDefaultSubmit = true,
 }: {

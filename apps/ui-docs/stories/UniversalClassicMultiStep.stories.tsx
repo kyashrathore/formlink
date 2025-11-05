@@ -12,7 +12,7 @@ import type { Form } from "@formlink/runtime/schema";
 import {
   RuntimeProvider,
   ShadCnProvider,
-  UniversalClassic,
+  ClassicTemplate,
 } from "@formlink/runtime/ui/react";
 import {
   Button,
@@ -283,7 +283,7 @@ export const Demo: Story = {
         }}
       >
         <RuntimeProvider runtime={rt} showDevtools>
-          <UniversalClassic nodes={nodes} showDefaultSubmit={false} />
+          <ClassicTemplate nodes={nodes} showDefaultSubmit={false} />
         </RuntimeProvider>
       </ShadCnProvider>
     );

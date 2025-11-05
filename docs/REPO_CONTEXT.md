@@ -5,6 +5,7 @@ Last updated: 2025-11-04
 Recent change
 
 - Runtime/chat scaffold: Added `useChatStartCard` and `useQuestionPlaceholder` hooks to `@formlink/runtime/ui/react` for start-card control and consistent placeholders. See `docs/ai-chat-scaffold-primitives.md`.
+  -- 2025-11-06: Renamed `UniversalClassic` → `ClassicTemplate` and added `ChatTemplate` under `@formlink/runtime/ui/react`. Updated stories to use `ClassicTemplate`; added `apps/ui-docs/stories/ChatTemplateRealBackend.stories_v1.tsx` demonstrating controller wiring with `useChat`. For back-compat, a temporary alias `export { ClassicTemplate as UniversalClassic }` remains; remove in next minor.
 
 - 2025-10-23: Codegen deployments will use `wrangler pages deploy` from inside the Vercel sandbox (with Cloudflare tokens) instead of hitting the Pages Direct Upload REST API. The API path is still viable later, but CLI keeps us unblocked now; revisit once we have a stable archive streaming helper.
 - Runtime docs: Added consolidated plan at `docs/runtime/RUNTIME_CONSOLIDATED_v1.md` organizing packages, decisions to gavel, Deploy-on-Formlink flow, headless chat testmode, and the Devtools plan. This doc links to existing detailed specs and examples and defines MVP acceptance.
