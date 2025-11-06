@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "pnpm dlx shadcn@latest build",
+    "build": "next build",
+    "registry:build": "pnpm dlx shadcn@latest build",
     "start": "next start",
     "lint": "eslint"
   },
