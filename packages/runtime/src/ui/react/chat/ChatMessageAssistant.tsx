@@ -1,6 +1,6 @@
 "use client";
 import type { Question } from "@formlink/schema";
-import { Response } from "@formlink/ui/ai-elements";
+import { useAiElements } from "../primitives/ai-elements-context";
 import * as React from "react";
 import { ChatQuestionWrapper } from "./ChatQuestionWrapper";
 import { remarkSlots } from "./remark-slots-streamdown";
@@ -45,6 +45,8 @@ export function ChatMessageAssistant({
   onFileUpload,
   renderSlots = true,
 }: ChatMessageAssistantProps) {
+  const { Response } = useAiElements();
+  // ai-elements provided by host via AiElementsProvider
   const parts = Array.isArray(message?.parts) ? message.parts : [];
   const findQuestion = React.useCallback(
     (qId: string): Question | null => {

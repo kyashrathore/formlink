@@ -1,14 +1,42 @@
 "use client";
 
-import FormAIComponent from "@/app/[formId]/FormAIComponent";
-import TypeFormView from "@/components/typeform/TypeFormView";
-import ClassicFormView from "@/components/classic/ClassicFormView";
 import { FormModeProvider, useFormMode } from "@/contexts/FormModeContext";
 import { useThemeLoader } from "@/hooks/useThemeLoader";
 import { useAppFormStore } from "@/lib/stores/useAppFormStore";
-import type { QueryDataForForm, QuestionResponse } from "@/lib/types";
+import type { QueryDataForForm } from "@/lib/types";
+import { Chat, useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, type UIMessage as AiUIMessage } from "ai";
+import { createRuntime } from "@formlink/runtime";
+import {
+  ChatTemplate,
+  ClassicTemplate,
+  RuntimeProvider,
+  ShadCnProvider,
+  TypeformTemplate,
+} from "@formlink/runtime/ui/react";
 import { Form } from "@formlink/schema";
+import {
+  Badge,
+  Button,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  Command as CommandRoot,
+  CommandSeparator,
+  Input,
+  Label,
+  PopoverAnchor,
+  PopoverContent,
+  Popover as PopoverRoot,
+  PopoverTrigger,
+  ScrollArea,
+  Separator,
+  Textarea,
+} from "@formlink/ui";
 import React from "react";
+import { apiConfig } from "@/lib/api-config";
 
 interface FormPageContentProps {
   formSchema: Form;
@@ -40,22 +68,7 @@ function FormPageContent({
   // Questions are available directly from formSchema.questions
 
   // Business logic from app store
-  const {
-    questionResponses,
-    isCompleted,
-    initialize,
-    restart,
-    setQuestionResponse,
-    handleSingleChoiceChange,
-    handleTextChange,
-    shouldShowQuestion,
-    getNextValidQuestionIndex,
-    markAsCompleted,
-    submitForm,
-    handleFileUpload,
-    getCurrentQuestion,
-    getProgress,
-  } = useAppFormStore();
+  const { submissionId, initialize } = useAppFormStore();
 
   // Initialize wrapper to seed query params and testmode for Typeform/Classic
   const handleInitialize = React.useCallback(
@@ -65,60 +78,38 @@ function FormPageContent({
     [initialize, isTestSubmission, queryDataForForm],
   );
 
-  const handleStartQuiz = () => {
-    // Business logic for starting quiz (if any additional logic needed)
-  };
+  // Seed submission + local state on mount (reuses existing store init)
+  React.useEffect(() => {
+    handleInitialize(formSchema, formSchema.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const handleAnswerChange = (
-    questionId: string,
-    value: QuestionResponse,
-    questionType: string,
-  ) => {
-    // Route to appropriate business logic based on question type
-    switch (questionType) {
-      case "singleChoice":
-        if (typeof value === "string") {
-          handleSingleChoiceChange(questionId, value);
-        }
-        break;
-      case "multipleChoice":
-        if (Array.isArray(value)) {
-          setQuestionResponse(questionId, value);
-        }
-        break;
-      case "ranking":
-        if (Array.isArray(value)) {
-          setQuestionResponse(questionId, value);
-        }
-        break;
-      case "address":
-        if (typeof value === "object" && value !== null) {
-          setQuestionResponse(questionId, value);
-        }
-        break;
-      case "rating":
-      case "linearScale":
-        if (typeof value === "number") {
-          setQuestionResponse(questionId, value);
-        }
-        break;
-      case "likertScale":
-        // Likert scale uses labeled options (strings)
-        if (typeof value === "string") {
-          setQuestionResponse(questionId, value);
-        }
-        break;
-      case "date":
-        // Handle both Date objects and strings
-        setQuestionResponse(questionId, value);
-        break;
-      default:
-        if (typeof value === "string") {
-          handleTextChange(questionId, value);
-        }
-        break;
-    }
-  };
+  // Build runtime once submission id is available (Typeform/Classic)
+  const runtime = React.useMemo(() => {
+    if (!submissionId) return null;
+    return createRuntime({
+      form: formSchema,
+      formfiller: {
+        baseUrl: "",
+        formId: formSchema.id,
+        submissionId,
+        formVersionId: formSchema.version_id,
+        isTestSubmission,
+      },
+      uiMode: isClassicMode ? "classic" : "typeform",
+    });
+  }, [submissionId, formSchema, isClassicMode, isTestSubmission]);
+
+  // Prepare AI chat controller unconditionally to keep hook order stable.
+  // For our installed SDK versions, pass a transport that points to chat-assist.
+  const chat = useChat<AiUIMessage>({
+    chat: React.useMemo(() => {
+      const transport = new DefaultChatTransport({
+        api: apiConfig.getChatAssistUrl(),
+      });
+      return new Chat<AiUIMessage>({ transport });
+    }, []),
+  });
 
   // Show minimal loading state while theme is being applied to prevent content flash
   if (themeLoader.isLoading) {
@@ -132,61 +123,107 @@ function FormPageContent({
     );
   }
 
+  // AI Chat path (runtime ChatTemplate + useChat)
   if (isAIMode) {
+    const { messages, sendMessage, status } = chat;
     return (
-      <FormAIComponent
-        formId={formSchema.id}
-        formSchema={formSchema}
-        isTestSubmission={isTestSubmission}
-        queryDataForForm={queryDataForForm}
-      />
+      <ShadCnProvider
+        components={{
+          Button,
+          Input,
+          Textarea,
+          Label,
+          Separator,
+          Badge,
+          ScrollArea,
+          PopoverRoot,
+          PopoverTrigger,
+          PopoverContent,
+          PopoverAnchor,
+          CommandRoot,
+          CommandList,
+          CommandItem,
+          CommandGroup,
+          CommandEmpty,
+          CommandInput,
+          CommandSeparator,
+        }}
+      >
+        <ChatTemplate
+          form={formSchema}
+          baseUrl={""}
+          controller={{
+            messages,
+            status,
+            sendMessage,
+          }}
+          title={formSchema.title}
+        />
+      </ShadCnProvider>
     );
   }
 
   if (isClassicMode) {
+    if (!runtime) return null;
     return (
-      <ClassicFormView
-        formSchema={formSchema}
-        formId={formSchema.id}
-        // Props down: business state
-        questionResponses={questionResponses}
-        isCompleted={isCompleted}
-        // Callbacks up: business actions
-        onInitialize={handleInitialize}
-        onStartQuiz={handleStartQuiz}
-        onRestart={restart}
-        onAnswerChange={handleAnswerChange}
-        onFileUpload={handleFileUpload}
-        onNavigateNext={getNextValidQuestionIndex}
-        onMarkCompleted={markAsCompleted}
-        onSubmitForm={submitForm}
-        shouldShowQuestion={shouldShowQuestion}
-        getCurrentQuestion={getCurrentQuestion}
-        getProgress={getProgress}
-      />
+      <ShadCnProvider
+        components={{
+          Button,
+          Input,
+          Textarea,
+          Label,
+          Separator,
+          Badge,
+          ScrollArea,
+          PopoverRoot,
+          PopoverTrigger,
+          PopoverContent,
+          PopoverAnchor,
+          CommandRoot,
+          CommandList,
+          CommandItem,
+          CommandGroup,
+          CommandEmpty,
+          CommandInput,
+          CommandSeparator,
+        }}
+      >
+        <RuntimeProvider runtime={runtime} showDevtools={false}>
+          <ClassicTemplate />
+        </RuntimeProvider>
+      </ShadCnProvider>
     );
   }
 
   // Default to TypeForm mode if not in AI or Classic mode
+  if (!runtime) return null;
   return (
-    <TypeFormView
-      formSchema={formSchema}
-      formId={formSchema.id}
-      // Props down: business state
-      questionResponses={questionResponses}
-      isCompleted={isCompleted}
-      // Callbacks up: business actions
-      onInitialize={handleInitialize}
-      onStartQuiz={handleStartQuiz}
-      onRestart={restart}
-      onAnswerChange={handleAnswerChange}
-      onFileUpload={handleFileUpload}
-      onNavigateNext={getNextValidQuestionIndex}
-      onSubmitForm={submitForm}
-      shouldShowQuestion={shouldShowQuestion}
-      getCurrentQuestion={getCurrentQuestion}
-      getProgress={getProgress}
-    />
+    <ShadCnProvider
+      components={{
+        Button,
+        Input,
+        Textarea,
+        Label,
+        Separator,
+        Badge,
+        ScrollArea,
+        PopoverRoot,
+        PopoverTrigger,
+        PopoverContent,
+        PopoverAnchor,
+        CommandRoot,
+        CommandList,
+        CommandItem,
+        CommandGroup,
+        CommandEmpty,
+        CommandInput,
+        CommandSeparator,
+      }}
+    >
+      <RuntimeProvider runtime={runtime} showDevtools={false}>
+        <TypeformTemplate />
+      </RuntimeProvider>
+    </ShadCnProvider>
   );
 }
 

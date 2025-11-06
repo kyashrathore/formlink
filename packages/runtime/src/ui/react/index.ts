@@ -6,6 +6,11 @@ export { InlineSelect } from "./InlineSelect";
 export { InlineSignature } from "./InlineSignature";
 export { ShadCnProvider, useUiComponents } from "./primitives/context";
 export type { ShadCnPrimitives } from "./primitives/context";
+export {
+  AiElementsProvider,
+  useAiElements,
+} from "./primitives/ai-elements-context";
+export type { AiElementsPrimitives } from "./primitives/ai-elements-context";
 export { RuntimeProvider } from "./runtime-context";
 export { TypeFormContinueFooter } from "./typeform/ContinueFooter";
 export { TypeFormLayout } from "./typeform/Layout";

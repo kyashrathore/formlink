@@ -45,12 +45,7 @@ export * from "./components/ui/toggle-group";
 export * from "./components/ui/tooltip";
 export * from "./ui/scoped-drawer";
 
-// Motion components
-export * from "./motion/morphing-dialog";
-export * from "./motion/progressive-blur";
-export * from "./motion/scroll-button";
-export * from "./motion/text-morph";
-export * from "./motion/useClickOutside";
+// Motion components removed (unused in apps)
 
 // Chat UI components (prompt-kit) - remaining components still in use
 
@@ -58,60 +53,17 @@ export * from "./motion/useClickOutside";
 // Includes: Message, MessageContent, MessageAvatar, Conversation, PromptInput, Tool, PromptSuggestion
 export * from "./components/ai-elements/";
 
-// Icons
-export { default as ClaudeIcon } from "./icons/claude";
-export { default as DeepSeekIcon } from "./icons/deepseek";
-export { default as GeminiIcon } from "./icons/gemini";
-export { default as GrokIcon } from "./icons/grok";
-export { default as MistralIcon } from "./icons/mistral";
-export { default as OpenAIIcon } from "./icons/openai";
+// Icons removed (related config removed and unused)
 
 // Store - REMOVED: UI package should be stateless
 // All state management should be handled by the consuming application
 
 // Form context removed from UI to keep package stateless
 
-// Generic types for decoupled usage - IMPORT THESE FOR TYPE SAFETY
-export * from "./types/generic";
+// Generic types removed (unused)
 
 // Hooks exports - organized by category
-export * from "./hooks/typeform/useTypeFormScroll";
-export * from "./hooks/typeform/useTypeFormSwipe";
 export * from "./hooks/ui/use-mobile";
 export * from "./hooks/ui/useTheme";
 
-// Unified Component Architecture Exports - PRIMARY INTERFACE
-
-// Main unified form input components (USE THESE BY DEFAULT)
-// Note: UnifiedFormInput was removed as it used the registry system
-
-// Individual unified components (for advanced usage)
-export { UnifiedAddressInput } from "./form/modes/unified/UnifiedAddressInput";
-export { UnifiedCountryList } from "./form/modes/unified/UnifiedCountryList";
-export { UnifiedCountrySelect } from "./form/modes/unified/UnifiedCountrySelect";
-export { UnifiedDatePicker } from "./form/modes/unified/UnifiedDatePicker";
-export { UnifiedDropdownMultiSelect } from "./form/modes/unified/UnifiedDropdownMultiSelect";
-export { UnifiedDropdownSelect } from "./form/modes/unified/UnifiedDropdownSelect";
-export { UnifiedFileUpload } from "./form/modes/unified/UnifiedFileUpload";
-export { UnifiedLikert } from "./form/modes/unified/UnifiedLikert";
-export { UnifiedLinearScale } from "./form/modes/unified/UnifiedLinearScale";
-export { UnifiedMultiSelect } from "./form/modes/unified/UnifiedMultiSelect";
-export { UnifiedPhoneInput } from "./form/modes/unified/UnifiedPhoneInput";
-export { UnifiedRanking } from "./form/modes/unified/UnifiedRanking";
-export { UnifiedRating } from "./form/modes/unified/UnifiedRating";
-export { UnifiedSignature } from "./form/modes/unified/UnifiedSignature";
-
-// Context provider removed (should live in app)
-
-// Base primitives - these provide the core logic
-export * from "./form/primitives";
-
-// Shared components for both modes
-export * from "./form/modes/shared";
-
-// Legacy mode-specific components (USE UNIFIED COMPONENTS ABOVE INSTEAD)
-// Chat/AI mode components
-export * from "./form/modes/chat";
-
-// TypeForm mode components
-export * from "./form/modes/typeform";
+// Unified form components and form primitives removed (moved to @formlink/runtime)

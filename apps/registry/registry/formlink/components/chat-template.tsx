@@ -1,22 +1,67 @@
 "use client";
-import type { Question } from "@/schema";
-import { PromptInputTypedAssist } from "@/ui/react/ai/PromptInputTypedAssist";
-import { useTypedInputGate } from "@/ui/react/ai/useTypedInputGate";
-import { ChatMessageAssistant } from "@/ui/react/chat/ChatMessageAssistant";
-import { useChatStartCard } from "@/ui/react/chat/hooks/useChatStartCard";
-import { useFileUploadSubmission } from "@/ui/react/chat/hooks/useFileUploadSubmission";
-import { useQuestionPlaceholder } from "@/ui/react/chat/hooks/useQuestionPlaceholder";
-import { useSlotBridge } from "@/ui/react/chat/hooks/useSlotBridge";
-import { useSubmitSelection } from "@/ui/react/chat/hooks/useSubmitSelection";
-import { FormlinkLogo } from "@/ui/react/icons/FormlinkLogo";
-import { useUiComponents } from "./primitives/context";
-import { useAiElements } from "./primitives/ai-elements-context";
-// Minimal classnames joiner to avoid pulling UI utils
+
+import * as React from "react";
+import type { Question } from "@formlink/runtime/schema";
+import {
+  ShadCnProvider,
+  AiElementsProvider,
+  PromptInputTypedAssist,
+  useTypedInputGate,
+  ChatMessageAssistant,
+  useChatStartCard,
+  useFileUploadSubmission,
+  useQuestionPlaceholder,
+  useSlotBridge,
+  useSubmitSelection,
+  FormlinkLogo,
+  useUiComponents,
+  useAiElements,
+} from "@formlink/runtime/ui/react";
+import { UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Avatar as AvatarUi,
+  AvatarImage as AvatarImageUi,
+  AvatarFallback as AvatarFallbackUi,
+} from "@/components/ui/avatar";
+import {
+  Popover as PopoverRoot,
+  PopoverTrigger,
+  PopoverContent,
+  PopoverAnchor,
+} from "@/components/ui/popover";
+import {
+  Command as CommandRoot,
+  CommandList,
+  CommandItem,
+  CommandGroup,
+  CommandEmpty,
+  CommandInput,
+  CommandSeparator,
+} from "@/components/ui/command";
+import {
+  Conversation as ConversationUi,
+  ConversationContent as ConversationContentUi,
+  ConversationScrollButton as ConversationScrollButtonUi,
+} from "@/components/ai-elements/conversation";
+import {
+  PromptInput as PromptInputUi,
+  PromptInputHeader as PromptInputHeaderUi,
+  PromptInputTextarea as PromptInputTextareaUi,
+  PromptInputSubmit as PromptInputSubmitUi,
+} from "@/components/ai-elements/prompt-input";
+import { Response as ResponseUi } from "@/components/ai-elements/response";
+
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
-import { UserRound } from "lucide-react";
-import * as React from "react";
 
 export type UIMessage = { id?: string | number; role: string; parts?: any[] };
 
@@ -31,14 +76,14 @@ export type ChatController = {
 
 export interface ChatTemplateProps {
   form: { id?: string; questions?: Question[]; [k: string]: any };
-  baseUrl: string; // host base for uploads, e.g. "" to use same origin
+  baseUrl: string;
   controller: ChatController;
   title?: string;
   avatarUrl?: string;
   showDebugIntent?: boolean;
 }
 
-export function ChatTemplate({
+function ChatTemplateInner({
   form,
   baseUrl,
   controller,
@@ -56,10 +101,13 @@ export function ChatTemplate({
     PromptInputSubmit,
     Response,
   } = useAiElements();
+  const {
+    Avatar: AvatarComp,
+    AvatarImage: AvatarImageComp,
+    AvatarFallback: AvatarFallbackComp,
+  } = useUiComponents();
 
-  // ai-elements provided by host via AiElementsProvider
   const { messages, status, sendMessage } = controller;
-
   const [currentQuestionId, setCurrentQuestionId] = React.useState<
     string | null
   >(null);
@@ -68,10 +116,8 @@ export function ChatTemplate({
   const [drafts, setDrafts] = React.useState<Record<string, any>>({});
   const [completed, setCompleted] = React.useState(false);
 
-  // Bridge the slot token to current question id
   useSlotBridge({ messages, onSlot: setCurrentQuestionId });
 
-  // Apply tool outputs from assistant messages exactly once per message id
   const lastAppliedRef = React.useRef<string>("");
   React.useEffect(() => {
     const assistants = messages.filter((m) => m?.role === "assistant");
@@ -79,13 +125,12 @@ export function ChatTemplate({
     const last = assistants[assistants.length - 1]!;
     const lastId = String((last as any)?.id ?? assistants.length);
     if (lastAppliedRef.current === lastId) return;
-    // scan for tool-* parts
     const toolParts = (
       Array.isArray((last as any).parts) ? (last as any).parts : []
     ).filter(
       (p: any) => typeof p?.type === "string" && p.type.startsWith("tool-"),
     );
-    if (toolParts.length === 0) return; // nothing to apply yet
+    if (toolParts.length === 0) return;
     lastAppliedRef.current = lastId;
     for (const p of toolParts) {
       const tool = String(p.type).replace(/^tool-/, "");
@@ -178,6 +223,43 @@ export function ChatTemplate({
     setInput("");
   }
 
+  function renderHeader(isAssistant: boolean) {
+    const icon = isAssistant ? (
+      <FormlinkLogo className="h-3 w-3" />
+    ) : (
+      <UserRound className="h-3 w-3" />
+    );
+    if (AvatarComp) {
+      return (
+        <>
+          <AvatarComp className="h-6 w-6">
+            {AvatarImageComp ? (
+              <AvatarImageComp src={isAssistant ? avatarUrl : undefined} />
+            ) : null}
+            {AvatarFallbackComp ? (
+              <AvatarFallbackComp className="text-[10px]">
+                {icon}
+              </AvatarFallbackComp>
+            ) : (
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border">
+                {icon}
+              </div>
+            )}
+          </AvatarComp>
+          <span>{isAssistant ? "Formlink" : "You"}</span>
+        </>
+      );
+    }
+    return (
+      <>
+        <div className="flex h-6 w-6 items-center justify-center rounded-full border">
+          {icon}
+        </div>
+        <span>{isAssistant ? "Formlink" : "You"}</span>
+      </>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-6 min-h-[100svh]">
       {!started ? (
@@ -224,41 +306,7 @@ export function ChatTemplate({
 
                 const Header = (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {(() => {
-                      const { Avatar, AvatarImage, AvatarFallback } =
-                        useUiComponents();
-                      const icon = isAssistant ? (
-                        <FormlinkLogo className="h-3 w-3" />
-                      ) : (
-                        <UserRound className="h-3 w-3" />
-                      );
-                      if (Avatar) {
-                        return (
-                          <Avatar className="h-6 w-6">
-                            {AvatarImage ? (
-                              <AvatarImage
-                                src={isAssistant ? avatarUrl : undefined}
-                              />
-                            ) : null}
-                            {AvatarFallback ? (
-                              <AvatarFallback className="text-[10px]">
-                                {icon}
-                              </AvatarFallback>
-                            ) : (
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full border">
-                                {icon}
-                              </div>
-                            )}
-                          </Avatar>
-                        );
-                      }
-                      return (
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full border">
-                          {icon}
-                        </div>
-                      );
-                    })()}
-                    <span>{isAssistant ? "Formlink" : "You"}</span>
+                    {renderHeader(isAssistant)}
                   </div>
                 );
 
@@ -283,7 +331,6 @@ export function ChatTemplate({
                             aria-live="polite"
                             role="status"
                           >
-                            {/* Simple thinking dots indicator */}
                             Thinking...
                           </div>
                         ) : (
@@ -292,7 +339,7 @@ export function ChatTemplate({
                             isLast={isLastAssistant}
                             currentQuestionId={currentQuestionId ?? undefined}
                             form={form as any}
-                            values={{ ...answers, ...drafts }}
+                            values={{ ...drafts, ...answers }}
                             onChange={(qid, v) =>
                               setDrafts((d) => ({ ...d, [qid]: v }))
                             }
@@ -363,5 +410,51 @@ export function ChatTemplate({
         </>
       )}
     </div>
+  );
+}
+
+export function ChatTemplate(props: ChatTemplateProps) {
+  return (
+    <ShadCnProvider
+      components={{
+        Button,
+        Input,
+        Textarea,
+        Label,
+        Badge,
+        ScrollArea,
+        Separator,
+        Calendar,
+        Avatar: AvatarUi,
+        AvatarImage: AvatarImageUi,
+        AvatarFallback: AvatarFallbackUi,
+        PopoverRoot,
+        PopoverTrigger,
+        PopoverContent,
+        PopoverAnchor,
+        CommandRoot,
+        CommandList,
+        CommandItem,
+        CommandGroup,
+        CommandEmpty,
+        CommandInput,
+        CommandSeparator,
+      }}
+    >
+      <AiElementsProvider
+        components={{
+          Conversation: ConversationUi,
+          ConversationContent: ConversationContentUi,
+          ConversationScrollButton: ConversationScrollButtonUi,
+          PromptInput: PromptInputUi,
+          PromptInputHeader: PromptInputHeaderUi,
+          PromptInputTextarea: PromptInputTextareaUi,
+          PromptInputSubmit: PromptInputSubmitUi,
+          Response: ResponseUi,
+        }}
+      >
+        <ChatTemplateInner {...props} />
+      </AiElementsProvider>
+    </ShadCnProvider>
   );
 }

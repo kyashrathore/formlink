@@ -55,6 +55,37 @@ Prompt Guards
 - Rationale: Avoid transient stuck UX and make errors explicit, keeping validation logic centralized in the runtime (not stories). Aligns with docs plan for submit flow and "fail loudly" rule.
 - Verification: `pnpm -w typecheck` passes. Lint has pre-existing warnings in unrelated packages; not changed. Story uses the mock transport; submit now transitions to `completed` reliably when valid, and to `filling` with surfaced errors when invalid.
 
+## Decision Log — 2025-11-06
+
+- Task 1 Adoption (Formfiller → @formlink/runtime)
+  - Modes integrated:
+    - Typeform: `TypeformTemplate` under `RuntimeProvider` with a `createRuntime({ form, formfiller, uiMode: 'typeform' })` instance. Transport uses same-origin endpoints: `/api/forms/:id/save-answers` and `/api/upload`.
+    - Classic: `ClassicTemplate` under `RuntimeProvider` with `uiMode: 'classic'`. No custom nodes passed initially; the template renders `form.questions` (and will honor layout nodes when available).
+    - AI Chat: `ChatTemplate` wired via `useChat` (`@ai-sdk/react`) controller. Uploads go to `/api/upload`. No runtime instance required for ChatTemplate.
+  - App wiring (apps/formfiller):
+    - `app/layout.tsx`: imports `@formlink/runtime/ui/react/style.css` in addition to UI globals to ensure runtime utilities (height, progress, etc.) are present.
+    - `app/[formId]/FormPageClient.tsx`: replaces bespoke `TypeFormView` / `ClassicFormView` / `FormAIComponent` paths with runtime templates. A single `createRuntime` instance is memoized per render, seeded with `{ formId, formVersionId, submissionId, isTestSubmission }`. `submissionId` comes from the app’s Zustand store (`initialize()`), preserving the existing DB partial-save behavior.
+    - `ShadCnProvider` maps UI primitives from `@formlink/ui` so runtime templates can render consistently across apps.
+  - TS/Resolution decisions:
+    - To avoid a workspace install step (interactive in CI), `apps/formfiller/tsconfig.json` maps runtime imports to built files:
+      - `@formlink/runtime` → `../../packages/runtime/dist/index.js`
+      - `@formlink/runtime/ui/react` → `../../packages/runtime/dist/ui/react/index.js`
+        This sidesteps the runtime’s internal `@/*` path alias collisions and keeps typecheck green without changing the app’s `@/*` alias.
+    - `useChat` option typing in `@ai-sdk/react` varies by version; we cast to `any` at the import site to keep the controller simple and prevent friction.
+  - CSS source scanning bug fixed:
+    - `packages/runtime/styles/runtime-tailwind.css` `@source` path updated to `../src` so Tailwind v4 picks up runtime classes when rebuilding CSS. A dev watcher (`pnpm --filter @formlink/runtime dev:css`) can be run in parallel to propagate style changes instantly.
+  - Temporary compat:
+    - `ClassicTemplate as UniversalClassic` export remains for external references; remove once all imports migrate (tracked in docs TODOs).
+  - Deletions not performed yet:
+    - App-local Typeform/Classic/Chat components remain and are not referenced by the main page. Delete after parity is verified to keep the change surgical.
+
+- Defaults / Base URL
+  - `LinkWithFormlink` `baseUrl` defaults to `https://formlink.ai` and may be overridden per environment. First‑party apps hide linking UI by default (`usage='first_party'`).
+
+- Keyless Claim Flow (Option B) — Summary & Risks
+  - We will offer a “Claim in Formlink” flow for hosts that cannot store an API key. UX: open Formlink in a new tab with an opaque single‑use claim token; user logs in, selects workspace, claims the form; host instructs to refresh or optionally checks status via a read‑only endpoint.
+  - Top risks: ownership hijack (guessing ids), replay of tokens, open redirect/phishing, concurrent claims/races, CSRF. Mitigations: high‑entropy ids, single‑use short‑TTL tokens, strict redirect allowlist (or fixed destination), atomic server‑side claim with idempotency, state/PKCE and CSRF tokens, rate‑limit/captcha, audit trail and reassign/unclaim path.
+
 - Bug: Pressing Enter in TypeForm text inputs (e.g., email) advanced two steps (qN → qN+2). Root cause was double invocation of `onSubmit` from both the base primitive and the TypeForm wrapper.
 - Change: Disable primitive-level auto-submit-on-Enter for TypeFormTextInput and handle Enter once in the wrapper.
   - File: `packages/ui/src/form/modes/typeform/TypeFormTextInput.tsx`

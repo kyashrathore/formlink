@@ -1,7 +1,14 @@
 "use client";
 import { useChat } from "@ai-sdk/react";
-import { ShadCnProvider, ChatTemplate } from "@formlink/runtime/ui/react";
 import {
+  ShadCnProvider,
+  ChatTemplate,
+  AiElementsProvider,
+} from "@formlink/runtime/ui/react";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
   Badge,
   Button,
   CommandEmpty,
@@ -21,6 +28,16 @@ import {
   Separator,
   Textarea,
 } from "@formlink/ui";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+  PromptInput,
+  PromptInputHeader,
+  PromptInputTextarea,
+  PromptInputSubmit,
+  Response,
+} from "@formlink/ui/ai-elements";
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import * as React from "react";
 
@@ -212,6 +229,10 @@ function RealBackendDemo({
         Separator,
         Badge,
         ScrollArea,
+        // Avatar primitives (improves header visuals)
+        Avatar,
+        AvatarImage,
+        AvatarFallback,
         PopoverRoot,
         PopoverTrigger,
         PopoverContent,
@@ -225,16 +246,29 @@ function RealBackendDemo({
         CommandSeparator,
       }}
     >
-      <ChatTemplate
-        form={STATIC_FORM_SCHEMA}
-        baseUrl={baseUrl}
-        controller={{
-          messages: messages as any,
-          status: status as any,
-          sendMessage: sendMessage as any,
+      <AiElementsProvider
+        components={{
+          Conversation,
+          ConversationContent,
+          ConversationScrollButton,
+          PromptInput,
+          PromptInputHeader,
+          PromptInputTextarea,
+          PromptInputSubmit,
+          Response,
         }}
-        title="Formlink Assistant"
-      />
+      >
+        <ChatTemplate
+          form={STATIC_FORM_SCHEMA}
+          baseUrl={baseUrl}
+          controller={{
+            messages: messages as any,
+            status: status as any,
+            sendMessage: sendMessage as any,
+          }}
+          title="Formlink Assistant"
+        />
+      </AiElementsProvider>
     </ShadCnProvider>
   );
 }

@@ -5,6 +5,11 @@
     "paths": {
       "@/*": ["./*"],
       "@formlink/prompts": ["../../packages/prompts/src"],
+      "@formlink/runtime": ["../../packages/runtime/dist/index.d.ts"],
+      "@formlink/runtime/*": ["../../packages/runtime/dist/*"],
+      "@formlink/runtime/ui/react": [
+        "../../packages/runtime/dist/ui/react/index.d.ts"
+      ],
       "@formlink/ui/components/*": ["../../packages/ui/src/components/*"],
       "@formlink/ui/lib/*": ["../../packages/ui/src/lib/*"],
       "@formlink/ui/hooks/*": ["../../packages/ui/src/hooks/*"],

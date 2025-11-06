@@ -20,6 +20,10 @@ export default defineConfig({
     "react",
     "react-dom",
     "motion",
+    // Keep external to prevent bundling their CJS shims (avoid dynamic require)
+    "@formlink/ui",
+    "use-sync-external-store",
+    "@radix-ui/react-use-is-hydrated",
     "@tanstack/form-core",
     "@tanstack/react-form",
     "@tanstack/zod-form-adapter",

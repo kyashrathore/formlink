@@ -1,0 +1,82 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "formlink",
+  "homepage": "https://formlini.ai",
+  "items": [
+    {
+      "name": "chat-template",
+      "type": "registry:component",
+      "dependencies": ["@formlink/runtime", "lucide-react"],
+      "registryDependencies": [
+        "button",
+        "input",
+        "textarea",
+        "label",
+        "badge",
+        "scroll-area",
+        "separator",
+        "avatar",
+        "popover",
+        "command",
+        "calendar",
+        "ai-elements/conversation",
+        "ai-elements/prompt-input",
+        "ai-elements/response"
+      ],
+      "files": [
+        {
+          "path": "registry/formlink/components/chat-template.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "classic-template",
+      "type": "registry:component",
+      "dependencies": ["@formlink/runtime"],
+      "registryDependencies": [
+        "button",
+        "input",
+        "textarea",
+        "label",
+        "badge",
+        "scroll-area",
+        "separator",
+        "avatar",
+        "popover",
+        "command",
+        "calendar"
+      ],
+      "files": [
+        {
+          "path": "registry/formlink/components/classic-template.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "typeform-template",
+      "type": "registry:component",
+      "dependencies": ["@formlink/runtime"],
+      "registryDependencies": [
+        "button",
+        "input",
+        "textarea",
+        "label",
+        "badge",
+        "scroll-area",
+        "separator",
+        "avatar",
+        "popover",
+        "command",
+        "calendar"
+      ],
+      "files": [
+        {
+          "path": "registry/formlink/components/typeform-template.tsx",
+          "type": "registry:component"
+        }
+      ]
+    }
+  ]
+}

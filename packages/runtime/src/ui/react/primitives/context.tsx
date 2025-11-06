@@ -14,6 +14,10 @@ export type ShadCnPrimitives = {
   Badge?: React.ComponentType<UnknownProps>;
   ScrollArea?: React.ComponentType<UnknownProps>;
   Separator?: React.ComponentType<UnknownProps>;
+  // Avatar (optional)
+  Avatar?: React.ComponentType<UnknownProps>;
+  AvatarImage?: React.ComponentType<UnknownProps>;
+  AvatarFallback?: React.ComponentType<UnknownProps>;
   // Date
   Calendar?: React.ComponentType<UnknownProps>; // shadcn Calendar wrapper (react-day-picker)
 

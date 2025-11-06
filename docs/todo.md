@@ -1,5 +1,5 @@
 Formlink Runtime Adoption & Linking Plan (v1)
-Last updated: 2025-11-05
+Last updated: 2025-11-06
 
 Summary
 
@@ -12,6 +12,13 @@ Crisp Questions (blocking details)
 
 - What is the base URL for link/existence checks? Provide one of: required prop on `<LinkWithFormlink baseUrl="…" />`, or a constant env (e.g., `FORMLINK_BASE_URL`). Defaulting silently is not acceptable.
 - Should the “linking” UI be completely hidden in first‑party apps (Formcraft/Formfiller)? Proposed: yes; opt‑out via an explicit `usage` prop.
+- API key vs claim flow: When a third‑party host cannot store an API key, do we support a keyless “claim in Formlink” flow? If yes, specify verification, trust boundary, and UX (no silent callbacks).
+
+Decisions (resolved)
+
+- Base URL: `https://formlink.ai` (default). Can be overridden via prop (`baseUrl`) or env for non‑prod.
+- First‑party apps: Hide linking UI by default (`usage="first_party"`).
+- Offer claim‑in‑Formlink (Option B) for keyless hosts; keep UX simple (new tab → login → claim → return).
 
 Acceptance (global)
 
@@ -23,7 +30,7 @@ Task 1 — Adopt runtime in Formfiller (All modes: typeform, classic, ai chat)
 
 - Reference patterns (authoritative examples)
   - Classic: `apps/ui-docs/stories/StripeSDE2Application.stories.tsx` (manual composition with `createRuntime`, UI primitives, progress, submit/reset wiring).
-  - AI Chat: `apps/ui-docs/stories/ChatGlueRealBackend.stories.tsx` (chat glue primitives: `useSlotBridge`, `useSubmitSelection`, `useFileUploadSubmission`, `useChatStartCard`, `useQuestionPlaceholder`, `PromptInputTypedAssist`). Also see `apps/ui-docs/stories/ChatTemplateRealBackend.stories_v1.tsx` for the `ChatTemplate` controller wiring example.
+  - AI Chat: Prefer `ChatTemplate`. See `apps/ui-docs/stories/ChatGlueRealBackend.stories.tsx` (now rendered via `ChatTemplate`) and `apps/ui-docs/stories/ChatTemplateRealBackend.stories_v1.tsx` for controller wiring.
 
 - Scope by mode
   - Typeform
@@ -41,8 +48,8 @@ Task 1 — Adopt runtime in Formfiller (All modes: typeform, classic, ai chat)
   - `apps/formfiller/app/[formId]/FormPageClient.tsx` — instantiate runtime once per page render; branch on mode to render:
     - Typeform: `<RuntimeProvider><TypeformTemplate flowEngine?={flow}/></RuntimeProvider>`
     - Classic: `<RuntimeProvider><ClassicTemplate nodes={…?} /></RuntimeProvider>` (Option A), or a composed JSX wrapper (Option B).
-    - AI: new chat component using glue hooks (see below).
-  - New (AI chat): `apps/formfiller/components/chat/ChatTemplate.tsx` (props: `form: Form`, `baseUrl: string`, optional `initialMessages`).
+    - AI: render runtime `ChatTemplate` with a controller from `useChat` (or equivalent). Thin wrapper component in app wires controller and props; no app‑local ChatTemplate implementation.
+  - Runtime (AI chat): `packages/runtime/src/ui/react/ChatTemplate.tsx` (exported from `@formlink/runtime/ui/react`).
   - Deletion (after parity): `apps/formfiller/components/typeform/*`.
   - Keep: `components/shared/IntroScreen.tsx`, `CompletionScreen.tsx` if still referenced.
 
@@ -69,7 +76,7 @@ Task 2 — `<LinkWithFormlink />` component (runtime)
   - `schema: import("@formlink/runtime").Form` — required.
   - `routeSpec?: import("@formlink/runtime").FormlinkFlowRouteSpec` — optional, if present validate against server state too.
   - `usage: 'first_party' | 'third_party'` — required. Hide UI entirely when `first_party`.
-  - `baseUrl: string` — required host for checks (no implicit default).
+  - `baseUrl?: string` — optional host for checks; defaults to `https://formlink.ai`.
   - `onLinked?: (info: { formId: string; versionId: string }) => void` — optional callback.
 
 - Behavior
@@ -81,6 +88,55 @@ Task 2 — `<LinkWithFormlink />` component (runtime)
 - Acceptance
   - External sample app renders `<LinkWithFormlink />` and surfaces the correct state transitions without spurious network calls.
   - First‑party usage hides the button entirely.
+
+- Auth / Provisioning Modes
+  - Mode A — With API Key (preferred)
+    - Host provides a Formlink API key (UI feature required to store/manage the key securely per project).
+    - `<LinkWithFormlink />` calls read‑only endpoints to validate `formId`, `version_id`, and schema fingerprint.
+    - Pros: deterministic UX, no external redirects, clear caching.
+  - Mode B — No API Key (third‑party platforms cannot store secrets)
+    - Show a “Link in Formlink” action which opens Formlink (new tab) at a claim URL.
+    - Minimal parameters: `formId`, optional `schemaFingerprint`, optional display metadata; no host callback assumed.
+    - After login, Formlink lets the user claim/own the `formId` (or create & link if it does not exist). Host UI shows clear guidance to refresh after completion.
+    - UX note: Feels “magical” — no token copy/paste, short happy‑path; keep copy clear on next steps.
+
+- Top Risks (Mode B — keyless claim)
+  - Ownership hijack or takeover via guessed/obtained identifiers.
+  - Replay of claim links/tokens leading to unintended transfers.
+  - Open redirect or phishing using crafted redirect parameters.
+  - Concurrent claims/race resulting in ambiguous ownership.
+  - CSRF or abused implicit session state during claim finalization.
+
+- Risks (Mode B — keyless claim) and mitigations (detailed)
+  - Ownership hijack via known `formId`
+    - Mitigate: high‑entropy `formId` (UUIDv4 or longer), single‑use claim tokens issued by Formlink (not raw `formId`), short TTL, revoke on use.
+  - Enumeration/guessing of `formId`
+    - Mitigate: rate limiting, IP/device fingerprint throttles, captcha after N attempts.
+  - Open redirect / phishing via `redirectUrl` params
+    - Mitigate: avoid arbitrary `redirectUrl`; use fixed Formlink dashboard destination; if needed, whitelist origins and sign redirect params.
+  - CSRF on claim endpoints
+    - Mitigate: state parameter binding (PKCE‑style), same‑site cookies, enforce POST with CSRF token.
+  - Race conditions in concurrent claims
+    - Mitigate: atomic claim on server, idempotency keys, first‑writer wins with audit trail, clear error for losers.
+  - Data leakage (sending schema/details during claim)
+    - Mitigate: send only identifiers and hashes; avoid sending full schema in URL; upload schema only after authenticated session.
+  - Replay of claim links
+    - Mitigate: single‑use, short TTL tokens; bind token to intended `userId` after auth; maintain used‑token blacklist.
+  - Orphaned/incorrect ownership
+    - Mitigate: explicit confirmation UI in Formlink (“You will own form X”); easy unclaim/reassign path with audit.
+  - Multi‑tenant boundary violations
+    - Mitigate: bind claim to target workspace/org selected by user; enforce org‑level entitlements.
+  - No callback → stale host UI
+    - Mitigate: clear copy to refresh/check; optional polling when host can call read‑only endpoints without secrets (e.g., public link status endpoint with token).
+  - Abuse/DoS against claim endpoint
+    - Mitigate: rate limit by IP/account/device; anomaly detection; CAPTCHA after threshold.
+  - Compliance/legal (transferring ownership)
+    - Mitigate: Terms disclosure; audit log of claims with timestamps, IP, prior owner.
+
+- Proposed claim flow (no API key)
+  - Host invokes `window.open(FORMLINK_HOST/claim?token=XYZ)`. `token` is generated by Formlink (not by the host) or is a short opaque code the user copies.
+  - User logs in to Formlink, selects a workspace, and confirms claim; Formlink stores ownership and displays success.
+  - Host UI instructs: “After claiming, refresh to update status.” Optional: a “Check status” button hits a read‑only public claim‑status endpoint if available.
 
 Task 3 — Generate JSONata RouteSpec (new branching)
 
@@ -152,9 +208,9 @@ Deletions After Parity (authoritative list)
   - Classic (Option A replacement)
   - `apps/formfiller/components/classic/ClassicFormView.tsx` (replace with `ClassicTemplate`)
 
-- Chat (phase 3 replacement; keep until AI glue is in)
-  - Entire `apps/formfiller/components/chat/**` directory will be replaced by a new `ChatTemplate.tsx` + UI primitives
-  - Keep for now: will delete only after Chat glue reaches parity.
+  - Chat (phase 3 replacement; keep until AI glue is in)
+  - Entire `apps/formfiller/components/chat/**` directory will be replaced by a runtime‑driven `ChatTemplate` + primitives.
+  - Keep current chat until parity; delete after verification.
 
 - UI package (replace with runtime UI)
   - `packages/ui/src/form/modes/typeform/**`
@@ -174,6 +230,7 @@ Preferred Imports
 - Typeform UI: `@formlink/runtime/ui/react` (`TypeformTemplate`, unified inputs, navigation/progress components)
 - Classic UI: `@formlink/runtime/ui/react` (`ClassicTemplate`)
 - Runtime core: `@formlink/runtime` (`createRuntime`, `createFormfillerTransport`, `FormlinkFlow` helpers)
+- AI Chat UI: `@formlink/runtime/ui/react` (`ChatTemplate`)
 
 Verification
 
@@ -183,6 +240,7 @@ Verification
 - LinkWithFormlink
   - Manual: external sample app toggling schema and version id; confirm caching and UI state.
   - Automated: jest/dom tests mocking fetch and localStorage.
+  - Keyless claim: manual walkthrough against a Formlink “claim” sandbox; attack simulations (rate limit, replay, concurrent claim); ensure no open redirect.
 
 Open TODOs (trackable)
 
@@ -191,6 +249,13 @@ Open TODOs (trackable)
 - [ ] Identify first two forms to encode as RouteSpec fixtures for tests.
 - [ ] Gate deletions of `components/typeform/*` behind a feature flag until parity is verified.
 - [ ] Remove Typeform exports from `packages/ui/src/index.ts` after migration; publish a minor with a clear CHANGELOG entry.
+- [ ] UI: Add “Project API key” management to enable Mode A (secure storage + scoped to project/workspace).
+- [ ] Design Mode B claim endpoints/tokens (single‑use, TTL, audit) and the Formlink claim UI.
+- [ ] Decide whether to support optional polling/public claim‑status endpoint for hosts without secrets.
+- [ ] Document threat model and mitigations for claim flow (enumeration, takeover, CSRF, open redirect, replay).
+- [ ] Remove temporary alias `export { ClassicTemplate as UniversalClassic }` in runtime once all imports migrate.
+- [ ] Consider `heightOffset` prop for `ChatTemplate` to subtract fixed headers when embedded.
+- [ ] Ensure Storybook/app import of `@formlink/runtime/ui/react/style.css` and correct Tailwind `@source` path in runtime CSS (set to `../src`).
 
 Notes on Original List (fixed typos)
 

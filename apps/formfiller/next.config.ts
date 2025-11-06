@@ -12,18 +12,23 @@ const nextConfig: NextConfig = {
     "@formlink/db",
     "@formlink/schema",
     "@formlink/prompts",
+    "@formlink/runtime",
+    "use-sync-external-store",
+    "@xyflow/react",
   ],
   experimental: {
     browserDebugInfoInTerminal: true,
   },
   webpack: (config) => {
-    // Fix for packages importing `useShallow` from 'zustand/shallow'.
-    // In Zustand v5 the hook lives under 'zustand/react/shallow'.
+    // Ensure alias map exists
     config.resolve = config.resolve || {};
     config.resolve.alias = config.resolve.alias || {};
-    config.resolve.alias["zustand/shallow"] = require.resolve(
-      "zustand/react/shallow",
-    );
+    // Note: no alias for `zustand/shallow` — zustand v5 still exports `shallow` via
+    // `zustand/shallow` (ESM and CJS). Aliasing to `zustand/react/shallow` breaks
+    // libraries (e.g., @xyflow/react) that expect the `shallow` comparator export.
+    //
+    // Also avoid hard-mapping @formlink/runtime to local dist; rely on package exports
+    // so the package is consumable externally without workspace-specific aliases.
     return config;
   },
 };

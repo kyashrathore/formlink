@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "@formlink/ui/globals.css";
+import "@formlink/runtime/ui/react/style.css";
 import {
   PostHogProviderWrapper,
   PostHogPageview,

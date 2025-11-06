@@ -11,6 +11,10 @@ Recent change
 - Runtime docs: Added consolidated plan at `docs/runtime/RUNTIME_CONSOLIDATED_v1.md` organizing packages, decisions to gavel, Deploy-on-Formlink flow, headless chat testmode, and the Devtools plan. This doc links to existing detailed specs and examples and defines MVP acceptance.
 - Runtime/schema: Re‑attached `@formlink/runtime` to the canonical `@formlink/schema` types to prevent drift. `packages/runtime/src/types.ts` now re‑exports `Form`/`Question`/`AddressData` from `@formlink/schema`, and core modules import types from the schema package. Address schema validation also uses `AddressSchema` from `@formlink/schema`.
 - Runtime packaging: `@formlink/runtime` now ships the full `src/` tree in npm with a `source` conditional export, and Storybook aliases resolve to those `.ts/.tsx` files so “Open in editor” no longer jumps to `dist/*.d.ts`.
+- Runtime packaging: Externalized `@formlink/ui` (and `use-sync-external-store`, `@radix-ui/react-use-is-hydrated`) from the `@formlink/runtime` bundle to avoid CJS shims being inlined into ESM output. This removes the browser error `Dynamic require of "react" is not supported` and SSR `document is not defined` originating from transitively bundled UI/d3 code.
+  - New: `@formlink/runtime` no longer declares `@formlink/ui` as a peer dependency. Host apps provide AI UI via `AiElementsProvider` (mapping components typically from `@formlink/ui/ai-elements`) and shadcn primitives via `ShadCnProvider`.
+
+- Runtime UI: Introduced `AiElementsProvider` to map ai-elements (Conversation, PromptInput\*, Response) from the host app (typically `@formlink/ui/ai-elements`). `ChatTemplate` and `ChatMessageAssistant` now consume ai-elements via this provider instead of importing `@formlink/ui` directly. In dev, missing mappings throw with a clear message.
 
 - Runtime: Rewrote `packages/runtime/src/ui/react/InlineSignature.tsx` to use `react-signature-canvas` (matches our UI package) instead of custom `<canvas>` (and dropped prior `@uiw/react-signature` change). Preserves API (`value?: string|null`, `onChange(dataUrl)`, `onSubmit?`, `width`, `height`). Behavior: loads existing `value` into the canvas via `fromDataURL`, new strokes append, and `toDataURL('image/png')` emits the full image; `Clear` resets and emits `null`. Added deps: `react-signature-canvas` and `@types/react-signature-canvas` to `@formlink/runtime`.
 - Runtime: Tweaked signature stroke thickness to be slightly lighter: `minWidth` 1 → 0.75 and `maxWidth` 3 → 2.0 in `InlineSignature`. No API change.
@@ -21,7 +25,7 @@ Recent change
 - Architecture: Moved app-specific context/screens out of UI package. Removed `FormModeContext` exports from UI index; added app-owned `apps/formfiller/contexts/FormModeContext.tsx`. Moved Intro/Completion screens to `apps/formfiller/components/shared/` and updated imports. UI still exports `ConfettiElements` only from shared.
 - UI/docs: Adjusted imports in Storybook and app chat components to import AI elements from `@formlink/ui/ai-elements` directly to avoid TS path alias issues.
 - Preview stability: Guarded repeated shadcn CSS updates in `apps/formfiller/app/preview/[formId]/PreviewPageClient.tsx:FORMCRAFT_SHADCN_CSS_UPDATE` by comparing `payload.cssText` to `lastCssRef.current` to avoid postMessage feedback loops causing maximum update depth.
-- Zustand shallow: Kept named import `import { shallow } from 'zustand/shallow'` and ensured alias to `zustand/react/shallow` in `apps/formfiller/next.config.ts` for v5 compatibility.
+- Zustand shallow: Do NOT alias. Zustand v5 continues to export `shallow` from `zustand/shallow` (ESM/CJS). We removed the alias to `zustand/react/shallow` in `apps/formfiller/next.config.ts` because it breaks libraries (e.g., `@xyflow/react`) that import `{ shallow }`.
 - Cleanup: Removed unused hooks under `packages/ui/src/hooks/form/*` and removed their public re-exports from `packages/ui/src/index.ts`. Confirmed no in-repo usages. Kept `hooks/ui` (`useIsMobile`, `useThemeStyles`) as they are used by UI components and apps.
 - Cleanup: Removed unused app-level hook `apps/formcraft/hooks/use-mobile.tsx` (no references in app). Repo typecheck remains green.
 - Cleanup: Removed empty directories `packages/ui/src/hooks/form` and `packages/ui/src/hooks/primitives` after pruning unused hooks.
@@ -133,6 +137,15 @@ Key notes:
 - Structure: `src/ui/**` (primitive components), `src/ai-elements/**` (AI tooling surfaces), `src/components/**` (mid-level composites), `src/hooks/**`, `src/lib/**`, and `src/styles/globals.css`.
 - Tech: Tailwind 4, Radix primitives, shadcn patterns, motion/Framer integration, TanStack utilities.
 - Build: `tsup` for JS bundles, `tsc` for type declarations; exports configured for tree-shaking and CSS opt-in. The `build` script runs both JS and type declaration emits to ensure app type-checking has package types in CI.
+
+- Cleanup (Nov 6): Removed unused directories and exports to keep `@formlink/ui` stateless and lean.
+  - Deleted `src/form/**` (contexts, primitives, modes: chat/typeform/unified) and dropped all related exports from `src/index.ts` — unified inputs now live in `@formlink/runtime/ui/react`.
+  - Deleted `src/hooks/typeform/**`; removed their exports. Kept `src/hooks/ui/use-mobile.ts` and `useTheme.ts` as the public hooks.
+  - Consolidated duplicate mobile hook: removed `src/hooks/use-mobile.ts` and fixed internal imports to `"@/hooks/ui/use-mobile"` (see `packages/ui/src/components/ui/sidebar.tsx`).
+  - Deleted `src/motion/**` and removed motion exports from package index (no in-repo usages).
+  - Deleted `src/icons/**` and unused `src/lib/config.ts`; neither is referenced in apps or stories.
+  - Trimmed `src/lib` of unused files (`file-handling.ts`, `motion.ts`, `routes.ts`); retained `utils.ts` which is widely used (`cn`).
+  - Removed unused `src/types/generic.ts` and its export.
 
 TODO: Verify CI caches don’t skip `packages/ui` type emit; if necessary, add an explicit Turbo `type-check` task for `@formlink/ui` and wire it as a dependency for app builds.
 
@@ -385,3 +398,53 @@ Notes / TODOs:
 - TODO(mintlify): If any page shows as “Untitled”, add frontmatter `title:` to the source `.md` file.
 - TODO(mintlify): Add brand colors/logo later; currently using a neutral primary `#3b82f6`.
 - Runtime/Flow: Added deep explainer `docs/formlinkflow_typeform_transition_explainer_v1.md` covering FormlinkFlow navigation semantics, Typeform visibility (required‑only gating), the animation architecture, and the two tricky bugs (optional back navigation and direction/opacity issues) with fixes and modeling patterns for deferred branching (depend on Q1, execute at Q5).
+
+## Shadcn Registry (formlink)
+
+- We maintain a dedicated registry app at `apps/registry` to serve shadcn-compatible items under `/r/{name}.json`.
+- Purpose: install formlink templates into host apps via `shadcn add`.
+
+What’s included
+
+- `chat-template`: Chat template with embedded providers
+- `classic-template`: Classic template with embedded ShadCnProvider
+- `typeform-template`: Typeform template with embedded ShadCnProvider
+
+Location
+
+- Built items are emitted to `apps/registry/public/r/*.json` via `shadcn build`.
+- Source lives under `apps/registry/registry/**` and is compiled by the CLI.
+
+Usage (from a host app)
+
+- Install with shadcn CLI (one-off):
+  - `pnpm dlx shadcn@latest add chat-template --registry https://registry.formlini.ai/r`
+- Dependency resolution:
+  - NPM deps are declared via `dependencies` (e.g., `@formlink/runtime`, `lucide-react`). The CLI adds them to the host app.
+  - UI primitives and AI elements are declared via `registryDependencies` and will be installed (e.g., `button`, `input`, `ai-elements/conversation`, `ai-elements/prompt-input`, `ai-elements/response`). Ensure your components.json has the AI registry mapping if you use chat.
+- Styling:
+  - Import CSS once: `import "@formlink/runtime/ui/react/style.css"` (e.g., in your root layout).
+- Namespaces:
+  - Recommended `components.json` registries mapping in the host:
+    - `"registries": { "@formlink": "https://registry.formlini.ai/r/{name}.json", "@ai-elements": "https://registry.ai-sdk.dev/{name}.json" }`
+  - Then: `pnpm dlx shadcn@latest add @formlink/chat-template`
+- Runtime injection for Classic/Typeform:
+  - `import { createRuntime } from "@formlink/runtime";`
+  - `const runtime = createRuntime({ form, transport });`
+  - `<ClassicTemplate runtime={runtime} />` or `<TypeformTemplate runtime={runtime} />`
+
+Notes
+
+- Templates are provider-agnostic; they throw in dev if required providers are missing.
+- If you prefer pure shadcn components instead of `@formlink/ui`, replace imports inside the provider file with your local `@/components/ui/*` equivalents; keep the `ShadCnProvider` keys intact.
+
+### Registry App — Build & Deploy
+
+- Build registry JSON:
+  - `pnpm --filter registry run registry:build`
+- Local preview: `pnpm --filter registry dev` then visit `http://localhost:3000/r/chat-template.json`.
+- Production build: `pnpm --filter registry build` (runs `shadcn build` then `next build`).
+- Deploy to Vercel:
+  - Project root: `apps/registry`
+  - Custom domain: `registry.formlini.ai`
+  - Output: static JSON served from `public/r/*`.
