@@ -9,12 +9,12 @@
     "strict": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler", // Use "bundler" for modern TS/JS interop
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true, // Let tsup handle emitting files
-    "jsx": "react-jsx", // Keep if any utils might involve JSX, otherwise remove
+    "jsx": "react-jsx",
     "declaration": true, // Generate .d.ts files (tsup will use this)
     "declarationMap": true, // Optional: Generate sourcemaps for .d.ts files
     "sourceMap": true, // Generate .map files
@@ -24,6 +24,7 @@
     "paths": {
       "@/*": ["./src/*"] // Allow internal aliased imports if needed
     },
+    "types": ["node"]
   },
   "include": ["src/**/*", "src/supabase"],
   "exclude": ["node_modules", "dist"]
