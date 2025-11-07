@@ -13,7 +13,7 @@
   "aliases": {
     "components": "@/components",
     "utils": "@formlink/ui/lib/utils",
-    "ui": "@formlink/ui",
+    "ui": "@formlink/ui/components",
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
