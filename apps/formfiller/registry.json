@@ -1,0 +1,85 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "formlink",
+  "homepage": "http://localhost:3001/r/registry.json",
+  "items": [
+    {
+      "name": "chat-template",
+      "type": "registry:component",
+      "dependencies": ["@formlink/runtime", "lucide-react", "streamdown"],
+      "registryDependencies": [
+        "button",
+        "input",
+        "textarea",
+        "label",
+        "badge",
+        "scroll-area",
+        "separator",
+        "avatar",
+        "popover",
+        "command",
+        "calendar",
+        "@ai-elements/conversation",
+        "@ai-elements/prompt-input"
+      ],
+      "files": [
+        {
+          "path": "components/formlink/chat-template.tsx",
+          "type": "registry:component",
+          "target": "components/formlink/chat-template.tsx"
+        }
+      ]
+    },
+    {
+      "name": "classic-template",
+      "type": "registry:component",
+      "dependencies": ["@formlink/runtime"],
+      "registryDependencies": [
+        "button",
+        "input",
+        "textarea",
+        "label",
+        "badge",
+        "scroll-area",
+        "separator",
+        "avatar",
+        "popover",
+        "command",
+        "calendar",
+        "dialog"
+      ],
+      "files": [
+        {
+          "path": "components/formlink/classic-template.tsx",
+          "type": "registry:component",
+          "target": "components/formlink/classic-template.tsx"
+        }
+      ]
+    },
+    {
+      "name": "typeform-template",
+      "type": "registry:component",
+      "dependencies": ["@formlink/runtime"],
+      "registryDependencies": [
+        "button",
+        "input",
+        "textarea",
+        "label",
+        "badge",
+        "scroll-area",
+        "separator",
+        "avatar",
+        "popover",
+        "command",
+        "calendar"
+      ],
+      "files": [
+        {
+          "path": "components/formlink/typeform-template.tsx",
+          "type": "registry:component",
+          "target": "components/formlink/typeform-template.tsx"
+        }
+      ]
+    }
+  ]
+}

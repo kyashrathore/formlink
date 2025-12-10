@@ -4,7 +4,7 @@
     "plugins": [{ "name": "next" }],
     "types": ["react", "react-dom"],
     "paths": {
-      "@/*": ["../../packages/runtime/src/*"],
+      "@/*": ["../../packages/ui/src/*", "../../packages/runtime/src/*"],
       "@formlink/runtime": ["../../packages/runtime/src/index.ts"],
       "@formlink/runtime/ui/react": [
         "../../packages/runtime/src/ui/react/index.ts"

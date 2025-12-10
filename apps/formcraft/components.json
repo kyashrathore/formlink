@@ -14,10 +14,11 @@
     "components": "@/components",
     "utils": "@formlink/ui/lib/utils",
     "ui": "@formlink/ui/components",
-    "lib": "@/lib",
-    "hooks": "@/hooks"
+    "lib": "@formlink/ui/lib",
+    "hooks": "@formlink/ui/hooks"
   },
   "registries": {
-    "@ai-elements": "https://registry.ai-sdk.dev/{name}.json"
+    "@ai-elements": "https://registry.ai-sdk.dev/{name}.json",
+    "@formlink": "http://localhost:3001/r/{name}.json"
   }
 }

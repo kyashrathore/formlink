@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3002",
     "build": "next build",
     "registry:build": "pnpm dlx shadcn@latest build",
     "start": "next start",
@@ -12,7 +12,7 @@
   "dependencies": {
     "@formlink/runtime": "npm:@formlink/runtime@0.1.0-alpha.8",
     "lucide-react": "^0.552.0",
-    "next": "16.0.1",
+    "next": "16.0.8",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },

@@ -13,6 +13,7 @@ import {
   RuntimeProvider,
   ShadCnProvider,
   TypeformTemplate,
+  AiElementsProvider,
 } from "@formlink/runtime/ui/react";
 import { Form } from "@formlink/schema";
 import {
@@ -35,6 +36,16 @@ import {
   Separator,
   Textarea,
 } from "@formlink/ui";
+import {
+  Conversation,
+  ConversationContent,
+  ConversationScrollButton,
+  PromptInput,
+  PromptInputHeader,
+  PromptInputTextarea,
+  PromptInputSubmit,
+  Response,
+} from "@formlink/ui/ai-elements";
 import React from "react";
 import { apiConfig } from "@/lib/api-config";
 
@@ -149,16 +160,29 @@ function FormPageContent({
           CommandSeparator,
         }}
       >
-        <ChatTemplate
-          form={formSchema}
-          baseUrl={""}
-          controller={{
-            messages,
-            status,
-            sendMessage,
+        <AiElementsProvider
+          components={{
+            Conversation,
+            ConversationContent,
+            ConversationScrollButton,
+            PromptInput,
+            PromptInputHeader,
+            PromptInputTextarea,
+            PromptInputSubmit,
+            Response,
           }}
-          title={formSchema.title}
-        />
+        >
+          <ChatTemplate
+            form={formSchema}
+            baseUrl={""}
+            controller={{
+              messages,
+              status,
+              sendMessage,
+            }}
+            title={formSchema.title}
+          />
+        </AiElementsProvider>
       </ShadCnProvider>
     );
   }

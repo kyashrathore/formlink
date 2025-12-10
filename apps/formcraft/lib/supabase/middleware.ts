@@ -22,7 +22,7 @@ export async function updateSession(request: NextRequest) {
   })
 
   const url = isLocalSupabase()
-    ? getenv("NEXT_PUBLIC_SUPABASE_LOCAL_URL") || "http://localhost:54321"
+    ? getenv("NEXT_PUBLIC_SUPABASE_LOCAL_URL") || "http://127.0.0.1:54321"
     : getenv("NEXT_PUBLIC_SUPABASE_URL")!
 
   const anonKey = isLocalSupabase()

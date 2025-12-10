@@ -48,7 +48,7 @@ export function shouldUseLocalSupabase(): boolean {
 export function getSupabaseUrl(): string {
   if (shouldUseLocalSupabase()) {
     return (
-      process.env.NEXT_PUBLIC_SUPABASE_LOCAL_URL || "http://localhost:54321"
+      process.env.NEXT_PUBLIC_SUPABASE_LOCAL_URL || "http://127.0.0.1:54321"
     )
   }
   return process.env.NEXT_PUBLIC_SUPABASE_URL!

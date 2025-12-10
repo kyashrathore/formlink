@@ -170,7 +170,7 @@ export async function POST(req: NextRequest) {
           .eq("version_id", versionId)
           .single();
         const formId = (fv as any)?.form_id as string | undefined;
-        if (formId) revalidateTag(`ri:summary:${formId}`);
+        if (formId) revalidateTag(`ri:summary:${formId}`, "max");
       } catch {}
 
       // Only call the integration if there are actual responses

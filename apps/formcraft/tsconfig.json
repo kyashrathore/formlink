@@ -3,8 +3,11 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
+      "@/components/*": ["../../packages/ui/src/components/*"],
+      "@/hooks/ui/*": ["../../packages/ui/src/hooks/ui/*"],
       "@/*": ["./*"],
-      "@formlink/prompts": ["../../packages/prompts/src"]
+      "@formlink/prompts": ["../../packages/prompts/src"],
+      "@formlink/ui/*": ["../../packages/ui/src/*"]
     },
     "plugins": [
       {

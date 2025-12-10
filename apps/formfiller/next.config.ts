@@ -1,7 +1,6 @@
-import type { NextConfig } from "next";
 import path from "path";
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   assetPrefix: process.env.NODE_ENV === "production" ? "/f" : "",
   eslint: {
     ignoreDuringBuilds: true,
@@ -19,7 +18,7 @@ const nextConfig: NextConfig = {
   experimental: {
     browserDebugInfoInTerminal: true,
   },
-  webpack: (config) => {
+  webpack: (config: any) => {
     // Ensure alias map exists
     config.resolve = config.resolve || {};
     config.resolve.alias = config.resolve.alias || {};
