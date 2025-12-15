@@ -1,7 +1,7 @@
 "use client"
 
 import { ToggleGroup, ToggleGroupItem } from "@formlink/ui"
-import { Monitor, Smartphone, Tablet } from "lucide-react"
+import { Maximize, Monitor, Smartphone, Tablet } from "lucide-react"
 import { DeviceMode } from "./DevicePreviewFrame"
 
 interface PreviewControlsProps {
@@ -28,6 +28,12 @@ const deviceOptions = [
     icon: Monitor,
     label: "Desktop",
     description: "Desktop device preview",
+  },
+  {
+    mode: "full" as const,
+    icon: Maximize,
+    label: "Fullscreen",
+    description: "Full-width preview",
   },
 ]
 

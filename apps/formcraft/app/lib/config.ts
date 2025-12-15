@@ -22,18 +22,22 @@ export const MODELS = [
     provider: "cerebras",
   },
   // Common proprietary options (optional to keep visible)
-  { id: "openai/gpt-5", name: "OpenAI GPT-5", provider: "openai" },
+  { id: "openai/gpt-5.2", name: "OpenAI GPT-5.2", provider: "openai" },
   {
-    id: "anthropic/claude-opus-4.1",
-    name: "Claude Opus 4.1",
+    id: "anthropic/claude-opus-4.5",
+    name: "Claude Opus 4.5",
     provider: "anthropic",
   },
   {
-    id: "anthropic/claude-sonnet-4",
-    name: "Claude Sonnet 4",
+    id: "anthropic/claude-sonnet-4.5",
+    name: "Claude Sonnet 4.5",
     provider: "anthropic",
   },
-  { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", provider: "google" },
+  {
+    id: "google/gemini-3-pro-preview",
+    name: "Gemini 3 Pro",
+    provider: "google",
+  },
   {
     id: "google/gemini-2.5-flash",
     name: "Gemini 2.5 Flash",

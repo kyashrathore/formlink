@@ -1,5 +1,5 @@
 import { Element } from "hast"
-import React, { ComponentProps } from "react"
+import { ComponentProps } from "react"
 import { QuestionWrapper } from "../QuestionWrapper"
 
 export const useQuestionRenderer = (
@@ -37,7 +37,11 @@ export const useQuestionRenderer = (
         // Don't render the paragraph content, just render children which will be our QuestionWrapper
         return <>{children}</>
       }
-      return <p {...props}>{children}</p>
+      return (
+        <p className="px-2" {...props}>
+          {children}
+        </p>
+      )
     },
     a: ({ node, ...props }: ComponentProps<"a"> & { node?: Element }) => {
       const linkText =

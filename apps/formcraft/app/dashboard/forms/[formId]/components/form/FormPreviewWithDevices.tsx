@@ -64,7 +64,10 @@ export default function FormPreviewWithDevices({
       )}
 
       <div className="flex-1">
-        <DevicePreviewFrame deviceMode={deviceMode}>
+        <DevicePreviewFrame
+          deviceMode={deviceMode}
+          onDeviceModeChange={setDeviceMode}
+        >
           <FormPreview
             form={form}
             className="h-full w-full"

@@ -39,12 +39,12 @@ export function getModel(
   // Canonical mapping between short ids and fully-qualified provider ids
   const modelMap: Record<string, string> = {
     // OpenAI
-    "gpt-5": "openai/gpt-5",
+    "gpt-5": "openai/gpt-5.2",
     // Anthropic
-    "claude-opus-4.1": "anthropic/claude-opus-4.1",
-    "claude-sonnet-4": "anthropic/claude-sonnet-4",
+    "claude-opus-4.1": "anthropic/claude-opus-4.5",
+    "claude-sonnet-4": "anthropic/claude-sonnet-4.5",
     // Google
-    "gemini-2.5-pro": "google/gemini-2.5-pro",
+    "gemini-2.5-pro": "google/gemini-3-pro-preview",
     "gemini-2.5-flash": "google/gemini-2.5-flash",
   }
 

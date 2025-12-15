@@ -48,7 +48,7 @@ const VisibleMessage = ({
   )
   return (
     <Message key={messageId} from={message.role as "user" | "assistant"}>
-      <MessageContent className={cn(message.role === "user" ? "" : "px-0")}>
+      <MessageContent className={cn(message.role === "user" ? "" : "px-2")}>
         {message.role === "user"
           ? // User messages - extract text from parts
             (() => {
@@ -170,7 +170,7 @@ const VisibleMessage = ({
                   : part.errorText
 
                 return (
-                  <div key={`tool-${partIndex}`} className="my-2">
+                  <div key={`tool-${partIndex}`} className="my-2 px-2">
                     <Tool>
                       <ToolHeader
                         type={`tool-${toolName}` as ToolUIPart["type"]}
@@ -203,6 +203,31 @@ const VisibleMessage = ({
                           ) {
                             return null
                           }
+                          if (
+                            toolName === "createForm" &&
+                            finalResult &&
+                            !hideOutput
+                          ) {
+                            const res = finalResult as any
+                            if (res.success) {
+                              return (
+                                <div className="border-border/50 bg-background/50 mx-3 mt-2 mb-3 flex flex-col gap-1 rounded-lg border p-3 text-sm">
+                                  <div className="flex items-center gap-2 font-medium text-green-600 dark:text-green-400">
+                                    <span>✓ Form Generated</span>
+                                  </div>
+                                  <div className="text-foreground font-medium">
+                                    {res.formTitle || "Untitled Form"}
+                                  </div>
+                                  <div className="text-muted-foreground text-xs">
+                                    {res.questionCount
+                                      ? `${res.questionCount} questions added`
+                                      : "Ready to edit"}
+                                  </div>
+                                </div>
+                              )
+                            }
+                          }
+
                           if (finalResult || finalError) {
                             return (
                               <ToolOutput

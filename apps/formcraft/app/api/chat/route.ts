@@ -16,7 +16,6 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
-  UIMessage,
 } from "ai"
 import { customAlphabet } from "nanoid"
 import { cookies } from "next/headers"
@@ -96,11 +95,8 @@ export async function POST(req: NextRequest) {
     } else if (typeof (options as any)?.singlePass === "boolean") {
       resolvedSinglePass = Boolean((options as any)?.singlePass)
     } else {
-      const modelStr =
-        typeof selectedModel === "string" ? selectedModel : undefined
-      // Default to single-pass if model is cerebras/gpt-oss-120b or not specified (app default is cerebras)
-      const isCerebras120b = !modelStr || modelStr.includes("gpt-oss-120b")
-      resolvedSinglePass = isCerebras120b
+      // Default to single-pass for all models to ensure consistent behavior and avoid multi-step loop timeouts
+      resolvedSinglePass = true
     }
     const normalizedOptions = {
       ...(options as any),
