@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     }
     const res = await getOrComputeSummary(body)
     // Tag-based cache coordination per form
-    revalidateTag?.(`ri:summary:${body.formId}`)
+    revalidateTag(`ri:summary:${body.formId}`, "max")
     return NextResponse.json(res)
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || "Failed" }, { status: 500 })

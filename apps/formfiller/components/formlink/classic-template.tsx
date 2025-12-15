@@ -1,41 +1,44 @@
 "use client";
 
-import * as React from "react";
-import { useSyncExternalStore } from "react";
 import type { RuntimeApi } from "@formlink/runtime";
 import type { Question } from "@formlink/runtime/schema";
-import { ShadCnProvider, useUiComponents } from "@formlink/runtime/ui/react";
-import { UnifiedPhoneInput } from "@formlink/runtime/ui/react";
-import { UnifiedFileUpload } from "@formlink/runtime/ui/react";
-import { UnifiedDatePicker } from "@formlink/runtime/ui/react";
-import { Button } from "@formlink/ui/components/ui/button";
-import { Input } from "@formlink/ui/components/ui/input";
-import { Textarea } from "@formlink/ui/components/ui/textarea";
-import { Label } from "@formlink/ui/components/ui/label";
-import { Badge } from "@formlink/ui/components/ui/badge";
-import { ScrollArea } from "@formlink/ui/components/ui/scroll-area";
-import { Separator } from "@formlink/ui/components/ui/separator";
-import { Calendar } from "@formlink/ui/components/ui/calendar";
+import {
+  ShadCnProvider,
+  UnifiedDatePicker,
+  UnifiedFileUpload,
+  UnifiedPhoneInput,
+  useUiComponents,
+} from "@formlink/runtime/ui/react";
 import {
   Avatar,
-  AvatarImage,
   AvatarFallback,
+  AvatarImage,
 } from "@formlink/ui/components/ui/avatar";
+import { Badge } from "@formlink/ui/components/ui/badge";
+import { Button } from "@formlink/ui/components/ui/button";
+import { Calendar } from "@formlink/ui/components/ui/calendar";
 import {
-  Popover as PopoverRoot,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverAnchor,
-} from "@formlink/ui/components/ui/popover";
-import {
-  Command as CommandRoot,
-  CommandList,
-  CommandItem,
-  CommandGroup,
   CommandEmpty,
+  CommandGroup,
   CommandInput,
+  CommandItem,
+  CommandList,
+  Command as CommandRoot,
   CommandSeparator,
 } from "@formlink/ui/components/ui/command";
+import { Input } from "@formlink/ui/components/ui/input";
+import { Label } from "@formlink/ui/components/ui/label";
+import {
+  PopoverAnchor,
+  PopoverContent,
+  Popover as PopoverRoot,
+  PopoverTrigger,
+} from "@formlink/ui/components/ui/popover";
+import { ScrollArea } from "@formlink/ui/components/ui/scroll-area";
+import { Separator } from "@formlink/ui/components/ui/separator";
+import { Textarea } from "@formlink/ui/components/ui/textarea";
+import * as React from "react";
+import { useSyncExternalStore } from "react";
 
 type ShowIf = {
   q: string;
@@ -227,7 +230,7 @@ function ClassicTemplateInner({
             <UnifiedPhoneInput
               mode="chat"
               value={value}
-              onChange={(v) => setVal(v ?? "")}
+              onChange={(v: string | null) => setVal(v ?? "")}
               placeholder="Enter phone number"
             />
             {err ? <div className="text-xs text-destructive">{err}</div> : null}
@@ -276,7 +279,7 @@ function ClassicTemplateInner({
           <UnifiedDatePicker
             mode="chat"
             value={value}
-            onChange={(v) => setVal(v ?? "")}
+            onChange={(v: string | null) => setVal(v ?? "")}
             placeholder="Select date"
           />
           {err ? <div className="text-xs text-destructive">{err}</div> : null}
@@ -294,7 +297,7 @@ function ClassicTemplateInner({
           <UnifiedFileUpload
             mode="chat"
             questionId={q.id}
-            onFileUpload={async (id, file) => {
+            onFileUpload={async (id: string | number, file: File) => {
               const desc = await runtime.actions.upload(String(id), file);
               runtime.actions.set(String(id), desc);
             }}

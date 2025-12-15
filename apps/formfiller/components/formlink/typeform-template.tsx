@@ -1,65 +1,66 @@
 "use client";
 
-import * as React from "react";
 import type { FormlinkFlow, RuntimeApi } from "@formlink/runtime";
-import type { Question } from "@formlink/runtime/schema";
-import { ShadCnProvider, useUiComponents } from "@formlink/runtime/ui/react";
 import {
-  TypeFormLayout,
-  TypeFormProgress,
-  TypeFormNavigation,
-  TypeFormQuestionHeader,
-  TypeFormContinueFooter,
-  TypeFormTransition,
+  useAutoAdvanceOnce,
+  useTypeformScaffold,
+} from "@formlink/runtime/headless/react";
+import type { Question } from "@formlink/runtime/schema";
+import {
   buildCountryOptions,
-  InlineSelect,
   InlineMultiSelect,
-  InlineRating,
   InlineRanking,
-  UnifiedLinearScale,
+  InlineRating,
+  InlineSelect,
+  InlineSignature,
+  ShadCnProvider,
+  TypeFormContinueFooter,
+  TypeFormLayout,
+  TypeFormNavigation,
+  TypeFormProgress,
+  TypeFormQuestionHeader,
+  TypeFormTextInput,
+  TypeFormTransition,
+  UnifiedAddressInput,
   UnifiedCountrySelect,
   UnifiedDatePicker,
-  UnifiedDropdownSelect,
   UnifiedDropdownMultiSelect,
-  UnifiedLikert,
-  UnifiedPhoneInput,
+  UnifiedDropdownSelect,
   UnifiedFileUpload,
-  UnifiedAddressInput,
-  InlineSignature,
-  TypeFormTextInput,
+  UnifiedLikert,
+  UnifiedLinearScale,
+  UnifiedPhoneInput,
+  useUiComponents,
 } from "@formlink/runtime/ui/react";
 import {
-  useTypeformScaffold,
-  useAutoAdvanceOnce,
-} from "@formlink/runtime/headless/react";
-import { Button } from "@formlink/ui/components/ui/button";
-import { Input } from "@formlink/ui/components/ui/input";
-import { Textarea } from "@formlink/ui/components/ui/textarea";
-import { Label } from "@formlink/ui/components/ui/label";
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@formlink/ui/components/ui/avatar";
 import { Badge } from "@formlink/ui/components/ui/badge";
-import { ScrollArea } from "@formlink/ui/components/ui/scroll-area";
-import { Separator } from "@formlink/ui/components/ui/separator";
+import { Button } from "@formlink/ui/components/ui/button";
 import { Calendar } from "@formlink/ui/components/ui/calendar";
 import {
-  Avatar,
-  AvatarImage,
-  AvatarFallback,
-} from "@formlink/ui/components/ui/avatar";
-import {
-  Popover as PopoverRoot,
-  PopoverTrigger,
-  PopoverContent,
-  PopoverAnchor,
-} from "@formlink/ui/components/ui/popover";
-import {
-  Command as CommandRoot,
-  CommandList,
-  CommandItem,
-  CommandGroup,
   CommandEmpty,
+  CommandGroup,
   CommandInput,
+  CommandItem,
+  CommandList,
+  Command as CommandRoot,
   CommandSeparator,
 } from "@formlink/ui/components/ui/command";
+import { Input } from "@formlink/ui/components/ui/input";
+import { Label } from "@formlink/ui/components/ui/label";
+import {
+  PopoverAnchor,
+  PopoverContent,
+  Popover as PopoverRoot,
+  PopoverTrigger,
+} from "@formlink/ui/components/ui/popover";
+import { ScrollArea } from "@formlink/ui/components/ui/scroll-area";
+import { Separator } from "@formlink/ui/components/ui/separator";
+import { Textarea } from "@formlink/ui/components/ui/textarea";
+import * as React from "react";
 
 const DEFAULT_AUTO_ADVANCE_MS = 480;
 
@@ -348,7 +349,7 @@ function TypeformTemplateInner({
                       ? qidOrFiles[0]
                       : undefined;
                 if (!file) return Promise.resolve();
-                return runtime.actions.upload(qid, file).then((desc) => {
+                return runtime.actions.upload(qid, file).then((desc: any) => {
                   runtime.actions.set(qid, desc as any);
                 });
               }) as any
@@ -374,7 +375,7 @@ function TypeformTemplateInner({
         return (
           <InlineSignature
             value={value}
-            onChange={(dataUrl) => setValue(dataUrl)}
+            onChange={(dataUrl: any) => setValue(dataUrl)}
           />
         );
       }

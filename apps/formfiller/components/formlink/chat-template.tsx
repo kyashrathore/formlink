@@ -1,5 +1,21 @@
 "use client";
 
+import type { Question } from "@formlink/runtime/schema";
+import {
+  AiElementsProvider,
+  ChatMessageAssistant,
+  FormlinkLogo,
+  PromptInputTypedAssist,
+  ShadCnProvider,
+  useAiElements,
+  useChatStartCard,
+  useFileUploadSubmission,
+  useQuestionPlaceholder,
+  useSlotBridge,
+  useSubmitSelection,
+  useTypedInputGate,
+  useUiComponents,
+} from "@formlink/runtime/ui/react";
 import {
   ConversationContent as ConversationContentUi,
   ConversationScrollButton as ConversationScrollButtonUi,
@@ -40,22 +56,6 @@ import {
 import { ScrollArea } from "@formlink/ui/components/ui/scroll-area";
 import { Separator } from "@formlink/ui/components/ui/separator";
 import { Textarea } from "@formlink/ui/components/ui/textarea";
-import type { Question } from "@formlink/runtime/schema";
-import {
-  AiElementsProvider,
-  ChatMessageAssistant,
-  FormlinkLogo,
-  PromptInputTypedAssist,
-  ShadCnProvider,
-  useAiElements,
-  useChatStartCard,
-  useFileUploadSubmission,
-  useQuestionPlaceholder,
-  useSlotBridge,
-  useSubmitSelection,
-  useTypedInputGate,
-  useUiComponents,
-} from "@formlink/runtime/ui/react";
 import { UserRound } from "lucide-react";
 import * as React from "react";
 
@@ -347,9 +347,7 @@ function ChatTemplateInner({
                               submitSelection(qid, value, display)
                             }
                             onFileUpload={(qid, f) => handleFileUpload(qid, f)}
-                            renderSlots={(q) =>
-                              (q as any).type?.name !== "text"
-                            }
+                            renderSlots={(q: any) => q.type?.name !== "text"}
                           />
                         )}
                       </div>
