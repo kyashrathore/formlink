@@ -1,8 +1,8 @@
 "use client";
-import * as React from "react";
-import type { ComponentPropsWithRef } from "react";
-import { useUiComponents } from "./primitives/context";
 import { useTriggerMultiSelect } from "@/headless/react/hooks/useTriggerMultiSelect";
+import type { ComponentPropsWithRef } from "react";
+import * as React from "react";
+import { useUiComponents } from "./primitives/context";
 
 function must<P extends object>(
   name: string,
@@ -267,7 +267,18 @@ export function UnifiedDropdownMultiSelect<T = string>({
           {selectedLabels.length} selected
           {required && selectedLabels.length === 0 && " (required)"}
         </span>
-        {/* No internal continue button in typeform mode; use page-level footer */}
+        {onSubmit && (
+          <Button
+            type="button"
+            className="h-8 px-3 text-xs"
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              onSubmit();
+            }}
+          >
+            Continue
+          </Button>
+        )}
       </div>
       {required && (!value || value.length === 0) && (
         <p className="text-sm text-destructive mt-2">

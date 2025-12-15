@@ -9,14 +9,14 @@ import { useQuestionPlaceholder } from "@/ui/react/chat/hooks/useQuestionPlaceho
 import { useSlotBridge } from "@/ui/react/chat/hooks/useSlotBridge";
 import { useSubmitSelection } from "@/ui/react/chat/hooks/useSubmitSelection";
 import { FormlinkLogo } from "@/ui/react/icons/FormlinkLogo";
-import { useUiComponents } from "./primitives/context";
+import { UserRound } from "lucide-react";
+import * as React from "react";
 import { useAiElements } from "./primitives/ai-elements-context";
+import { useUiComponents } from "./primitives/context";
 // Minimal classnames joiner to avoid pulling UI utils
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
-import { UserRound } from "lucide-react";
-import * as React from "react";
 
 export type UIMessage = { id?: string | number; role: string; parts?: any[] };
 
@@ -110,8 +110,18 @@ export function ChatTemplate({
     [answers, drafts],
   );
 
+  // Track optimistic submission to hide controls immediately
+  const [lastSubmittedQuestionId, setLastSubmittedQuestionId] = React.useState<
+    string | null
+  >(null);
+
   const { submitSelection } = useSubmitSelection({
-    sendMessage,
+    sendMessage: (msg, opts) => {
+      // Optimistically mark question as submitted when message is actually sent (after delay)
+      const qid = opts?.body?.justSavedAnswer?.questionId;
+      if (qid) setLastSubmittedQuestionId(qid);
+      return sendMessage(msg, opts);
+    },
     currentQuestionId,
     getFormSchema,
     getResponses,
@@ -174,12 +184,37 @@ export function ChatTemplate({
       formSchema: getFormSchema(),
       responses: getResponses(),
     };
-    await Promise.resolve(sendMessage({ text: input }, { body }));
+    if (currentQuestionId) setLastSubmittedQuestionId(currentQuestionId);
     setInput("");
+    await Promise.resolve(sendMessage({ text: input }, { body }));
   }
 
+  const headerText = React.useMemo(() => {
+    if (gate.showValidation && gate.block && currentTextFormat) {
+      return `Please enter a valid ${currentTextFormat}.`;
+    }
+    const qType = currentQuestion?.type?.name;
+    if (qType === "singleChoice" || qType === "multipleChoice") {
+      return "Select an option above, or type your answer here.";
+    }
+    if (
+      qType === "text" &&
+      currentTextFormat &&
+      currentTextFormat !== "text" &&
+      currentTextFormat !== "textarea"
+    ) {
+      return `Enter your ${currentTextFormat}, or ask a clarifying question.`;
+    }
+    return "";
+  }, [
+    gate.showValidation,
+    gate.block,
+    currentTextFormat,
+    currentQuestion?.type?.name,
+  ]);
+
   return (
-    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-6 min-h-[100svh]">
+    <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-6 min-h-screen">
       {!started ? (
         <div className="rounded-md border p-4">
           <div className="text-sm text-muted-foreground">
@@ -202,18 +237,11 @@ export function ChatTemplate({
             className={cn(
               "border rounded-md rounded-b-none",
               started
-                ? "[&>*:first-child]:min-h-[calc(100svh-64px)] lg:[&>*:first-child]:min-h-[calc(100svh-164px)]"
-                : "[&>*:first-child]:min-h-[calc(100svh-8px)] lg:[&>*:first-child]:min-h-[calc(100svh-42px)]",
+                ? "h-[calc(100svh-64px)] lg:h-[calc(100svh-164px)]"
+                : "h-[calc(100svh-8px)] lg:h-[calc(100svh-42px)]",
             )}
           >
-            <ConversationContent
-              className={cn(
-                "flex flex-col justify-end",
-                started
-                  ? "h-[calc(100svh-64px)] lg:h-[calc(100svh-164px)]"
-                  : "h-[calc(100svh-8px)] lg:h-[calc(100svh-42px)]",
-              )}
-            >
+            <ConversationContent className="flex flex-col justify-end min-h-full">
               {messages.map((m, i) => {
                 const key = String(m.id ?? i);
                 const isAssistant = m.role === "assistant";
@@ -300,9 +328,11 @@ export function ChatTemplate({
                               submitSelection(qid, value, display)
                             }
                             onFileUpload={(qid, f) => handleFileUpload(qid, f)}
-                            renderSlots={(q) =>
-                              (q as any).type?.name !== "text"
-                            }
+                            renderSlots={(q) => {
+                              if (q.id === lastSubmittedQuestionId)
+                                return false;
+                              return (q as any).type?.name !== "text";
+                            }}
                           />
                         )}
                       </div>
@@ -331,7 +361,7 @@ export function ChatTemplate({
           {!completed && (
             <PromptInput onSubmit={handleSubmit} className="relative mt-3">
               <PromptInputHeader>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-h-[1.5rem]">
                   <PromptInputTypedAssist
                     expectedFormat={currentTextFormat as any}
                     value={input}
@@ -339,7 +369,11 @@ export function ChatTemplate({
                     alwaysShowTelSelector
                     gate={gate}
                   />
-                  <div>{promptPlaceholder}</div>
+                  {headerText && (
+                    <div className="text-xs text-muted-foreground animate-in fade-in slide-in-from-left-1">
+                      {headerText}
+                    </div>
+                  )}
                 </div>
               </PromptInputHeader>
               <PromptInputTextarea

@@ -49,7 +49,7 @@ export function useQuestionPlaceholder(
   }, [question]);
 
   const placeholder = React.useMemo(() => {
-    if (!format) return described ?? defaultPlaceholder;
+    if (!format) return defaultPlaceholder;
     switch (format) {
       case "email":
         return "example@example.com";
@@ -64,9 +64,11 @@ export function useQuestionPlaceholder(
       case "text":
       case "textarea":
       default:
-        return described ?? defaultPlaceholder;
+        // Don't repeat the question title/description as placeholder,
+        // since the assistant just asked it.
+        return defaultPlaceholder;
     }
-  }, [format, described, defaultPlaceholder]);
+  }, [format, defaultPlaceholder]);
 
   return { format, placeholder } as const;
 }

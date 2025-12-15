@@ -32,6 +32,9 @@ export function PromptInputTypedAssist({
   const showError = Boolean(gate?.showValidation && gate?.block);
   const showTelSelector =
     expectedFormat === "tel" && (alwaysShowTelSelector || showError);
+
+  if (!showTelSelector && !showError) return null;
+
   return (
     <div className="flex items-center gap-2 text-xs">
       {showTelSelector ? (
