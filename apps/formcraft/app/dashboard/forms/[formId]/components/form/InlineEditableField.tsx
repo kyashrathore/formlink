@@ -21,8 +21,9 @@ interface InlineEditableFieldProps {
   hideLabel?: boolean
 
   className?: string
-
   useTextArea?: boolean
+
+  noBackground?: boolean
 }
 
 const InlineEditableField: React.FC<InlineEditableFieldProps> = ({
@@ -36,6 +37,7 @@ const InlineEditableField: React.FC<InlineEditableFieldProps> = ({
   hideLabel = false,
   className,
   useTextArea = false,
+  noBackground = false,
 }) => {
   const displayValue = defaultValue ?? ""
 
@@ -55,9 +57,13 @@ const InlineEditableField: React.FC<InlineEditableFieldProps> = ({
         readView={() => (
           <div
             className={cn(
-              "read-view bg-muted/100 min-h-[28px] w-full cursor-text rounded-sm border border-transparent px-2 py-1 text-sm transition-colors hover:rounded-sm",
+              "read-view w-full cursor-text transition-colors",
+              isCompact && "text-xs",
+              noBackground
+                ? "bg-transparent p-0"
+                : "bg-muted/100 min-h-[28px] rounded-sm border border-transparent px-2 py-1 hover:rounded-sm",
               !displayValue && "text-muted-foreground italic",
-              isCompact && "min-h-[20px] px-1 py-0.5 text-xs"
+              isCompact && !noBackground && "min-h-[20px] px-1 py-0.5"
             )}
             title={placeholder}
           >

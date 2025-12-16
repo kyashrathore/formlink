@@ -12,6 +12,7 @@ export interface SandboxConfig {
     OPENAI_API_KEY?: string
     ANTHROPIC_API_KEY?: string
     AI_GATEWAY_API_KEY?: string
+    GEMINI_API_KEY?: string
   }
   timeout?: string
   ports?: number[]
@@ -49,4 +50,5 @@ export interface AgentExecutionResult {
   streamingLogs?: unknown[]
   logs?: LogEntry[]
   sessionId?: string // For Cursor agent session resumption
+  duration?: string
 }

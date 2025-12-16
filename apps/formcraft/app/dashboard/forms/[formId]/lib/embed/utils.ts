@@ -10,12 +10,22 @@ export type EmbedCodeParts = {
   script: string | null
 }
 
-export function getEmbedCode(type: EmbedType, formId: string): EmbedCodeParts {
+export function getEmbedCode(
+  type: EmbedType,
+  formId: string,
+  formMode?: "chat" | "typeform" | "classic"
+): EmbedCodeParts {
   const basePath = getFormFillerFBasePath() // for form URLs
   const scriptsBasePath = getEmbedScriptsBasePath() // for embed scripts
   const embedScriptUrl = `${scriptsBasePath}/embed/v1.js`
   const popupScriptUrl = `${scriptsBasePath}/embed/popup/v1.js`
-  const url = `${basePath}/${formId}`
+
+  let url = `${basePath}/${formId}`
+  if (formMode && formMode !== "chat") {
+    url += `?mode=${formMode}`
+  } else if (formMode === "chat") {
+    url += `?mode=ai`
+  }
 
   switch (type) {
     case "popup":

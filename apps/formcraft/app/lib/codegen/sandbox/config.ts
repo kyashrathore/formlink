@@ -1,4 +1,4 @@
-export type SupportedAgent = "claude" | "codex"
+export type SupportedAgent = "claude" | "codex" | "gemini"
 
 export function validateEnvironmentVariables(
   selectedAgent: SupportedAgent = "codex",
@@ -7,9 +7,21 @@ export function validateEnvironmentVariables(
     OPENAI_API_KEY?: string
     ANTHROPIC_API_KEY?: string
     AI_GATEWAY_API_KEY?: string
+    GEMINI_API_KEY?: string
   }
 ) {
   const errors: string[] = []
+
+  // Check for required environment variables based on selected agent
+  if (
+    selectedAgent === "gemini" &&
+    !apiKeys?.GEMINI_API_KEY &&
+    !process.env.GEMINI_API_KEY
+  ) {
+    errors.push(
+      "GEMINI_API_KEY is required for Gemini CLI. Please add your API key in your profile."
+    )
+  }
 
   // Check for required environment variables based on selected agent
   if (

@@ -5,7 +5,7 @@
 - Build: pnpm run build
 - Lint: pnpm run lint
 - Test: pnpm run test
-- Single Test: pnpm run test --filter <test-name>
+- Single Test: pnpm run test --filter
 
 ## Code Style Guidelines
 

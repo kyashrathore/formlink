@@ -9,7 +9,8 @@ export const FEATURE_FLAGS = {
   ACTIONS_COMPOSIO_ENABLED: process.env.ACTIONS_COMPOSIO_ENABLED === "true",
   CODEGEN_PREVIEW_UI:
     process.env.CODEGEN_PREVIEW_UI === "true" ||
-    process.env.NEXT_PUBLIC_CODEGEN_PREVIEW_UI === "true",
+    process.env.NEXT_PUBLIC_CODEGEN_PREVIEW_UI === "true" ||
+    true,
 } as const
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS

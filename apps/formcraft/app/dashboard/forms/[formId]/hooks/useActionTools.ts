@@ -33,7 +33,10 @@ export function useActionTools({
   const [nonce, setNonce] = useState<number>(0)
 
   const payload = useMemo(() => {
-    if (!formId) return null
+    // If enabled is true, we proceed even without formId (global mode)
+    // But if caller specifically wants form validation, they should handle it.
+    // The previous check was `if (!formId) return null`.
+    // We now allow it.
     return {
       formId,
       search,

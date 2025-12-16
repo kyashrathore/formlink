@@ -10,7 +10,7 @@ import { TOOL_DESCRIPTIONS } from "../prompts"
 
 const GenerateCodeSchema = z.object({
   prompt: z.string().min(1).describe("User intent for code generation"),
-  agent: z.enum(["claude", "codex"]).optional(),
+  agent: z.enum(["claude", "codex", "gemini"]).optional(),
   model: z.string().optional(),
 })
 
@@ -19,6 +19,7 @@ interface CodegenResult {
   branchName?: string
   previewUrl?: string
   error?: string
+  duration?: string
 }
 
 let cachedRuntimeSpec: string | null = null
@@ -288,6 +289,7 @@ async function streamCodegen(options: {
           success: Boolean(data?.success),
           branchName: data?.branchName,
           previewUrl: data?.previewUrl,
+          duration: data?.duration,
         }
         // We can stop reading further — server will close shortly
         reader.cancel().catch(() => {})
@@ -362,7 +364,7 @@ export function generateCodeTool(context: ChatToolContext) {
         })
 
         const baseUrl = resolveCodegenBaseUrl()
-        const agentToUse = agent || (options as any)?.agent || "codex"
+        const agentToUse = agent || (options as any)?.agent || "gemini"
         const payload: Record<string, unknown> = {
           formId,
           instruction,
@@ -386,8 +388,8 @@ export function generateCodeTool(context: ChatToolContext) {
             // Shape: { type: 'data', value: [{ eventName: 'codegen', eventType: string, data: any }] }
             try {
               dataStream.write({
-                type: "data",
-                value: [
+                type: "data-codegen",
+                data: [
                   {
                     eventName: "codegen",
                     eventType: String(event),
@@ -411,6 +413,7 @@ export function generateCodeTool(context: ChatToolContext) {
           branchName: result.branchName,
           previewUrl: result.previewUrl,
           message: "Code generation completed",
+          duration: result.duration,
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error)

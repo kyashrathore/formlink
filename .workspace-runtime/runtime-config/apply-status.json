@@ -1,0 +1,10 @@
+{
+  "state": "applied",
+  "revision": 83,
+  "acceptedAt": "2026-07-25T08:31:54.143Z",
+  "updatedAt": "2026-07-25T08:31:54.145Z",
+  "harness": {
+    "id": "claude",
+    "access": "native"
+  }
+}

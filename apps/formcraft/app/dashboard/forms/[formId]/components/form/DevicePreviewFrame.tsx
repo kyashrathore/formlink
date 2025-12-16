@@ -76,30 +76,38 @@ export default function DevicePreviewFrame({
         className
       )}
     >
-      {deviceMode !== "full" && (
-        <div className="mb-3 flex items-center space-x-2">
-          <div className="bg-muted text-muted-foreground rounded-full px-3 py-1 text-xs font-medium">
-            {dimensions.label}
-          </div>
-        </div>
-      )}
+      {/* Label removed, now in Header */}
 
       <div className="relative flex h-full w-full items-center justify-center">
         <div
           className={cn(
             "bg-background relative overflow-hidden transition-all duration-300 ease-in-out",
-            deviceMode !== "full" && "rounded-xl border shadow-lg"
+            deviceMode !== "full" &&
+              deviceMode !== "desktop" &&
+              "rounded-xl border shadow-lg"
           )}
           style={{
-            width: dimensions.width,
-            height: dimensions.height,
-            maxWidth: deviceMode === "full" ? "100%" : "calc(100vw - 4rem)",
-            maxHeight: deviceMode === "full" ? "100%" : "calc(100vh - 12rem)",
+            width:
+              deviceMode === "desktop" || deviceMode === "full"
+                ? "100%"
+                : dimensions.width,
+            height:
+              deviceMode === "desktop" || deviceMode === "full"
+                ? "100%"
+                : dimensions.height,
+            maxWidth:
+              deviceMode === "desktop" || deviceMode === "full"
+                ? "100%"
+                : "calc(100vw - 4rem)",
+            maxHeight:
+              deviceMode === "desktop" || deviceMode === "full"
+                ? "100%"
+                : "calc(100vh - 12rem)",
           }}
         >
           <div className="h-full w-full overflow-auto">{children}</div>
 
-          {deviceMode !== "full" && (
+          {deviceMode !== "full" && deviceMode !== "desktop" && (
             <div className="pointer-events-none absolute inset-0 rounded-xl border-2 border-black/5 dark:border-white/10" />
           )}
         </div>

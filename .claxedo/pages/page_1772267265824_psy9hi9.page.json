@@ -1,0 +1,1394 @@
+{
+  "version": 1,
+  "id": "page_1772267265824_psy9hi9",
+  "title": "Current Architecture",
+  "created_at": "2026-02-28T08:27:45.824Z",
+  "updated_at": "2026-02-28T10:03:05.001Z",
+  "content": "{\"type\":\"doc\",\"content\":[{\"type\":\"heading\",\"attrs\":{\"textAlign\":null,\"level\":3},\"content\":[{\"type\":\"text\",\"text\":\"Core PTY (\"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"packages/opencode/src/pty/index.ts\"},{\"type\":\"text\",\"text\":\")\"}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"Uses \"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"bun-pty\"},{\"type\":\"text\",\"text\":\" library\"}]}]}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"Creates/manages PTY sessions for both terminals and managed processes\"}]}]}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"Exposed via \"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"/pty\"},{\"type\":\"text\",\"text\":\" HTTP routes in opencode server\"}]}]}]},{\"type\":\"heading\",\"attrs\":{\"textAlign\":null,\"level\":3},\"content\":[{\"type\":\"text\",\"text\":\"Process Management (\"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"packages/claxedo-app/src/opencode-patches/process/\"},{\"type\":\"text\",\"text\":\")\"}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"process.ts\"},{\"type\":\"text\",\"text\":\" - Types (ProcessConfig, ManagedProcess, Status)\"}]}]}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"index.ts\"},{\"type\":\"text\",\"text\":\" - Implementation using opencode's PTY (\"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"Pty.create\"},{\"type\":\"text\",\"text\":\", \"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"Pty.write\"},{\"type\":\"text\",\"text\":\", etc.)\"}]}]}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"routes.ts\"},{\"type\":\"text\",\"text\":\" - HTTP API at \"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"/process\"}]}]}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"MCP tools in \"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"claxedo-mcp.ts\"}]}]}]},{\"type\":\"heading\",\"attrs\":{\"textAlign\":null,\"level\":3},\"content\":[{\"type\":\"text\",\"text\":\"Terminal UI (\"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"packages/claxedo-app/src/overrides/components/terminal-*\"},{\"type\":\"text\",\"text\":\")\"}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"terminal.tsx\"},{\"type\":\"text\",\"text\":\" - Main component that:\"}]}]}]},{\"type\":\"orderedList\",\"attrs\":{\"start\":1,\"type\":null},\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"bold\"}],\"text\":\"Creates PTY\"},{\"type\":\"text\",\"text\":\": Calls \"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"sdk.client.pty.create()\"},{\"type\":\"text\",\"text\":\" (HTTP POST /pty)\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"bold\"}],\"text\":\"Connects via WebSocket\"},{\"type\":\"text\",\"text\":\": Opens WebSocket to \"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"/pty/:ptyID/connect\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"bold\"}],\"text\":\"Renders\"},{\"type\":\"text\",\"text\":\": Uses xterm.js for terminal display\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"bold\"}],\"text\":\"Handles I/O\"},{\"type\":\"text\",\"text\":\": Sends keyboard input via WS, receives terminal output via WS\"}]}]}]},{\"type\":\"bulletList\",\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"terminal-connection.ts\"},{\"type\":\"text\",\"text\":\" - WebSocket utilities (reconnection, close handling)\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"terminal-stream.ts\"},{\"type\":\"text\",\"text\":\" - Stream buffering for terminal output\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"terminal-recovery.ts\"},{\"type\":\"text\",\"text\":\" - Snapshot/restore for terminal state\"}]}]},{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"terminal-tui.ts\"},{\"type\":\"text\",\"text\":\" - TUI detection and filtering\"}]}]}]},{\"type\":\"heading\",\"attrs\":{\"textAlign\":null,\"level\":2},\"content\":[{\"type\":\"text\",\"text\":\"Architecture Diagram\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"````mermaid\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"flowchart TB \"},{\"type\":\"text\",\"text\":\"    subgraph \\\"opencode Core (packages/opencode)\\\" \"},{\"type\":\"text\",\"text\":\"        direction TB\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"        PTY[\\\"PTY Module<br/>packages/opencode/src/pty/index.ts\\\"] \"},{\"type\":\"text\",\"text\":\"        Routes[\\\"PTY Routes<br/>/pty\\\"]\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"        PTY --> Routes \"},{\"type\":\"text\",\"text\":\"    end\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"    subgraph \\\"claxedo-app\\\" \"},{\"type\":\"text\",\"text\":\"        direction TB\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"        subgraph \\\"Process Management\\\" \"},{\"type\":\"text\",\"text\":\"            PMTypes[\\\"types.ts<br/>ProcessConfig, ManagedProcess\\\"] \"},{\"type\":\"text\",\"text\":\"            PMImpl[\\\"index.ts<br/>start, stop, restart, startAll...\\\"] \"},{\"type\":\"text\",\"text\":\"            PMRoutes[\\\"routes.ts<br/>/process API\\\"] \"},{\"type\":\"text\",\"text\":\"            PMPortless[\\\"portless.ts<br/>portless command builder\\\"] \"},{\"type\":\"text\",\"text\":\"            PMPatch[\\\"opencode-patches/process/process.ts\\\"]\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"            PMTypes --> PMImpl \"},{\"type\":\"text\",\"text\":\"            PMImpl --> PMRoutes \"},{\"type\":\"text\",\"text\":\"            PMImpl --> PMPortless \"},{\"type\":\"text\",\"text\":\"            PMImpl -.->|uses| PTY \"},{\"type\":\"text\",\"text\":\"        end\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"    subgraph \\\"Terminal UI\\\" \"},{\"type\":\"text\",\"text\":\"        TUIMain[\\\"terminal.tsx<br/>Creates PTY, WS connect, xterm.js\\\"] \"},{\"type\":\"text\",\"text\":\"        TUIConn[\\\"terminal-connection.ts<br/>WebSocket, reconnection\\\"] \"},{\"type\":\"text\",\"text\":\"        TUIStream[\\\"terminal-stream.ts<br/>Stream buffering\\\"] \"},{\"type\":\"text\",\"text\":\"        TUIRecov[\\\"terminal-recovery.ts<br/>Snapshot/restore\\\"] \"},{\"type\":\"text\",\"text\":\"        TUITui[\\\"terminal-tui.ts<br/>TUI detection\\\"]\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"        TUIMain --> TUIConn \"},{\"type\":\"text\",\"text\":\"        TUIMain --> TUIStream \"},{\"type\":\"text\",\"text\":\"        TUIMain --> TUIRecov \"},{\"type\":\"text\",\"text\":\"        TUIMain --> TUITui \"},{\"type\":\"text\",\"text\":\"    end\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"    subgraph \\\"Frontend (Browser)\\\" \"},{\"type\":\"text\",\"text\":\"        FE[\\\"xterm.js<br/>Terminal rendering\\\"] \"},{\"type\":\"text\",\"text\":\"    end\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"    FE -->|1. Create PTY| TUIMain \"},{\"type\":\"text\",\"text\":\"    TUIMain -->|2. POST /pty| Routes \"},{\"type\":\"text\",\"text\":\"    TUIMain -->|3. WebSocket /pty/:id/connect| Routes \"},{\"type\":\"text\",\"text\":\"    Routes -->|4. PTY I/O| PTY \"},{\"type\":\"text\",\"text\":\"    end\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"    subgraph \\\"MCP Server\\\" \"},{\"type\":\"text\",\"text\":\"        MCP[\\\"claxedo-mcp.ts<br/>claxedo-mcp server\\\"]\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"        MCP -->|list_process| PMRoutes \"},{\"type\":\"text\",\"text\":\"        MCP -->|start_process| PMRoutes \"},{\"type\":\"text\",\"text\":\"        MCP -->|stop_process| PMRoutes \"},{\"type\":\"text\",\"text\":\"        MCP -->|restart_process| PMRoutes \"},{\"type\":\"text\",\"text\":\"        MCP -->|add_process| PMRoutes \"},{\"type\":\"text\",\"text\":\"        MCP -->|update_process| PMRoutes \"},{\"type\":\"text\",\"text\":\"        MCP -->|remove_process| PMRoutes \"},{\"type\":\"text\",\"text\":\"        MCP -->|start\"},{\"type\":\"text\",\"marks\":[{\"type\":\"italic\"}],\"text\":\"all\"},{\"type\":\"text\",\"text\":\"processes| PMRoutes \"},{\"type\":\"text\",\"text\":\"        MCP -->|stop\"},{\"type\":\"text\",\"marks\":[{\"type\":\"italic\"}],\"text\":\"all\"},{\"type\":\"text\",\"text\":\"processes| PMRoutes \"},{\"type\":\"text\",\"text\":\"    end\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"    PMImpl -.->|uses| PTY\"}]},{\"type\":\"codeBlock\",\"attrs\":{\"language\":null},\"content\":[{\"type\":\"text\",\"text\":\"\\n### Data Flow\\n\\n#### Terminal PTY Flow (Frontend to Backend)\\n\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"sequenceDiagram \"},{\"type\":\"text\",\"text\":\"    participant User \"},{\"type\":\"text\",\"text\":\"    participant XTerm as xterm.js<br/>(Browser) \"},{\"type\":\"text\",\"text\":\"    participant TUI as terminal.tsx<br/>(Frontend) \"},{\"type\":\"text\",\"text\":\"    participant API as /pty routes<br/>(Backend) \"},{\"type\":\"text\",\"text\":\"    participant PTY as PTY Module<br/>(opencode) \"},{\"type\":\"text\",\"text\":\"    participant bunpty as bun-pty\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"    User->>XTerm: Types command \"},{\"type\":\"text\",\"text\":\"    XTerm->>TUI: Key events \"},{\"type\":\"text\",\"text\":\"    TUI->>API: POST /pty (create session) \"},{\"type\":\"text\",\"text\":\"    API->>PTY: Pty.create({title, env}) \"},{\"type\":\"text\",\"text\":\"    PTY->>bunpty: spawn shell \"},{\"type\":\"text\",\"text\":\"    bunpty-->>PTY: ptyProcess \"},{\"type\":\"text\",\"text\":\"    PTY-->>API: {id, title, cwd} \"},{\"type\":\"text\",\"text\":\"    API-->>TUI: {id, title, cwd} \"},{\"type\":\"text\",\"text\":\"    TUI->>API: WS /pty/:id/connect \"},{\"type\":\"text\",\"text\":\"    API->>PTY: Pty.connect(id, socket) \"},{\"type\":\"text\",\"text\":\"    PTY->>bunpty: attach socket to ptyProcess \"},{\"type\":\"text\",\"text\":\"    loop Real-time I/O \"},{\"type\":\"text\",\"text\":\"        XTerm->>TUI: key data \"},{\"type\":\"text\",\"text\":\"        TUI->>API: WS send(key data) \"},{\"type\":\"text\",\"text\":\"        API->>PTY: socket.onMessage \"},{\"type\":\"text\",\"text\":\"        PTY->>bunpty: ptyProcess.write() \"},{\"type\":\"text\",\"text\":\"        bunpty-->>PTY: ptyProcess output \"},{\"type\":\"text\",\"text\":\"        PTY-->>API: socket.send(output) \"},{\"type\":\"text\",\"text\":\"        API-->>TUI: WS message \"},{\"type\":\"text\",\"text\":\"        TUI->>XTerm: write(output) \"},{\"type\":\"text\",\"text\":\"    end\"}]},{\"type\":\"codeBlock\",\"attrs\":{\"language\":null},\"content\":[{\"type\":\"text\",\"text\":\"\\n#### Process Management PTY Flow\\n\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"sequenceDiagram \"},{\"type\":\"text\",\"text\":\"    participant User \"},{\"type\":\"text\",\"text\":\"    participant MCP as claxedo-mcp \"},{\"type\":\"text\",\"text\":\"    participant API as /process routes \"},{\"type\":\"text\",\"text\":\"    participant PM as Process Manager \"},{\"type\":\"text\",\"text\":\"    participant PTY as opencode PTY \"},{\"type\":\"text\",\"text\":\"    participant bunpty as bun-pty\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"    User->>MCP: start_process(id) \"},{\"type\":\"text\",\"text\":\"    MCP->>API: POST /process/:id/start \"},{\"type\":\"text\",\"text\":\"    API->>PM: start(configId) \"},{\"type\":\"text\",\"text\":\"    PM->>PTY: Pty.create({command, args, cwd, title, env}) \"},{\"type\":\"text\",\"text\":\"    PTY->>bunpty: spawn(command, args, options) \"},{\"type\":\"text\",\"text\":\"    bunpty-->>PTY: ptyProcess \"},{\"type\":\"text\",\"text\":\"    PTY-->>PM: {id, title, command, ...} \"},{\"type\":\"text\",\"text\":\"    PM-->>API: ManagedProcess \"},{\"type\":\"text\",\"text\":\"    API-->>MCP: ManagedProcess \"},{\"type\":\"text\",\"text\":\"    MCP-->>User: \\\"Process started\\\"\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"    Note over PM,PTY: For terminal, similar flow but<br/>directly via /pty routes\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"````\"}]},{\"type\":\"heading\",\"attrs\":{\"textAlign\":null,\"level\":2},\"content\":[{\"type\":\"text\",\"text\":\"The Issue\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"Both process management and terminal creation:\"}]},{\"type\":\"orderedList\",\"attrs\":{\"start\":1,\"type\":null},\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"Use the same technology (\"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"bun-pty\"},{\"type\":\"text\",\"text\":\")\"}]}]}]},{\"type\":\"orderedList\",\"attrs\":{\"start\":2,\"type\":null},\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"Are tightly coupled to opencode core (\"},{\"type\":\"text\",\"marks\":[{\"type\":\"code\"}],\"text\":\"@/pty\"},{\"type\":\"text\",\"text\":\")\"}]}]}]},{\"type\":\"orderedList\",\"attrs\":{\"start\":3,\"type\":null},\"content\":[{\"type\":\"listItem\",\"content\":[{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"Can't be easily shared or decoupled\"}]}]}]},{\"type\":\"heading\",\"attrs\":{\"textAlign\":null,\"level\":2},\"content\":[{\"type\":\"text\",\"text\":\"Solution\"}]},{\"type\":\"paragraph\",\"attrs\":{\"textAlign\":null},\"content\":[{\"type\":\"text\",\"text\":\"Extract PTY functionality into a shared package and have both process management and terminal use this shared package.\"}]}]}",
+  "doc": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 3
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Core PTY ("
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "code"
+              }
+            ],
+            "text": "packages/opencode/src/pty/index.ts"
+          },
+          {
+            "type": "text",
+            "text": ")"
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Uses "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "bun-pty"
+                  },
+                  {
+                    "type": "text",
+                    "text": " library"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Creates/manages PTY sessions for both terminals and managed processes"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Exposed via "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "/pty"
+                  },
+                  {
+                    "type": "text",
+                    "text": " HTTP routes in opencode server"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 3
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Process Management ("
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "code"
+              }
+            ],
+            "text": "packages/claxedo-app/src/opencode-patches/process/"
+          },
+          {
+            "type": "text",
+            "text": ")"
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "process.ts"
+                  },
+                  {
+                    "type": "text",
+                    "text": " - Types (ProcessConfig, ManagedProcess, Status)"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "index.ts"
+                  },
+                  {
+                    "type": "text",
+                    "text": " - Implementation using opencode's PTY ("
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "Pty.create"
+                  },
+                  {
+                    "type": "text",
+                    "text": ", "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "Pty.write"
+                  },
+                  {
+                    "type": "text",
+                    "text": ", etc.)"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "routes.ts"
+                  },
+                  {
+                    "type": "text",
+                    "text": " - HTTP API at "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "/process"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "MCP tools in "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "claxedo-mcp.ts"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 3
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Terminal UI ("
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "code"
+              }
+            ],
+            "text": "packages/claxedo-app/src/overrides/components/terminal-*"
+          },
+          {
+            "type": "text",
+            "text": ")"
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "terminal.tsx"
+                  },
+                  {
+                    "type": "text",
+                    "text": " - Main component that:"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "start": 1,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Creates PTY"
+                  },
+                  {
+                    "type": "text",
+                    "text": ": Calls "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "sdk.client.pty.create()"
+                  },
+                  {
+                    "type": "text",
+                    "text": " (HTTP POST /pty)"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Connects via WebSocket"
+                  },
+                  {
+                    "type": "text",
+                    "text": ": Opens WebSocket to "
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "/pty/:ptyID/connect"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Renders"
+                  },
+                  {
+                    "type": "text",
+                    "text": ": Uses xterm.js for terminal display"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "bold"
+                      }
+                    ],
+                    "text": "Handles I/O"
+                  },
+                  {
+                    "type": "text",
+                    "text": ": Sends keyboard input via WS, receives terminal output via WS"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "bulletList",
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "terminal-connection.ts"
+                  },
+                  {
+                    "type": "text",
+                    "text": " - WebSocket utilities (reconnection, close handling)"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "terminal-stream.ts"
+                  },
+                  {
+                    "type": "text",
+                    "text": " - Stream buffering for terminal output"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "terminal-recovery.ts"
+                  },
+                  {
+                    "type": "text",
+                    "text": " - Snapshot/restore for terminal state"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "terminal-tui.ts"
+                  },
+                  {
+                    "type": "text",
+                    "text": " - TUI detection and filtering"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Architecture Diagram"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "````mermaid"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "flowchart TB "
+          },
+          {
+            "type": "text",
+            "text": "    subgraph \"opencode Core (packages/opencode)\" "
+          },
+          {
+            "type": "text",
+            "text": "        direction TB"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "        PTY[\"PTY Module<br/>packages/opencode/src/pty/index.ts\"] "
+          },
+          {
+            "type": "text",
+            "text": "        Routes[\"PTY Routes<br/>/pty\"]"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "        PTY --> Routes "
+          },
+          {
+            "type": "text",
+            "text": "    end"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "    subgraph \"claxedo-app\" "
+          },
+          {
+            "type": "text",
+            "text": "        direction TB"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "        subgraph \"Process Management\" "
+          },
+          {
+            "type": "text",
+            "text": "            PMTypes[\"types.ts<br/>ProcessConfig, ManagedProcess\"] "
+          },
+          {
+            "type": "text",
+            "text": "            PMImpl[\"index.ts<br/>start, stop, restart, startAll...\"] "
+          },
+          {
+            "type": "text",
+            "text": "            PMRoutes[\"routes.ts<br/>/process API\"] "
+          },
+          {
+            "type": "text",
+            "text": "            PMPortless[\"portless.ts<br/>portless command builder\"] "
+          },
+          {
+            "type": "text",
+            "text": "            PMPatch[\"opencode-patches/process/process.ts\"]"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "            PMTypes --> PMImpl "
+          },
+          {
+            "type": "text",
+            "text": "            PMImpl --> PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "            PMImpl --> PMPortless "
+          },
+          {
+            "type": "text",
+            "text": "            PMImpl -.->|uses| PTY "
+          },
+          {
+            "type": "text",
+            "text": "        end"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "    subgraph \"Terminal UI\" "
+          },
+          {
+            "type": "text",
+            "text": "        TUIMain[\"terminal.tsx<br/>Creates PTY, WS connect, xterm.js\"] "
+          },
+          {
+            "type": "text",
+            "text": "        TUIConn[\"terminal-connection.ts<br/>WebSocket, reconnection\"] "
+          },
+          {
+            "type": "text",
+            "text": "        TUIStream[\"terminal-stream.ts<br/>Stream buffering\"] "
+          },
+          {
+            "type": "text",
+            "text": "        TUIRecov[\"terminal-recovery.ts<br/>Snapshot/restore\"] "
+          },
+          {
+            "type": "text",
+            "text": "        TUITui[\"terminal-tui.ts<br/>TUI detection\"]"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "        TUIMain --> TUIConn "
+          },
+          {
+            "type": "text",
+            "text": "        TUIMain --> TUIStream "
+          },
+          {
+            "type": "text",
+            "text": "        TUIMain --> TUIRecov "
+          },
+          {
+            "type": "text",
+            "text": "        TUIMain --> TUITui "
+          },
+          {
+            "type": "text",
+            "text": "    end"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "    subgraph \"Frontend (Browser)\" "
+          },
+          {
+            "type": "text",
+            "text": "        FE[\"xterm.js<br/>Terminal rendering\"] "
+          },
+          {
+            "type": "text",
+            "text": "    end"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "    FE -->|1. Create PTY| TUIMain "
+          },
+          {
+            "type": "text",
+            "text": "    TUIMain -->|2. POST /pty| Routes "
+          },
+          {
+            "type": "text",
+            "text": "    TUIMain -->|3. WebSocket /pty/:id/connect| Routes "
+          },
+          {
+            "type": "text",
+            "text": "    Routes -->|4. PTY I/O| PTY "
+          },
+          {
+            "type": "text",
+            "text": "    end"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "    subgraph \"MCP Server\" "
+          },
+          {
+            "type": "text",
+            "text": "        MCP[\"claxedo-mcp.ts<br/>claxedo-mcp server\"]"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "        MCP -->|list_process| PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "        MCP -->|start_process| PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "        MCP -->|stop_process| PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "        MCP -->|restart_process| PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "        MCP -->|add_process| PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "        MCP -->|update_process| PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "        MCP -->|remove_process| PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "        MCP -->|start"
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ],
+            "text": "all"
+          },
+          {
+            "type": "text",
+            "text": "processes| PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "        MCP -->|stop"
+          },
+          {
+            "type": "text",
+            "marks": [
+              {
+                "type": "italic"
+              }
+            ],
+            "text": "all"
+          },
+          {
+            "type": "text",
+            "text": "processes| PMRoutes "
+          },
+          {
+            "type": "text",
+            "text": "    end"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "    PMImpl -.->|uses| PTY"
+          }
+        ]
+      },
+      {
+        "type": "codeBlock",
+        "attrs": {
+          "language": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "\n### Data Flow\n\n#### Terminal PTY Flow (Frontend to Backend)\n"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "sequenceDiagram "
+          },
+          {
+            "type": "text",
+            "text": "    participant User "
+          },
+          {
+            "type": "text",
+            "text": "    participant XTerm as xterm.js<br/>(Browser) "
+          },
+          {
+            "type": "text",
+            "text": "    participant TUI as terminal.tsx<br/>(Frontend) "
+          },
+          {
+            "type": "text",
+            "text": "    participant API as /pty routes<br/>(Backend) "
+          },
+          {
+            "type": "text",
+            "text": "    participant PTY as PTY Module<br/>(opencode) "
+          },
+          {
+            "type": "text",
+            "text": "    participant bunpty as bun-pty"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "    User->>XTerm: Types command "
+          },
+          {
+            "type": "text",
+            "text": "    XTerm->>TUI: Key events "
+          },
+          {
+            "type": "text",
+            "text": "    TUI->>API: POST /pty (create session) "
+          },
+          {
+            "type": "text",
+            "text": "    API->>PTY: Pty.create({title, env}) "
+          },
+          {
+            "type": "text",
+            "text": "    PTY->>bunpty: spawn shell "
+          },
+          {
+            "type": "text",
+            "text": "    bunpty-->>PTY: ptyProcess "
+          },
+          {
+            "type": "text",
+            "text": "    PTY-->>API: {id, title, cwd} "
+          },
+          {
+            "type": "text",
+            "text": "    API-->>TUI: {id, title, cwd} "
+          },
+          {
+            "type": "text",
+            "text": "    TUI->>API: WS /pty/:id/connect "
+          },
+          {
+            "type": "text",
+            "text": "    API->>PTY: Pty.connect(id, socket) "
+          },
+          {
+            "type": "text",
+            "text": "    PTY->>bunpty: attach socket to ptyProcess "
+          },
+          {
+            "type": "text",
+            "text": "    loop Real-time I/O "
+          },
+          {
+            "type": "text",
+            "text": "        XTerm->>TUI: key data "
+          },
+          {
+            "type": "text",
+            "text": "        TUI->>API: WS send(key data) "
+          },
+          {
+            "type": "text",
+            "text": "        API->>PTY: socket.onMessage "
+          },
+          {
+            "type": "text",
+            "text": "        PTY->>bunpty: ptyProcess.write() "
+          },
+          {
+            "type": "text",
+            "text": "        bunpty-->>PTY: ptyProcess output "
+          },
+          {
+            "type": "text",
+            "text": "        PTY-->>API: socket.send(output) "
+          },
+          {
+            "type": "text",
+            "text": "        API-->>TUI: WS message "
+          },
+          {
+            "type": "text",
+            "text": "        TUI->>XTerm: write(output) "
+          },
+          {
+            "type": "text",
+            "text": "    end"
+          }
+        ]
+      },
+      {
+        "type": "codeBlock",
+        "attrs": {
+          "language": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "\n#### Process Management PTY Flow\n"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "sequenceDiagram "
+          },
+          {
+            "type": "text",
+            "text": "    participant User "
+          },
+          {
+            "type": "text",
+            "text": "    participant MCP as claxedo-mcp "
+          },
+          {
+            "type": "text",
+            "text": "    participant API as /process routes "
+          },
+          {
+            "type": "text",
+            "text": "    participant PM as Process Manager "
+          },
+          {
+            "type": "text",
+            "text": "    participant PTY as opencode PTY "
+          },
+          {
+            "type": "text",
+            "text": "    participant bunpty as bun-pty"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "    User->>MCP: start_process(id) "
+          },
+          {
+            "type": "text",
+            "text": "    MCP->>API: POST /process/:id/start "
+          },
+          {
+            "type": "text",
+            "text": "    API->>PM: start(configId) "
+          },
+          {
+            "type": "text",
+            "text": "    PM->>PTY: Pty.create({command, args, cwd, title, env}) "
+          },
+          {
+            "type": "text",
+            "text": "    PTY->>bunpty: spawn(command, args, options) "
+          },
+          {
+            "type": "text",
+            "text": "    bunpty-->>PTY: ptyProcess "
+          },
+          {
+            "type": "text",
+            "text": "    PTY-->>PM: {id, title, command, ...} "
+          },
+          {
+            "type": "text",
+            "text": "    PM-->>API: ManagedProcess "
+          },
+          {
+            "type": "text",
+            "text": "    API-->>MCP: ManagedProcess "
+          },
+          {
+            "type": "text",
+            "text": "    MCP-->>User: \"Process started\""
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "    Note over PM,PTY: For terminal, similar flow but<br/>directly via /pty routes"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "````"
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "The Issue"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Both process management and terminal creation:"
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "start": 1,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Use the same technology ("
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "bun-pty"
+                  },
+                  {
+                    "type": "text",
+                    "text": ")"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "start": 2,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Are tightly coupled to opencode core ("
+                  },
+                  {
+                    "type": "text",
+                    "marks": [
+                      {
+                        "type": "code"
+                      }
+                    ],
+                    "text": "@/pty"
+                  },
+                  {
+                    "type": "text",
+                    "text": ")"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "orderedList",
+        "attrs": {
+          "start": 3,
+          "type": null
+        },
+        "content": [
+          {
+            "type": "listItem",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "Can't be easily shared or decoupled"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "textAlign": null,
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Solution"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "attrs": {
+          "textAlign": null
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Extract PTY functionality into a shared package and have both process management and terminal use this shared package."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -24,9 +24,7 @@ export default function WorkbenchLayout({
       )}
     >
       {/* 1. Vertical Icon Rail */}
-      <div className="border-border bg-background z-20 flex-none border-r">
-        {rail}
-      </div>
+      <div className="bg-background z-20 flex-none">{rail}</div>
 
       {/* 2. Main Workbench Area (Split Pane) */}
       <div className="flex flex-1 overflow-hidden">

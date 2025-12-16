@@ -11,10 +11,12 @@ import {
 import {
   PromptInput,
   PromptInputFooter,
+  PromptInputHeader,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputTools,
 } from "@formlink/ui/ai-elements"
+import { X } from "lucide-react"
 import React, { useCallback, useState } from "react"
 
 type ChatComposerProps = {
@@ -35,6 +37,8 @@ type ChatComposerProps = {
   onSelectSystemPrompt: (systemPrompt: string) => void
   stop: () => void
   status?: "submitted" | "streaming" | "ready" | "error"
+  selectionContext?: any
+  onClearSelection?: () => void
 }
 
 export function ChatComposer({
@@ -45,6 +49,8 @@ export function ChatComposer({
   selectedModel,
   onSelectModel,
   status,
+  selectionContext,
+  onClearSelection,
 }: ChatComposerProps) {
   const handleSubmit = useCallback(
     (_message: unknown, e: React.FormEvent<HTMLFormElement>) => {
@@ -62,8 +68,35 @@ export function ChatComposer({
       className="border-input bg-popover relative overflow-hidden border p-0 shadow-xs backdrop-blur-xl"
       onSubmit={handleSubmit}
     >
+      {selectionContext && (
+        <PromptInputHeader>
+          <div className="flex w-full items-center justify-between px-1">
+            <div className="flex items-center gap-2 rounded-md border border-blue-100 bg-blue-50/50 px-2 py-1 text-xs text-blue-600">
+              <span>
+                <span className="font-medium">{selectionContext.tagName}</span>{" "}
+                {selectionContext.componentName && (
+                  <span className="font-normal text-blue-400">
+                    ({selectionContext.componentName})
+                  </span>
+                )}
+              </span>
+              <button
+                type="button"
+                onClick={onClearSelection}
+                className="ml-1 rounded-sm p-0.5 text-blue-400 transition-colors hover:bg-blue-100/50 hover:text-blue-600"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </PromptInputHeader>
+      )}
       <PromptInputTextarea
-        placeholder="Ask me anything about forms..."
+        placeholder={
+          selectionContext
+            ? "Describe changes..."
+            : "Ask me anything about forms..."
+        }
         className="min-h-[44px] bg-transparent text-base leading-[1.3] sm:text-base md:text-base"
         value={value}
         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
@@ -107,9 +140,12 @@ type ChatProps = {
   onSubmit?: (input: string, selectedModel: string) => void
   isLoading?: boolean
   showSuggestions?: boolean
-  onInputChange?: (input: string) => void
   initialModel?: string
   onModelChange?: (model: string) => void
+  value?: string
+  onInputChange?: (value: string) => void
+  selectionContext?: any
+  onClearSelection?: () => void
 }
 
 export default function Chat({
@@ -119,8 +155,13 @@ export default function Chat({
   onInputChange,
   initialModel,
   onModelChange,
+  value: externalValue,
+  selectionContext,
+  onClearSelection,
 }: ChatProps) {
-  const [input, setInput] = useState("")
+  const [internalInput, setInternalInput] = useState("")
+  // Use external value if provided, otherwise internal state
+  const input = externalValue !== undefined ? externalValue : internalInput
   const [selectedModel, setSelectedModel] = useState(
     initialModel || MODEL_DEFAULT
   )
@@ -133,15 +174,25 @@ export default function Chat({
   const handleSubmit = useCallback(() => {
     if (!input.trim() || isLoading) return
     onSubmit?.(input, selectedModel)
-    setInput("")
-  }, [input, selectedModel, onSubmit, isLoading])
+    // Clear input
+    if (externalValue === undefined) {
+      setInternalInput("")
+    } else {
+      // If controlled, parent handles clearing via onSubmit usually,
+      // but here we might need to notify parent to clear.
+      // For now, let's assume parent clears it or we call onInputChange("")
+      onInputChange?.("")
+    }
+  }, [input, selectedModel, onSubmit, isLoading, externalValue, onInputChange])
 
   const handleInputChange = useCallback(
     (value: string) => {
-      setInput(value)
+      if (externalValue === undefined) {
+        setInternalInput(value)
+      }
       onInputChange?.(value)
     },
-    [onInputChange]
+    [onInputChange, externalValue]
   )
 
   return (
@@ -164,9 +215,10 @@ export default function Chat({
       onSuggestion={() => {}}
       hasSuggestions={showSuggestions}
       isUserAuthenticated={true}
-      systemPrompt=""
       onSelectSystemPrompt={() => {}}
       stop={() => {}}
+      selectionContext={selectionContext}
+      onClearSelection={onClearSelection}
     />
   )
 }

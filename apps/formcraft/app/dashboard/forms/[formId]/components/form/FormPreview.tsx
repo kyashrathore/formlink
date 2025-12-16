@@ -450,11 +450,11 @@ export default function FormPreview({
 
   return (
     <div
-      className={`bg-muted flex h-full items-center justify-center rounded-xl border ${className} relative`}
+      className={`bg-muted flex h-full items-center justify-center ${className} relative`}
     >
       {}
       {previewState.type === "loading" && (
-        <div className="bg-muted/80 absolute inset-0 z-10 flex items-center justify-center rounded-xl">
+        <div className="bg-muted/80 absolute inset-0 z-10 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-4">
             <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
             <div className="text-center">
@@ -469,7 +469,7 @@ export default function FormPreview({
         </div>
       )}
       {gateChatPreview && (
-        <div className="bg-muted/80 absolute inset-0 z-10 flex items-center justify-center rounded-xl">
+        <div className="bg-muted/80 absolute inset-0 z-10 flex items-center justify-center">
           <div className="flex flex-col items-center space-y-2 text-center">
             <Loader2 className="text-muted-foreground h-6 w-6 animate-spin" />
             <p className="text-foreground text-sm font-medium">
@@ -488,7 +488,7 @@ export default function FormPreview({
           ref={iframeRef}
           src={getPreviewUrl()}
           title="Form Preview"
-          className="bg-background h-full w-full rounded-xl border"
+          className="bg-background h-full w-full"
           sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
           onLoad={handleIframeLoad}
           onError={handleIframeError}

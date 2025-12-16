@@ -5,7 +5,6 @@ import { Button } from "@formlink/ui"
 import { Copy, GripVertical, Trash2 } from "lucide-react"
 import React from "react"
 import InlineEditableField from "../../InlineEditableField"
-import { BUTTON_CLASSES } from "../constants"
 
 interface QuestionHeaderProps {
   question: Question
@@ -29,17 +28,15 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
     disabled: isPublishedMode,
   })
   return (
-    <div className="mb-4 flex-col items-start justify-between">
-      <div className="text-muted-foreground flex items-center justify-between">
+    <div className="mb-4 flex flex-col gap-2">
+      <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           <div
             {...(!isPublishedMode ? attributes : {})}
             {...(!isPublishedMode ? listeners : {})}
             className={cn(
-              "text-muted-foreground hover:text-foreground flex items-center p-1",
-              isPublishedMode
-                ? "cursor-not-allowed opacity-50"
-                : "cursor-grab active:cursor-grabbing"
+              "text-muted-foreground hover:text-foreground mt-0.5 -ml-1 flex cursor-grab items-center p-1 active:cursor-grabbing",
+              isPublishedMode && "cursor-not-allowed opacity-50"
             )}
             title={
               isPublishedMode
@@ -49,63 +46,65 @@ export const QuestionHeader: React.FC<QuestionHeaderProps> = ({
           >
             <GripVertical className="size-4" />
           </div>
-          <span className="mr-2">ID: {question.id}</span>
-          <span className="mr-2">Type: {question.type.name}</span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-muted-foreground text-[10px] leading-tight font-medium tracking-wider uppercase">
+              {question.type.name}
+            </span>
+            <span className="text-muted-foreground/60 font-mono text-[10px] leading-tight">
+              #{question.id}
+            </span>
+          </div>
         </div>
+
         {!shouldHideControls && (
-          <div className="opacity-0 transition-opacity duration-200 ease-in-out group-hover:opacity-100">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className={BUTTON_CLASSES.base}
-                onClick={onDuplicate}
-              >
-                <Copy className="mr-1 size-3" /> Duplicate
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className={BUTTON_CLASSES.base}
-                onClick={onDelete}
-              >
-                <Trash2 className="mr-1 size-3" /> Delete
-              </Button>
-            </div>
+          <div className="flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-foreground h-6 w-6"
+              onClick={onDuplicate}
+              title="Duplicate"
+            >
+              <Copy className="size-3" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-6 w-6"
+              onClick={onDelete}
+              title="Delete"
+            >
+              <Trash2 className="size-3" />
+            </Button>
           </div>
         )}
       </div>
-      <div
-        className={cn(
-          "mb-4 flex items-start justify-between",
-          shouldHideControls ? "w-full" : "pr-6"
-        )}
-      >
-        <div className={cn(shouldHideControls ? "w-full" : "pr-6")}>
-          <div className="flex">
-            <InlineEditableField
-              id={`title-${question.id}`}
-              label="Question Title"
-              defaultValue={question.title}
-              onConfirm={(value) => onFieldUpdate("title", value)}
-              placeholder="Enter question title"
-              hideLabel
-              className={`text-3xl font-medium ${shouldHideControls ? "w-full" : ""}`}
-            />
-          </div>
-          <div className="flex">
-            <InlineEditableField
-              id={`desc-${question.id}`}
-              label="Description"
-              defaultValue={question.description}
-              onConfirm={(value) => onFieldUpdate("description", value)}
-              placeholder="Add optional description..."
-              hideLabel
-              className={`text-muted-foreground text-sm ${shouldHideControls ? "w-full" : ""}`}
-              useTextArea
-              isCompact
-            />
-          </div>
+
+      <div className={cn(shouldHideControls ? "w-full" : "pr-6")}>
+        <div className="space-y-1">
+          <InlineEditableField
+            id={`title-${question.id}`}
+            label="Question Title"
+            defaultValue={question.title}
+            onConfirm={(value) => onFieldUpdate("title", value)}
+            placeholder="Enter question title"
+            hideLabel
+            isCompact
+            className={`text-left text-sm leading-normal font-medium ${shouldHideControls ? "w-full" : ""}`}
+            noBackground
+          />
+          <InlineEditableField
+            id={`desc-${question.id}`}
+            label="Description"
+            defaultValue={question.description}
+            onConfirm={(value) => onFieldUpdate("description", value)}
+            placeholder="Add optional description..."
+            hideLabel
+            isCompact
+            useTextArea
+            className={`text-muted-foreground text-left text-xs ${shouldHideControls ? "w-full" : ""}`}
+            noBackground
+          />
         </div>
       </div>
     </div>

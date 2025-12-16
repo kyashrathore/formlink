@@ -8,6 +8,7 @@ interface FormModeControlsProps {
   formMode: FormMode
   onFormModeChange: (mode: FormMode) => void
   className?: string
+  size?: "default" | "sm" | "lg"
 }
 
 const formModeOptions = [
@@ -32,10 +33,12 @@ export default function FormModeControls({
   formMode,
   onFormModeChange,
   className = "",
+  size = "default",
 }: FormModeControlsProps) {
   return (
     <ToggleGroup
       type="single"
+      size={size}
       value={formMode}
       onValueChange={(value) => value && onFormModeChange(value as FormMode)}
       className={`${className}`}

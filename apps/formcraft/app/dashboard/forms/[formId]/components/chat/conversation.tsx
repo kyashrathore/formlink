@@ -15,7 +15,6 @@ import {
 } from "@formlink/ui/ai-elements"
 import type { ToolUIPart } from "ai"
 import { getToolName, type UIMessage } from "ai"
-import { Loader2 } from "lucide-react"
 import type { ReactNode } from "react"
 import { cn } from "../../lib"
 import { useQuestionRenderer } from "./hooks/useQuestionRenderer"
@@ -46,10 +45,30 @@ const VisibleMessage = ({
     isLast,
     message.role as "user" | "assistant"
   )
+
+  const isUser = message.role === "user"
+
+  // Check if message is "tool-only" (ignoring reasoning)
+  let isToolOnly = false
+  if (!isUser && Array.isArray(message.parts)) {
+    const visibleParts = message.parts.filter(
+      (p: any) => p.type === "text" && p.text && p.text.trim().length > 0
+    )
+    isToolOnly = visibleParts.length === 0
+  }
+
   return (
     <Message key={messageId} from={message.role as "user" | "assistant"}>
-      <MessageContent className={cn(message.role === "user" ? "" : "px-2")}>
-        {message.role === "user"
+      <MessageContent
+        className={cn(
+          isUser
+            ? ""
+            : isToolOnly
+              ? "w-full border-none bg-transparent p-0 shadow-none"
+              : "px-2"
+        )}
+      >
+        {isUser
           ? // User messages - extract text from parts
             (() => {
               const textPart = (message.parts as any)?.find(
@@ -165,17 +184,31 @@ const VisibleMessage = ({
                   ? part.toolInvocation?.result
                   : part.output
 
+                // Check for duration in result
+                const duration = (result as any)?.duration
+
                 const errorText = isInvocation
                   ? part.toolInvocation?.errorText
                   : part.errorText
 
                 return (
-                  <div key={`tool-${partIndex}`} className="my-2 px-2">
-                    <Tool>
+                  <div
+                    key={`tool-${partIndex}`}
+                    className={cn("my-2", isToolOnly ? "my-0" : "px-2")}
+                  >
+                    <Tool
+                      className={cn(isToolOnly && "bg-card mb-0 shadow-sm")}
+                      defaultOpen={
+                        state === "input-available" ||
+                        state === "input-streaming"
+                      }
+                    >
                       <ToolHeader
                         type={`tool-${toolName}` as ToolUIPart["type"]}
                         state={state as ToolUIPart["state"]}
                         title={prettyToolName}
+                        className={cn(isToolOnly && "bg-muted/30 border-b")}
+                        duration={duration}
                       />
                       <ToolContent>
                         {(state === "input-streaming" ||
@@ -226,6 +259,16 @@ const VisibleMessage = ({
                                 </div>
                               )
                             }
+                          }
+
+                          // User Request: "don't need a expandable panel once done"
+                          // If successful, we can just hide the content or leave it collapsed.
+                          // But we still need to render it if there is an error.
+                          if (finalResult && !finalError) {
+                            // For success, return minimal or nothing in content to keep it collapsed/clean?
+                            // If we assume the header says "Completed", maybe we don't need the JSON output at all?
+                            // User said: "since description it self shows what need to be shown"
+                            return null
                           }
 
                           if (finalResult || finalError) {
@@ -305,13 +348,10 @@ export function Conversation({
         })}
 
         {(status === "submitted" || status === "streaming") && (
-          <div className="flex items-center justify-center p-4">
-            <div className="flex items-center space-x-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span className="text-muted-foreground text-sm">
-                {status === "streaming" ? "Generating..." : "Processing..."}
-              </span>
-            </div>
+          <div className="flex items-center justify-start p-4">
+            <span className="text-muted-foreground animate-pulse text-sm font-medium">
+              Thinking...
+            </span>
           </div>
         )}
       </ConversationContent>

@@ -12,7 +12,7 @@ const nextConfig = {
     "@formlink/prompts",
   ],
   devIndicators: {
-    position: "top-right",
+    position: "bottom-left",
   },
   experimental: {
     viewTransition: true,

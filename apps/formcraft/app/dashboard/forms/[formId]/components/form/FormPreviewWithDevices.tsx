@@ -3,9 +3,9 @@
 import { Form } from "@formlink/schema"
 import { useState } from "react"
 import DevicePreviewFrame, { DeviceMode } from "./DevicePreviewFrame"
-import FormModeControls, { FormMode } from "./FormModeControls"
+import { FormMode } from "./FormModeControls"
 import FormPreview from "./FormPreview"
-import PreviewControls from "./PreviewControls"
+import PreviewHeader from "./PreviewHeader"
 
 interface FormPreviewWithDevicesProps {
   form: Form
@@ -51,16 +51,12 @@ export default function FormPreviewWithDevices({
   return (
     <div className={`flex h-full w-full flex-col ${className}`}>
       {showControls && (
-        <div className="flex items-center justify-between">
-          <FormModeControls
-            formMode={formMode}
-            onFormModeChange={setFormMode}
-          />
-          <PreviewControls
-            deviceMode={deviceMode}
-            onDeviceModeChange={setDeviceMode}
-          />
-        </div>
+        <PreviewHeader
+          formMode={formMode}
+          onFormModeChange={setFormMode}
+          deviceMode={deviceMode}
+          onDeviceModeChange={setDeviceMode}
+        />
       )}
 
       <div className="flex-1">

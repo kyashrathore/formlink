@@ -2,9 +2,10 @@
 
 import { Form } from "@formlink/schema"
 import { Tabs, TabsList, TabsTrigger } from "@formlink/ui"
-import { PublishMode } from "../publish/PublishTab"
+import { FormMode } from "../form/FormModeControls"
 import DirectLinkSettings from "../publish/settings/DirectLinkSettings"
 import EmbedSettings from "../publish/settings/EmbedSettings"
+import { PublishMode } from "./types"
 
 interface PublishCardProps {
   form: Form
@@ -12,6 +13,7 @@ interface PublishCardProps {
   shortId?: string
   publishMode: PublishMode
   setPublishMode: (mode: PublishMode) => void
+  embedFormMode?: FormMode
 }
 
 export default function PublishCard({
@@ -20,6 +22,7 @@ export default function PublishCard({
   shortId,
   publishMode,
   setPublishMode,
+  embedFormMode,
 }: PublishCardProps) {
   return (
     <div className="flex h-full flex-col p-4">
@@ -46,7 +49,11 @@ export default function PublishCard({
             </div>
           ) : (
             <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-              <EmbedSettings formId={formId} shortId={shortId} />
+              <EmbedSettings
+                formId={formId}
+                shortId={shortId}
+                formMode={embedFormMode}
+              />
             </div>
           )}
         </div>

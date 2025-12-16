@@ -18,12 +18,11 @@ export default function DirectLinkSettings({
   const publicUrl = `${getFormFillerFBasePath()}/${shortId || formId}`
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
         <h3 className="mb-2 font-medium">Public Link</h3>
         <CopiableLink
           value={publicUrl}
-          label="Form URL"
           description="Share this link directly with your users."
         />
       </div>
@@ -32,7 +31,6 @@ export default function DirectLinkSettings({
         <h3 className="mb-2 font-medium">Test Link</h3>
         <CopiableLink
           value={publicUrl + "?formlinkai_testmode=true"}
-          label="Test URL"
           description="Responses will be saved as drafts."
         />
       </div>

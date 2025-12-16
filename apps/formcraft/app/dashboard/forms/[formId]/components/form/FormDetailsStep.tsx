@@ -48,7 +48,7 @@ const FormDetailsStep: React.FC<FormStartStepProps> = ({
             )}
           </CollapsibleTrigger>
           <CollapsibleContent className="border-t p-4">
-            <div className="mt-2 mb-4">
+            <div className="mt-2 mb-4 space-y-2">
               <InlineEditableField
                 id={`form-title`}
                 label="Form Title"
@@ -56,9 +56,10 @@ const FormDetailsStep: React.FC<FormStartStepProps> = ({
                 onConfirm={(value) => onUpdate("title", value)}
                 placeholder="Enter Form Title"
                 hideLabel
-                className="text-2xl font-medium tracking-tight"
+                className="text-lg font-semibold tracking-tight"
+                noBackground
               />
-              <div className="mt-1 mb-8">
+              <div className="mt-1">
                 <InlineEditableField
                   id={`form-intro`}
                   label="Form description"
@@ -66,8 +67,9 @@ const FormDetailsStep: React.FC<FormStartStepProps> = ({
                   onConfirm={(value) => onUpdate("description", value)}
                   placeholder="Add description for the form..."
                   hideLabel
-                  className="text-muted-foreground text-base"
+                  className="text-muted-foreground text-sm"
                   useTextArea
+                  noBackground
                 />
               </div>
             </div>

@@ -15,14 +15,18 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import type { Question } from "@formlink/schema"
-import { Button } from "@formlink/ui"
-import { Plus } from "lucide-react"
-import { useMemo, useState } from "react"
-import { toast } from "sonner"
+import {
+  PromptInput,
+  PromptInputFooter,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
+} from "@formlink/ui/ai-elements"
+import { useMemo } from "react"
 import { useMobile } from "../../hooks/use-mobile"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
-import PromptDialog from "../PromptDialog"
+import { useWorkbench } from "../workbench/WorkbenchContext"
 import SortableQuestionItem from "./FormEditor/SortableQuestionItem"
 import { QuestionSkeleton } from "./shimmers/FormShimmers"
 
@@ -46,7 +50,8 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
     addQuestion,
   } = useFormEditorStore()
 
-  const { agentState } = useFormGenerationStore()
+  const { agentState, setInitialPrompt } = useFormGenerationStore()
+  const { setActiveTool } = useWorkbench()
 
   const isMobile = useMobile()
   const shouldHideControls = isMobile && selectedTab === "content"
@@ -65,8 +70,6 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
   const isPublishedMode =
     !!persistedForm?.current_published_version_id &&
     !persistedForm?.current_draft_version_id
-
-  const [isPromptDialogOpen, setIsPromptDialogOpen] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -101,63 +104,23 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
     [displayQuestions]
   )
 
-  const handleAddQuestionSubmit = async (prompt: string) => {
-    const currentForm = persistedForm
-    if (!currentForm) return
-
-    const isAuthenticated = true
-
-    try {
-      const response = await fetch("/api/ai", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          operationType: "add-question",
-          prompt: prompt,
-          userId: userId,
-          isAuthenticated: isAuthenticated,
-          questions: currentForm.questions,
-        }),
-      })
-
-      const result = (await response.json()) as {
-        error?: boolean
-        message?: string
-        data?: Question
-      }
-
-      if (!response.ok) {
-        toast.warning("API Error", {
-          description:
-            result.message ||
-            "An unexpected error occurred while creating the question.",
-        })
-      } else if (result.error) {
-        toast.warning("Creation Error", {
-          description:
-            result.message || "Could not create question from prompt.",
-        })
-      } else if (result.data) {
-        addQuestion({
-          questionToClone: result.data,
-          isNewQuestion: true,
-        })
-        setIsPromptDialogOpen(false)
-      } else {
-        toast.warning("Creation Error", {
-          description:
-            "Question creation successful, but no question object returned.",
-        })
-      }
-    } catch (error) {
-      toast.warning("Request Failed", {
-        description:
-          (error instanceof Error ? error.message : String(error)) ||
-          "Could not connect to AI service for question creation.",
-      })
+  const handlePromptSubmit = (message: any) => {
+    let promptText = ""
+    if (typeof message === "string") {
+      promptText = message
+    } else if (
+      message &&
+      typeof message === "object" &&
+      Array.isArray(message.parts)
+    ) {
+      promptText = message.parts
+        .map((p: any) => (p.type === "text" ? p.text : ""))
+        .join("")
     }
+
+    if (!promptText.trim()) return
+    setInitialPrompt(promptText)
+    setActiveTool("chat")
   }
 
   return (
@@ -177,28 +140,8 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
         >
           <div className="mt-8 mb-4 flex items-center justify-between">
             <div className="text-lg font-semibold">Questions</div>
-            <div className="flex items-center space-x-4">
-              {!isPublishedMode && !shouldHideControls && (
-                <PromptDialog
-                  trigger={
-                    <Button
-                      variant="secondary"
-                      onClick={() => setIsPromptDialogOpen(true)}
-                    >
-                      <Plus className="mr-2 size-4" />
-                      Add Question
-                    </Button>
-                  }
-                  title="Add New Question"
-                  description="Enter a prompt to generate a new question."
-                  onSubmit={handleAddQuestionSubmit}
-                  isOpen={isPromptDialogOpen}
-                  onOpenChange={setIsPromptDialogOpen}
-                />
-              )}
-            </div>
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 pb-20">
             {/* Render generated/existing questions */}
             {displayQuestions.map((question, index) => {
               if (!question) {
@@ -230,6 +173,29 @@ const QuestionsStep: React.FC<QuestionsStepProps> = ({
                   ? "Agent is generating questions..."
                   : "No questions yet."}
               </p>
+            )}
+
+            {/* Sticky Prompt Input */}
+            {!isPublishedMode && !shouldHideControls && (
+              <div className="sticky bottom-4 z-10 mx-auto w-full max-w-2xl">
+                <div className="bg-background/80 supports-[backdrop-filter]:bg-background/60 hover:ring-primary/20 rounded-xl border p-1 shadow-lg backdrop-blur-xl transition-all duration-300 hover:shadow-xl hover:ring-1">
+                  <PromptInput
+                    onSubmit={handlePromptSubmit}
+                    className="border-0 shadow-none focus-visible:ring-0"
+                  >
+                    <PromptInputTextarea
+                      placeholder="Describe a question to add..."
+                      className="min-h-[2.5rem]"
+                    />
+                    <PromptInputFooter className="px-3 py-2">
+                      <span />
+                      <PromptInputTools>
+                        <PromptInputSubmit />
+                      </PromptInputTools>
+                    </PromptInputFooter>
+                  </PromptInput>
+                </div>
+              </div>
             )}
           </div>
         </SortableContext>

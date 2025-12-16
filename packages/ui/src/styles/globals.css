@@ -151,3 +151,41 @@
     font-family: var(--font-sans);
   }
 }
+
+/* Custom Scrollbar Styles */
+/* Standard styles applied directly */
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  /* Use muted-foreground with transparency for visible but themed contrast */
+  background-color: hsl(240 5.3% 26.1% / 0.4); /* fallback if var invalid */
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+     background-color: oklch(0.82 0.02 75 / 0.4);
+  }
+}
+
+/* Try to use modern vars if supported, overriding the fallback */
+::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+  opacity: 0.4; /* Opacity via alpha channel in color usually better */
+  background-color: color-mix(in srgb, var(--muted-foreground), transparent 60%);
+  
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in srgb, var(--muted-foreground), transparent 40%);
+}

@@ -32,12 +32,12 @@ export async function Header({ className }: { className?: string }) {
   return (
     <header
       className={cn(
-        "h-app-header bg-background border-border fixed top-0 right-0 left-0 z-50 h-12 border-b",
+        "h-app-header bg-background border-border fixed top-0 right-0 left-0 z-50 h-12",
         className
       )}
     >
       <div className="h-app-header top-app-header bg-background pointer-events-none absolute left-0 z-50 mx-auto w-full to-transparent backdrop-blur-xl [-webkit-mask-image:linear-gradient(to_bottom,black,transparent)] lg:hidden"></div>
-      <div className="bg-background relative mx-auto flex h-full items-center justify-between px-8 sm:px-4 lg:bg-transparent lg:px-8">
+      <div className="bg-background relative mx-auto flex h-full items-center justify-between px-2 sm:px-4 lg:bg-transparent lg:px-2">
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
             <Link

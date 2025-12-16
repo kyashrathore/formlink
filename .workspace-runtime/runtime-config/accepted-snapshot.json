@@ -1,0 +1,22 @@
+{
+  "revision": 83,
+  "acceptedAt": "2026-07-25T08:31:54.143Z",
+  "snapshot": {
+    "version": 1,
+    "harness": {
+      "id": "claude",
+      "access": "native"
+    },
+    "mcp": {
+      "keys": []
+    },
+    "auth": {
+      "keys": []
+    },
+    "agent_extensions": {
+      "version": 1,
+      "installCount": 0,
+      "installIds": []
+    }
+  }
+}

@@ -9,6 +9,7 @@ import { useFormGenerationStore } from "@/app/dashboard/forms/[formId]/stores/us
 import { AsyncCollection } from "@/app/lib/types/async-data"
 import { User } from "@formlink/db"
 import { Form, Question } from "@formlink/schema"
+import { Switch } from "@formlink/ui"
 import { Loader2 } from "lucide-react"
 import React from "react"
 import { useWarnIfUnsavedChanges } from "../../hooks/useWarnIfUnsavedChanges"
@@ -134,6 +135,21 @@ const FormEditor: React.FC<FormEditorProps> = ({ user, selectedTab }) => {
 
   return (
     <div className="flex flex-col items-center space-y-8">
+      {/* Code Mode Toggle Header */}
+      <div className="flex w-full items-center justify-end px-4">
+        <div className="bg-card flex items-center gap-2 rounded-lg border px-3 py-1.5 shadow-sm">
+          <label htmlFor="code-mode-toggle" className="text-sm font-medium">
+            Code Mode
+          </label>
+          <Switch
+            id="code-mode-toggle"
+            checked={useFormEditorStore((s) => s.isCodeMode)}
+            onCheckedChange={(checked) =>
+              useFormEditorStore.getState().setIsCodeMode(checked)
+            }
+          />
+        </div>
+      </div>
       {/* Metadata Section */}
       {showMetadata && (
         <AsyncSection

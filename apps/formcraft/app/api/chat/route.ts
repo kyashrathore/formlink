@@ -82,6 +82,21 @@ export async function POST(req: NextRequest) {
       formId: initialFormId,
       options,
     } = validateChatRequest(body)
+
+    // Handle Code Mode Context Injection
+    const codeContext = (options as any)?.codeContext
+    if (codeContext && messages.length > 0) {
+      const lastMsg = messages[messages.length - 1]
+      // Validate lastMsg existence to satisfy TS
+      if (
+        lastMsg &&
+        lastMsg.role === "user" &&
+        typeof lastMsg.content === "string"
+      ) {
+        logger.info("[POST /api/chat] Injecting Code Mode context")
+        lastMsg.content = `${codeContext}\n\nUser Request: ${lastMsg.content}`
+      }
+    }
     // Normalize selected model: accept either top-level `selectedModel` or `options.model`
     const selectedModel = body?.selectedModel || (options as any)?.model
     // Allow toggling single-pass via query param; default depends on model:
@@ -201,6 +216,8 @@ export async function POST(req: NextRequest) {
             system,
             maxOutputTokens: normalizedOptions?.maxOutputTokens ?? 2000,
             toolChoice: "auto",
+            // @ts-expect-error maxSteps is supported in runtime but types might be outdated
+            maxSteps: 10,
             stopWhen({ steps }) {
               // Stop if `createForm` has been successfully called and produced a result.
               const hasCreateFormResult = steps.some((s) =>

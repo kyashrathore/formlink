@@ -25,8 +25,11 @@ export default function UserMenu({ user }: { user: User }) {
       <Tooltip>
         <TooltipTrigger asChild>
           <DropdownMenuTrigger>
-            <Avatar>
-              <AvatarImage src={user?.profile_image ?? undefined} />
+            <Avatar className="size-6">
+              <AvatarImage
+                className="size-6"
+                src={user?.profile_image ?? undefined}
+              />
               <AvatarFallback>{user?.display_name?.charAt(0)}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>

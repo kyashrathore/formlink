@@ -8,6 +8,7 @@ interface PreviewControlsProps {
   deviceMode: DeviceMode
   onDeviceModeChange: (mode: DeviceMode) => void
   className?: string
+  size?: "default" | "sm" | "lg"
 }
 
 const deviceOptions = [
@@ -41,10 +42,12 @@ export default function PreviewControls({
   deviceMode,
   onDeviceModeChange,
   className = "",
+  size = "default",
 }: PreviewControlsProps) {
   return (
     <ToggleGroup
       type="single"
+      size={size}
       value={deviceMode}
       onValueChange={(value) =>
         value && onDeviceModeChange(value as DeviceMode)

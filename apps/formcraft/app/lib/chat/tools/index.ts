@@ -1,3 +1,4 @@
+import { FEATURE_FLAGS } from "../../feature-flags"
 import { ChatToolContext } from "../types"
 import { createFormTool } from "./create-form"
 import { generateCodeTool } from "./generate-code"
@@ -9,7 +10,7 @@ import {
 import { proposeLifecycleAutomationTool } from "./submission-automations/index"
 import { updateFormTool } from "./update-form"
 
-const CODEGEN_ENABLED = process.env.CODEGEN_PREVIEW_UI === "true"
+const CODEGEN_ENABLED = FEATURE_FLAGS.CODEGEN_PREVIEW_UI
 
 export function createChatTools(context: ChatToolContext) {
   const baseTools = {

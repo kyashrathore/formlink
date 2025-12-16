@@ -1,0 +1,14 @@
+{
+  "$schema": "./processes.schema.json",
+  "processes": [
+    {
+      "id": "proc_019c69d05531grhydnezrfk",
+      "name": "Bud",
+      "command": "npm run dev",
+      "args": [],
+      "autoStart": false,
+      "restartPolicy": "never",
+      "maxRestarts": 3
+    }
+  ]
+}

@@ -63,7 +63,7 @@ export type SetupDrawerProps = {
   ) => Promise<void> | void
 }
 
-// Helper functions
+// Helper functions (same as before)
 function getToolkitFromItem(item: ActionItem | null): string {
   if (!item) return ""
   return (item.toolkit || item.slug.split(".")[0] || "").toLowerCase()
@@ -174,7 +174,6 @@ export function SetupDrawer(props: SetupDrawerProps) {
     setAuthingSlug,
     onSaveParams,
   } = props
-  // Parent controls drawer open; no local open state
 
   const [connectStage, setConnectStage] = useState<
     "idle" | "generating" | "awaiting_user" | "verifying" | "done" | "error"
@@ -192,12 +191,8 @@ export function SetupDrawer(props: SetupDrawerProps) {
   const [suggestLoading, setSuggestLoading] = useState(false)
   const [suggestError, setSuggestError] = useState<string | null>(null)
   const [suggestRationale, setSuggestRationale] = useState<string | null>(null)
-  // Advanced JSON mapping was removed per product decision
   const autoSuggestedRef = useRef<Set<string>>(new Set())
 
-  // Auto-suggest moved below after currentItem and derived flags are defined
-
-  // Stable callback for polling
   const pollRefresh = useCallback(() => {
     refreshTools()
   }, [refreshTools])
@@ -233,10 +228,6 @@ export function SetupDrawer(props: SetupDrawerProps) {
     return s === "ready" || s === "connected"
   }, [currentItem])
 
-  // Silence unused props that may still be passed by callers
-  // (Keep types stable without surfacing lint errors)
-
-  // Server may signal post-auth setup even if curated action has no requiredParams
   const needsSetupFromServer = useMemo(() => {
     return Boolean(currentItem && currentItem.uiStatus === "needs_setup")
   }, [currentItem])
@@ -245,9 +236,6 @@ export function SetupDrawer(props: SetupDrawerProps) {
     return Boolean(currentItem && requiresParamsForSlug(currentItem.slug))
   }, [currentItem])
 
-  // No generic JSON editor; configs are captured via params drafts
-
-  // Queries
   const questionsQuery = useQuery<{ id: string; label: string }[]>({
     queryKey: ["form-questions", formId, openSlug],
     enabled: Boolean(formId && openSlug),
@@ -358,46 +346,48 @@ export function SetupDrawer(props: SetupDrawerProps) {
     }
   }, [actionItems, openSlug])
 
-  // Reset suggest state when switching actions
   useEffect(() => {
     setSuggestRationale(null)
     setSuggestError(null)
     setSuggestLoading(false)
   }, [openSlug])
 
-  // Auto-suggest params on dialog open if needs setup
   useEffect(() => {
     void autoSuggest("initial")
   }, [autoSuggest])
 
-  // Auto-suggest again once auth becomes ready (post-OAuth)
   useEffect(() => {
     if (!currentAuthReady) return
     void autoSuggest("auth")
   }, [autoSuggest, currentAuthReady])
 
-  // (Replaced imperative schema/questions fetch with useQuery above)
+  // Adaptive Portal/Modal Logic
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
+    null
+  )
 
-  // helpers moved to SetupDialogParts/helpers
+  // Checking for window/document to ensure SSR safety
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const root = document.getElementById("right-panel-root")
+      setPortalContainer(root || document.body)
+    }
+  }, [])
 
-  // MappingSelect now lives in ParamsConfigurator
-
-  // Advanced JSON mapping removed
-
-  // No generic JSON save path (removed)
+  // If we found the specific right-panel-root, we are in "Scoped" mode (modeless).
+  // Otherwise, we are likely in "Global" mode (modal).
+  const isScoped = portalContainer?.id === "right-panel-root"
 
   return (
     <ScopedDrawer
       open={open}
-      modal={false}
+      modal={!isScoped} // User requested modeless only when scoped
       onOpenChange={(openState: boolean) => {
-        // Notify parent first; parent is source of truth
         onOpenChange?.(openState)
-        // Ensure openSlug clears on close for legacy callers
         if (!openState) setOpenSlug(null)
       }}
     >
-      <ScopedDrawerPortal>
+      <ScopedDrawerPortal container={portalContainer}>
         <ScopedDrawerOverlay />
         <ScopedDrawerContent className="p-0 sm:max-w-[460px]">
           <ScopedDrawerHeader className="bg-background sticky top-0 z-10 border-b px-4 py-3">
@@ -470,8 +460,6 @@ export function SetupDrawer(props: SetupDrawerProps) {
                     onSaveParams={onSaveParams}
                   />
                 ) : null}
-
-                {/* Generic JSON config removed */}
 
                 {currentItem.provider === "usesend" ? (
                   <div className="text-muted-foreground text-sm">

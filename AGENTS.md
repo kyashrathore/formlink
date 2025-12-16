@@ -69,7 +69,6 @@ Assist a solo dev. Priorities: clarity, leverage, momentum. Output must be high-
 ## 14) Other
 
 - Don't use iife in React component's JSX, alway define it in function body and then call
-
 - Add actionable, searchable TODOs for gaps (e.g., “sync migrations to prod”).
 
 ## 15) React & State
@@ -83,7 +82,7 @@ Assist a solo dev. Priorities: clarity, leverage, momentum. Output must be high-
 - No function definitions inside `useEffect`. If component state is referenced, define helpers outside the component or memoize with `useMemo`/`useCallback` above the effect.
 - Prefer `useQuery`. When using `fetch`, use `await`; only resort to `.then`/`.catch` as a last option. If try/catch or promise logic grows, split into focused helper functions.
 - Extract complex imperative code (e.g., loops) into small helper functions defined outside the React component.
-- Define constants outside components and use UPPER_SNAKE_CASE variable names.
+- Define constants outside components and use UPPER*SNAKE*CASE variable names.
 - Use `"@formlink/ui"` to import UI components instead of deep/direct component paths.
 
 ## 16) JSX & Events

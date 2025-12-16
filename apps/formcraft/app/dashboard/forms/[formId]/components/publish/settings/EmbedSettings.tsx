@@ -10,7 +10,6 @@ import {
   Button,
   Card,
   CodeBlock,
-  Label,
   Select,
   SelectContent,
   SelectItem,
@@ -19,10 +18,12 @@ import {
 } from "@formlink/ui"
 import { Copy } from "lucide-react"
 import { useState } from "react"
+import { FormMode } from "../../form/FormModeControls"
 
 interface EmbedSettingsProps {
   formId: string
   shortId?: string
+  formMode?: FormMode
 }
 
 const EMBED_TYPES: { type: EmbedType; label: string }[] = [
@@ -33,13 +34,18 @@ const EMBED_TYPES: { type: EmbedType; label: string }[] = [
   { type: "inline", label: "Inline Embed" },
 ]
 
-export default function EmbedSettings({ formId, shortId }: EmbedSettingsProps) {
+export default function EmbedSettings({
+  formId,
+  shortId,
+  formMode,
+}: EmbedSettingsProps) {
   const { embedType, setEmbedType } = useFormPageContext()
   const [copyState, setCopyState] = useState<"idle" | "copied">("idle")
 
   const embedCodeParts: EmbedCodeParts = getEmbedCode(
     embedType,
-    shortId || formId
+    shortId || formId,
+    formMode
   )
 
   const handleCopy = () => {
@@ -49,9 +55,9 @@ export default function EmbedSettings({ formId, shortId }: EmbedSettingsProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="space-y-3">
-        <Label>Embed Type</Label>
+        <h3 className="mb-2 font-medium">Embed Type</h3>
         <Select
           value={embedType}
           onValueChange={(v) => setEmbedType(v as EmbedType)}
@@ -73,7 +79,7 @@ export default function EmbedSettings({ formId, shortId }: EmbedSettingsProps) {
       </div>
 
       <div className="space-y-3">
-        <Label>Embed Code</Label>
+        <h3 className="mb-2 font-medium">Embed Code</h3>
         <Card className="bg-muted/50 flex flex-col gap-2 p-1">
           <div className="overflow-x-auto p-2">
             <CodeBlock
@@ -96,9 +102,9 @@ export default function EmbedSettings({ formId, shortId }: EmbedSettingsProps) {
 
       {embedCodeParts.script && (
         <div className="space-y-3">
-          <Label className="text-xs">
+          <h3 className="mb-2 text-xs font-medium">
             Required Script (add to &lt;head&gt;)
-          </Label>
+          </h3>
           <Card className="bg-muted/50 overflow-x-auto p-2">
             <CodeBlock
               code={embedCodeParts.script}

@@ -6,6 +6,7 @@ import {
   ChevronDownIcon,
   CircleIcon,
   ClockIcon,
+  Loader,
   XCircleIcon,
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
@@ -33,6 +34,7 @@ export type ToolHeaderProps = {
   type: ToolUIPart["type"];
   state: ToolUIPart["state"];
   className?: string;
+  duration?: string;
 };
 
 const getStatusBadge = (status: ToolUIPart["state"]) => {
@@ -48,18 +50,33 @@ const getStatusBadge = (status: ToolUIPart["state"]) => {
 
   const icons: Record<ToolUIPart["state"], ReactNode> = {
     "input-streaming": <CircleIcon className="size-4" />,
-    "input-available": <ClockIcon className="size-4 animate-pulse" />,
+    "input-available": <Loader className="size-3 animate-spin" />, // Use Spinner for running
     "approval-requested": <ClockIcon className="size-4 text-yellow-600" />,
     "approval-responded": <CheckCircleIcon className="size-4 text-blue-600" />,
-    "output-available": <CheckCircleIcon className="size-4 text-green-600" />,
+    "output-available": null, // No icon for completed
     "output-error": <XCircleIcon className="size-4 text-red-600" />,
     "output-denied": <XCircleIcon className="size-4 text-orange-600" />,
   };
 
+  const isRunning = status === "input-available";
+  const isCompleted = status === "output-available";
   return (
-    <Badge className="gap-1.5 rounded-full text-xs" variant="secondary">
-      {icons[status]}
-      {labels[status]}
+    <Badge
+      className={cn(
+        "gap-1.5 rounded-full text-xs font-normal inline-flex items-center relative",
+        isRunning &&
+          "animate-pulse bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200", // Shimmer effect for running
+        // Removed minimalist override so Completed status looks like a badge again
+        !isRunning && !isCompleted && "variant-secondary",
+        isCompleted &&
+          "bg-green-100 text-green-800 hover:bg-green-100 border-green-200",
+      )}
+      variant={isRunning ? "outline" : "secondary"}
+    >
+      <span className="size-4 absolute left-[10px] top-[10px]">
+        {icons[status]}
+      </span>
+      <span className={cn(isRunning && "ml-3")}>{labels[status]}</span>
     </Badge>
   );
 };
@@ -70,23 +87,37 @@ export const ToolHeader = ({
   type,
   state,
   ...props
-}: ToolHeaderProps) => (
-  <CollapsibleTrigger
-    className={cn(
-      "flex w-full items-center justify-between gap-4 p-3",
-      className,
-    )}
-    {...props}
-  >
-    <div className="flex items-center gap-2">
-      <span className="font-medium text-sm">
-        {title ?? type.split("-").slice(1).join("-")}
-      </span>
-      {getStatusBadge(state)}
-    </div>
-    <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-  </CollapsibleTrigger>
-);
+}: ToolHeaderProps) => {
+  const isCompleted = state === "output-available";
+
+  return (
+    <CollapsibleTrigger
+      className={cn(
+        "flex w-full items-center justify-between gap-4 p-3",
+        className,
+      )}
+      {...props}
+      disabled={isCompleted} // Disable interaction if completed (since content is usually hidden/collapsed)
+    >
+      <div className="flex flex-1 flex-col items-start gap-1 text-left">
+        <div className="flex w-full items-center justify-between gap-2">
+          <span className="font-medium text-sm leading-tight">
+            {title ?? type.split("-").slice(1).join("-")}
+          </span>
+          {props.duration && (
+            <span className="text-xs text-muted-foreground font-mono whitespace-nowrap flex-shrink-0">
+              {props.duration}
+            </span>
+          )}
+        </div>
+        <div>{getStatusBadge(state)}</div>
+      </div>
+      {!isCompleted && (
+        <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+      )}
+    </CollapsibleTrigger>
+  );
+};
 
 export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 
@@ -147,14 +178,14 @@ export const ToolOutput = ({
       </h4>
       <div
         className={cn(
-          "overflow-x-auto rounded-md text-xs [&_table]:w-full",
+          "rounded-md text-xs [&_table]:w-full overflow-hidden",
           errorText
             ? "bg-destructive/10 text-destructive"
             : "bg-muted/50 text-foreground",
         )}
       >
-        {errorText && <div>{errorText}</div>}
-        {Output}
+        {errorText && <div className="p-2 break-words">{errorText}</div>}
+        <div className="max-h-[300px] overflow-y-auto">{Output}</div>
       </div>
     </div>
   );

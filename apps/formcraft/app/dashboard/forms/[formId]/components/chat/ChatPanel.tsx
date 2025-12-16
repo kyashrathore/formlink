@@ -17,6 +17,7 @@ import { useAutomationsPlanStore } from "../../stores/useAutomationsPlanStore"
 import { useFormEditorStore } from "../../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../../stores/useFormGenerationStore"
 import { useResponseViewsStore } from "../../stores/useResponseViewsStore"
+import { useWorkbench } from "../workbench/WorkbenchContext"
 import Chat from "./chat-components/chat"
 import { Conversation } from "./conversation"
 import { useAutoScroll, useFormattedEvents } from "./hooks"
@@ -55,7 +56,23 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   const chatHistoryLoadedRef = useRef(false)
 
   // All state hooks together
+  /* State for chat input controlled by parent (for Smart Selection) */
+  const [chatInput, setChatInput] = useState("")
   const [hasUserInteracted, setHasUserInteracted] = useState(false)
+
+  // Consume Smart Selection from Workbench Context
+  // @ts-ignore
+  const { selectionContext, setSelectionContext } = useWorkbench()
+
+  // No longer auto-filling chatInput, we show it in the Header instead
+  // useEffect(() => {
+  //   if (selectionPrompt) {
+  //     setChatInput(selectionPrompt)
+  //     // We consume it, so clear it to avoid repeated sets if re-rendered
+  //     setSelectionPrompt(null)
+  //   }
+  // }, [selectionPrompt, setSelectionPrompt])
+
   const [selectedModel, setSelectedModel] = useState(
     initialModel || MODEL_DEFAULT
   )
@@ -197,10 +214,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         if (
           dataPart &&
           typeof dataPart === "object" &&
-          (dataPart as any).type === "data" &&
-          Array.isArray((dataPart as any).value)
+          (dataPart as any).type === "data-codegen" &&
+          Array.isArray((dataPart as any).data)
         ) {
-          const arr = (dataPart as any).value as any[]
+          const arr = (dataPart as any).data as any[]
           for (const item of arr) {
             if (item?.eventName === "codegen") {
               const et = String(item.eventType || "log")
@@ -535,6 +552,18 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           }
         }
       }
+
+      // Inject Code Mode context if active
+      // Context for Code Mode
+      const isCodeMode = useFormEditorStore.getState().isCodeMode
+      const codeContext = isCodeMode
+        ? selectionContext?.rawPrompt ||
+          `[CONTEXT: CODE MODE ACTIVE. Target: apps/preview/src/App.tsx. Use generate_code/replace_file_content tool to edit this file based on user request.]`
+        : undefined
+
+      // Clear selection after sending
+      if (selectionContext) setSelectionContext(null)
+
       await sendMessage(
         { parts: [{ type: "text", text: message }] },
         {
@@ -549,6 +578,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                   : "general",
               responseIntelligence: activeMainTab === "responses",
               planContext: refineContext,
+              codeContext,
             },
           },
         }
@@ -575,7 +605,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
     storedInitialMessage,
   ])
 
-  const handleInputChange = useCallback(() => {
+  const handleInputChange = useCallback((newValue: string) => {
+    setChatInput(newValue)
     setHasUserInteracted(true)
   }, [])
 
@@ -827,8 +858,11 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             }
             showSuggestions={false}
             onInputChange={handleInputChange}
-            initialModel={selectedModel}
+            value={chatInput}
+            initialModel={initialModel}
             onModelChange={setSelectedModel}
+            selectionContext={selectionContext}
+            onClearSelection={() => setSelectionContext(null)}
           />
         </div>
       )}

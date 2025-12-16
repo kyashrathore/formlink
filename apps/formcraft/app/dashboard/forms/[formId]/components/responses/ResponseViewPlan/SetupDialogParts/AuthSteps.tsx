@@ -79,7 +79,7 @@ export function AuthSteps({
                 size="sm"
                 className="h-7 px-2.5 text-sm"
                 onClick={async () => {
-                  if (!formId) return
+                  // if (!formId) return // Global auth allowed
                   try {
                     setConnectError(null)
                     setConnectStage("generating")

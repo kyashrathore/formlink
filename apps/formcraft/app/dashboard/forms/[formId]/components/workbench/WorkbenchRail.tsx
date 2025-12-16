@@ -1,24 +1,18 @@
 "use client"
 
+import { Button } from "@formlink/ui"
 import {
-  Button,
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@formlink/ui"
-import {
-  ArrowLeft,
   BarChart2,
+  FileText,
   MessageSquare,
   Paintbrush,
   Rocket,
   Settings,
 } from "lucide-react"
-import Link from "next/link"
 
 export type WorkbenchTool =
   | "chat"
+  | "form"
   | "design"
   | "publish"
   | "responses"
@@ -34,67 +28,54 @@ export default function WorkbenchRail({
   onToolSelect,
 }: WorkbenchRailProps) {
   return (
-    <div className="flex h-full w-[52px] flex-col items-center gap-4 py-4">
-      {/* Back to Dashboard */}
-      <TooltipProvider delayDuration={0}>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Link href="/dashboard">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-lg"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                <span className="sr-only">Back</span>
-              </Button>
-            </Link>
-          </TooltipTrigger>
-          <TooltipContent side="right">Dashboard</TooltipContent>
-        </Tooltip>
+    <div className="bg-muted/10 flex h-full w-[80px] flex-col items-center gap-2 border-r px-1 py-2">
+      {/* Chat (Base Layer) */}
+      <RailButton
+        icon={<MessageSquare className="h-5 w-5" />}
+        label="Chat"
+        active={activeTool === "chat"}
+        onClick={() => onToolSelect("chat")}
+      />
 
-        <div className="bg-border h-px w-8" />
+      {/* Form Editor Tab */}
+      <RailButton
+        icon={<FileText className="h-5 w-5" />}
+        label="Form"
+        active={activeTool === "form"}
+        onClick={() => onToolSelect("form")}
+      />
 
-        {/* Chat (Base Layer) */}
-        <RailButton
-          icon={<MessageSquare className="h-4 w-4" />}
-          label="Chat"
-          active={activeTool === "chat"}
-          onClick={() => onToolSelect("chat")}
-        />
+      {/* Design Overlay */}
+      <RailButton
+        icon={<Paintbrush className="h-5 w-5" />}
+        label="Design"
+        active={activeTool === "design"}
+        onClick={() => onToolSelect("design")}
+      />
 
-        {/* Design Overlay */}
-        <RailButton
-          icon={<Paintbrush className="h-4 w-4" />}
-          label="Design"
-          active={activeTool === "design"}
-          onClick={() => onToolSelect("design")}
-        />
+      {/* Publish Overlay */}
+      <RailButton
+        icon={<Rocket className="h-5 w-5" />}
+        label="Publish"
+        active={activeTool === "publish"}
+        onClick={() => onToolSelect("publish")}
+      />
 
-        {/* Publish Overlay */}
-        <RailButton
-          icon={<Rocket className="h-4 w-4" />}
-          label="Publish"
-          active={activeTool === "publish"}
-          onClick={() => onToolSelect("publish")}
-        />
+      {/* Responses Tab */}
+      <RailButton
+        icon={<BarChart2 className="h-5 w-5" />}
+        label="Stats"
+        active={activeTool === "responses"}
+        onClick={() => onToolSelect("responses")}
+      />
 
-        {/* Responses Tab */}
-        <RailButton
-          icon={<BarChart2 className="h-4 w-4" />}
-          label="Responses"
-          active={activeTool === "responses"}
-          onClick={() => onToolSelect("responses")}
-        />
-
-        {/* Settings - Moved up (no spacer) */}
-        <RailButton
-          icon={<Settings className="h-4 w-4" />}
-          label="Settings"
-          active={activeTool === "settings"}
-          onClick={() => onToolSelect("settings")}
-        />
-      </TooltipProvider>
+      {/* Settings */}
+      <RailButton
+        icon={<Settings className="h-5 w-5" />}
+        label="Config"
+        active={activeTool === "settings"}
+        onClick={() => onToolSelect("settings")}
+      />
     </div>
   )
 }
@@ -111,19 +92,14 @@ function RailButton({
   onClick: () => void
 }) {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant={active ? "secondary" : "ghost"}
-          size="icon"
-          className="h-9 w-9 rounded-lg"
-          onClick={onClick}
-        >
-          {icon}
-          <span className="sr-only">{label}</span>
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent side="right">{label}</TooltipContent>
-    </Tooltip>
+    <Button
+      variant={active ? "secondary" : "ghost"}
+      size="sm"
+      className={`h-auto w-full flex-col gap-1 px-0 py-2 text-[10px] ${active ? "font-medium" : "text-muted-foreground"}`}
+      onClick={onClick}
+    >
+      {icon}
+      <span>{label}</span>
+    </Button>
   )
 }

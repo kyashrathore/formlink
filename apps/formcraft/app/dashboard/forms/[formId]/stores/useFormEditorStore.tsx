@@ -35,6 +35,7 @@ interface FormEditorState {
   isLoading: boolean
   error: string | null
   selectedQuestionId: string | null
+  isCodeMode: boolean
 }
 
 interface FormEditorActions {
@@ -85,6 +86,7 @@ interface FormEditorActions {
   }) => void
   reorderQuestions: (oldIndex: number, newIndex: number) => void
   deleteQuestion: (questionId: string) => void
+  setIsCodeMode: (isCodeMode: boolean) => void
 }
 
 export const getDefaultSettings = (): Settings => ({
@@ -110,6 +112,7 @@ const formEditorStore: StateCreator<
   isLoading: true,
   error: null,
   selectedQuestionId: null,
+  isCodeMode: false,
 
   resetForm: () => {
     set((state) => {
@@ -490,6 +493,11 @@ const formEditorStore: StateCreator<
           }
         }
       }
+    }),
+
+  setIsCodeMode: (isCodeMode: boolean) =>
+    set((state) => {
+      state.isCodeMode = isCodeMode
     }),
 })
 

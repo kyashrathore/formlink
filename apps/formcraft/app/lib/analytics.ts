@@ -33,7 +33,14 @@ export const analytics = {
     })
   },
 
-  formCreationStarted: (method: "ai_chat" | "blank" | "template") => {
+  formCreationStarted: (
+    method:
+      | "ai_chat"
+      | "blank"
+      | "template"
+      | "manual_classic"
+      | "manual_typeform"
+  ) => {
     if (shouldDisableAnalytics()) return
     posthog.capture("form_creation_started", {
       method,

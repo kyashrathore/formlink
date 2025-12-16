@@ -13,7 +13,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 
 const schema = z.object({
-  formId: z.string().uuid(),
+  formId: z.string().uuid().optional(),
   toolSlug: z.string(),
   authConfigId: z.string().optional(),
   callbackUrl: z.string().url().optional(),
@@ -52,18 +52,20 @@ export async function POST(request: Request) {
 
   const { formId, toolSlug, authConfigId, callbackUrl } = parsed.data
 
-  const ownership = await verifyUserOwnsForm(formId, auth.user.id)
-  if (!ownership.formExists) {
-    return NextResponse.json(
-      { success: false, error: "Form not found" },
-      { status: 404 }
-    )
-  }
-  if (!ownership.isOwner) {
-    return NextResponse.json(
-      { success: false, error: "You do not have access to this form" },
-      { status: 403 }
-    )
+  if (formId) {
+    const ownership = await verifyUserOwnsForm(formId, auth.user.id)
+    if (!ownership.formExists) {
+      return NextResponse.json(
+        { success: false, error: "Form not found" },
+        { status: 404 }
+      )
+    }
+    if (!ownership.isOwner) {
+      return NextResponse.json(
+        { success: false, error: "You do not have access to this form" },
+        { status: 403 }
+      )
+    }
   }
   // Resolve toolkit strictly from CURATED_ACTIONS using toolSlug
   const allowedToolkits = getAllowedComposioToolkits()

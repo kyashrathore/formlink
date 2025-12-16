@@ -78,11 +78,28 @@ export async function runStreamingCommandInSandbox(
   options: StreamingCommandOptions = {}
 ): Promise<CommandResult> {
   try {
+    // Create proxy streams that call our callbacks
+    const { PassThrough } = await import("node:stream")
+
+    const stdoutStream = new PassThrough()
+    stdoutStream.on("data", (chunk) => {
+      const text = chunk.toString()
+      if (options.onStdout) options.onStdout(text)
+      if (process.stdout) process.stdout.write(chunk)
+    })
+
+    const stderrStream = new PassThrough()
+    stderrStream.on("data", (chunk) => {
+      const text = chunk.toString()
+      if (options.onStderr) options.onStderr(text)
+      if (process.stderr) process.stderr.write(chunk)
+    })
+
     const result = await sandbox.runCommand({
       cmd: command,
       args,
-      stdout: process.stdout,
-      stderr: process.stderr,
+      stdout: stdoutStream,
+      stderr: stderrStream,
     })
 
     let stdout = ""

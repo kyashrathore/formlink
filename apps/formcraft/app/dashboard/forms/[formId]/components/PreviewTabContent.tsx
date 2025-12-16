@@ -2,8 +2,8 @@
 
 import { formatDistanceToNow } from "date-fns"
 import { useMemo, useState } from "react"
-import { useFormEditorStore } from "../stores/useFormEditorStore"
 import type { FormWithVersionIds } from "../stores/useFormEditorStore"
+import { useFormEditorStore } from "../stores/useFormEditorStore"
 import { useFormGenerationStore } from "../stores/useFormGenerationStore"
 import { DeviceMode } from "./form/DevicePreviewFrame"
 import { FormMode } from "./form/FormModeControls"
@@ -118,7 +118,7 @@ export default function PreviewTabContent({
 
   return (
     <div className="bg-background flex h-full flex-col overflow-hidden">
-      <div className="flex-1 p-2">
+      <div className="flex-1">
         {hasFormContent && form?.short_id ? (
           <FormPreviewWithDevices
             form={form}
