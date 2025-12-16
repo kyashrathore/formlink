@@ -11,28 +11,12 @@ import {
   useRef,
   useState,
 } from "react"
-import ChatDesignPanel from "./components/ChatDesignPanel"
-import ChatTabContent from "./components/ChatTabContent"
-import DesignTabContent from "./components/DesignTabContent"
-import FloatingPanel from "./components/FloatingPanel"
-import NavigationBar from "./components/NavigationBar"
-import TabContentManager from "./components/TabContentManager"
-import TwoColumnLayout from "./components/TwoColumnLayout"
+import EditorWorkbench from "./components/workbench/EditorWorkbench"
 import { useFormDataQuery } from "./hooks/useFormDataQuery"
-import { usePanelState } from "./hooks/usePanelState"
 import { useFormEditorStore } from "./stores/useFormEditorStore"
 import { useFormGenerationStore } from "./stores/useFormGenerationStore"
 
 function TestUIPageContent() {
-  const {
-    leftPanelWidth,
-    isResizing,
-    panelState,
-    isFloating,
-    setIsResizing,
-    setPanelWidth,
-  } = usePanelState()
-
   const { user, loading } = useAuth()
   const userId = user?.id || null
 
@@ -228,13 +212,6 @@ function TestUIPageContent() {
     }
   }, [formAgent_currentForm, formId, router])
 
-  // Reset tab states when form page unmounts to ensure clean state for next form
-  useEffect(() => {
-    return () => {
-      usePanelState.getState().resetToDefaults()
-    }
-  }, [])
-
   if (loading) {
     return (
       <div className="flex min-h-[calc(100dvh-var(--header-height,var(--spacing-app-header,56px)))] items-center justify-center">
@@ -243,88 +220,17 @@ function TestUIPageContent() {
     )
   }
 
-  const handleResizeStart = () => {
-    setIsResizing(true)
-  }
-
-  const handleResize = (width: number) => {
-    setPanelWidth(width)
-  }
-
-  const handleResizeEnd = () => {
-    setIsResizing(false)
-  }
-
-  const handleSaveForm = () => {}
-
-  const handlePublishForm = () => {}
-
-  const chatContent = (
-    <ChatTabContent
-      userId={userId}
-      formId={formId || ""}
-      initialModel={initialModel}
-    />
-  )
-  const designContent = (
-    <DesignTabContent
-      formId={formId || ""}
-      onShadcnCSSApply={handleShadcnCSSApply}
-      shadcnStatus={shadcnStatus}
-    />
-  )
-
-  const leftPanel = (
-    <ChatDesignPanel chatContent={chatContent} designContent={designContent} />
-  )
-
-  const rightPanel = (
-    <div className="flex h-full flex-col">
-      <NavigationBar
-        formId={formId || ""}
-        onSaveForm={handleSaveForm}
-        onPublishForm={handlePublishForm}
-      />
-      <TabContentManager
-        formId={formId || ""}
-        shadcnCSSData={shadcnCSSData || undefined}
-        onShadcnApplied={handleShadcnApplied}
-      />
-    </div>
-  )
-
   return (
     <div className="flex h-[calc(100dvh-var(--header-height,var(--spacing-app-header,56px)))] flex-col overflow-hidden">
-      <div className="flex-1 overflow-hidden">
-        <TwoColumnLayout
-          leftPanel={leftPanel}
-          rightPanel={rightPanel}
-          leftPanelWidth={leftPanelWidth}
-          isResizing={isResizing}
-          onResizeStart={handleResizeStart}
-          onResize={handleResize}
-          onResizeEnd={handleResizeEnd}
-          panelState={panelState}
-        />
-      </div>
-
-      {isFloating && (
-        <FloatingPanel>
-          {({ onHeaderMouseDown }) => (
-            <ChatDesignPanel
-              chatContent={
-                <ChatTabContent
-                  userId={userId}
-                  formId={formId || ""}
-                  initialModel={initialModel}
-                />
-              }
-              designContent={designContent}
-              onHeaderMouseDown={onHeaderMouseDown}
-            />
-          )}
-        </FloatingPanel>
-      )}
+      <EditorWorkbench
+        formId={formId || ""}
+        userId={userId}
+        initialModel={initialModel}
+        shadcnCSSData={shadcnCSSData || undefined}
+        onShadcnApplied={handleShadcnApplied}
+        onShadcnCSSApply={handleShadcnCSSApply}
+        shadcnStatus={shadcnStatus}
+      />
     </div>
   )
 }
