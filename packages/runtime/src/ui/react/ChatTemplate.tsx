@@ -36,16 +36,18 @@ export interface ChatTemplateProps {
   title?: string;
   avatarUrl?: string;
   showDebugIntent?: boolean;
+  initialAnswers?: Record<string, any>;
 }
 
-export function ChatTemplate({
-  form,
-  baseUrl,
-  controller,
-  title,
-  avatarUrl,
-  showDebugIntent = false,
-}: ChatTemplateProps) {
+export function ChatTemplate(props: ChatTemplateProps) {
+  const {
+    form,
+    baseUrl,
+    controller,
+    title,
+    avatarUrl,
+    initialAnswers = {},
+  } = props;
   const {
     Conversation,
     ConversationContent,
@@ -60,46 +62,63 @@ export function ChatTemplate({
   // ai-elements provided by host via AiElementsProvider
   const { messages, status, sendMessage } = controller;
 
+  const {
+    Avatar: AvatarComp,
+    AvatarImage: AvatarImageComp,
+    AvatarFallback: AvatarFallbackComp,
+  } = useUiComponents();
+
   const [currentQuestionId, setCurrentQuestionId] = React.useState<
     string | null
   >(null);
   const [input, setInput] = React.useState("");
-  const [answers, setAnswers] = React.useState<Record<string, any>>({});
+  const [answers, setAnswers] =
+    React.useState<Record<string, any>>(initialAnswers);
   const [drafts, setDrafts] = React.useState<Record<string, any>>({});
   const [completed, setCompleted] = React.useState(false);
 
   // Bridge the slot token to current question id
   useSlotBridge({ messages, onSlot: setCurrentQuestionId });
 
-  // Apply tool outputs from assistant messages exactly once per message id
-  const lastAppliedRef = React.useRef<string>("");
+  // Apply tool outputs from assistant messages once tool output is available.
+  // Tool parts exist while streaming input, so we dedupe by toolCallId and apply
+  // only when `state === "output-available"` to avoid missing late outputs.
+  const appliedToolCallIdsRef = React.useRef<Set<string>>(new Set());
   React.useEffect(() => {
     const assistants = messages.filter((m) => m?.role === "assistant");
     if (assistants.length === 0) return;
-    const last = assistants[assistants.length - 1]!;
-    const lastId = String((last as any)?.id ?? assistants.length);
-    if (lastAppliedRef.current === lastId) return;
-    // scan for tool-* parts
-    const toolParts = (
-      Array.isArray((last as any).parts) ? (last as any).parts : []
-    ).filter(
-      (p: any) => typeof p?.type === "string" && p.type.startsWith("tool-"),
-    );
-    if (toolParts.length === 0) return; // nothing to apply yet
-    lastAppliedRef.current = lastId;
-    for (const p of toolParts) {
-      const tool = String(p.type).replace(/^tool-/, "");
-      const result = p?.output ?? p?.result;
-      if (tool === "saveAnswer") {
-        const qid = result?.questionId;
-        const next = result?.nextQuestionId ?? null;
-        if (qid != null) {
-          setAnswers((prev) => ({ ...prev, [qid]: result?.value }));
+
+    for (const message of assistants) {
+      const parts = Array.isArray((message as any).parts)
+        ? (message as any).parts
+        : [];
+      const toolParts = parts.filter(
+        (p: any) => typeof p?.type === "string" && p.type.startsWith("tool-"),
+      );
+      for (const p of toolParts) {
+        const toolCallId =
+          typeof p?.toolCallId === "string" ? p.toolCallId : "";
+        if (!toolCallId) continue;
+        if (appliedToolCallIdsRef.current.has(toolCallId)) continue;
+        if (p?.state !== "output-available") continue;
+
+        appliedToolCallIdsRef.current.add(toolCallId);
+
+        const tool = String(p.type).replace(/^tool-/, "");
+        const output = p?.output ?? p?.result;
+
+        if (tool === "saveAnswer") {
+          const questionId = output?.questionId;
+          const nextQuestionId = output?.nextQuestionId ?? null;
+          if (typeof questionId === "string") {
+            setAnswers((prev) => ({ ...prev, [questionId]: output?.value }));
+          }
+          setCurrentQuestionId(nextQuestionId);
         }
-        setCurrentQuestionId(next);
-      }
-      if (tool === "completeSubmission") {
-        setCompleted(true);
+
+        if (tool === "completeSubmission") {
+          setCompleted(true);
+        }
       }
     }
   }, [messages]);
@@ -117,9 +136,30 @@ export function ChatTemplate({
 
   const { submitSelection } = useSubmitSelection({
     sendMessage: (msg, opts) => {
-      // Optimistically mark question as submitted when message is actually sent (after delay)
-      const qid = opts?.body?.justSavedAnswer?.questionId;
-      if (qid) setLastSubmittedQuestionId(qid);
+      const justSavedRaw = opts?.body?.justSavedAnswer;
+      if (
+        justSavedRaw &&
+        typeof justSavedRaw === "object" &&
+        typeof (justSavedRaw as any).questionId === "string"
+      ) {
+        const questionId = (justSavedRaw as any).questionId as string;
+        const value = (justSavedRaw as any).value as unknown;
+
+        setLastSubmittedQuestionId(questionId);
+
+        // Keep local responses in sync even if the model doesn't emit a tool result.
+        setAnswers((prev) => ({ ...prev, [questionId]: value }));
+
+        // Ensure request carries this answer so the server doesn't "forget" it
+        // when `partialSubmission === false` (no DB persistence until completion).
+        if (opts?.body) {
+          const existing =
+            opts.body.responses && typeof opts.body.responses === "object"
+              ? (opts.body.responses as Record<string, unknown>)
+              : {};
+          opts.body.responses = { ...existing, [questionId]: value };
+        }
+      }
       return sendMessage(msg, opts);
     },
     currentQuestionId,
@@ -213,6 +253,45 @@ export function ChatTemplate({
     currentQuestion?.type?.name,
   ]);
 
+  function renderHeader(isAssistant: boolean) {
+    const icon = isAssistant ? (
+      <FormlinkLogo className="h-3 w-3" />
+    ) : (
+      <UserRound className="h-3 w-3" />
+    );
+
+    if (AvatarComp) {
+      return (
+        <>
+          <AvatarComp className="h-6 w-6">
+            {AvatarImageComp ? (
+              <AvatarImageComp src={isAssistant ? avatarUrl : undefined} />
+            ) : null}
+            {AvatarFallbackComp ? (
+              <AvatarFallbackComp className="text-[10px]">
+                {icon}
+              </AvatarFallbackComp>
+            ) : (
+              <div className="flex h-6 w-6 items-center justify-center rounded-full border">
+                {icon}
+              </div>
+            )}
+          </AvatarComp>
+          <span>{isAssistant ? "Formlink" : "You"}</span>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <div className="flex h-6 w-6 items-center justify-center rounded-full border">
+          {icon}
+        </div>
+        <span>{isAssistant ? "Formlink" : "You"}</span>
+      </>
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 py-6 min-h-screen">
       {!started ? (
@@ -252,41 +331,7 @@ export function ChatTemplate({
 
                 const Header = (
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    {(() => {
-                      const { Avatar, AvatarImage, AvatarFallback } =
-                        useUiComponents();
-                      const icon = isAssistant ? (
-                        <FormlinkLogo className="h-3 w-3" />
-                      ) : (
-                        <UserRound className="h-3 w-3" />
-                      );
-                      if (Avatar) {
-                        return (
-                          <Avatar className="h-6 w-6">
-                            {AvatarImage ? (
-                              <AvatarImage
-                                src={isAssistant ? avatarUrl : undefined}
-                              />
-                            ) : null}
-                            {AvatarFallback ? (
-                              <AvatarFallback className="text-[10px]">
-                                {icon}
-                              </AvatarFallback>
-                            ) : (
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full border">
-                                {icon}
-                              </div>
-                            )}
-                          </Avatar>
-                        );
-                      }
-                      return (
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full border">
-                          {icon}
-                        </div>
-                      );
-                    })()}
-                    <span>{isAssistant ? "Formlink" : "You"}</span>
+                    {renderHeader(isAssistant)}
                   </div>
                 );
 
@@ -318,6 +363,7 @@ export function ChatTemplate({
                           <ChatMessageAssistant
                             message={m}
                             isLast={isLastAssistant}
+                            status={status}
                             currentQuestionId={currentQuestionId ?? undefined}
                             form={form as any}
                             values={{ ...answers, ...drafts }}

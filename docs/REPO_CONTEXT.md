@@ -1,9 +1,10 @@
 # REPO_CONTEXT
 
-Last updated: 2025-11-04
+Last updated: 2025-12-15
 
 Recent change
 
+- 2025-12-15: Chat-assist debugging: added correlated client/server logs (via `x-formlink-trace-id`) and fixed AI chat “repeat question” loop by ensuring tool outputs update `responses` (applied on `output-available`) and by sending a stable `submissionId` with chat requests.
 - Runtime/chat scaffold: Added `useChatStartCard` and `useQuestionPlaceholder` hooks to `@formlink/runtime/ui/react` for start-card control and consistent placeholders. See `docs/ai-chat-scaffold-primitives.md`.
   -- 2025-11-06: Renamed `UniversalClassic` → `ClassicTemplate` and added `ChatTemplate` under `@formlink/runtime/ui/react`. Updated stories to use `ClassicTemplate`; added `apps/ui-docs/stories/ChatTemplateRealBackend.stories_v1.tsx` demonstrating controller wiring with `useChat`. For back-compat, a temporary alias `export { ClassicTemplate as UniversalClassic }` remains; remove in next minor.
 

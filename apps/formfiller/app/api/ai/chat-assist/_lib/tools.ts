@@ -202,37 +202,39 @@ export function createAITools(options: CreateAIToolsOptions) {
     },
   });
 
-  if (partialSubmission) {
-    const saveAnswerTool = tool({
-      description:
-        "Persist an answer for the active question when partial submission is enabled.",
-      inputSchema: SAVE_ANSWER_INPUT,
-      execute: async ({ questionId, value }: SaveAnswerInput) => {
-        const question = findQuestion(formSchema, questionId);
-        if (!question) {
-          return {
-            saved: false,
-            error: "Question not found",
-          };
-        }
+  const saveAnswerTool = tool({
+    description:
+      "Persist an answer for the active question. ALWAYS call this when you have extracted a valid answer from the user.",
+    inputSchema: SAVE_ANSWER_INPUT,
+    execute: async ({ questionId, value }: SaveAnswerInput) => {
+      const question = findQuestion(formSchema, questionId);
+      if (!question) {
+        return {
+          saved: false,
+          error: "Question not found",
+        };
+      }
 
-        const {
-          isValid,
-          value: normalized,
-          error,
-        } = validateAnswer(
-          question,
-          value as QuestionResponse,
-          safeResponses,
-          formSchema,
-        );
-        if (!isValid || normalized === undefined) {
-          return {
-            saved: false,
-            error: error || "Invalid value",
-          };
-        }
+      const {
+        isValid,
+        value: normalized,
+        error,
+      } = validateAnswer(
+        question,
+        value as QuestionResponse,
+        safeResponses,
+        formSchema,
+      );
+      if (!isValid || normalized === undefined) {
+        return {
+          saved: false,
+          error: error || "Invalid value",
+        };
+      }
 
+      // Only adhere to partialSubmission strictly for DB persistence.
+      // We still "save" it to the run state so the client stays in sync.
+      if (partialSubmission) {
         const persisted = await preSaveAnswer(
           submissionId,
           question.id,
@@ -245,34 +247,32 @@ export function createAITools(options: CreateAIToolsOptions) {
             error: "Failed to save answer",
           };
         }
+      }
 
-        safeResponses[question.id] = normalized;
-        const { nextQuestionId, hasRemaining } = computeNextQuestion(
-          formSchema,
-          safeResponses,
-        );
+      safeResponses[question.id] = normalized;
+      const { nextQuestionId, hasRemaining } = computeNextQuestion(
+        formSchema,
+        safeResponses,
+      );
 
-        trackServerEvent("tool.save_answer.success", {
-          questionId: question.id,
-          formId: formSchema?.id,
-        });
+      trackServerEvent("tool.save_answer.success", {
+        questionId: question.id,
+        formId: formSchema?.id,
+        persisted: partialSubmission,
+      });
 
-        return {
-          saved: true,
-          questionId: question.id,
-          value: normalized,
-          nextQuestionId,
-          allQuestionsAnswered: !hasRemaining,
-        };
-      },
-    });
-    return {
-      saveAnswer: saveAnswerTool,
-      completeSubmission: completeSubmissionTool,
-    };
-  }
+      return {
+        saved: true,
+        questionId: question.id,
+        value: normalized,
+        nextQuestionId,
+        allQuestionsAnswered: !hasRemaining,
+      };
+    },
+  });
 
   return {
+    saveAnswer: saveAnswerTool,
     completeSubmission: completeSubmissionTool,
   };
 }

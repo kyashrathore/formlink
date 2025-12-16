@@ -1,6 +1,5 @@
 import { getModel } from "@/app/lib/ai/provider";
 import { FormValidator } from "@/lib/validation/FormValidator";
-import { loadPrompt } from "@formlink/prompts";
 import {
   convertToModelMessages,
   createUIMessageStream,
@@ -11,14 +10,11 @@ import {
 } from "ai";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
-import {
-  ensureSubmissionExists,
-  hydrateEffectiveResponses,
-  preSaveAnswer,
-  saveSubmissionMessage,
-} from "./_lib/submission";
 import { createAITools } from "./_lib/tools";
 import { ChatAssistBodySchema } from "./schema";
+import { ChatContextService } from "./services/ChatContextService";
+import { FlowService } from "./services/FlowService";
+import { SubmissionService } from "./services/SubmissionService";
 import {
   Question,
   sanitizeUserInput,
@@ -27,14 +23,22 @@ import {
 } from "./utils";
 
 const STREAM_STEP_LIMIT = 10;
+const CHAT_ASSIST_DEBUG_ENABLED = process.env.NODE_ENV !== "production";
+const CHAT_ASSIST_TRACE_HEADER = "x-formlink-trace-id";
+
+function createChatAssistTraceId(): string {
+  const webCrypto = globalThis.crypto as
+    | { randomUUID?: () => string }
+    | undefined;
+  if (webCrypto?.randomUUID) {
+    return webCrypto.randomUUID();
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
 
 function formatUserText(value: unknown): string {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (value === null || value === undefined) {
-    return "";
-  }
+  if (typeof value === "string") return value;
+  if (value === null || value === undefined) return "";
   try {
     return JSON.stringify(value);
   } catch {
@@ -42,136 +46,13 @@ function formatUserText(value: unknown): string {
   }
 }
 
-function normalizeBehavior(
-  value: unknown,
-): "auto" | "manualClear" | "manualUnclear" | null {
-  if (
-    value === "auto" ||
-    value === "manualClear" ||
-    value === "manualUnclear"
-  ) {
-    return value;
-  }
-  return null;
-}
-
-function findFirstUnanswered(
-  formSchema: any,
-  responses: Record<string, unknown>,
-): string | null {
-  if (!Array.isArray(formSchema?.questions)) {
-    return null;
-  }
-  return (
-    formSchema.questions.find(
-      (q: Question) =>
-        !Object.prototype.hasOwnProperty.call(responses || {}, q.id),
-    )?.id ?? null
-  );
-}
-
-function stabilizeObject<T>(input: T): T {
-  if (Array.isArray(input)) {
-    return input.map((item) => stabilizeObject(item)) as T;
-  }
-  if (input && typeof input === "object") {
-    const sortedEntries = Object.keys(input as Record<string, unknown>)
-      .sort()
-      .map((key) => {
-        const value = (input as Record<string, unknown>)[key];
-        return [key, stabilizeObject(value)];
-      });
-    return Object.fromEntries(sortedEntries) as T;
-  }
-  return input;
-}
-
-function injectXmlContext(
-  messages: any[],
-  xmlBlock: string,
-  fallbackText: string,
-): any[] {
-  const cloned = messages.map((message) => ({
-    ...message,
-    parts: Array.isArray(message.parts)
-      ? message.parts.map((part: any) => ({ ...part }))
-      : message.parts,
-  }));
-  let lastUserIndex = -1;
-  for (let i = cloned.length - 1; i >= 0; i -= 1) {
-    if (cloned[i]?.role === "user") {
-      lastUserIndex = i;
-      break;
-    }
-  }
-
-  const blockWithNewline = `${xmlBlock}\n`;
-
-  if (lastUserIndex >= 0) {
-    const target = cloned[lastUserIndex];
-    const existingParts = Array.isArray(target.parts) ? [...target.parts] : [];
-    const firstTextIndex = existingParts.findIndex(
-      (part) => part?.type === "text",
-    );
-    if (firstTextIndex >= 0) {
-      const originalText = existingParts[firstTextIndex]?.text ?? "";
-      existingParts[firstTextIndex] = {
-        ...existingParts[firstTextIndex],
-        text: `${blockWithNewline}${originalText}`,
-      };
-    } else {
-      existingParts.unshift({
-        type: "text",
-        text: `${blockWithNewline}${fallbackText}`,
-      });
-    }
-    target.parts = existingParts;
-  } else {
-    cloned.push({
-      id: `server-user-${Date.now()}`,
-      role: "user",
-      parts: [{ type: "text", text: `${blockWithNewline}${fallbackText}` }],
-    });
-  }
-
-  return cloned;
-}
-
-function sanitizeUserMessageForPersistence(message: any): any {
-  if (!message) return message;
-  if (Array.isArray(message.parts)) {
-    const sanitizedParts = message.parts.map((part: any) => {
-      if (part?.type === "text" && typeof part.text === "string") {
-        const text = part.text.replace(
-          /<current_turn_context>[\s\S]*?<\/current_turn_context>\n?/,
-          "",
-        );
-        return { ...part, text };
-      }
-      return part;
-    });
-    return { ...message, parts: sanitizedParts };
-  }
-  if (typeof message.content === "string") {
-    const updated = message.content.replace(
-      /<current_turn_context>[\s\S]*?<\/current_turn_context>\n?/,
-      "",
-    );
-    return { ...message, content: updated };
-  }
-  return message;
-}
-
 export async function POST(req: Request) {
   const startTime = Date.now();
 
   try {
     const headersList = await headers();
-    const ip =
-      headersList.get("x-forwarded-for") ||
-      headersList.get("x-real-ip") ||
-      "unknown";
-    const userAgent = headersList.get("user-agent") || "unknown";
+    const traceId =
+      headersList.get(CHAT_ASSIST_TRACE_HEADER) ?? createChatAssistTraceId();
     const requestData = await req.json();
 
     const messages = Array.isArray(requestData?.messages)
@@ -181,10 +62,18 @@ export async function POST(req: Request) {
 
     const parsed = ChatAssistBodySchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json(
+      if (CHAT_ASSIST_DEBUG_ENABLED) {
+        console.error("[chat-assist][server] invalid-body", {
+          traceId,
+          issues: parsed.error.flatten(),
+        });
+      }
+      const res = NextResponse.json(
         { error: "Invalid request body", issues: parsed.error.flatten() },
         { status: 400 },
       );
+      res.headers.set(CHAT_ASSIST_TRACE_HEADER, traceId);
+      return res;
     }
 
     const {
@@ -202,39 +91,41 @@ export async function POST(req: Request) {
       userInput,
     } = parsed.data;
 
-    const submissionBehaviorNorm = normalizeBehavior(submissionBehavior);
+    const submissionBehaviorNorm =
+      FlowService.normalizeBehavior(submissionBehavior);
     const partialSubmission = Boolean(formSchema?.settings?.partialSubmission);
-
     const formattedUserText = formatUserText(userInput);
     const sanitizedUserText = sanitizeUserInput(formattedUserText);
 
-    const activeSubmissionId = await ensureSubmissionExists(
+    // 1. Ensure submission exists
+    const activeSubmissionId = await SubmissionService.ensureSubmissionExists(
       submissionId,
       formSchema,
       userId,
       isTestSubmission,
-      ip,
-      userAgent,
+      headersList.get("x-forwarded-for") ||
+        headersList.get("x-real-ip") ||
+        "unknown",
+      headersList.get("user-agent") || "unknown",
     );
 
-    let effectiveResponses = await hydrateEffectiveResponses(
+    // 2. Hydrate responses
+    let effectiveResponses = await SubmissionService.hydrateEffectiveResponses(
       activeSubmissionId,
       responses,
     );
 
-    const answeredIds = Object.keys(effectiveResponses || {});
-    const fallbackQuestionId = findFirstUnanswered(
+    // 3. Determine Context (Current Question, Validation)
+    const fallbackQuestionId = FlowService.findFirstUnanswered(
       formSchema,
       effectiveResponses,
     );
 
-    const questionIdFromBehavior =
-      submissionBehaviorNorm === "manualUnclear"
-        ? currentQuestionId || fallbackQuestionId
-        : currentQuestionId;
-
-    let effectiveCurrentQuestionId =
-      questionIdFromBehavior || fallbackQuestionId;
+    let effectiveCurrentQuestionId = FlowService.determineCurrentQuestionId(
+      submissionBehaviorNorm,
+      currentQuestionId,
+      fallbackQuestionId,
+    );
 
     const currentQuestion = formSchema?.questions?.find(
       (q: Question) => q.id === effectiveCurrentQuestionId,
@@ -245,8 +136,8 @@ export async function POST(req: Request) {
         ? justSavedAnswer.value
         : sanitizedUserText;
 
+    // 4. Validate & Auto-Save
     let validationResult: ValidationResult | undefined;
-
     if (
       (submissionBehaviorNorm === "auto" ||
         submissionBehaviorNorm === "manualClear") &&
@@ -284,6 +175,7 @@ export async function POST(req: Request) {
         validationResult?.normalizedValue ??
         candidateAnswerValue;
 
+      // Re-validate to be safe if strictly persisting
       const validation = FormValidator.validate(
         valueToPersist,
         currentQuestion,
@@ -295,7 +187,7 @@ export async function POST(req: Request) {
       }
 
       if (!validationResult || validationResult.isValid) {
-        const saved = await preSaveAnswer(
+        const saved = await SubmissionService.preSaveAnswer(
           activeSubmissionId,
           currentQuestionId,
           valueToPersist,
@@ -314,6 +206,7 @@ export async function POST(req: Request) {
         submissionBehaviorNorm === "manualClear") &&
       currentQuestionId
     ) {
+      // Optimistic update for non-partial
       const valueToApply =
         justSavedAnswer?.value ??
         validationResult?.normalizedValue ??
@@ -324,8 +217,11 @@ export async function POST(req: Request) {
       };
     }
 
-    const nextQuestionId = findFirstUnanswered(formSchema, effectiveResponses);
-
+    // 5. Calculate Next Step
+    const nextQuestionId = FlowService.findFirstUnanswered(
+      formSchema,
+      effectiveResponses,
+    );
     if (
       effectiveCurrentQuestionId &&
       !formSchema?.questions?.some(
@@ -335,43 +231,42 @@ export async function POST(req: Request) {
       effectiveCurrentQuestionId = nextQuestionId;
     }
 
-    const questionSummaries = Array.isArray(formSchema?.questions)
-      ? formSchema.questions.map((q: Question) => ({
-          id: q.id,
-          title: q.title ?? null,
-          type: q.type?.name ?? null,
-          required: Boolean(q.validations?.required),
-          mightBranchOffNext: Boolean(q.mightBranchOffNext),
-        }))
-      : [];
-
-    const contextPayload = stabilizeObject({
+    // 6. Build Context Payload
+    const contextPayload = ChatContextService.stabilizeObject({
       submissionBehavior: submissionBehaviorNorm,
       partialSubmission,
       currentQuestionId: effectiveCurrentQuestionId,
       firstUnansweredId: nextQuestionId,
       mustCompleteNow: nextQuestionId === null,
-      answeredIds,
+      answeredIds: Object.keys(effectiveResponses || {}),
       initiate,
       startMode,
       branchingEnabled: Boolean(formSchema?.settings?.branching?.enabled),
       journeyScript: String(formSchema?.settings?.journeyScript || ""),
       responses: effectiveResponses,
-      questions: questionSummaries,
+      questions: Array.isArray(formSchema?.questions)
+        ? formSchema.questions.map((q: Question) => ({
+            id: q.id,
+            title: q.title ?? null,
+            type: q.type?.name ?? null,
+            required: Boolean(q.validations?.required),
+            mightBranchOffNext: Boolean(q.mightBranchOffNext),
+          }))
+        : [],
       submissionId: activeSubmissionId,
       formId: formSchema?.id ?? null,
     });
 
-    const xmlBlock = `<current_turn_context>${JSON.stringify(
-      contextPayload,
-    )}</current_turn_context>`;
-
-    const modelMessages = injectXmlContext(
+    const modelMessages = ChatContextService.injectXmlContext(
       messages,
-      xmlBlock,
+      contextPayload,
       sanitizedUserText,
     );
 
+    const coreMessages = convertToModelMessages(modelMessages);
+    const systemPrompt = await ChatContextService.loadSystemPrompt(formSchema);
+
+    // 7. Prepare Tools & Model
     const tools = createAITools({
       submissionId: activeSubmissionId,
       userId: userId ?? undefined,
@@ -380,34 +275,38 @@ export async function POST(req: Request) {
       partialSubmission,
     }) as ToolSet;
 
-    const systemPrompt = await loadPrompt("filler/form-assistant-system.md", {
-      journey_script: String(formSchema?.settings?.journeyScript || ""),
-      include_guards: true,
-    });
-
     const model = getModel();
 
+    // 8. Stream Response
     const uiStream = await createUIMessageStream({
       async execute({ writer }) {
         const response = await streamText({
           model,
           system: systemPrompt,
-          messages: convertToModelMessages(modelMessages),
+          messages: coreMessages,
           tools,
           stopWhen: stepCountIs(STREAM_STEP_LIMIT),
-          onFinish: async ({ toolCalls }) => {
+          onFinish: async (result) => {
+            const toolCalls = (result as any).toolCalls;
             const duration = Date.now() - startTime;
             trackServerEvent("api.form_assist.duration", {
               duration,
               formId: formSchema.id,
               toolCallCount: toolCalls?.length || 0,
             });
-            toolCalls?.forEach((call) => {
+            toolCalls?.forEach((call: any) => {
               trackServerEvent("tool.usage", {
                 toolName: call.toolName,
                 formId: formSchema.id,
               });
             });
+
+            if (CHAT_ASSIST_DEBUG_ENABLED) {
+              console.log("[chat-assist][server] finish", {
+                traceId,
+                duration,
+              });
+            }
           },
         });
 
@@ -415,10 +314,10 @@ export async function POST(req: Request) {
       },
       originalMessages: messages,
       onError: (error) => {
-        console.error(
-          "[chat-assist] Stream error:",
-          error instanceof Error ? error.message : error,
-        );
+        console.error("[chat-assist] Stream error:", {
+          traceId,
+          error: error instanceof Error ? error.message : error,
+        });
         return `Error: ${error instanceof Error ? error.message : "Unknown error"}`;
       },
       onFinish: async ({ messages: finishedMessages }) => {
@@ -427,7 +326,7 @@ export async function POST(req: Request) {
         );
         const lastAssistant = assistantMessages[assistantMessages.length - 1];
         if (lastAssistant) {
-          await saveSubmissionMessage(
+          await SubmissionService.saveSubmissionMessage(
             activeSubmissionId,
             lastAssistant,
             userId ?? undefined,
@@ -441,11 +340,9 @@ export async function POST(req: Request) {
         .reverse()
         .find((msg: any) => msg.role === "user");
       if (lastUserMessage) {
-        const sanitizedMessage =
-          sanitizeUserMessageForPersistence(lastUserMessage);
-        await saveSubmissionMessage(
+        await SubmissionService.saveSubmissionMessage(
           activeSubmissionId,
-          sanitizedMessage,
+          lastUserMessage,
           userId ?? undefined,
         );
       }
@@ -465,9 +362,12 @@ export async function POST(req: Request) {
         "Access-Control-Allow-Headers",
         "content-type,authorization",
       );
+      resp.headers.set(CHAT_ASSIST_TRACE_HEADER, traceId);
     } catch {}
     return resp;
   } catch (error) {
+    const traceId =
+      req.headers.get(CHAT_ASSIST_TRACE_HEADER) ?? createChatAssistTraceId();
     console.error(
       "[chat-assist] Critical error:",
       error instanceof Error ? error.message : error,
@@ -487,6 +387,7 @@ export async function POST(req: Request) {
       "Access-Control-Allow-Headers",
       "content-type,authorization",
     );
+    json.headers.set(CHAT_ASSIST_TRACE_HEADER, traceId);
     return json;
   }
 }

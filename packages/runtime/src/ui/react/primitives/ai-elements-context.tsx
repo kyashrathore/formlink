@@ -12,6 +12,9 @@ export type AiElementsPrimitives = {
   PromptInputTextarea: AnyComponent;
   PromptInputSubmit: AnyComponent;
   Response: AnyComponent;
+  Reasoning?: AnyComponent;
+  ReasoningTrigger?: AnyComponent;
+  ReasoningContent?: AnyComponent;
 };
 
 const AiElementsContext = React.createContext<AiElementsPrimitives | null>(

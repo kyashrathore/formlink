@@ -29,7 +29,7 @@ export function getModel(
 
   // Default model if none provided (gateway-specific safe defaults)
   const defaultByGateway: Record<ProviderType, string> = {
-    vercel: "cerebras/gpt-oss-120b",
+    vercel: "openai/gpt-5.1-instant",
     openrouter: "openai/gpt-oss-120b",
     openai: "gpt-oss-120b",
   }

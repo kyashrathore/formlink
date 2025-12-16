@@ -27,6 +27,11 @@ import {
   PromptInputTextarea as PromptInputTextareaUi,
   PromptInput as PromptInputUi,
 } from "@formlink/ui/components/ai-elements/prompt-input";
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@formlink/ui/components/ai-elements/reasoning";
 import { Response as ResponseUi } from "@formlink/ui/components/ai-elements/response";
 import {
   AvatarFallback as AvatarFallbackUi,
@@ -112,42 +117,64 @@ function ChatTemplateInner({
     string | null
   >(null);
   const [input, setInput] = React.useState("");
-  const [answers, setAnswers] = React.useState<Record<string, any>>({});
   const [drafts, setDrafts] = React.useState<Record<string, any>>({});
   const [completed, setCompleted] = React.useState(false);
 
   useSlotBridge({ messages, onSlot: setCurrentQuestionId });
 
-  const lastAppliedRef = React.useRef<string>("");
-  React.useEffect(() => {
-    const assistants = messages.filter((m) => m?.role === "assistant");
-    if (assistants.length === 0) return;
-    const last = assistants[assistants.length - 1]!;
-    const lastId = String((last as any)?.id ?? assistants.length);
-    if (lastAppliedRef.current === lastId) return;
-    const toolParts = (
-      Array.isArray((last as any).parts) ? (last as any).parts : []
-    ).filter(
-      (p: any) => typeof p?.type === "string" && p.type.startsWith("tool-"),
-    );
-    if (toolParts.length === 0) return;
-    lastAppliedRef.current = lastId;
-    for (const p of toolParts) {
-      const tool = String(p.type).replace(/^tool-/, "");
-      const result = p?.output ?? p?.result;
-      if (tool === "saveAnswer") {
-        const qid = result?.questionId;
-        const next = result?.nextQuestionId ?? null;
-        if (qid != null) {
-          setAnswers((prev) => ({ ...prev, [qid]: result?.value }));
+  // Derive answers from the entire message history.
+  // This supports restoring state from history (e.g. on refresh) and live updates.
+  const answers = React.useMemo(() => {
+    const derived: Record<string, any> = {};
+    for (const m of messages) {
+      if (m.role !== "assistant") continue;
+      const parts = Array.isArray((m as any).parts) ? (m as any).parts : [];
+      for (const p of parts) {
+        // Broadly detect any part that looks like a saveAnswer result
+        // We check both 'result' and 'output' properties for compatibility
+        const result = (p as any)?.result ?? (p as any)?.output;
+
+        // Debug log to inspect what we are parsing
+        if (
+          (p as any)?.type === "tool-result" ||
+          (p as any)?.type?.includes("tool")
+        ) {
+          console.log("[Client Debug] processing part:", p, "result:", result);
         }
-        setCurrentQuestionId(next);
-      }
-      if (tool === "completeSubmission") {
-        setCompleted(true);
+
+        if (
+          result &&
+          typeof result === "object" &&
+          (result.saved === true || result.success === true) && // broadened check
+          result.questionId &&
+          result.value !== undefined
+        ) {
+          console.log(
+            "[Client Debug] Found answer:",
+            result.questionId,
+            result.value,
+          );
+          derived[result.questionId] = result.value;
+        }
       }
     }
+    return derived;
   }, [messages]);
+
+  // Track completion status from history
+  React.useEffect(() => {
+    const hasCompletion = messages.some((m) => {
+      if (m.role !== "assistant") return false;
+      const parts = Array.isArray((m as any).parts) ? (m as any).parts : [];
+      return parts.some((p: any) => {
+        const toolName = String(p?.type || "").replace(/^tool-/, "");
+        return toolName === "completeSubmission";
+      });
+    });
+    if (hasCompletion && !completed) {
+      setCompleted(true);
+    }
+  }, [messages, completed]);
 
   const getFormSchema = React.useCallback(() => form, [form]);
   const getResponses = React.useCallback(
@@ -337,6 +364,7 @@ function ChatTemplateInner({
                           <ChatMessageAssistant
                             message={m}
                             isLast={isLastAssistant}
+                            status={status}
                             currentQuestionId={currentQuestionId ?? undefined}
                             form={form as any}
                             values={{ ...drafts, ...answers }}
@@ -449,6 +477,9 @@ export function ChatTemplate(props: ChatTemplateProps) {
           PromptInputTextarea: PromptInputTextareaUi,
           PromptInputSubmit: PromptInputSubmitUi,
           Response: ResponseUi,
+          Reasoning,
+          ReasoningTrigger,
+          ReasoningContent,
         }}
       >
         <ChatTemplateInner {...props} />
