@@ -252,12 +252,19 @@ await step("private view reads submissions with its share link only", async () =
   const cookie = share.headers.get("set-cookie").split(";")[0];
   const page = await fetch(`${BASE}/s/dash-e2e/`, { headers: { cookie } });
   assert.equal(await page.text(), "secret dash");
-  const data = await fetch(`${BASE}/v1/forms/${formId}/submissions`, { headers: { cookie, "x-formlink-site": "dash-e2e" } });
+  const data = await fetch(`${BASE}/v1/forms/${formId}/submissions`, {
+    headers: { cookie, "x-formlink-site": "dash-e2e", referer: `${BASE}/s/dash-e2e/` },
+  });
   assert.equal(data.status, 200);
+  // Another page on the same origin can't borrow the view's cookie.
+  const borrowed = await fetch(`${BASE}/v1/forms/${formId}/submissions`, {
+    headers: { cookie, "x-formlink-site": "dash-e2e", referer: `${BASE}/s/lead-page-e2e/` },
+  });
+  assert.equal(borrowed.status, 401);
   assert.ok((await data.json()).submissions.length >= 1);
   const write = await fetch(`${BASE}/v1/forms/${formId}`, {
     method: "PATCH",
-    headers: { cookie, "x-formlink-site": "dash-e2e", "content-type": "application/json" },
+    headers: { cookie, "x-formlink-site": "dash-e2e", referer: `${BASE}/s/dash-e2e/`, "content-type": "application/json" },
     body: "{}",
   });
   assert.equal(write.status, 403);
@@ -298,6 +305,42 @@ await step("MCP requires auth and advertises OAuth", async () => {
   const meta = await call("GET", "/.well-known/oauth-authorization-server");
   assert.equal(meta.status, 200);
   assert.ok(meta.json.authorization_endpoint.endsWith("/authorize"));
+});
+
+await step("OAuth: register, consent with a key, token, MCP call", async () => {
+  const reg = await call("POST", "/register", { redirect_uris: ["https://client.example/cb"], client_name: "E2E Client", token_endpoint_auth_method: "none" });
+  assert.equal(reg.status, 201, JSON.stringify(reg.json));
+  const verifier = "v".repeat(64);
+  const challenge = Buffer.from(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))).toString("base64url");
+  const q = new URLSearchParams({
+    response_type: "code",
+    client_id: reg.json.client_id,
+    redirect_uri: "https://client.example/cb",
+    code_challenge: challenge,
+    code_challenge_method: "S256",
+    state: "xyz",
+    resource: `${BASE}/mcp`,
+  });
+  const page = await fetch(`${BASE}/authorize?${q}`);
+  assert.match(await page.text(), /E2E Client/);
+  const bad = await fetch(`${BASE}/authorize?${q}`, { method: "POST", body: new URLSearchParams({ key: "fl_sk_wrong" }) });
+  assert.equal(bad.status, 401);
+  const ok = await fetch(`${BASE}/authorize?${q}`, { method: "POST", body: new URLSearchParams({ key: KEY }), redirect: "manual" });
+  assert.equal(ok.status, 302);
+  const code = new URL(ok.headers.get("location")).searchParams.get("code");
+  const tok = await fetch(`${BASE}/token`, {
+    method: "POST",
+    body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: "https://client.example/cb", client_id: reg.json.client_id, code_verifier: verifier, resource: `${BASE}/mcp` }),
+  });
+  const token = await tok.json();
+  assert.ok(token.access_token, JSON.stringify(token));
+  const res = await fetch(`${BASE}/mcp`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${token.access_token}`, "content-type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name: "whoami", arguments: {} } }),
+  });
+  const out = await res.json();
+  assert.equal(out.result.structuredContent.role, "admin", JSON.stringify(out));
 });
 
 await step("delete form cleans up", async () => {

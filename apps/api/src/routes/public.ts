@@ -6,7 +6,7 @@ import { EventInput, trackEvents } from "@/services/events";
 import { uploadFile } from "@/services/files";
 import { type Form, getFormById, publicForm } from "@/services/forms";
 import { createPayment } from "@/services/payments";
-import { DraftInput, type RequestInfo, SubmitInput, saveDraft, submit } from "@/services/submissions";
+import { DraftInput, type RequestInfo, SubmitInput, checkTurnstile, saveDraft, submit } from "@/services/submissions";
 import { checkVerification, startVerification } from "@/services/verify";
 
 /** Endpoints a respondent's browser calls. Identified by form id; guarded by origin allowlist, rate limits and Turnstile. */
@@ -71,7 +71,12 @@ publicApi.post("/:formId/events", async (c) => {
 });
 
 publicApi.post("/:formId/verify", async (c) => {
-  const input = await body(c, z.object({ channel: z.enum(["email", "sms"]), to: z.string().max(320) }));
+  const input = await body(
+    c,
+    z.object({ channel: z.enum(["email", "sms"]), to: z.string().max(320), turnstileToken: z.string().optional() }),
+  );
+  // Codes cost money to send, so Turnstile-protected forms also protect this endpoint.
+  await checkTurnstile(c.env, c.get("form"), input.turnstileToken, c.req.header("cf-connecting-ip"));
   return c.json(await startVerification(c.env, c.get("form"), input.channel, input.to), 201);
 });
 

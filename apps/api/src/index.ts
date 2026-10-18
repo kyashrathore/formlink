@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import type { Auth, Env } from "@/env";
 import { GUIDE } from "@/guide";
+import { ApiError } from "@/lib/errors";
 import { type AppEnv, errorResponse } from "@/lib/http";
 import { handleMcp } from "@/mcp/server";
 import { admin } from "@/routes/admin";
@@ -32,8 +33,12 @@ app.route("/", oauth);
 app.notFound((c) => c.json({ error: { code: "not_found", message: "Route not found" } }, 404));
 
 const mcpApi = {
-  fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    return handleMcp(request, env, ctx, ctx.props as Auth);
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    const auth = ctx.props as Auth;
+    // OAuth grants outlive nothing: revoking the key that approved them cuts the client off.
+    const key = await env.DB.prepare("SELECT revoked_at FROM api_keys WHERE id = ?").bind(auth.keyId ?? "").first<{ revoked_at: number | null }>();
+    if (!key || key.revoked_at) return errorResponse(new ApiError(401, "unauthorized", "The key behind this connection was revoked"));
+    return handleMcp(request, env, ctx, auth);
   },
 };
 
@@ -76,8 +81,9 @@ export default {
         if (env.SITES_DOMAIN) return new Response("Not found", { status: 404 });
       }
 
-      // Path-based hosting for local dev or when no sites domain is configured.
-      const m = url.pathname.match(/^\/s\/([a-z0-9-]+)(\/.*)?$/);
+      // Path-based hosting for local dev, only when no sites domain is configured: sites sharing
+      // the API origin can't be isolated from each other.
+      const m = env.SITES_DOMAIN ? null : url.pathname.match(/^\/s\/([a-z0-9-]+)(\/.*)?$/);
       if (m) {
         const site = await siteForSlug(env, m[1]!);
         if (!site) return new Response("Not found", { status: 404 });
@@ -85,10 +91,13 @@ export default {
         return routeSite(request, env, ctx, site, m[2], "/");
       }
 
-      // Private views on the API host identify themselves with x-formlink-site.
+      // Private views served under /s/<slug>/ identify themselves with x-formlink-site. The referer must be
+      // that site's own page, so another page on this origin can't borrow its cookie.
       const siteSlug = request.headers.get("x-formlink-site");
       if (siteSlug && url.pathname.startsWith("/v1/")) {
-        const site = await siteForSlug(env, siteSlug);
+        const referer = request.headers.get("referer");
+        const fromSite = referer && new URL(referer).origin === url.origin && new URL(referer).pathname.startsWith(`/s/${siteSlug}/`);
+        const site = fromSite ? await siteForSlug(env, siteSlug) : null;
         if (site) siteAuths.set(request, await siteAuth(env, site, request));
       }
 

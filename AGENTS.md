@@ -7,7 +7,7 @@ Assist a solo dev. Priorities: clarity, leverage, momentum. Output must be high-
 - Use `pnpm` only; never suggest `npm`.
 - Assume `pnpm run dev` is running; don’t restart.
 - Don’t run `pnpm run build` while dev server is running.
-- Validate with `pnpm typecheck` (tsc --noEmit) and `pnpm lint`; build only when needed.
+- Validate with `pnpm typecheck`; run `pnpm -C apps/api test:e2e` against `pnpm dev` for behaviour changes.
 
 ## 2) Imports & Path Aliases
 
@@ -39,8 +39,8 @@ Assist a solo dev. Priorities: clarity, leverage, momentum. Output must be high-
 
 ## 7) Docs
 
-- All artifacts → `docs/`.
-- Keep `docs/REPO_CONTEXT.md` current.
+- Keep `README.md` and `apps/api/src/guide.ts` (served as /llms.txt and the MCP `guide` tool) current.
+- The agent skill in `skills/formlink/` must match the real API; update it with any API change.
 
 ## 8) Metrics
 

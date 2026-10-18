@@ -37,8 +37,7 @@ async function stripe<T>(key: string, path: string, body?: Record<string, string
  * The amount always comes from the form's `price` hook, never from the browser,
  * so a respondent can't change what they pay.
  */
-export async function createPayment(env: Env, form: Form, sessionId: string, data: Record<string, unknown>) {
-  if (!form.settings.payment) throw badRequest("This form does not take payments");
+async function quote(env: Env, form: Form, sessionId: string, data: Record<string, unknown>) {
   const priced = await runHook<{ amount: number; currency: string; description?: string }>(env, form, "price", {
     data,
     sessionId,
@@ -48,10 +47,15 @@ export async function createPayment(env: Env, form: Form, sessionId: string, dat
   const { amount, currency, description } = priced.result ?? ({} as never);
   if (!Number.isInteger(amount) || amount <= 0 || typeof currency !== "string")
     throw new ApiError(502, "hook_failed", "price must return { amount: positive integer (minor units), currency }");
+  return { amount, currency: currency.toLowerCase(), description };
+}
 
+export async function createPayment(env: Env, form: Form, sessionId: string, data: Record<string, unknown>) {
+  if (!form.settings.payment) throw badRequest("This form does not take payments");
+  const { amount, currency, description } = await quote(env, form, sessionId, data);
   const pi = await stripe<PaymentIntent>(await stripeKey(env, form), "/payment_intents", {
     amount: String(amount),
-    currency: currency.toLowerCase(),
+    currency,
     "automatic_payment_methods[enabled]": "true",
     "metadata[formlink_form]": form.id,
     "metadata[formlink_session]": sessionId,
@@ -60,8 +64,17 @@ export async function createPayment(env: Env, form: Form, sessionId: string, dat
   return { paymentIntentId: pi.id, clientSecret: pi.client_secret, amount, currency: pi.currency };
 }
 
-/** Confirms a PaymentIntent succeeded for this form and session before a submission is accepted. */
-export async function verifyPayment(env: Env, form: Form, paymentIntentId: string, sessionId: string | undefined) {
+/**
+ * Confirms a PaymentIntent succeeded for this form and session, and that it paid the price
+ * of the answers actually submitted, before a submission is accepted.
+ */
+export async function verifyPayment(
+  env: Env,
+  form: Form,
+  paymentIntentId: string,
+  sessionId: string,
+  data: Record<string, unknown>,
+) {
   if (!/^pi_[A-Za-z0-9]+$/.test(paymentIntentId)) throw badRequest("Invalid paymentIntentId");
   const used = await env.DB.prepare(
     "SELECT id FROM submissions WHERE form_id = ? AND json_extract(payment, '$.id') = ?",
@@ -70,8 +83,11 @@ export async function verifyPayment(env: Env, form: Form, paymentIntentId: strin
     .first();
   if (used) throw new ApiError(409, "conflict", "This payment was already used for a submission");
   const pi = await stripe<PaymentIntent>(await stripeKey(env, form), `/payment_intents/${paymentIntentId}`);
-  if (pi.metadata.formlink_form !== form.id || (sessionId && pi.metadata.formlink_session !== sessionId))
+  if (pi.metadata.formlink_form !== form.id || pi.metadata.formlink_session !== sessionId)
     throw badRequest("Payment does not belong to this form session");
   if (pi.status !== "succeeded") throw new ApiError(402, "payment_required", `Payment status is ${pi.status}`);
+  const expected = await quote(env, form, sessionId, data);
+  if (pi.amount_received !== expected.amount || pi.currency !== expected.currency)
+    throw new ApiError(402, "payment_mismatch", "The payment does not match the price of these answers");
   return { id: pi.id, amount: pi.amount_received, currency: pi.currency, status: pi.status };
 }

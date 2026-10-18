@@ -110,7 +110,7 @@ async function completeCount(env: Env, formId: string) {
   return r?.n ?? 0;
 }
 
-async function checkTurnstile(env: Env, form: Form, token: string | undefined, ip?: string | null) {
+export async function checkTurnstile(env: Env, form: Form, token: string | undefined, ip?: string | null) {
   if (!form.settings.turnstile) return;
   if (!token) throw badRequest("turnstileToken is required");
   const secret = await getSecret(env, form.workspaceId, "TURNSTILE_SECRET_KEY");
@@ -168,8 +168,9 @@ export async function submit(env: Env, form: Form, input: SubmitInput, req: Requ
 
   let payment = null;
   if (form.settings.payment) {
-    if (!input.paymentIntentId) throw new ApiError(402, "payment_required", "paymentIntentId is required");
-    payment = await verifyPayment(env, form, input.paymentIntentId, input.sessionId);
+    if (!input.paymentIntentId || !input.sessionId)
+      throw new ApiError(402, "payment_required", "paymentIntentId and sessionId are required");
+    payment = await verifyPayment(env, form, input.paymentIntentId, input.sessionId, input.data);
   }
 
   const existing = input.sessionId ? await bySession(env, form.id, input.sessionId) : null;
