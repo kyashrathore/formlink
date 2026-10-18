@@ -1,8 +1,0 @@
-{
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "display": "Formlink Monorepo Root",
-  "compilerOptions": {
-    "skipLibCheck": true
-  },
-  "exclude": ["**/*"]
-}
