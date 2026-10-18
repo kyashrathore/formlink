@@ -5,7 +5,7 @@ import { type AppEnv, background, body } from "@/lib/http";
 import { EventInput, trackEvents } from "@/services/events";
 import { uploadFile } from "@/services/files";
 import { type Form, getFormById, publicForm } from "@/services/forms";
-import { createPayment } from "@/services/payments";
+import { createPayment, handleStripeWebhook } from "@/services/payments";
 import { DraftInput, type RequestInfo, SubmitInput, checkTurnstile, saveDraft, submit } from "@/services/submissions";
 import { checkVerification, startVerification } from "@/services/verify";
 
@@ -89,3 +89,9 @@ publicApi.post("/:formId/payments", async (c) => {
   const input = await body(c, z.object({ sessionId: SessionId, data: z.record(z.string(), z.unknown()) }));
   return c.json(await createPayment(c.env, c.get("form"), input.sessionId, input.data), 201);
 });
+
+/** Stripe webhooks, one endpoint per workspace: <api>/v1/stripe/<workspaceId>. */
+export const stripeWebhook = new Hono<AppEnv>();
+stripeWebhook.post("/:workspaceId", async (c) =>
+  c.json(await handleStripeWebhook(c.env, c.req.param("workspaceId"), await c.req.text(), c.req.header("stripe-signature") ?? null)),
+);

@@ -40,6 +40,13 @@ export function startMocks(port) {
         return pi ? json(200, pi) : json(404, { error: { message: "No such payment_intent" } });
       }
     }
+    // Test control: a delayed method (bank debit) leaves the PaymentIntent processing.
+    const proc = p.match(/^\/_process\/(pi_\w+)$/);
+    if (proc) {
+      const pi = intents.get(proc[1]);
+      pi.status = "processing";
+      return json(200, pi);
+    }
     // Test control: mark a PaymentIntent paid, as Stripe.js confirmation would.
     const paid = p.match(/^\/_pay\/(pi_\w+)$/);
     if (paid) {

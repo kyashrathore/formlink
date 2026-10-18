@@ -14,7 +14,8 @@
   "ratelimits": [
     { "name": "PUBLIC_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } }
   ],
-  "triggers": { "crons": ["17 3 * * *"] },
+  // Every 5 minutes: retry failed side-effect hooks. Daily: retention.
+  "triggers": { "crons": ["*/5 * * * *", "17 3 * * *"] },
   "vars": {
     // Public origin of this Worker, used in links and OAuth metadata.
     "PUBLIC_URL": "http://localhost:8787",

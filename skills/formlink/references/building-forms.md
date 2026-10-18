@@ -598,6 +598,7 @@ the SDK keeps `sessionId` in sessionStorage), status is `succeeded` (anything el
 `payment_required`), and it was not used before (409 `conflict`). Async methods that stay
 `processing` will be rejected; restrict methods in the Stripe dashboard if that matters.
 `amount / 100` is wrong for zero-decimal currencies (JPY, KRW): format with the currency's minor unit.
+Bank debits and other delayed methods: submit while the PaymentIntent is `processing`; the result's `status` is `"pending_payment"`, so tell the respondent the payment is being confirmed. Stripe's webhook settles it (see api.md, Stripe webhook).
 `createPayment` errors: 400 (form has `payment: false`), 501 `not_configured` (no price hook or no
 Stripe key), 502 `hook_failed` (bad price result), 502 `stripe_error`.
 

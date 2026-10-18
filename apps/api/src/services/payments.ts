@@ -3,6 +3,8 @@ import { ApiError, badRequest } from "@/lib/errors";
 import type { Form } from "@/services/forms";
 import { runHook } from "@/services/hooks";
 import { getSecret } from "@/services/secrets";
+import { settlePayment } from "@/services/submissions";
+import { hmacHex, timingSafeEqual } from "@/lib/crypto";
 
 
 interface PaymentIntent {
@@ -84,9 +86,35 @@ export async function verifyPayment(
   const pi = await stripe<PaymentIntent>(env, await stripeKey(env, form), `/payment_intents/${paymentIntentId}`);
   if (pi.metadata.formlink_form !== form.id || pi.metadata.formlink_session !== sessionId)
     throw badRequest("Payment does not belong to this form session");
-  if (pi.status !== "succeeded") throw new ApiError(402, "payment_required", `Payment status is ${pi.status}`);
+  // "processing" is a delayed method (e.g. a bank debit); the submission is held until the webhook settles it.
+  if (pi.status !== "succeeded" && pi.status !== "processing")
+    throw new ApiError(402, "payment_required", `Payment status is ${pi.status}`);
   const expected = await quote(env, form, sessionId, data);
-  if (pi.amount_received !== expected.amount || pi.currency !== expected.currency)
+  const paid = pi.status === "succeeded" ? pi.amount_received : pi.amount;
+  if (paid !== expected.amount || pi.currency !== expected.currency)
     throw new ApiError(402, "payment_mismatch", "The payment does not match the price of these answers");
-  return { id: pi.id, amount: pi.amount_received, currency: pi.currency, status: pi.status };
+  return { id: pi.id, amount: paid, currency: pi.currency, status: pi.status as string, heldStatus: undefined as string | undefined };
+}
+
+const SIGNATURE_TOLERANCE_S = 300;
+
+/**
+ * Stripe webhook for a workspace (endpoint secret in STRIPE_WEBHOOK_SECRET). Settles submissions
+ * held for delayed payment methods.
+ */
+export async function handleStripeWebhook(env: Env, workspaceId: string, rawBody: string, signature: string | null) {
+  const secret = await getSecret(env, workspaceId, "STRIPE_WEBHOOK_SECRET");
+  if (!secret) throw new ApiError(501, "not_configured", "Set the STRIPE_WEBHOOK_SECRET secret");
+  const parts = Object.fromEntries((signature ?? "").split(",").map((kv) => kv.split("=") as [string, string]));
+  const t = Number(parts.t);
+  if (!t || Math.abs(Date.now() / 1000 - t) > SIGNATURE_TOLERANCE_S) throw badRequest("Invalid Stripe signature timestamp");
+  const expected = await hmacHex(secret, `${t}.${rawBody}`);
+  const given = (signature ?? "").split(",").filter((p) => p.startsWith("v1=")).map((p) => p.slice(3));
+  if (!given.some((g) => timingSafeEqual(g, expected))) throw badRequest("Invalid Stripe signature");
+
+  const event = JSON.parse(rawBody) as { type: string; data: { object: { id: string } } };
+  const outcome =
+    event.type === "payment_intent.succeeded" ? "succeeded" : event.type === "payment_intent.payment_failed" ? "failed" : null;
+  if (!outcome) return { ignored: event.type };
+  return settlePayment(env, workspaceId, event.data.object.id, outcome);
 }

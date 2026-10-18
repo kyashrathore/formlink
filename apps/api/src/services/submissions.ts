@@ -4,7 +4,7 @@ import { ApiError, badRequest, notFound } from "@/lib/errors";
 import { newId, now } from "@/lib/ids";
 import { parseJson } from "@/lib/json";
 import { deleteFilesWhere, filesForSubmission } from "@/services/files";
-import { type Form, getForm, isOpen } from "@/services/forms";
+import { type Form, getForm, getFormById, isOpen } from "@/services/forms";
 import { runHook } from "@/services/hooks";
 import { verifyPayment } from "@/services/payments";
 import { getSecret } from "@/services/secrets";
@@ -166,7 +166,7 @@ export async function submit(env: Env, form: Form, input: SubmitInput, req: Requ
       throw new ApiError(403, "verification_required", `A verified ${form.settings.verification} is required`);
   }
 
-  let payment = null;
+  let payment: Awaited<ReturnType<typeof verifyPayment>> | null = null;
   if (form.settings.payment) {
     if (!input.paymentIntentId || !input.sessionId)
       throw new ApiError(402, "payment_required", "paymentIntentId and sessionId are required");
@@ -192,6 +192,12 @@ export async function submit(env: Env, form: Form, input: SubmitInput, req: Requ
     throw new ApiError(422, "invalid", "Submission rejected", { errors: before.result.errors });
   if (before.result?.computed) computed = before.result.computed;
   if (before.result?.status && STATUS.test(before.result.status)) status = before.result.status;
+  // Delayed payment methods (bank debits) are still processing: hold the submission until Stripe's webhook.
+  const awaitingPayment = payment?.status === "processing";
+  if (awaitingPayment && payment) {
+    payment = { ...payment, heldStatus: status };
+    status = PENDING_PAYMENT;
+  }
 
   const t = now();
   const values = [
@@ -230,20 +236,92 @@ export async function submit(env: Env, form: Form, input: SubmitInput, req: Requ
     ]);
   }
 
-  const submission = await loadSubmission(env, id);
-  background(runAfterSubmit(env, form, submission));
+  if (!awaitingPayment) background(runSideEffect(env, form, id, "afterSubmit", {}));
   return { id, status, computed };
 }
 
-async function runAfterSubmit(env: Env, form: Form, submission: Submission) {
+export const PENDING_PAYMENT = "pending_payment";
+
+/**
+ * Settles a submission held for a delayed payment. On success it takes the status it would have had
+ * and afterSubmit runs; on failure it becomes `payment_failed` and onStatusChange runs.
+ */
+export async function settlePayment(env: Env, workspaceId: string, paymentIntentId: string, outcome: "succeeded" | "failed") {
+  const row = await env.DB.prepare(
+    "SELECT * FROM submissions WHERE workspace_id = ? AND json_extract(payment, '$.id') = ?",
+  )
+    .bind(workspaceId, paymentIntentId)
+    .first<SubmissionRow>();
+  if (!row) return { matched: false };
+  const s = toSubmission(row);
+  const payment = s.payment as { heldStatus?: string; status: string; amount: number } | null;
+  if (s.status !== PENDING_PAYMENT || !payment) return { matched: true, changed: false };
+  const form = await getFormById(env, s.formId);
+  const status = outcome === "succeeded" ? (payment.heldStatus ?? "complete") : "payment_failed";
+  const { heldStatus: _held, ...rest } = payment;
+  await env.DB.prepare("UPDATE submissions SET status = ?, payment = ?, updated_at = ? WHERE id = ?")
+    .bind(status, JSON.stringify({ ...rest, status: outcome }), now(), s.id)
+    .run();
+  if (outcome === "succeeded") await runSideEffect(env, form, s.id, "afterSubmit", {});
+  else await runSideEffect(env, form, s.id, "onStatusChange", { previousStatus: PENDING_PAYMENT });
+  return { matched: true, changed: true, status };
+}
+
+/** Retry delays after a failed side-effect hook: 1m, 5m, 30m, 2h, 12h, then give up. */
+const RETRY_DELAYS_MS = [60_000, 300_000, 1_800_000, 7_200_000, 43_200_000];
+
+type SideEffect = "afterSubmit" | "onStatusChange";
+
+/**
+ * Runs a side-effect hook for a submission and applies its patch. A failure is scheduled for retry;
+ * hooks get `attempt` (1-based) so they can stay idempotent.
+ */
+async function runSideEffect(
+  env: Env,
+  form: Form,
+  submissionId: string,
+  event: SideEffect,
+  extra: Record<string, unknown>,
+  attempt = 1,
+) {
+  const row = await env.DB.prepare("SELECT * FROM submissions WHERE id = ?").bind(submissionId).first<SubmissionRow>();
+  if (!row) return { ok: true };
+  const submission = toSubmission(row);
   const res = await runHook<{ computed?: Record<string, unknown>; status?: string }>(
     env,
     form,
-    "afterSubmit",
-    { submission: await withFiles(env, submission) },
-    submission.id,
+    event,
+    { submission: await withFiles(env, submission), ...extra, attempt },
+    submissionId,
   );
+  if (res.error) {
+    const delay = RETRY_DELAYS_MS[attempt - 1];
+    if (delay !== undefined)
+      await env.DB.prepare(
+        "INSERT INTO hook_retries (id, form_id, submission_id, event, extra, attempt, next_at, last_error) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+        .bind(newId("run"), form.id, submissionId, event, JSON.stringify(extra), attempt + 1, now() + delay, res.error.slice(0, 2000))
+        .run();
+    return { ok: false, error: res.error };
+  }
   if (res.result) await applyPatch(env, submission, res.result);
+  return { ok: true };
+}
+
+/** Called by the cron: re-runs failed side-effect hooks that are due. */
+export async function processHookRetries(env: Env, limit = 50) {
+  const { results } = await env.DB.prepare("SELECT * FROM hook_retries WHERE next_at <= ? ORDER BY next_at LIMIT ?")
+    .bind(now(), limit)
+    .all<{ id: string; form_id: string; submission_id: string; event: SideEffect; extra: string; attempt: number }>();
+  let succeeded = 0;
+  for (const r of results) {
+    await env.DB.prepare("DELETE FROM hook_retries WHERE id = ?").bind(r.id).run();
+    const form = await getFormById(env, r.form_id).catch(() => null);
+    if (!form) continue;
+    const out = await runSideEffect(env, form, r.submission_id, r.event, parseJson(r.extra, {}), r.attempt);
+    if (out.ok) succeeded++;
+  }
+  return { due: results.length, succeeded };
 }
 
 async function applyPatch(env: Env, s: Submission, patch: { computed?: Record<string, unknown>; status?: string }) {
@@ -333,18 +411,7 @@ export async function updateSubmission(
     .run();
   const updated = await loadSubmission(env, id);
   if (status !== s.status) {
-    background(
-      (async () => {
-        const res = await runHook<{ computed?: Record<string, unknown>; status?: string }>(
-          env,
-          form,
-          "onStatusChange",
-          { submission: await withFiles(env, updated), previousStatus: s.status },
-          id,
-        );
-        if (res.result) await applyPatch(env, updated, res.result);
-      })(),
-    );
+    background(runSideEffect(env, form, id, "onStatusChange", { previousStatus: s.status }));
   }
   return updated;
 }

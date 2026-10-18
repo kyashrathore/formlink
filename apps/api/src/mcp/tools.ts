@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Auth, Env } from "@/env";
 import { GUIDE } from "@/guide";
+import { VIEW_APP_URI, VIEW_RUNTIME_TAG, VIEW_TOOLS, viewForMcpApp } from "@/views";
 import type { Background } from "@/services/submissions";
 import { getAnalytics } from "@/services/events";
 import { FormInput, SettingsPatch, createForm, deleteForm, getForm, listForms, updateForm } from "@/services/forms";
@@ -15,10 +16,12 @@ import {
   deleteSite,
   deploySite,
   getDomain,
+  getViewHtml,
   listDeployments,
   listSites,
   removeDomain,
   rollbackSite,
+  saveView,
   updateSite,
 } from "@/services/sites";
 import {
@@ -36,6 +39,8 @@ interface Tool<S extends z.ZodObject = z.ZodObject> {
   name: string;
   description: string;
   input: S;
+  /** MCP `_meta`, e.g. `{ ui: { resourceUri } }` for tools that render an MCP App. */
+  meta?: Record<string, unknown>;
   readOnly?: boolean;
   destructive?: boolean;
   run: (env: Env, auth: Auth, args: z.infer<S>, background: Background) => Promise<unknown>;
@@ -250,6 +255,31 @@ export const TOOLS: Tool[] = [
     input: z.object({ hostname: z.string() }),
     destructive: true,
     run: async (env, auth, { hostname }) => (await removeDomain(env, auth, hostname), { removed: hostname }),
+  }),
+  tool({
+    name: "save_view",
+    description: `Save a reusable view (dashboard, table, chart) over form data as one HTML page. It is shareable by link and can be shown inside the chat with show_view, so it never has to be rebuilt. The page includes ${VIEW_RUNTIME_TAG} and reads data only through \`await formlink.call(tool, args)\` with one of: ${VIEW_TOOLS.join(", ")} (same arguments as those tools). Pass siteId to update an existing view.`,
+    input: z.object({
+      name: z.string().min(1).max(200),
+      dataForms: z.array(z.string()).min(1).describe("Form ids the view may read"),
+      html: z.string().min(1).describe("Complete self-contained HTML document"),
+      siteId: z.string().optional(),
+    }),
+    run: (env, auth, args) => saveView(env, auth, args),
+  }),
+  tool({
+    name: "show_view",
+    description: "Show a saved view inside the chat (MCP App), with live data. Use list_sites to find views (private sites).",
+    input: z.object({ siteId: z.string() }),
+    readOnly: true,
+    meta: { ui: { resourceUri: VIEW_APP_URI } },
+    run: async (env, auth, { siteId }) => {
+      const { site, html } = await getViewHtml(env, auth, siteId);
+      return {
+        view: { id: site.id, name: site.name, shareUrl: site.shareUrl, html: viewForMcpApp(html) },
+        message: `Showing "${site.name}". Share link: ${site.shareUrl}`,
+      };
+    },
   }),
   tool({
     name: "get_form",

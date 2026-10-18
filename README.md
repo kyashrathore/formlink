@@ -28,6 +28,8 @@ skills/formlink  Agent skill: how an AI builds forms, hooks and views on Formlin
 - **Forms** are buckets with server-side settings (allowed origins, Turnstile, verification, payment, uploads, retention, limits). There is no field schema; `data` is whatever your app sends.
 - **Hooks** are one ES module per form, versioned, run in a [Dynamic Worker](https://developers.cloudflare.com/workers/runtime-apis/bindings/worker-loader/) with the workspace secrets: `beforeSubmit` (validate, compute trusted values, reject), `afterSubmit` (side effects), `onStatusChange` (approvals), `price` (Stripe amount), `sendVerification` (deliver OTP codes).
 - **Sites** host the static app your AI builds at `<slug>.<SITES_DOMAIN>` (or `/s/<slug>/`), with rollbacks and custom domains through Cloudflare for SaaS. Hosted pages call the API on the same origin. Private sites open with a share link and can read the submissions of the forms they list in `dataForms`, read-only.
+- **Views** are saved HTML dashboards over form data (`save_view`). The same file renders inside Claude as an MCP App (`show_view`) and in a browser through its share link, so a view is built once.
+- **Reliability**: failed `afterSubmit`/`onStatusChange` hooks are retried by a 5-minute cron; delayed Stripe payments are held as `pending_payment` until the Stripe webhook settles them.
 - **MCP**: `POST /mcp`, stateless Streamable HTTP. claude.ai and other clients connect with OAuth (the consent page asks for an API key once); Claude Code and scripts can send the key as a bearer token.
 - **`/llms.txt`** serves the integration guide; the MCP `guide` tool returns the same text.
 
@@ -46,7 +48,7 @@ In another shell:
 ```sh
 pnpm -C apps/api test:e2e      # full flow: hooks, drafts, uploads, OTP, sites, private views, MCP, OAuth
 pnpm -C apps/api test:external # starts its own worker + mocks: Stripe, Turnstile, custom domains, subdomains, retention, rate limits
-pnpm -C apps/api test:browser  # fills the skill's Typeform-style example in Chromium (needs playwright)
+pnpm -C apps/api test:browser  # Chromium: fills the skill's Typeform-style example; renders a saved view in an MCP Apps host and by link
 pnpm -C packages/sdk build && pnpm -C packages/sdk test
 pnpm -C packages/cli build && pnpm -C packages/cli test
 ```

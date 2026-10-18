@@ -6,10 +6,14 @@ import { GUIDE } from "@/guide";
 import { ApiError } from "@/lib/errors";
 import { type AppEnv, errorResponse } from "@/lib/http";
 import { handleMcp } from "@/mcp/server";
+import { VIEW_RUNTIME_REST } from "@/views";
 import { admin } from "@/routes/admin";
 import { oauth } from "@/routes/oauth";
-import { publicApi } from "@/routes/public";
+import { publicApi, stripeWebhook } from "@/routes/public";
 import { runRetention } from "@/services/retention";
+import { processHookRetries } from "@/services/submissions";
+
+const RETENTION_CRON = "17 3 * * *";
 import { type Site, serveSite, siteAuth, siteForHost, siteForSlug } from "@/services/sites";
 import { authenticateKey, isApiKey } from "@/services/workspaces";
 
@@ -28,6 +32,7 @@ app.get("/", (c) =>
 );
 app.get("/llms.txt", (c) => c.text(GUIDE.replaceAll("<api>", c.env.PUBLIC_URL)));
 app.route("/v1/f", publicApi);
+app.route("/v1/stripe", stripeWebhook);
 app.route("/v1", admin);
 app.route("/", oauth);
 app.notFound((c) => c.json({ error: { code: "not_found", message: "Route not found" } }, 404));
@@ -74,6 +79,10 @@ export default {
       const url = new URL(request.url);
       const apiHost = new URL(env.PUBLIC_URL).host;
 
+      // Runtime for saved views, on every host so a view's absolute script tag always resolves.
+      if (url.pathname === "/_formlink/view.js")
+        return new Response(VIEW_RUNTIME_REST, { headers: { "content-type": "text/javascript; charset=utf-8", "cache-control": "public, max-age=300" } });
+
       // Hosted sites on <slug>.<SITES_DOMAIN> or a connected custom domain.
       if (url.host !== apiHost) {
         const site = await siteForHost(env, url.host);
@@ -113,7 +122,8 @@ export default {
     }
   },
 
-  async scheduled(_event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    ctx.waitUntil(runRetention(env).then((r) => console.log("retention", r)));
+  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(processHookRetries(env).then((r) => r.due && console.log("hook retries", r)));
+    if (event.cron === RETENTION_CRON) ctx.waitUntil(runRetention(env).then((r) => console.log("retention", r)));
   },
 } satisfies ExportedHandler<Env>;

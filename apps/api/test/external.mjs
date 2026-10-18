@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { request as httpRequest } from "node:http";
+import { createHmac } from "node:crypto";
 import { startMocks } from "./mock-server.mjs";
 
 const MOCK = 8788;
@@ -112,6 +113,70 @@ await step("Stripe: priced by the hook, verified on submit", async () => {
   assert.equal(reuse.status, 409);
 });
 
+const d1 = (sql) =>
+  new Promise((res) => spawn("npx", ["wrangler", "d1", "execute", "formlink", "--local", "--command", sql], { stdio: "ignore" }).on("exit", res));
+
+await step("delayed payment held until the Stripe webhook settles it", async () => {
+  await call("PUT", `/v1/forms/${formId}/hook`, {
+    code: `export default {
+      price({ data }) { return { amount: data.plan === "pro" ? 4900 : 900, currency: "usd" }; },
+      afterSubmit() { return { computed: { welcomed: true } }; },
+      onStatusChange({ previousStatus }) { return { computed: { failedFrom: previousStatus } }; },
+    }`,
+  });
+  const ws = (await call("GET", "/v1/me")).json.workspace.id;
+  await call("PUT", "/v1/secrets/STRIPE_WEBHOOK_SECRET", { value: "whsec_mock" });
+  const webhook = (body, secret = "whsec_mock") => {
+    const raw = JSON.stringify(body);
+    const t = Math.floor(Date.now() / 1000);
+    const sig = createHmac("sha256", secret).update(`${t}.${raw}`).digest("hex");
+    return fetch(`${BASE}/v1/stripe/${ws}`, { method: "POST", body: raw, headers: { "stripe-signature": `t=${t},v1=${sig}` } });
+  };
+  const run = async (sid, outcome) => {
+    const pi = (await call("POST", `/v1/f/${formId}/payments`, { sessionId: sid, data: { plan: "basic" } })).json;
+    await fetch(`http://localhost:${MOCK}/_process/${pi.paymentIntentId}`, { method: "POST" });
+    const sub = await call("POST", `/v1/f/${formId}/submissions`, { sessionId: sid, data: { plan: "basic" }, paymentIntentId: pi.paymentIntentId });
+    assert.equal(sub.status, 201, JSON.stringify(sub.json));
+    assert.equal(sub.json.status, "pending_payment");
+    await new Promise((r) => setTimeout(r, 500));
+    assert.equal((await call("GET", `/v1/submissions/${sub.json.id}`)).json.computed.welcomed, undefined, "afterSubmit waits for payment");
+    const type = outcome === "ok" ? "payment_intent.succeeded" : "payment_intent.payment_failed";
+    assert.equal((await webhook({ type, data: { object: { id: pi.paymentIntentId } } }, "whsec_wrong")).status, 400);
+    const res = await webhook({ type, data: { object: { id: pi.paymentIntentId } } });
+    assert.equal(res.status, 200, await res.clone().text());
+    return (await call("GET", `/v1/submissions/${sub.json.id}`)).json;
+  };
+  const ok = await run("sess_delay_ok", "ok");
+  assert.equal(ok.status, "complete");
+  assert.equal(ok.payment.status, "succeeded");
+  assert.equal(ok.computed.welcomed, true);
+  const failed = await run("sess_delay_fail", "fail");
+  assert.equal(failed.status, "payment_failed");
+  assert.equal(failed.computed.failedFrom, "pending_payment");
+});
+
+await step("failed afterSubmit is retried by the cron", async () => {
+  const f = (await call("POST", "/v1/forms", { name: "Flaky webhook" })).json.id;
+  await call("PUT", `/v1/forms/${f}/hook`, {
+    code: `export default { afterSubmit({ attempt }) {
+      if (attempt < 2) throw new Error("CRM is down");
+      return { computed: { syncedOnAttempt: attempt } };
+    } }`,
+  });
+  const sub = (await call("POST", `/v1/f/${f}/submissions`, { data: { a: 1 } })).json;
+  await new Promise((r) => setTimeout(r, 800));
+  const runs = (await call("GET", `/v1/forms/${f}/hook/runs`)).json.runs;
+  assert.ok(runs.some((r) => !r.ok && r.error.includes("CRM is down")));
+  await d1(`UPDATE hook_retries SET next_at = 0 WHERE submission_id = '${sub.id}'`);
+  assert.equal((await fetch(`${BASE}/__scheduled?cron=*/5+*+*+*+*`)).status, 200);
+  let s;
+  for (let i = 0; i < 20 && !s?.computed?.syncedOnAttempt; i++) {
+    await new Promise((r) => setTimeout(r, 300));
+    s = (await call("GET", `/v1/submissions/${sub.id}`)).json;
+  }
+  assert.equal(s.computed.syncedOnAttempt, 2);
+});
+
 await step("Turnstile on submit and on OTP send", async () => {
   const f = (await call("POST", "/v1/forms", { name: "Bot-checked", settings: { turnstile: true } })).json.id;
   const missing = await call("POST", `/v1/f/${f}/submissions`, { data: { a: 1 } });
@@ -161,9 +226,7 @@ await step("retention cron deletes expired submissions and stale drafts", async 
   const r = await call("POST", `/v1/f/${f}/submissions`, { data: { keep: false } });
   assert.equal(r.status, 201);
   // Age the row by two days, then run the scheduled handler.
-  const sql = `UPDATE submissions SET created_at = created_at - 172800000 WHERE id = '${r.json.id}'`;
-  const exec = spawn("npx", ["wrangler", "d1", "execute", "formlink", "--local", "--command", sql], { stdio: "ignore" });
-  await new Promise((res) => exec.on("exit", res));
+  await d1(`UPDATE submissions SET created_at = created_at - 172800000 WHERE id = '${r.json.id}'`);
   const cron = await fetch(`${BASE}/__scheduled?cron=17+3+*+*+*`);
   assert.equal(cron.status, 200);
   await new Promise((res) => setTimeout(res, 1500));

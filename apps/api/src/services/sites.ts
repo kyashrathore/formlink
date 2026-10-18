@@ -428,3 +428,27 @@ export function contentType(path: string) {
   const ext = path.split(".").pop()?.toLowerCase() ?? "";
   return TYPES[ext] ?? "application/octet-stream";
 }
+
+// ---- Views: private sites that read form data, also renderable inside Claude as an MCP App ----
+
+/** Creates or updates a private single-page view over `dataForms`. */
+export async function saveView(
+  env: Env,
+  auth: Auth,
+  input: { siteId?: string; name: string; dataForms: string[]; html: string },
+) {
+  const site = input.siteId
+    ? await updateSite(env, auth, input.siteId, { name: input.name, dataForms: input.dataForms, visibility: "private" })
+    : await createSite(env, auth, { name: input.name, visibility: "private", dataForms: input.dataForms });
+  const deployed = await deploySite(env, auth, site.id, { files: { "index.html": { content: input.html, encoding: "utf8" } } });
+  return deployed.site;
+}
+
+/** The view's HTML from its live deployment. */
+export async function getViewHtml(env: Env, auth: Auth, siteId: string) {
+  const row = await siteRow(env, auth, siteId);
+  if (!row.active_deployment) throw notFound("Deployment");
+  const obj = await env.FILES.get(`sites/${siteId}/${row.active_deployment}/index.html`);
+  if (!obj) throw notFound("index.html");
+  return { site: await toSite(env, row), html: await obj.text() };
+}

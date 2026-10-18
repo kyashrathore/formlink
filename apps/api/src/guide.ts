@@ -67,6 +67,7 @@ export default {
   async sendVerification({ channel, to, code, form }, ctx) {},
 }
 ctx.secrets: workspace secrets. fetch() works for outbound calls. console.log output is kept in hook runs.
+afterSubmit and onStatusChange that throw are retried (1m, 5m, 30m, 2h, 12h); the event carries attempt (1-based).
 In afterSubmit/onStatusChange, submission.files carries signed download URLs.
 Always run POST /forms/:id/hook/test before relying on a hook, and read GET /forms/:id/hook/runs when debugging.
 
@@ -79,5 +80,11 @@ Always run POST /forms/:id/hook/test before relying on a hook, and read GET /for
 - On a Formlink-hosted site, call the API with relative URLs (/v1/f/...): same origin, no CORS.
 - Private views (dashboards): create a private site with dataForms: [formId] and send header x-formlink-site: <slug>;
   the page may then GET /v1/forms/:id/submissions and /analytics with the share-link cookie, read-only.
+- Saved views (dashboards over the data): MCP save_view { name, dataForms, html } then show_view { siteId }
+  renders it inside the chat (MCP App) and its shareUrl opens it in a browser. The page includes
+  <script src="/_formlink/view.js"></script> and reads data only via await formlink.call(tool, args) with
+  list_forms, get_form, query_submissions, get_submission, get_analytics or export_submissions.
+- Delayed payments (bank debits): a submission paid with a still-processing PaymentIntent is stored as
+  "pending_payment"; POST <api>/v1/stripe/<workspaceId> (secret STRIPE_WEBHOOK_SECRET) settles it.
 - SDK: npm i @formlink/sdk  (createForm, createAdmin). Agent skill: skills/formlink in the Formlink repo.
 `;

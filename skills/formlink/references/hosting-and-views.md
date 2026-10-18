@@ -81,6 +81,43 @@ CLI: `formlink domain add <siteId> <hostname>`.
 
 ---
 
+## Saved views: build once, show in chat and by link
+
+Prefer this for dashboards, tables and charts over form data. One HTML file works in two places:
+inside Claude as an MCP App (`show_view`) and in any browser through its share link.
+
+```text
+save_view { name: "Signups by plan", dataForms: ["frm_..."], html: "<!doctype html>..." }   -> site with shareUrl
+show_view { siteId }                                                                        -> renders it in the chat
+save_view { siteId, name, dataForms, html }                                                 -> update the same view
+```
+
+Rules for the HTML:
+- Include `<script src="/_formlink/view.js"></script>` in `<head>`.
+- Read data only with `await formlink.call(tool, args)`, using the MCP tool names and arguments:
+  `list_forms`, `get_form`, `query_submissions`, `get_submission`, `get_analytics`, `export_submissions`.
+  Any other tool is refused. `formlink.mode` is `"mcp-app"` in chat and `"web"` in a browser.
+- Self-contained: inline CSS/JS, no external scripts or fonts (the chat sandbox blocks them).
+- Size to content; the chat frame grows with the page.
+
+```html
+<!doctype html><html><head><meta charset="utf-8"><script src="/_formlink/view.js"></script></head>
+<body><h1>Signups by plan</h1><ul id="out"></ul>
+<script>
+(async () => {
+  const { submissions } = await formlink.call("query_submissions", { formId: "frm_...", limit: 500 });
+  const counts = {};
+  for (const s of submissions) counts[s.data.plan] = (counts[s.data.plan] || 0) + 1;
+  const ul = document.getElementById("out");
+  for (const [plan, n] of Object.entries(counts)) { const li = document.createElement("li"); li.textContent = `${plan}: ${n}`; ul.append(li); }
+})();
+</script></body></html>
+```
+
+When the user asks for "the dashboard" again later, `list_sites` and `show_view` it rather than
+rebuilding it. The pattern below (raw `fetch` with `x-formlink-site`) still works for views that are
+only ever opened by link.
+
 ## Private views
 
 ```text

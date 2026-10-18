@@ -66,9 +66,10 @@ Do these in order. Each step names the MCP tool; REST/SDK/CLI equivalents are in
 7. **Smoke-test** — open the URL, submit once, then `query_submissions` and `list_hook_runs`.
 8. **Share** the site `url` (public) or `shareUrl` (private).
 9. **Later** — `query_submissions` / `get_submission` / `get_analytics` to answer questions about
-   responses; `update_submission { status }` for approvals (runs `onStatusChange`); build a
-   **private view** (`create_site { visibility: "private", dataForms: [formId] }`) for a dashboard
-   the user can share with a link.
+   responses; `update_submission { status }` for approvals (runs `onStatusChange`). For a
+   dashboard, `save_view { name, dataForms, html }` once, then `show_view { siteId }` renders it in
+   the chat and its `shareUrl` opens it in a browser. Next time, `list_sites` + `show_view` instead
+   of rebuilding.
 
 ## Connecting
 
@@ -114,5 +115,5 @@ or a private view's share-link cookie (read-only).
 |---|---|
 | `references/building-forms.md` | Writing any form UI: full Typeform-style single file (keyboard nav, progress, branching, drafts, step events, upload, signature, matrix, field errors), Tally-style page, embedding, Turnstile, email OTP, Stripe Elements, hidden fields/UTM, accessibility |
 | `references/hooks.md` | Writing a hook: exact contract and return shapes, testing/debugging, secrets, recipes (validation, quiz scoring, lead routing, webhook, Slack, Resend, OTP via Resend/Twilio, Google Sheets, Airtable upsert, Notion, approvals, Stripe price tiers) |
-| `references/hosting-and-views.md` | Deploying, SPA fallback, rollbacks, custom domains, private views and a complete dashboard example, share links |
+| `references/hosting-and-views.md` | Deploying, SPA fallback, rollbacks, custom domains, saved views (in chat and by link), private views and a complete dashboard example, share links |
 | `references/api.md` | Exact endpoints, MCP tools, SDK/CLI mapping, error codes, limits, retention |

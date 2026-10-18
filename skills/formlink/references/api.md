@@ -72,9 +72,17 @@ or OAuth (consent page asks for an API key once). Read keys can call read-only t
 `get_hook`, `set_hook`, `test_hook`, `list_hook_runs`, `list_secrets`, `set_secret`,
 `delete_secret`, `list_sites`, `create_site`, `update_site`, `deploy_site`, `rollback_site`,
 `add_domain`, `get_domain`, `export_submissions`, `delete_submission`, `list_deployments`,
-`delete_site`, `remove_domain`.
+`delete_site`, `remove_domain`, `save_view`, `show_view` (renders a saved view in the chat as an MCP App: `_meta.ui.resourceUri = ui://formlink/view`).
 
 Not in MCP (use REST/SDK/CLI): API keys and workspace signup. Tool errors come back as `isError: true` with text `code: message`.
+
+## Stripe webhook
+
+`POST <api>/v1/stripe/<workspaceId>`: point a Stripe webhook here (events `payment_intent.succeeded`,
+`payment_intent.payment_failed`) and store its signing secret as `STRIPE_WEBHOOK_SECRET`. Needed only for
+delayed payment methods: a submission whose PaymentIntent is still `processing` is stored with status
+`pending_payment` and afterSubmit waits. On success it gets the status it would have had and afterSubmit runs;
+on failure it becomes `payment_failed` and onStatusChange runs.
 
 ## CLI
 

@@ -23,8 +23,8 @@ decrypted workspace secret (or `undefined`); `ctx.log(...)` is the same as `cons
 | Event | When | Input `submission` | Return | Effect of throwing |
 |---|---|---|---|---|
 | `beforeSubmit` | Before the submission is stored, after Turnstile/verification/payment checks | `{ id, sessionId, data, meta, verified, payment }` (no `status`, no `files`) | `{ errors: { key: msg } }` → 422 `invalid` with `details.errors` (SDK `fieldErrors`). `{ computed }` stored and returned to the browser. `{ status }` sets the initial status (default `"complete"`). | 422 `rejected`, message = first line of the error (leading `Error: ` stripped) |
-| `afterSubmit` | After storing, in the background (respondent already has the 201) | full stored submission + `files` | `{ computed }` shallow-merged, `{ status }` replaced | recorded in hook runs only; **not retried** |
-| `onStatusChange` | After an admin/agent changes `status` (`update_submission`, `PATCH /v1/submissions/:id`, `admin.submissions.update`) | full submission (new status) + `files`; `previousStatus` | same as afterSubmit | recorded in hook runs only |
+| `afterSubmit` | After storing, in the background (respondent already has the 201) | full stored submission + `files` | `{ computed }` shallow-merged, `{ status }` replaced | a throw is retried by the 5-minute cron after 1m, 5m, 30m, 2h, 12h; `attempt` (1-based) is passed in so you can stay idempotent |
+| `onStatusChange` | After an admin/agent changes `status` (`update_submission`, `PATCH /v1/submissions/:id`, `admin.submissions.update`) | full submission (new status) + `files`; `previousStatus`; `attempt` | same as afterSubmit | retried like afterSubmit |
 | `price` | `POST /payments` (`form.createPayment`) | — (`data`, `sessionId` are top-level) | `{ amount, currency, description? }`; amount positive integer in minor units | 502 `hook_failed` |
 | `sendVerification` | `POST /verify` (`form.verify.start`) | — (`channel` `"email"|"sms"`, `to` normalized: lowercased email or E.164 phone, `code` 6 digits) | ignored | 502 `delivery_failed`, no code stored |
 
