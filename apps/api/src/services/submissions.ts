@@ -115,7 +115,7 @@ export async function checkTurnstile(env: Env, form: Form, token: string | undef
   if (!token) throw badRequest("turnstileToken is required");
   const secret = await getSecret(env, form.workspaceId, "TURNSTILE_SECRET_KEY");
   if (!secret) throw new ApiError(501, "not_configured", "Set the TURNSTILE_SECRET_KEY secret to use Turnstile");
-  const res = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+  const res = await fetch(env.TURNSTILE_VERIFY_URL || "https://challenges.cloudflare.com/turnstile/v0/siteverify", {
     method: "POST",
     body: new URLSearchParams({ secret, response: token, ...(ip ? { remoteip: ip } : {}) }),
   });

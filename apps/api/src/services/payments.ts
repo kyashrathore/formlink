@@ -4,7 +4,6 @@ import type { Form } from "@/services/forms";
 import { runHook } from "@/services/hooks";
 import { getSecret } from "@/services/secrets";
 
-const STRIPE = "https://api.stripe.com/v1";
 
 interface PaymentIntent {
   id: string;
@@ -22,8 +21,8 @@ async function stripeKey(env: Env, form: Form) {
   return key;
 }
 
-async function stripe<T>(key: string, path: string, body?: Record<string, string>) {
-  const res = await fetch(`${STRIPE}${path}`, {
+async function stripe<T>(env: Env, key: string, path: string, body?: Record<string, string>) {
+  const res = await fetch(`${env.STRIPE_API_URL || "https://api.stripe.com/v1"}${path}`, {
     method: body ? "POST" : "GET",
     headers: { authorization: `Bearer ${key}`, "content-type": "application/x-www-form-urlencoded" },
     body: body ? new URLSearchParams(body) : undefined,
@@ -53,7 +52,7 @@ async function quote(env: Env, form: Form, sessionId: string, data: Record<strin
 export async function createPayment(env: Env, form: Form, sessionId: string, data: Record<string, unknown>) {
   if (!form.settings.payment) throw badRequest("This form does not take payments");
   const { amount, currency, description } = await quote(env, form, sessionId, data);
-  const pi = await stripe<PaymentIntent>(await stripeKey(env, form), "/payment_intents", {
+  const pi = await stripe<PaymentIntent>(env, await stripeKey(env, form), "/payment_intents", {
     amount: String(amount),
     currency,
     "automatic_payment_methods[enabled]": "true",
@@ -82,7 +81,7 @@ export async function verifyPayment(
     .bind(form.id, paymentIntentId)
     .first();
   if (used) throw new ApiError(409, "conflict", "This payment was already used for a submission");
-  const pi = await stripe<PaymentIntent>(await stripeKey(env, form), `/payment_intents/${paymentIntentId}`);
+  const pi = await stripe<PaymentIntent>(env, await stripeKey(env, form), `/payment_intents/${paymentIntentId}`);
   if (pi.metadata.formlink_form !== form.id || pi.metadata.formlink_session !== sessionId)
     throw badRequest("Payment does not belong to this form session");
   if (pi.status !== "succeeded") throw new ApiError(402, "payment_required", `Payment status is ${pi.status}`);

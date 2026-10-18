@@ -44,7 +44,9 @@ pnpm dev                       # http://localhost:8787
 In another shell:
 
 ```sh
-pnpm -C apps/api test:e2e      # full flow: hooks, drafts, uploads, OTP, sites, private views, MCP
+pnpm -C apps/api test:e2e      # full flow: hooks, drafts, uploads, OTP, sites, private views, MCP, OAuth
+pnpm -C apps/api test:external # starts its own worker + mocks: Stripe, Turnstile, custom domains, subdomains, retention, rate limits
+pnpm -C apps/api test:browser  # fills the skill's Typeform-style example in Chromium (needs playwright)
 pnpm -C packages/sdk build && pnpm -C packages/sdk test
 pnpm -C packages/cli build && pnpm -C packages/cli test
 ```

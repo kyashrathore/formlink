@@ -236,7 +236,7 @@ export async function rollbackSite(env: Env, auth: Auth, siteId: string, deploym
 async function cf<T>(env: Env, path: string, init?: { method: string; body?: unknown }) {
   if (!env.CF_ZONE_ID || !env.CF_API_TOKEN)
     throw new ApiError(501, "not_configured", "Custom domains need CF_ZONE_ID and CF_API_TOKEN on the server");
-  const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}${path}`, {
+  const res = await fetch(`${env.CF_API_URL || "https://api.cloudflare.com/client/v4"}/zones/${env.CF_ZONE_ID}${path}`, {
     method: init?.method ?? "GET",
     headers: { authorization: `Bearer ${env.CF_API_TOKEN}`, "content-type": "application/json" },
     body: init?.body ? JSON.stringify(init.body) : undefined,
