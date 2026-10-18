@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "formlink",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "formlink", "database_id": "REPLACE_WITH_D1_ID", "migrations_dir": "migrations" }
+  ],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "formlink-files" }],
+  "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "REPLACE_WITH_KV_ID" }],
+  // Dynamic Workers: per-form hook scripts run in their own sandboxed isolate.
+  "worker_loaders": [{ "binding": "LOADER" }],
+  "ratelimits": [
+    { "name": "PUBLIC_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } }
+  ],
+  // Every 5 minutes: retry failed side-effect hooks. Daily: retention.
+  "triggers": { "crons": ["*/5 * * * *", "17 3 * * *"] },
+  "vars": {
+    // Public origin of this Worker, used in links and OAuth metadata.
+    "PUBLIC_URL": "http://localhost:8787",
+    // Hosted sites are served at <slug>.<SITES_DOMAIN>. Leave empty to only use /s/<slug>/ paths.
+    "SITES_DOMAIN": "",
+    // Optional: Cloudflare for SaaS zone that issues custom hostnames for hosted sites.
+    "CF_ZONE_ID": ""
+  }
+  // Secrets (wrangler secret put): SECRETS_KEY (base64, 32 bytes), SIGNING_KEY, CF_API_TOKEN,
+  // SIGNUP_TOKEN (optional: when set, creating a workspace requires it).
+}

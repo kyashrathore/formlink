@@ -1,0 +1,25 @@
+{
+  "name": "formlink",
+  "version": "0.1.0",
+  "description": "Formlink CLI: forms, hooks, secrets, submissions and site deploys from your terminal or agent.",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "formlink": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@formlink/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^5.9.3"
+  }
+}
