@@ -270,7 +270,7 @@ async function withFiles(env: Env, s: Submission) {
 export const ListQuery = z.object({
   status: z.string().optional(),
   /** Include drafts (partial submissions). Off by default. */
-  drafts: z.coerce.boolean().optional(),
+  drafts: z.union([z.boolean(), z.enum(["true", "false"]).transform((v) => v === "true")]).optional(),
   since: z.coerce.number().int().optional(),
   until: z.coerce.number().int().optional(),
   /** Case-insensitive text match anywhere in the answers. */

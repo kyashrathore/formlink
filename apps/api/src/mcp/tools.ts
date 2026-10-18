@@ -12,13 +12,24 @@ import {
   SiteUpdate,
   addDomain,
   createSite,
+  deleteSite,
   deploySite,
   getDomain,
+  listDeployments,
   listSites,
+  removeDomain,
   rollbackSite,
   updateSite,
 } from "@/services/sites";
-import { ListQuery, UpdateSubmissionInput, getSubmission, listSubmissions, updateSubmission } from "@/services/submissions";
+import {
+  ListQuery,
+  UpdateSubmissionInput,
+  deleteSubmission,
+  exportSubmissions,
+  getSubmission,
+  listSubmissions,
+  updateSubmission,
+} from "@/services/submissions";
 import { getWorkspace } from "@/services/workspaces";
 
 interface Tool<S extends z.ZodObject = z.ZodObject> {
@@ -97,6 +108,20 @@ export const TOOLS: Tool[] = [
     description: "Set a submission's status (runs onStatusChange, e.g. approvals) or merge data/computed fields.",
     input: UpdateSubmissionInput.extend({ submissionId: z.string() }),
     run: (env, auth, { submissionId, ...rest }, bg) => updateSubmission(env, auth, submissionId, rest, bg),
+  }),
+  tool({
+    name: "delete_submission",
+    description: "Permanently delete one submission and its files.",
+    input: z.object({ submissionId: z.string() }),
+    destructive: true,
+    run: async (env, auth, { submissionId }) => (await deleteSubmission(env, auth, submissionId), { deleted: submissionId }),
+  }),
+  tool({
+    name: "export_submissions",
+    description: "All non-draft submissions of a form as CSV (answers flattened to columns) or JSON.",
+    input: z.object({ formId, format: z.enum(["csv", "json"]).default("csv") }),
+    readOnly: true,
+    run: (env, auth, { formId, format }) => exportSubmissions(env, auth, formId, format),
   }),
   tool({
     name: "get_analytics",
@@ -187,6 +212,20 @@ export const TOOLS: Tool[] = [
     run: (env, auth, { siteId, files }) => deploySite(env, auth, siteId, { files }),
   }),
   tool({
+    name: "list_deployments",
+    description: "A site's deployments, newest first, for rollback.",
+    input: z.object({ siteId: z.string() }),
+    readOnly: true,
+    run: (env, auth, { siteId }) => listDeployments(env, auth, siteId),
+  }),
+  tool({
+    name: "delete_site",
+    description: "Permanently delete a site, its deployments and its custom domains.",
+    input: z.object({ siteId: z.string() }),
+    destructive: true,
+    run: async (env, auth, { siteId }) => (await deleteSite(env, auth, siteId), { deleted: siteId }),
+  }),
+  tool({
     name: "rollback_site",
     description: "Make an earlier deployment live again.",
     input: z.object({ siteId: z.string(), deploymentId: z.string() }),
@@ -204,6 +243,13 @@ export const TOOLS: Tool[] = [
     input: z.object({ hostname: z.string() }),
     readOnly: true,
     run: (env, auth, { hostname }) => getDomain(env, auth, hostname),
+  }),
+  tool({
+    name: "remove_domain",
+    description: "Disconnect a custom domain from its site.",
+    input: z.object({ hostname: z.string() }),
+    destructive: true,
+    run: async (env, auth, { hostname }) => (await removeDomain(env, auth, hostname), { removed: hostname }),
   }),
   tool({
     name: "get_form",
